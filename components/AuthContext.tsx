@@ -118,13 +118,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const register = async (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => {
         try {
             const createData = {
+                username: data.email.split('@')[0] + Math.floor(Math.random() * 1000),
                 name: data.name,
                 email: data.email,
                 password: data.password,
                 passwordConfirm: data.password,
                 sector: data.sector,
                 role: data.role || 'USER',
-                status: 'Online'
+                status: 'Online',
+                emailVisibility: true
             };
             
             // 1. Create the user
