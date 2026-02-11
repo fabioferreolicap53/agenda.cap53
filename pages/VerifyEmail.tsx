@@ -10,28 +10,38 @@ const VerifyEmail: React.FC = () => {
 
     useEffect(() => {
         const verify = async () => {
-            if (!token) {
+            // Tenta pegar o token do useParams ou diretamente da URL se o roteador falhar
+            let rawToken = token;
+            if (!rawToken || rawToken === '*') {
+                const parts = window.location.href.split('/');
+                rawToken = parts[parts.length - 1];
+                console.log('Token extraído via window.location:', rawToken);
+            }
+
+            if (!rawToken || rawToken.length < 10) {
                 setStatus('error');
-                setMessage('Token de verificação ausente.');
+                setMessage('Token de verificação ausente ou inválido na URL.');
                 return;
             }
 
             try {
                 // Algoritmo Sênior de Extração de Token:
-                // 1. Pega o token bruto da URL
-                // 2. Remove aspas e espaços
-                // 3. Lida com double-hashing ou encoding de caracteres (#/%23)
-                let cleanToken = (token || '').trim().replace(/['"”]/g, '');
+                // 1. Limpa aspas e espaços
+                let cleanToken = rawToken.trim().replace(/['"”]/g, '');
                 
-                // Se o token contém o padrão de rota (ex: #/verify-email/TOKEN), extrai apenas a última parte
+                // 2. Se o token ainda contiver partes da URL (devido a redirecionamentos)
                 if (cleanToken.includes('/')) {
-                    const parts = cleanToken.split('/');
-                    cleanToken = parts[parts.length - 1];
+                    cleanToken = cleanToken.split('/').pop() || '';
                 }
+
+                // 3. Remove possíveis sufixos de consulta (?...)
+                cleanToken = cleanToken.split('?')[0];
+                
+                console.log('Processando verificação para o token:', cleanToken.substring(0, 10) + '...');
                 
                 // Validação mínima de formato JWT (três partes separadas por ponto)
                 if (!cleanToken || cleanToken.split('.').length !== 3) {
-                    throw new Error('Token de verificação inválido ou malformado.');
+                    throw new Error('O formato do token é inválido. Certifique-se de usar o link completo do e-mail.');
                 }
                 
                 await pb.collection('agenda_cap53_usuarios').confirmVerification(cleanToken);
