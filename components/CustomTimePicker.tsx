@@ -4,12 +4,14 @@ interface CustomTimePickerProps {
   value: string; // Format "HH:mm"
   onChange: (value: string) => void;
   label?: string;
+  tabIndex?: number;
 }
 
 const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
   value,
   onChange,
-  label
+  label,
+  tabIndex = 0
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -96,7 +98,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
       <div 
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        tabIndex={0}
+        tabIndex={tabIndex}
         role="button"
         aria-haspopup="listbox"
         aria-expanded={isOpen}

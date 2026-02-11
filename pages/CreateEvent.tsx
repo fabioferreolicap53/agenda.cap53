@@ -1735,6 +1735,7 @@ const CreateEvent: React.FC = () => {
                             <input 
                               type="text"
                               value={transporteOrigem}
+                              tabIndex={activeTab === 'transporte' ? 0 : -1}
                               onChange={(e) => {
                                 setTransporteOrigem(e.target.value);
                                 if (e.target.value) setTransporteSuporte(true);
@@ -1748,6 +1749,7 @@ const CreateEvent: React.FC = () => {
                             <input 
                               type="text"
                               value={transporteDestino}
+                              tabIndex={activeTab === 'transporte' ? 0 : -1}
                               onChange={(e) => {
                                 setTransporteDestino(e.target.value);
                                 if (e.target.value) setTransporteSuporte(true);
@@ -1760,6 +1762,7 @@ const CreateEvent: React.FC = () => {
                           <CustomTimePicker
                             label="Horário de Ida (Levar) *"
                             value={transporteHorarioLevar}
+                            tabIndex={activeTab === 'transporte' ? 0 : -1}
                             onChange={(val) => {
                               setTransporteHorarioLevar(val);
                               if (val) setTransporteSuporte(true);
@@ -1768,6 +1771,7 @@ const CreateEvent: React.FC = () => {
                           <CustomTimePicker
                             label="Horário de Volta (Buscar) *"
                             value={transporteHorarioBuscar}
+                            tabIndex={activeTab === 'transporte' ? 0 : -1}
                             onChange={(val) => {
                               setTransporteHorarioBuscar(val);
                               if (val) setTransporteSuporte(true);
@@ -1787,6 +1791,7 @@ const CreateEvent: React.FC = () => {
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Observações Adicionais</label>
                             <textarea 
                               value={transporteObs}
+                              tabIndex={activeTab === 'transporte' ? 0 : -1}
                               onChange={(e) => {
                                 setTransporteObs(e.target.value);
                                 if (e.target.value) setTransporteSuporte(true);
