@@ -55,7 +55,7 @@ const ResetPassword: React.FC = () => {
             setMessage('Senha redefinida com sucesso! Redirecionando para o login...');
             
             setTimeout(() => {
-                navigate('/login');
+                window.location.href = 'https://agenda-cap53.pages.dev/#/login';
             }, 3000);
         } catch (error: any) {
             console.error('Reset password error:', error);
@@ -136,7 +136,7 @@ const ResetPassword: React.FC = () => {
 
                 {(status === 'error' || status === 'success') && (
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={() => window.location.href = 'https://agenda-cap53.pages.dev/#/login'}
                         className="mt-6 text-primary font-bold hover:underline text-sm"
                     >
                         Voltar para o Login

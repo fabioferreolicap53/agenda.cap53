@@ -13,10 +13,7 @@ import TransportManagement from './pages/TransportManagement';
 import LocationManagement from './pages/LocationManagement';
 import TeamManagement from './pages/TeamManagement';
 import VerifyEmail from './pages/VerifyEmail';
-<<<<<<< HEAD
 import ResetPassword from './pages/ResetPassword';
-=======
->>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import Header from './components/Header';
@@ -78,13 +75,9 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-<<<<<<< HEAD
   const isAuthPage = location.pathname === '/login' || 
                     location.pathname.startsWith('/verify-email') || 
                     location.pathname.startsWith('/reset-password');
-=======
-  const isAuthPage = location.pathname === '/login' || location.pathname.startsWith('/verify-email');
->>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
 
   console.log('LayoutContent render:', { loading, hasUser: !!user, isAuthPage, path: location.pathname });
 
@@ -139,7 +132,6 @@ const App: React.FC = () => {
               <Route path="/" element={<Navigate to="/calendar" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
-<<<<<<< HEAD
               {/* Rotas de contingência para capturar variações de links malformados ou encodados */}
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verify-email/*" element={<VerifyEmail />} />
@@ -149,12 +141,6 @@ const App: React.FC = () => {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/reset-password/*" element={<ResetPassword />} />
               <Route path="/confirm-password-reset/*" element={<ResetPassword />} />
-              
-=======
-              {/* Rotas de contingência para capturar variações de links malformados */}
-              <Route path="/verify-email/*" element={<VerifyEmail />} />
-              <Route path="/%23/verify-email/*" element={<VerifyEmail />} />
->>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/create-event" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
