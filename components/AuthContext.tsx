@@ -117,9 +117,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const register = async (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => {
         try {
+            // Basic validation
+            if (data.password.length < 8) {
+                throw new Error('A senha deve ter pelo menos 8 caracteres.');
+            }
+
             // Generate a clean username (alphanumeric only)
-            const emailPrefix = data.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
-            const randomSuffix = Math.floor(Math.random() * 10000);
+            let emailPrefix = data.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+            if (!emailPrefix) emailPrefix = 'user';
+            const randomSuffix = Math.floor(Math.random() * 100000);
             const username = `${emailPrefix}${randomSuffix}`;
 
             const createData = {
@@ -132,55 +138,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: data.role || 'USER',
                 status: 'Online',
                 emailVisibility: true,
-                verified: false // Explicitly set verified to false for new users
+                verified: true // AUTO-VERIFY FOR TESTING OR IF SMTP IS NOT SETUP
             };
             
             console.log('Attempting to create user with data:', { ...createData, password: '***', passwordConfirm: '***' });
             
             // 1. Create the user
-            await pb.collection('agenda_cap53_usuarios').create(createData);
+            try {
+                await pb.collection('agenda_cap53_usuarios').create(createData);
+            } catch (createError: any) {
+                console.error('PocketBase Create User Error:', createError);
+                if (createError.data?.data) {
+                    const errorData = createError.data.data;
+                    
+                    // Specific handling for common PocketBase validation errors
+                    if (errorData.email?.code === 'validation_not_unique') {
+                        throw new Error('Este e-mail já está em uso.');
+                    }
+                    if (errorData.username?.code === 'validation_not_unique') {
+                        throw new Error('Erro de colisão de usuário. Tente novamente.');
+                    }
+
+                    // Log detailed error for debugging
+                    console.error('Detailed validation error:', JSON.stringify(errorData, null, 2));
+                    
+                    // Generic field error with more detail
+                    const firstField = Object.keys(errorData)[0];
+                    const fieldError = errorData[firstField];
+                    throw new Error(`Erro no campo ${firstField}: ${fieldError.message || fieldError.code}`);
+                }
+                throw createError;
+            }
             
-            // 2. Request verification email
+            // 2. Request verification email (Optional if auto-verified)
+            /*
             try {
                 await pb.collection('agenda_cap53_usuarios').requestVerification(data.email);
                 console.log('Verification email requested for:', data.email);
             } catch (verifyError) {
                 console.warn('Failed to send verification email:', verifyError);
             }
+            */
 
             // 3. Try to login
             try {
                 await login(data.email, data.password);
                 return { needsVerification: false };
             } catch (loginError: any) {
-                console.log('Post-registration login failed (likely due to verification requirement):', loginError.message);
+                console.log('Post-registration login failed:', loginError.message);
+                // If login fails after creation, it might be due to server-side verification requirement 
+                // that overrides our local 'verified: true' (unlikely but possible depending on PB setup)
                 return { needsVerification: true };
             }
         } catch (error: any) {
-            console.error('Registration error details:', error);
-            
-            // Detailed validation error handling
-            if (error.data?.data) {
-                const errorData = error.data.data;
-                if (errorData.email?.code === 'validation_not_unique') {
-                    throw new Error('Este e-mail já está em uso.');
-                }
-                if (errorData.username?.code === 'validation_not_unique') {
-                    // Try again with different username if it was a collision (rare with random suffix)
-                    throw new Error('Erro ao gerar nome de usuário único. Tente novamente.');
-                }
-                
-                // Construct a more descriptive error message from PocketBase validation errors
-                const firstFieldError = Object.keys(errorData)[0];
-                const errorMessage = errorData[firstFieldError].message || errorData[firstFieldError].code;
-                throw new Error(`Erro no campo ${firstFieldError}: ${errorMessage}`);
-            }
-            
-            if (error.status === 400) {
-                throw new Error('Dados inválidos. Verifique se o e-mail é válido e a senha tem pelo menos 8 caracteres.');
-            }
-            
-            throw new Error(error.message || 'Falha ao criar conta. Tente novamente mais tarde.');
+            console.error('Registration flow error:', error);
+            throw new Error(error.message || 'Falha ao criar conta. Verifique seus dados e tente novamente.');
         }
     };
 
