@@ -23,7 +23,7 @@ interface AuthContextType {
     user: User | null;
     loading: boolean;
     login: (email: string, password: string) => Promise<void>;
-    register: (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => Promise<void>;
+    register: (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => Promise<{ needsVerification: boolean }>;
     logout: () => void;
     updateProfile: (data: Partial<User>) => Promise<void>;
     updateStatus: (status: User['status']) => Promise<void>;
@@ -101,8 +101,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (email: string, password: string) => {
         try {
             await pb.collection('agenda_cap53_usuarios').authWithPassword(email, password);
-        } catch (error) {
+        } catch (error: any) {
             console.error('Login error:', error);
+            
+            // Check if error is due to unverified email
+            if (error.status === 400 && error.data?.message?.includes('verified')) {
+                throw new Error('Sua conta ainda não foi verificada. Por favor, verifique seu e-mail.');
+            }
+            
             throw error;
         }
     };
@@ -118,10 +124,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 role: data.role || 'USER',
                 status: 'Online'
             };
+            
+            // 1. Create the user
             await pb.collection('agenda_cap53_usuarios').create(createData);
-            await login(data.email, data.password);
-        } catch (error) {
+            
+            // 2. Request verification email
+            try {
+                await pb.collection('agenda_cap53_usuarios').requestVerification(data.email);
+                console.log('Verification email requested for:', data.email);
+            } catch (verifyError) {
+                console.warn('Failed to send verification email:', verifyError);
+                // We continue because the user was created successfully
+            }
+
+            // 3. Try to login (this might fail if onlyVerified is true)
+            try {
+                await login(data.email, data.password);
+                return { needsVerification: false };
+            } catch (loginError: any) {
+                console.log('Post-registration login failed (likely due to verification requirement):', loginError.message);
+                return { needsVerification: true };
+            }
+        } catch (error: any) {
             console.error('Registration error:', error);
+            if (error.data?.data?.email?.code === 'validation_not_unique') {
+                throw new Error('Este e-mail já está em uso.');
+            }
             throw error;
         }
     };

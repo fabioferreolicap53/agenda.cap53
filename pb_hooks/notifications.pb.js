@@ -429,6 +429,179 @@ $app.onBeforeServe((e) => {
         }
     }, $apis.requireRecordAuth());
 
+    // 5. Endpoint para Decisão de Transporte (TRA) - Bypass API Rules
+    e.router.add('POST', '/api/transport_decision', (c) => {
+        const data = $apis.requestInfo(c).data;
+        const eventId = data.event_id;
+        const status = data.status; // 'confirmed' | 'rejected'
+        const justification = data.justification || '';
+        const authRecord = c.get('authRecord');
+
+        if (!eventId || !status) {
+            $app.logger().warn(`Transport Decision API: Missing parameters. eventId=${eventId}, status=${status}`);
+            throw new BadRequestError('Missing event_id or status');
+        }
+        
+        if (authRecord.getString('role') !== 'TRA' && authRecord.getString('role') !== 'ADMIN') {
+            $app.logger().warn(`Transport Decision API: Forbidden access by user ${authRecord.id} with role ${authRecord.getString('role')}`);
+            throw new ForbiddenError('Only TRA or ADMIN users can make transport decisions');
+        }
+
+        try {
+            $app.logger().info(`Transport Decision API Attempt: Event=${eventId}, Status=${status}, User=${authRecord.id}`);
+            const event = $app.dao().findRecordById('agenda_cap53_eventos', eventId);
+            
+            const oldStatus = event.getString('transporte_status');
+            event.set('transporte_status', status);
+            event.set('transporte_justification', justification);
+            
+            $app.dao().saveRecord(event);
+            
+            $app.logger().info(`Transport Decision via API: Event=${eventId}, Status=${status}, by=${authRecord.id}`);
+
+            // CREATE NOTIFICATION DIRECTLY HERE to ensure decider info is captured
+            // (Hooks might not have access to httpContext when triggered from dao.saveRecord in a custom route)
+            const creatorId = event.getString('user');
+            if (creatorId && status !== oldStatus) {
+                try {
+                    const notifications = $app.dao().findCollectionByNameOrId('agenda_cap53_notifications');
+                    const record = new Record(notifications);
+                    const eventTitle = event.getString('title') || 'Evento';
+                    const deciderByName = authRecord.getString('name') || authRecord.getString('email');
+
+                    record.set('user', creatorId);
+                    record.set('read', false);
+                    record.set('event', event.id);
+                    record.set('acknowledged', false);
+
+                    if (status === 'rejected') {
+                        record.set('title', 'Transporte Recusado');
+                        record.set('message', `A solicitação de transporte para o evento "${eventTitle}" foi recusada.\n\nJustificativa: ${justification || 'Sem justificativa fornecida.'}`);
+                        record.set('type', 'refusal');
+                        record.set('data', {
+                            kind: 'transport_decision',
+                            action: 'rejected',
+                            rejected_by: authRecord.id,
+                            rejected_by_name: deciderByName,
+                            justification: justification,
+                            refused_at: new Date().toISOString(),
+                        });
+                    } else {
+                        record.set('title', 'Transporte Confirmado');
+                        let message = `A solicitação de transporte para o evento "${eventTitle}" foi confirmada.`;
+                        if (justification) {
+                            message += `\n\nObservação: ${justification}`;
+                        }
+                        record.set('message', message);
+                        record.set('type', 'system');
+                        record.set('data', {
+                            kind: 'transport_decision',
+                            action: 'confirmed',
+                            confirmed_by: authRecord.id,
+                            confirmed_by_name: deciderByName,
+                            justification: justification || '',
+                            confirmed_at: new Date().toISOString(),
+                        });
+                    }
+
+                    $app.dao().saveRecord(record);
+                    $app.logger().info(`Transport Decision Notification Created (via API): status=${status}, event=${event.id}, to_user=${creatorId}`);
+                } catch (notifErr) {
+                    $app.logger().error('Failed to create notification in transport_decision API', notifErr);
+                }
+            }
+
+            return c.json(200, { success: true });
+        } catch (err) {
+            $app.logger().error('Error in transport_decision API', err);
+            throw new BadRequestError(err.message);
+        }
+    }, $apis.requireRecordAuth());
+
+    // 6. Endpoint para Decisão de Item Almac/DCA
+    e.router.add('POST', '/api/almac_decision', (c) => {
+        const data = $apis.requestInfo(c).data;
+        const requestId = data.request_id;
+        const action = data.action; // 'approved' | 'rejected'
+        const justification = data.justification || '';
+        const authRecord = c.get('authRecord');
+
+        if (!requestId || !action) {
+            throw new BadRequestError('Missing request_id or action');
+        }
+
+        const role = authRecord.getString('role');
+        if (role !== 'ALMC' && role !== 'DCA' && role !== 'ADMIN') {
+            throw new ForbiddenError('Only ALMC, DCA or ADMIN users can make item decisions');
+        }
+
+        try {
+            const request = $app.dao().findRecordById('agenda_cap53_almac_requests', requestId);
+            
+            // Check if user has permission for this specific item category
+            $app.dao().expandRecord(request, ['item'], null);
+            const item = request.expandedOne('item');
+            if (item) {
+                const category = item.getString('category');
+                if (role === 'DCA' && category !== 'INFORMATICA') {
+                    throw new ForbiddenError('DCA can only decide on INFORMATICA items');
+                }
+                if (role === 'ALMC' && (category !== 'ALMOXARIFADO' && category !== 'COPA')) {
+                    throw new ForbiddenError('ALMC can only decide on ALMOXARIFADO or COPA items');
+                }
+            }
+
+            const oldStatus = request.getString('status');
+            if (oldStatus !== 'pending' && role !== 'ADMIN') {
+                throw new BadRequestError('This request has already been decided');
+            }
+
+            request.set('status', action);
+            request.set('justification', justification);
+            request.set('decided_by', authRecord.id);
+            request.set('decided_at', new Date().toISOString());
+            
+            $app.dao().saveRecord(request);
+
+            // Notify requester
+            const creatorId = request.getString('created_by');
+            if (creatorId) {
+                try {
+                    const notifications = $app.dao().findCollectionByNameOrId('agenda_cap53_notifications');
+                    const record = new Record(notifications);
+                    const itemName = item ? item.getString('name') : 'Item';
+                    const deciderByName = authRecord.getString('name') || authRecord.getString('email');
+
+                    record.set('user', creatorId);
+                    record.set('title', action === 'approved' ? 'Item Aprovado' : 'Item Recusado');
+                    record.set('message', `Sua solicitação do item "${itemName}" foi ${action === 'approved' ? 'aprovada' : 'recusada'}.${justification ? ' Motivo: ' + justification : ''}`);
+                    record.set('type', action === 'approved' ? 'system' : 'refusal');
+                    record.set('read', false);
+                    record.set('related_request', request.id);
+                    record.set('event', request.getString('event'));
+                    record.set('data', {
+                        kind: 'almc_item_decision',
+                        action: action,
+                        decided_by: authRecord.id,
+                        decided_by_name: deciderByName,
+                        justification: justification,
+                        decided_at: new Date().toISOString()
+                    });
+                    record.set('acknowledged', false);
+
+                    $app.dao().saveRecord(record);
+                } catch (notifErr) {
+                    $app.logger().error('Failed to create notification in almac_decision API', notifErr);
+                }
+            }
+
+            return c.json(200, { success: true });
+        } catch (err) {
+            $app.logger().error('Error in almac_decision API', err);
+            throw new BadRequestError(err.message);
+        }
+    }, $apis.requireRecordAuth());
+
     // 4. Endpoint para Ciência de Recusa (TRA)
     e.router.add('POST', '/api/acknowledge_transport_refusal', (c) => {
         const data = $apis.requestInfo(c).data;

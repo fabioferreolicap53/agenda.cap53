@@ -639,6 +639,27 @@ const Requests: React.FC = () => {
         }
 
         try {
+            // Tentar usar o endpoint do backend primeiro
+            try {
+                await pb.send('/api/almac_decision', {
+                    method: 'POST',
+                    body: { 
+                        request_id: requestId,
+                        action: action,
+                        justification: justification
+                    }
+                });
+                
+                // Atualizar estado local após sucesso na API
+                setAlmacRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action, justification } : r));
+                setActionMessage(`Solicitação ${action === 'approved' ? 'aprovada' : 'recusada'} com sucesso (Via API).`);
+                setTimeout(() => setActionMessage(null), 5000);
+                return;
+            } catch (apiError) {
+                console.warn('Backend endpoint /api/almac_decision failed or not found. Falling back to client-side logic.', apiError);
+            }
+
+            // Fallback: Lógica client-side se o endpoint falhar
             // Atualizar a solicitação
             await pb.collection('agenda_cap53_almac_requests').update(requestId, {
                 status: action,
@@ -754,17 +775,17 @@ const Requests: React.FC = () => {
     const filteredNotifications = React.useMemo(() => {
         let list = notifications;
         if (canSeeAlmac) {
-            list = list.filter(n => n.data?.kind !== 'almc_item_request');
+            list = list.filter(n => n && n.data?.kind !== 'almc_item_request');
         }
-        return list;
+        return list.filter(n => n && n.id); // Garantir que não existam itens nulos ou inválidos
     }, [notifications, canSeeAlmac]);
 
     const filteredHistoryNotifications = React.useMemo(() => {
         let list = historyNotifications;
         if (canSeeAlmac) {
-            list = list.filter(n => n.data?.kind !== 'almc_item_request');
+            list = list.filter(n => n && n.data?.kind !== 'almc_item_request');
         }
-        return list;
+        return list.filter(n => n && n.id); // Garantir que não existam itens nulos ou inválidos
     }, [historyNotifications, canSeeAlmac]);
 
     return (

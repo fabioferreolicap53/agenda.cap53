@@ -16,15 +16,23 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
       if (isRegistering) {
-        await register({ name, email, password, sector });
+        const result = await register({ name, email, password, sector });
+        if (result.needsVerification) {
+          setSuccessMessage('Cadastro realizado com sucesso! Por favor, verifique seu e-mail para ativar sua conta antes de fazer login.');
+          setIsRegistering(false);
+          setLoading(false);
+          return;
+        }
       } else {
         await login(email, password);
       }
@@ -64,6 +72,12 @@ const Login: React.FC = () => {
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg text-center">
             {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-600 text-xs rounded-lg text-center font-medium">
+            {successMessage}
           </div>
         )}
 
