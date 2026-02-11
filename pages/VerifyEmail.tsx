@@ -17,13 +17,21 @@ const VerifyEmail: React.FC = () => {
             }
 
             try {
-                // Clean the token from any trailing characters like quotes from email clients
-                // Also handle the case where the token comes with HashRouter prefix (#/)
-                let cleanToken = token.trim().replace(/['"”]/g, '');
+                // Algoritmo Sênior de Extração de Token:
+                // 1. Pega o token bruto da URL
+                // 2. Remove aspas e espaços
+                // 3. Lida com double-hashing ou encoding de caracteres (#/%23)
+                let cleanToken = (token || '').trim().replace(/['"”]/g, '');
                 
-                // Remove HashRouter prefix if present (e.g., "#/verify-email/" part)
-                if (cleanToken.includes('#/')) {
-                    cleanToken = cleanToken.split('#/').pop() || cleanToken;
+                // Se o token contém o padrão de rota (ex: #/verify-email/TOKEN), extrai apenas a última parte
+                if (cleanToken.includes('/')) {
+                    const parts = cleanToken.split('/');
+                    cleanToken = parts[parts.length - 1];
+                }
+                
+                // Validação mínima de formato JWT (três partes separadas por ponto)
+                if (!cleanToken || cleanToken.split('.').length !== 3) {
+                    throw new Error('Token de verificação inválido ou malformado.');
                 }
                 
                 await pb.collection('agenda_cap53_usuarios').confirmVerification(cleanToken);

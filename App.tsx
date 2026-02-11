@@ -129,6 +129,8 @@ const App: React.FC = () => {
               <Route path="/" element={<Navigate to="/calendar" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
+              {/* Rota de contingência para links malformados vindos do email */}
+              <Route path="/%23/verify-email/:token" element={<VerifyEmail />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/create-event" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
