@@ -137,8 +137,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 sector: data.sector,
                 role: data.role || 'USER',
                 status: 'Online',
-                emailVisibility: true,
-                verified: true // AUTO-VERIFY FOR TESTING OR IF SMTP IS NOT SETUP
+                emailVisibility: true
             };
             
             console.log('Attempting to create user with data:', { ...createData, password: '***', passwordConfirm: '***' });
@@ -170,15 +169,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 throw createError;
             }
             
-            // 2. Request verification email (Optional if auto-verified)
-            /*
+            // 2. Request verification email
             try {
                 await pb.collection('agenda_cap53_usuarios').requestVerification(data.email);
                 console.log('Verification email requested for:', data.email);
             } catch (verifyError) {
                 console.warn('Failed to send verification email:', verifyError);
             }
-            */
 
             // 3. Try to login
             try {
@@ -186,8 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return { needsVerification: false };
             } catch (loginError: any) {
                 console.log('Post-registration login failed:', loginError.message);
-                // If login fails after creation, it might be due to server-side verification requirement 
-                // that overrides our local 'verified: true' (unlikely but possible depending on PB setup)
+                // If login fails after creation, it's likely because verification is required
                 return { needsVerification: true };
             }
         } catch (error: any) {
