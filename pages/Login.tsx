@@ -38,7 +38,7 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="relative flex h-screen w-full flex-col items-center justify-center bg-white p-4 overflow-hidden">
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center bg-white p-4 overflow-y-auto">
       {/* Background blobs */}
       <div className="absolute top-[-20%] left-[-10%] h-[500px] w-[500px] rounded-full bg-primary/10 blur-[100px]"></div>
       <div className="absolute bottom-[-20%] right-[-10%] h-[500px] w-[500px] rounded-full bg-primary/5 blur-[100px]"></div>

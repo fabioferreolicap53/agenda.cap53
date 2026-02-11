@@ -126,20 +126,20 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
       {isOpen && (
         <div className="absolute top-full left-0 w-full min-w-[240px] mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ring-1 ring-black/5">
-          <div className="max-h-[400px] overflow-y-auto custom-scrollbar p-2 space-y-1">
+          <div className="max-h-[280px] overflow-y-auto custom-scrollbar p-2 space-y-1">
             {options.map((option) => (
               <div
                 key={option.value}
                 onClick={() => handleSelect(option.value)}
                 className={`
-                  px-4 py-3 rounded-lg cursor-pointer transition-colors duration-200
+                  px-4 py-2 rounded-lg cursor-pointer transition-colors duration-200
                   flex items-center justify-between
                   ${isSelected(option.value) 
                     ? 'bg-primary/5 text-primary' 
                     : 'text-slate-600 hover:bg-gray-50 hover:text-primary'}
                 `}
               >
-                <span className="text-xs font-bold uppercase tracking-wider">
+                <span className="text-sm font-medium">
                   {option.label}
                 </span>
                 {isSelected(option.value) && (

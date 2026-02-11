@@ -639,15 +639,15 @@ const Requests: React.FC = () => {
         }
 
         try {
+            // Atualizar a solicitação
             await pb.collection('agenda_cap53_almac_requests').update(requestId, {
                 status: action,
-                justification: justification
+                justification: justification,
+                decided_by: user?.id,
+                decided_at: new Date().toISOString()
             });
             
-            // Notify user
             // Habilitando criação de notificação no cliente para garantir que o criador receba o aviso de recusa
-            // e possa dar ciência na aba de Notificações.
-            
             const ENABLE_CLIENT_SIDE_NOTIF = true; 
 
             if (ENABLE_CLIENT_SIDE_NOTIF) {
@@ -663,19 +663,19 @@ const Requests: React.FC = () => {
 
                 if (req) {
                     const requesterId = req.expand?.created_by?.id || req.created_by;
-                    const eventCreatorId = req.expand?.event?.user || req.event_creator_id; // event_creator_id as fallback if stored directly
+                    const eventCreatorId = req.expand?.event?.user || req.event_creator_id;
                     
                     const itemName = req.expand?.item?.name || 'item';
                     const eventTitle = req.expand?.event?.title || 'Evento';
                     const message = `O pedido de "${itemName}" para o evento "${eventTitle}" foi ${action === 'approved' ? 'aprovado' : 'reprovado'}.${action === 'rejected' && justification ? ` Justificativa: ${justification}` : ''}`;
 
-                    // 1. Notify the requester (if not the one acting)
+                    // 1. Notify the requester
                     if (requesterId && requesterId !== user?.id) {
                         try {
                             await pb.collection('agenda_cap53_notifications').create({
                                 user: requesterId,
                                 title: `Solicitação ${action === 'approved' ? 'Aprovada' : 'Reprovada'}`,
-                                message: `Seu pedido de "${itemName}" para o evento "${eventTitle}" foi ${action === 'approved' ? 'aprovado' : 'reprovado'}.${action === 'rejected' && justification ? ` Justificativa: ${justification}` : ''}`,
+                                message: message,
                                 type: action === 'rejected' ? 'refusal' : 'system',
                                 read: false,
                                 related_request: requestId,
@@ -695,8 +695,7 @@ const Requests: React.FC = () => {
                         }
                     }
 
-                    // 2. Notify the event creator (if not the one acting and not the requester)
-                    // Note: In many cases the requester IS the creator, so we check for both.
+                    // 2. Notify the event creator
                     const creatorToNotify = eventCreatorId || req.expand?.event?.user;
                     if (creatorToNotify && creatorToNotify !== user?.id && creatorToNotify !== requesterId) {
                         try {
@@ -725,13 +724,13 @@ const Requests: React.FC = () => {
                 }
             }
 
-            // Local update (optimistic or wait for subscription)
-            // We rely on subscription for full refresh, but can update locally for speed
-             setAlmacRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action, justification } : r));
+            // Local update
+            setAlmacRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action, justification } : r));
+            alert(`Solicitação ${action === 'approved' ? 'aprovada' : 'reprovada'} com sucesso!`);
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error updating request:', error);
-            alert('Erro ao atualizar solicitação.');
+            alert(`Erro ao atualizar solicitação: ${error.message}`);
         }
     };
 
@@ -770,6 +769,17 @@ const Requests: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-6 max-w-[1300px] mx-auto w-full">
+            <div className="flex flex-col gap-1">
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                    {user?.role === 'DCA' ? 'Central de TI' : user?.role === 'ALMC' ? 'Gestão de Recursos' : 'Minhas Notificações'}
+                </h1>
+                <p className="text-slate-500 text-sm font-medium">
+                    {user?.role === 'DCA' ? 'Gerencie solicitações de equipamentos e suporte para eventos.' : 
+                     user?.role === 'ALMC' ? 'Acompanhe e responda pedidos de almoxarifado e copa.' : 
+                     'Acompanhe seus convites e atualizações de eventos.'}
+                </p>
+            </div>
+
             {actionMessage && (
                 <div className="fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-50 animate-bounce flex items-center gap-3 border-2 border-green-400">
                     <span className="material-symbols-outlined">notifications_active</span>
@@ -812,8 +822,12 @@ const Requests: React.FC = () => {
                         <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
                             {Object.keys(requestsByEvent).length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl border border-slate-100 border-dashed">
-                                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">inbox</span>
-                                    <p className="text-slate-400 font-medium">Nenhuma solicitação de almoxarifado encontrada.</p>
+                                    <span className="material-symbols-outlined text-4xl text-slate-300 mb-2">
+                                        {user?.role === 'DCA' ? 'terminal' : 'inbox'}
+                                    </span>
+                                    <p className="text-slate-400 font-medium">
+                                        {user?.role === 'DCA' ? 'Nenhuma solicitação de informática encontrada.' : 'Nenhuma solicitação de almoxarifado encontrada.'}
+                                    </p>
                                 </div>
                             )}
 
@@ -822,7 +836,9 @@ const Requests: React.FC = () => {
                                     <div className="p-4 border-b border-slate-50 flex justify-between items-center">
                                         <div className="flex items-center gap-3">
                                             <div className="size-10 rounded-2xl bg-slate-100 text-slate-800 flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-2xl font-bold">event</span>
+                                                <span className="material-symbols-outlined text-2xl font-bold">
+                                                    {user?.role === 'DCA' ? 'computer' : 'inventory_2'}
+                                                </span>
                                             </div>
                                             <div className="flex flex-col">
                                                 <h3 className="font-bold text-slate-800 text-lg">{group.event?.title || 'Evento Desconhecido (ou Deletado)'}</h3>
@@ -849,9 +865,9 @@ const Requests: React.FC = () => {
                                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border ${
                                                         req.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
                                                         req.status === 'approved' ? 'bg-slate-800 text-white border-slate-800' :
-                                                        'bg-white text-slate-400 border-slate-200'
+                                                        'bg-rose-50 text-rose-700 border-rose-200 shadow-[0_0_8px_rgba(225,29,72,0.1)]'
                                                     }`}>
-                                                        {req.status === 'pending' ? 'Pendente' : req.status === 'approved' ? 'Aprovado' : 'Reprovado'}
+                                                        {req.status === 'pending' ? 'Pendente' : req.status === 'approved' ? 'Aprovado' : 'Recusado'}
                                                     </span>
                                                 </div>
                                                 
@@ -861,20 +877,6 @@ const Requests: React.FC = () => {
                                                         <span className="text-[11px] font-bold text-slate-700">{req.quantity || 1}</span>
                                                     </div>
                                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md border border-slate-100">{req.expand?.item?.category || 'Geral'}</span>
-                                                    
-                                                    {/* Status na Solicitação */}
-                                                    <div className={`flex items-center gap-1 px-2 py-1 rounded-md border ${
-                                                        req.item_snapshot_available !== false 
-                                                        ? 'bg-green-50 border-green-100 text-green-600' 
-                                                        : 'bg-red-50 border-red-100 text-red-600'
-                                                    }`}>
-                                                        <span className="material-symbols-outlined text-[12px]">
-                                                            {req.item_snapshot_available !== false ? 'check_circle' : 'cancel'}
-                                                        </span>
-                                                        <span className="text-[9px] font-black uppercase tracking-tight">
-                                                            {req.item_snapshot_available !== false ? 'Disponível' : 'Indisponível'}
-                                                        </span>
-                                                    </div>
                                                 </div>
 
                                                 {req.status === 'pending' && (

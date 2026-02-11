@@ -409,36 +409,6 @@ const AlmacManagement: React.FC = () => {
                                     />
                                 </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Status de Disponibilidade</label>
-                                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <button
-                                            type="button"
-                                            onClick={() => setNewItemAvailable(true)}
-                                            className={`flex items-center justify-center gap-2 h-10 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all duration-300 ${
-                                                newItemAvailable 
-                                                ? 'bg-white text-emerald-600 shadow-sm border border-slate-100' 
-                                                : 'text-slate-400 hover:text-slate-600'
-                                            }`}
-                                        >
-                                            <span className={`size-1.5 rounded-full ${newItemAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></span>
-                                            Disponível
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setNewItemAvailable(false)}
-                                            className={`flex items-center justify-center gap-2 h-10 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all duration-300 ${
-                                                !newItemAvailable 
-                                                ? 'bg-white text-rose-600 shadow-sm border border-slate-100' 
-                                                : 'text-slate-400 hover:text-slate-600'
-                                            }`}
-                                        >
-                                            <span className={`size-1.5 rounded-full ${!newItemAvailable ? 'bg-rose-500 animate-pulse' : 'bg-slate-300'}`}></span>
-                                            Indisponível
-                                        </button>
-                                    </div>
-                                </div>
-
                                 <div className="flex gap-3 pt-4">
                                     {editingId && (
                                         <button
@@ -488,7 +458,6 @@ const AlmacManagement: React.FC = () => {
                                             <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
                                             <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
                                             <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Estoque</th>
-                                            <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                                             <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                         </tr>
                                     </thead>
@@ -541,21 +510,6 @@ const AlmacManagement: React.FC = () => {
                                                             </span>
                                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.unit || 'un'}</span>
                                                         </div>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <button
-                                                            onClick={() => handleToggleAvailability(item.id)}
-                                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all border ${
-                                                                item.is_available 
-                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100' 
-                                                                : 'bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-100'
-                                                            }`}
-                                                        >
-                                                            <span className={`size-1.5 rounded-full ${item.is_available ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-                                                            <span className="text-[10px] font-black uppercase tracking-widest">
-                                                                {item.is_available ? 'Disponível' : 'Indisponível'}
-                                                            </span>
-                                                        </button>
                                                     </td>
                                                     <td className="px-6 py-5">
                                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
