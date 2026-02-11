@@ -12,6 +12,7 @@ import InformaticsManagement from './pages/InformaticsManagement';
 import TransportManagement from './pages/TransportManagement';
 import LocationManagement from './pages/LocationManagement';
 import TeamManagement from './pages/TeamManagement';
+import VerifyEmail from './pages/VerifyEmail';
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import Header from './components/Header';
@@ -127,6 +128,7 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/calendar" replace />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/verify-email/:token" element={<VerifyEmail />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/create-event" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
