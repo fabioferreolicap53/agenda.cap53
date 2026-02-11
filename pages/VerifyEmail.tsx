@@ -18,7 +18,13 @@ const VerifyEmail: React.FC = () => {
 
             try {
                 // Clean the token from any trailing characters like quotes from email clients
-                const cleanToken = token.trim().replace(/['"”]/g, '');
+                // Also handle the case where the token comes with HashRouter prefix (#/)
+                let cleanToken = token.trim().replace(/['"”]/g, '');
+                
+                // Remove HashRouter prefix if present (e.g., "#/verify-email/" part)
+                if (cleanToken.includes('#/')) {
+                    cleanToken = cleanToken.split('#/').pop() || cleanToken;
+                }
                 
                 await pb.collection('agenda_cap53_usuarios').confirmVerification(cleanToken);
                 setStatus('success');
