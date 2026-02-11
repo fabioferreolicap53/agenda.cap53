@@ -10,6 +10,7 @@ const VerifyEmail: React.FC = () => {
 
     useEffect(() => {
         const verify = async () => {
+<<<<<<< HEAD
             // Estratégia Multinível de Extração de Token
             let rawToken = token;
             
@@ -28,10 +29,24 @@ const VerifyEmail: React.FC = () => {
             if (!rawToken || rawToken.length < 10 || rawToken.includes('login')) {
                 // Se ainda não temos um token válido, aguardamos ou mostramos erro
                 console.warn('Token ainda não detectado ou inválido:', rawToken);
+=======
+            // Tenta pegar o token do useParams ou diretamente da URL se o roteador falhar
+            let rawToken = token;
+            if (!rawToken || rawToken === '*') {
+                const parts = window.location.href.split('/');
+                rawToken = parts[parts.length - 1];
+                console.log('Token extraído via window.location:', rawToken);
+            }
+
+            if (!rawToken || rawToken.length < 10) {
+                setStatus('error');
+                setMessage('Token de verificação ausente ou inválido na URL.');
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
                 return;
             }
 
             try {
+<<<<<<< HEAD
                 // Limpeza profunda do token
                 let cleanToken = rawToken.trim()
                     .replace(/['"”]/g, '')     // Remove aspas
@@ -39,18 +54,37 @@ const VerifyEmail: React.FC = () => {
                     .split('&')[0];            // Remove outros params
                 
                 // Se o token vier com prefixos de rota devido a encoding de email
+=======
+                // Algoritmo Sênior de Extração de Token:
+                // 1. Limpa aspas e espaços
+                let cleanToken = rawToken.trim().replace(/['"”]/g, '');
+                
+                // 2. Se o token ainda contiver partes da URL (devido a redirecionamentos)
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
                 if (cleanToken.includes('/')) {
                     cleanToken = cleanToken.split('/').pop() || '';
                 }
 
+<<<<<<< HEAD
                 console.log('Iniciando verificação para o token:', cleanToken.substring(0, 10) + '...');
                 
                 if (cleanToken.split('.').length !== 3) {
                     throw new Error('Formato de token inválido. Use o link original do e-mail.');
+=======
+                // 3. Remove possíveis sufixos de consulta (?...)
+                cleanToken = cleanToken.split('?')[0];
+                
+                console.log('Processando verificação para o token:', cleanToken.substring(0, 10) + '...');
+                
+                // Validação mínima de formato JWT (três partes separadas por ponto)
+                if (!cleanToken || cleanToken.split('.').length !== 3) {
+                    throw new Error('O formato do token é inválido. Certifique-se de usar o link completo do e-mail.');
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
                 }
                 
                 await pb.collection('agenda_cap53_usuarios').confirmVerification(cleanToken);
                 setStatus('success');
+<<<<<<< HEAD
                 setMessage('E-mail verificado com sucesso! Redirecionando para o login...');
                 
                 setTimeout(() => navigate('/login'), 3000);
@@ -64,6 +98,18 @@ const VerifyEmail: React.FC = () => {
                 } else {
                     setMessage(error.message || 'Falha na verificação. Tente solicitar um novo link.');
                 }
+=======
+                setMessage('E-mail verificado com sucesso! Você já pode fazer login.');
+                
+                // Auto redirect after 3 seconds
+                setTimeout(() => {
+                    navigate('/login');
+                }, 4000);
+            } catch (error: any) {
+                console.error('Verification error:', error);
+                setStatus('error');
+                setMessage(error.message || 'Falha ao verificar e-mail. O link pode ter expirado.');
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
             }
         };
 

@@ -5,9 +5,14 @@ import CustomSelect from '../components/CustomSelect';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+<<<<<<< HEAD
   const { login, register, requestPasswordReset } = useAuth();
   const [isRegistering, setIsRegistering] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+=======
+  const { login, register } = useAuth();
+  const [isRegistering, setIsRegistering] = useState(false);
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
 
   // Form states
   const [name, setName] = useState('');
@@ -26,6 +31,7 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
+<<<<<<< HEAD
       if (isResetting) {
         await requestPasswordReset(email);
         setSuccessMessage('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
@@ -34,6 +40,8 @@ const Login: React.FC = () => {
         return;
       }
 
+=======
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
       if (isRegistering) {
         const result = await register({ name, email, password, sector });
         if (result.needsVerification) {
@@ -69,6 +77,7 @@ const Login: React.FC = () => {
             <h2 className="text-text-main text-2xl font-bold">Agenda Cap5.3</h2>
           </div>
           <h1 className="text-text-main text-xl font-bold text-center">
+<<<<<<< HEAD
             {isResetting ? 'Recuperar senha' : (isRegistering ? 'Criar minha conta' : 'Bem-vindo de volta')}
           </h1>
           <p className="text-text-secondary text-sm text-center">
@@ -77,6 +86,14 @@ const Login: React.FC = () => {
               : (isRegistering
                 ? 'Preencha os dados abaixo para se cadastrar.'
                 : 'Acesse sua conta para gerenciar seus eventos.')}
+=======
+            {isRegistering ? 'Criar minha conta' : 'Bem-vindo de volta'}
+          </h1>
+          <p className="text-text-secondary text-sm text-center">
+            {isRegistering
+              ? 'Preencha os dados abaixo para se cadastrar.'
+              : 'Acesse sua conta para gerenciar seus eventos.'}
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
           </p>
         </div>
 
@@ -93,7 +110,11 @@ const Login: React.FC = () => {
         )}
 
         <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
+<<<<<<< HEAD
           {!isResetting && isRegistering && (
+=======
+          {isRegistering && (
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
             <label className="flex flex-col w-full">
               <p className="text-text-main text-sm font-medium pb-2">Nome Usuário</p>
               <input
@@ -118,7 +139,11 @@ const Login: React.FC = () => {
             />
           </label>
 
+<<<<<<< HEAD
           {!isResetting && isRegistering && (
+=======
+          {isRegistering && (
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
             <label className="flex flex-col w-full">
               <p className="text-text-main text-sm font-medium pb-2">Setor</p>
               <CustomSelect
@@ -131,6 +156,7 @@ const Login: React.FC = () => {
             </label>
           )}
 
+<<<<<<< HEAD
           {!isResetting && (
             <label className="flex flex-col w-full">
               <div className="flex justify-between items-center pb-2">
@@ -172,13 +198,48 @@ const Login: React.FC = () => {
                 Esqueci minha senha
               </button>
             </div>
+=======
+          <label className="flex flex-col w-full">
+            <div className="flex justify-between items-center pb-2">
+              <p className="text-text-main text-sm font-medium">Senha</p>
+            </div>
+            <div className="relative flex w-full flex-1 items-stretch rounded-lg">
+              <input
+                className="w-full rounded-lg border border-gray-300 h-11 px-4 pr-12 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm"
+                placeholder="Digite sua senha"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-0 top-0 bottom-0 px-4 text-gray-400 hover:text-primary"
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+              </button>
+            </div>
+          </label>
+
+          {!isRegistering && (
+            <div className="flex justify-end mt-[-8px]">
+              <a href="#" className="text-[13px] font-medium text-primary hover:underline">Esqueci minha senha</a>
+            </div>
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
           )}
 
           <button
             disabled={loading}
             className={`flex w-full items-center justify-center rounded-lg h-11 px-4 bg-primary hover:bg-primary-hover text-white font-bold mt-2 shadow-lg shadow-primary/20 transition-all text-sm uppercase ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
+<<<<<<< HEAD
             {loading ? 'Processando...' : (isResetting ? 'Enviar Link' : (isRegistering ? 'Cadastrar' : 'Entrar'))}
+=======
+            {loading ? 'Processando...' : (isRegistering ? 'Cadastrar' : 'Entrar')}
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
           </button>
         </form>
 
@@ -191,6 +252,7 @@ const Login: React.FC = () => {
           </div>
         </div>
 
+<<<<<<< HEAD
         <div className="flex flex-col items-center justify-center gap-3 text-sm font-medium">
           {!isResetting ? (
             <div className="flex items-center gap-1.5">
@@ -220,6 +282,18 @@ const Login: React.FC = () => {
               Voltar para o login
             </button>
           )}
+=======
+        <div className="flex items-center justify-center gap-1.5 text-sm font-medium">
+          <span className="text-gray-500">
+            {isRegistering ? 'Já tem uma conta?' : 'Não tem uma conta?'}
+          </span>
+          <button
+            onClick={() => setIsRegistering(!isRegistering)}
+            className="text-primary font-bold hover:underline"
+          >
+            {isRegistering ? 'Fazer login' : 'Criar uma conta'}
+          </button>
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
         </div>
       </div>
 

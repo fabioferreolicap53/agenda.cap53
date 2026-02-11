@@ -28,8 +28,11 @@ interface AuthContextType {
     updateProfile: (data: Partial<User>) => Promise<void>;
     updateStatus: (status: User['status']) => Promise<void>;
     setRole: (role: UserRole) => Promise<void>;
+<<<<<<< HEAD
     requestPasswordReset: (email: string) => Promise<void>;
     confirmPasswordReset: (token: string, password: string) => Promise<void>;
+=======
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -194,6 +197,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+<<<<<<< HEAD
     const requestPasswordReset = async (email: string) => {
         try {
             await pb.collection('agenda_cap53_usuarios').requestPasswordReset(email);
@@ -229,6 +233,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             requestPasswordReset,
             confirmPasswordReset
         }}>
+=======
+    return (
+        <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, updateStatus, setRole }}>
+>>>>>>> 24ea5ab793136e9911250573c3a96e1d6722e0ea
             {children}
         </AuthContext.Provider>
     );
