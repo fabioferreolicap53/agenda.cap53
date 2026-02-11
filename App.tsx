@@ -5,7 +5,6 @@ import CreateEvent from './pages/CreateEvent';
 import Reports from './pages/Reports';
 import Mensagens from './pages/Mensagens';
 import Login from './pages/Login';
-import VerifyEmail from './pages/VerifyEmail';
 import Requests from './pages/Requests';
 import MyInvolvement from './pages/MyInvolvement';
 import AlmacManagement from './pages/AlmacManagement';
@@ -128,7 +127,6 @@ const App: React.FC = () => {
             <Routes>
               <Route path="/" element={<Navigate to="/calendar" replace />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/verify-email/:token" element={<VerifyEmail />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/create-event" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
