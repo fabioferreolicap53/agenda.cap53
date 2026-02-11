@@ -17,7 +17,10 @@ const VerifyEmail: React.FC = () => {
             }
 
             try {
-                await pb.collection('agenda_cap53_usuarios').confirmVerification(token);
+                // Clean the token from any trailing characters like quotes from email clients
+                const cleanToken = token.trim().replace(/['"”]/g, '');
+                
+                await pb.collection('agenda_cap53_usuarios').confirmVerification(cleanToken);
                 setStatus('success');
                 setMessage('E-mail verificado com sucesso! Você já pode fazer login.');
                 

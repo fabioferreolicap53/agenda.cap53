@@ -74,7 +74,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const isAuthPage = location.pathname === '/login';
+  const isAuthPage = location.pathname === '/login' || location.pathname.startsWith('/verify-email');
 
   console.log('LayoutContent render:', { loading, hasUser: !!user, isAuthPage, path: location.pathname });
 
