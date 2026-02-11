@@ -117,8 +117,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const register = async (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => {
         try {
+            // Generate a clean username (alphanumeric only)
+            const emailPrefix = data.email.split('@')[0].replace(/[^a-zA-Z0-9]/g, '');
+            const randomSuffix = Math.floor(Math.random() * 10000);
+            const username = `${emailPrefix}${randomSuffix}`;
+
             const createData = {
-                username: data.email.split('@')[0] + Math.floor(Math.random() * 1000),
+                username,
                 name: data.name,
                 email: data.email,
                 password: data.password,
@@ -126,8 +131,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 sector: data.sector,
                 role: data.role || 'USER',
                 status: 'Online',
-                emailVisibility: true
+                emailVisibility: true,
+                verified: false // Explicitly set verified to false for new users
             };
+            
+            console.log('Attempting to create user with data:', { ...createData, password: '***', passwordConfirm: '***' });
             
             // 1. Create the user
             await pb.collection('agenda_cap53_usuarios').create(createData);
@@ -138,10 +146,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.log('Verification email requested for:', data.email);
             } catch (verifyError) {
                 console.warn('Failed to send verification email:', verifyError);
-                // We continue because the user was created successfully
             }
 
-            // 3. Try to login (this might fail if onlyVerified is true)
+            // 3. Try to login
             try {
                 await login(data.email, data.password);
                 return { needsVerification: false };
@@ -150,11 +157,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 return { needsVerification: true };
             }
         } catch (error: any) {
-            console.error('Registration error:', error);
-            if (error.data?.data?.email?.code === 'validation_not_unique') {
-                throw new Error('Este e-mail já está em uso.');
+            console.error('Registration error details:', error);
+            
+            // Detailed validation error handling
+            if (error.data?.data) {
+                const errorData = error.data.data;
+                if (errorData.email?.code === 'validation_not_unique') {
+                    throw new Error('Este e-mail já está em uso.');
+                }
+                if (errorData.username?.code === 'validation_not_unique') {
+                    // Try again with different username if it was a collision (rare with random suffix)
+                    throw new Error('Erro ao gerar nome de usuário único. Tente novamente.');
+                }
+                
+                // Construct a more descriptive error message from PocketBase validation errors
+                const firstFieldError = Object.keys(errorData)[0];
+                const errorMessage = errorData[firstFieldError].message || errorData[firstFieldError].code;
+                throw new Error(`Erro no campo ${firstFieldError}: ${errorMessage}`);
             }
-            throw error;
+            
+            if (error.status === 400) {
+                throw new Error('Dados inválidos. Verifique se o e-mail é válido e a senha tem pelo menos 8 caracteres.');
+            }
+            
+            throw new Error(error.message || 'Falha ao criar conta. Tente novamente mais tarde.');
         }
     };
 

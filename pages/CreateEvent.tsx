@@ -280,11 +280,11 @@ const CreateEvent: React.FC = () => {
         copa_items: copaItems,
         informatica_items: informaticaItems,
         transporte_suporte: transporteSuporte,
-        transporte_origem: transporteSuporte ? transporteOrigem : null,
-        transporte_destino: transporteSuporte ? transporteDestino : null,
-        transporte_horario_levar: transporteSuporte ? transporteHorarioLevar : null,
-        transporte_horario_buscar: transporteSuporte ? transporteHorarioBuscar : null,
-        transporte_obs: transporteSuporte ? transporteObs : null,
+        transporte_origem: transporteSuporte ? (transporteOrigem || null) : null,
+        transporte_destino: transporteSuporte ? (transporteDestino || null) : null,
+        transporte_horario_levar: transporteSuporte ? (transporteHorarioLevar || null) : null,
+        transporte_horario_buscar: transporteSuporte ? (transporteHorarioBuscar || null) : null,
+        transporte_obs: transporteSuporte ? (transporteObs || null) : null,
         unidades: selectedUnidades,
         categorias_profissionais: selectedCategorias,
         is_restricted: isRestricted,
@@ -297,6 +297,7 @@ const CreateEvent: React.FC = () => {
       let eventId = editingEventId;
 
       if (isEditing && editingEventId) {
+         console.log('--- UPDATING EVENT ---', editingEventId, eventData);
          await pb.collection('agenda_cap53_eventos').update(editingEventId, eventData);
          const newParticipants = selectedParticipants.filter(pId => !originalParticipants.includes(pId));
          if (newParticipants.length > 0) {
@@ -322,6 +323,7 @@ const CreateEvent: React.FC = () => {
             }
          }
       } else {
+         console.log('--- CREATING NEW EVENT ---', eventData);
          const created = await pb.collection('agenda_cap53_eventos').create(eventData);
          eventId = created.id;
          if (selectedParticipants.length > 0) {
