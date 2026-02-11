@@ -333,29 +333,6 @@ const Sidebar: React.FC = () => {
             </button>
           </div>
 
-          {/* Role Switcher for Demo */}
-          <div className="px-3 pb-2">
-            <p className="text-[9px] font-bold text-text-secondary/50 uppercase mb-1.5 tracking-wider">Mudar Nível (Dev)</p>
-            <div className="grid grid-cols-3 gap-1">
-              {(['USER', 'ADMIN', 'ALMC', 'TRA', 'CE', 'DCA'] as UserRole[]).map((r) => (
-                <button
-                  key={r}
-                  onClick={async () => {
-                    try {
-                      await setRole(r);
-                    } catch (err: any) {
-                      console.error('Error changing role:', err);
-                      alert(`Erro ao mudar nível: ${err.message || 'Erro desconhecido'}`);
-                    }
-                  }}
-                  className={`text-[8px] py-1 rounded border transition-all ${user?.role === r ? 'bg-primary text-white border-primary shadow-sm' : 'bg-white border-border-light text-text-secondary hover:bg-primary/[0.02]'}`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <p className="text-[9px] text-text-secondary/40 text-center px-2">
             Desenvolvido por Fabio Ferreira de Oliveira<br />DAPS/CAP5.3
           </p>
