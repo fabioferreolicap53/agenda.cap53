@@ -1015,13 +1015,13 @@ const Requests: React.FC = () => {
                                                 <div key={notification.id} className="group bg-white rounded-2xl border border-slate-200 hover:border-slate-300 hover:shadow-lg hover:shadow-slate-100 transition-all duration-300 flex items-stretch min-h-[120px]">
                                                     {/* Status indicator bar */}
                                                     <div className={`w-1.5 shrink-0 rounded-l-2xl ${
-                                                        isApproved || isAcknowledgment ? 'bg-slate-800' : 
-                                                            isRejected || isRefusal ? 'bg-slate-400' : 
-                                                            isInvite ? 'bg-slate-700' : 
-                                                            isParticipationRequest ? 'bg-primary' :
-                                                            isAlmcItemRequest ? 'bg-slate-600' :
-                                                            'bg-slate-400'
-                                                    }`}></div>
+                                                                isApproved || isAcknowledgment ? 'bg-slate-800' : 
+                                                                    isRejected || isRefusal ? 'bg-red-500' : 
+                                                                    isInvite ? 'bg-slate-700' : 
+                                                                    isParticipationRequest ? 'bg-primary' :
+                                                                    isAlmcItemRequest ? 'bg-slate-600' :
+                                                                    'bg-slate-400'
+                                                            }`}></div>
 
                                                     <div className="flex-1 p-5 flex flex-col md:flex-row md:items-center gap-6">
                                                         {/* Icon & Category */}
@@ -1033,6 +1033,7 @@ const Requests: React.FC = () => {
                                                                     isAlmcItemRequest ? 'bg-slate-100 text-slate-600' :
                                                                     isTransportRequest ? 'bg-slate-100 text-slate-500' :
                                                                     isApproved || isAcknowledgment ? 'bg-slate-100 text-slate-800' :
+                                                                    isRejected || isRefusal ? 'bg-red-50 text-red-600' :
                                                                     'bg-slate-50 text-slate-400'
                                                                 }`}>
                                                                     <span className="material-symbols-outlined text-[18px] font-bold">
@@ -1066,10 +1067,10 @@ const Requests: React.FC = () => {
                                                                 {statusDisplay && (
                                                                     <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-md w-fit ${
                                                                         statusDisplay === 'accepted' || statusDisplay === 'approved' || statusDisplay === 'confirmed' ? (isRefusal ? 'bg-slate-100 text-slate-600' : 'bg-emerald-50 text-emerald-600') :
-                                                                        statusDisplay === 'rejected' || statusDisplay === 'refused' ? 'bg-red-50 text-red-600' :
-                                                                        (isRefusal ? 'bg-amber-50 text-amber-600' : 'bg-amber-50 text-amber-600')
+                                                                        statusDisplay === 'rejected' || statusDisplay === 'refused' || isRefusal ? 'bg-red-50 text-red-600' :
+                                                                        'bg-amber-50 text-amber-600'
                                                                     }`}>
-                                                                        {isRefusal ? (statusDisplay === 'accepted' ? 'CIENTE' : 'PENDENTE CIÊNCIA') :
+                                                                        {isRefusal ? (statusDisplay === 'accepted' ? 'CIENTE' : 'RECUSADO') :
                                                                          (statusDisplay === 'accepted' || statusDisplay === 'approved' || statusDisplay === 'confirmed' ? 'Confirmado' :
                                                                          statusDisplay === 'rejected' || statusDisplay === 'refused' ? 'Recusado' :
                                                                          'Pendente')}
