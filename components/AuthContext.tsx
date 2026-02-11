@@ -128,17 +128,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const randomSuffix = Math.floor(Math.random() * 100000);
             const username = `${emailPrefix}${randomSuffix}`;
 
-            const createData = {
-                username,
-                name: data.name,
-                email: data.email,
-                password: data.password,
-                passwordConfirm: data.password,
-                sector: data.sector,
-                role: data.role || 'USER',
-                status: 'Online',
-                emailVisibility: true
-            };
+            const createData: any = {
+                    username,
+                    name: data.name,
+                    email: data.email,
+                    password: data.password,
+                    passwordConfirm: data.password,
+                    sector: data.sector,
+                    role: data.role || 'USER',
+                    status: 'Online',
+                    emailVisibility: true
+                };
             
             console.log('Attempting to create user with data:', { ...createData, password: '***', passwordConfirm: '***' });
             
