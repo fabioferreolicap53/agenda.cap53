@@ -7,7 +7,7 @@ interface ConflictModalProps {
   onConfirm: () => void;
   title: string;
   message: string;
-  conflictDetails?: string;
+  conflictDetails?: string | React.ReactNode;
   type?: 'warning' | 'danger';
 }
 
@@ -84,10 +84,12 @@ const ConflictModal: React.FC<ConflictModalProps> = ({
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
-                  <span className="material-symbols-outlined text-[#1C2E4A]/30 text-xl mt-0.5">info</span>
-                  <p className="text-[#1C2E4A] font-bold text-sm leading-tight tracking-tight">
+                  {typeof conflictDetails === 'string' && (
+                    <span className="material-symbols-outlined text-[#1C2E4A]/30 text-xl mt-0.5">info</span>
+                  )}
+                  <div className="text-[#1C2E4A] font-bold text-sm leading-tight tracking-tight w-full">
                     {conflictDetails}
-                  </p>
+                  </div>
                 </div>
               </div>
             )}

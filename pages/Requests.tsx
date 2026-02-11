@@ -668,8 +668,8 @@ const Requests: React.FC = () => {
                 decided_at: new Date().toISOString()
             });
             
-            // Habilitando criação de notificação no cliente para garantir que o criador receba o aviso de recusa
-            const ENABLE_CLIENT_SIDE_NOTIF = true; 
+            // Desativando criação de notificação no cliente, pois o backend (pb_hooks) já processa isso
+            const ENABLE_CLIENT_SIDE_NOTIF = false; 
 
             if (ENABLE_CLIENT_SIDE_NOTIF) {
                 // Fetch fresh data to ensure we have created_by AND event creator

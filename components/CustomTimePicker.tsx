@@ -41,7 +41,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
           const selectedHour = hoursRef.current.querySelector(`[data-hour="${currentHour}"]`);
           if (selectedHour) {
             hoursRef.current.scrollTo({
-              top: (selectedHour as HTMLElement).offsetTop - 80,
+              top: (selectedHour as HTMLElement).offsetTop - 12,
               behavior: 'smooth'
             });
           }
@@ -50,7 +50,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
           const selectedMinute = minutesRef.current.querySelector(`[data-minute="${currentMinute}"]`);
           if (selectedMinute) {
             minutesRef.current.scrollTo({
-              top: (selectedMinute as HTMLElement).offsetTop - 80,
+              top: (selectedMinute as HTMLElement).offsetTop - 12,
               behavior: 'smooth'
             });
           }
@@ -67,8 +67,17 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
     onChange(`${currentHour}:${m}`);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsOpen(!isOpen);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={`relative w-full ${isOpen ? 'z-[100]' : ''}`} ref={containerRef}>
       <style>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
@@ -86,9 +95,15 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
       
       <div 
         onClick={() => setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={`
           relative group w-full h-12 px-5 rounded-2xl bg-slate-50 border border-slate-100 
-          flex items-center cursor-pointer transition-all duration-300
+          flex items-center cursor-pointer transition-all duration-300 outline-none
+          focus:ring-4 focus:ring-primary/10 focus:border-primary
           ${isOpen ? 'bg-white border-primary shadow-sm ring-4 ring-primary/5' : 'hover:bg-white hover:border-slate-300'}
         `}
       >
@@ -103,17 +118,15 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
       {isOpen && (
         <div 
           onClick={(e) => e.stopPropagation()}
-          className="absolute top-full left-0 mt-2 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-slate-50 z-[100] p-4 animate-in fade-in slide-in-from-top-2 duration-300 min-w-[180px]"
+          className="absolute top-full left-0 mt-2 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 z-[100] p-1.5 animate-in fade-in slide-in-from-top-2 duration-300 min-w-[200px]"
         >
-          <div className="text-center mb-2">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">Horário</span>
-          </div>
-          
-          <div className="flex gap-2 h-48 relative">
+          <div className="flex p-1 gap-1">
             {/* Hours Column */}
             <div 
               ref={hoursRef}
-              className="flex-1 overflow-y-auto scrollbar-hide space-y-1 py-16 px-1"
+              className="flex-1 max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5"
+              role="listbox"
+              aria-label="Selecionar hora"
             >
               {hours.map((h) => {
                 const isSelected = h === currentHour;
@@ -121,25 +134,31 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                   <button
                     key={h}
                     type="button"
+                    role="option"
+                    aria-selected={isSelected}
                     data-hour={h}
                     onClick={() => handleSelectHour(h)}
                     className={`
-                      w-full py-2 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                      w-full py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center
                       ${isSelected 
-                        ? 'bg-[#1e293b] text-white font-bold shadow-lg shadow-slate-200 scale-105 z-10' 
-                        : 'text-slate-300 hover:text-slate-500 font-medium'}
+                        ? 'bg-slate-900 text-white font-bold shadow-md' 
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-medium'}
                     `}
                   >
-                    {h}h
+                    {h}
                   </button>
                 );
               })}
             </div>
 
+            <div className="w-[1px] bg-slate-100 my-2" />
+
             {/* Minutes Column */}
             <div 
               ref={minutesRef}
-              className="flex-1 overflow-y-auto scrollbar-hide space-y-1 py-16 px-1"
+              className="flex-1 max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5"
+              role="listbox"
+              aria-label="Selecionar minutos"
             >
               {minutes.map((m) => {
                 const isSelected = m === currentMinute;
@@ -147,33 +166,33 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                   <button
                     key={m}
                     type="button"
+                    role="option"
+                    aria-selected={isSelected}
                     data-minute={m}
                     onClick={() => handleSelectMinute(m)}
                     className={`
-                      w-full py-2 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                      w-full py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center
                       ${isSelected 
-                        ? 'bg-[#1e293b] text-white font-bold shadow-lg shadow-slate-200 scale-105 z-10' 
-                        : 'text-slate-300 hover:text-slate-500 font-medium'}
+                        ? 'bg-slate-900 text-white font-bold shadow-md' 
+                        : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-medium'}
                     `}
                   >
-                    {m}m
+                    {m}
                   </button>
                 );
               })}
             </div>
-
-            {/* Selection indicators */}
-            <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-white to-transparent pointer-events-none" />
-            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent pointer-events-none" />
           </div>
 
-          <button 
-            type="button"
-            onClick={() => setIsOpen(false)}
-            className="w-full mt-3 py-2.5 rounded-xl bg-slate-50 text-slate-500 text-[10px] font-bold hover:bg-slate-100 transition-colors uppercase tracking-widest"
-          >
-            Confirmar
-          </button>
+          <div className="p-1.5 mt-1 border-t border-slate-50">
+            <button 
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-[10px] font-bold hover:bg-slate-800 transition-colors uppercase tracking-widest shadow-sm"
+            >
+              Confirmar
+            </button>
+          </div>
         </div>
       )}
     </div>

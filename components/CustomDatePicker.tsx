@@ -6,6 +6,7 @@ interface CustomDatePickerProps {
   label?: string;
   required?: boolean;
   className?: string;
+  tabIndex?: number;
 }
 
 const DAYS_OF_WEEK = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
@@ -20,7 +21,8 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   onChange,
   label,
   required = false,
-  className = ''
+  className = '',
+  tabIndex
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -122,6 +124,11 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const selectionStart = inputRef.current?.selectionStart || 0;
     const separators = [2, 5, 10, 13];
+
+    if (e.key === 'Escape') {
+      setIsOpen(false);
+      return;
+    }
 
     if (e.key === 'Enter') {
       e.preventDefault(); // Evita submeter o formulário
@@ -476,7 +483,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   const currentMinute = selectedDate ? selectedDate.getMinutes() : 0;
 
   return (
-    <div className={`relative ${className} ${isOpen ? 'z-[60]' : ''}`} ref={containerRef}>
+    <div className={`relative ${className} ${isOpen ? 'z-[100]' : ''}`} ref={containerRef}>
       {/* Trigger Input */}
       <div
         className={`
@@ -498,6 +505,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                 onChange={handleInputChange}
                 onFocus={() => setIsOpen(true)}
                 placeholder="DD/MM/AAAA HH:mm"
+                tabIndex={tabIndex}
                 className={`font-semibold text-sm bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-300 w-full outline-none transition-colors duration-200 ${isInvalid ? 'text-red-500' : value ? 'text-[#1e293b]' : 'text-slate-400'}`}
             />
         </div>
@@ -523,7 +531,11 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
       {/* Popup */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] border border-slate-100 z-50 p-6 animate-in fade-in slide-in-from-top-4 duration-300 flex flex-col md:flex-row gap-8 min-w-[380px]">
+        <div 
+          role="dialog"
+          aria-label="Calendário e seletor de horário"
+          className="absolute top-full left-0 mt-3 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 z-[100] p-6 animate-in fade-in slide-in-from-top-4 duration-300 flex flex-col md:flex-row gap-8 min-w-[380px]"
+        >
           
           {/* Calendar Section */}
           <div className="flex-1">

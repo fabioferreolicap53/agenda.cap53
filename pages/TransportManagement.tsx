@@ -16,6 +16,49 @@ const TransportManagement: React.FC = () => {
     const [transportFilterStatus, setTransportFilterStatus] = useState<'all' | 'confirmed' | 'rejected'>('all');
     const [actionMessage, setActionMessage] = useState<string | null>(null);
 
+    const handleTransportDecision = async (eventId: string, status: 'confirmed' | 'rejected') => {
+        try {
+            console.log('Sending transport decision directly to record update:', { eventId, status });
+            
+            // Bypass the custom API and try to update the record directly
+            // Note: This requires the user to have update permissions on the agenda_cap53_eventos collection
+            await pb.collection('agenda_cap53_eventos').update(eventId, {
+                transporte_status: status,
+                transporte_justification: ''
+            });
+            
+            console.log('Record updated successfully');
+            
+            setActionMessage(status === 'confirmed' ? 'Confirmado' : 'Recusado');
+            setTimeout(() => setActionMessage(null), 3000);
+            fetchTransportRequests();
+        } catch (err: any) {
+            console.error(`Error processing transport ${status} via direct update:`, err);
+            
+            // If direct update fails, it might be due to API Rules. Fallback to custom API with more logging
+                try {
+                    console.log('Direct update failed, falling back to custom API /api/transport_decision...');
+                    const response = await pb.send('/api/transport_decision', {
+                        method: 'POST',
+                        body: { 
+                            event_id: eventId, 
+                            status: status,
+                            justification: 'Ação realizada pelo setor de transporte.'
+                        }
+                    });
+                    console.log('Response from custom API:', response);
+                
+                setActionMessage(status === 'confirmed' ? 'Confirmado' : 'Recusado');
+                setTimeout(() => setActionMessage(null), 3000);
+                fetchTransportRequests();
+            } catch (apiErr: any) {
+                console.error('Custom API also failed:', apiErr);
+                const errorMsg = apiErr.data?.message || apiErr.message || 'Erro desconhecido';
+                alert(`Erro ao ${status === 'confirmed' ? 'confirmar' : 'recusar'}: ${errorMsg}\n\nVerifique se você tem permissão de edição para esta solicitação.`);
+            }
+        }
+    };
+
     const fetchTransportRequests = useCallback(async () => {
         if (!user) return;
         setLoading(true);
@@ -326,54 +369,14 @@ const TransportManagement: React.FC = () => {
                                             {transportSubTab === 'pending' ? (
                                                 <>
                                                     <button 
-                                                        onClick={async () => {
-                                                            const observation = prompt('Alguma observação para a confirmação? (Opcional):');
-                                                            if (observation === null) return;
-                                                            try {
-                                                                // Use backend API to bypass restrictive API Rules for non-owners
-                                                                await pb.send('/api/transport_decision', {
-                                                                    method: 'POST',
-                                                                    body: { 
-                                                                        event_id: event.id, 
-                                                                        status: 'confirmed',
-                                                                        justification: observation || ''
-                                                                    }
-                                                                });
-                                                                setActionMessage('Confirmado');
-                                                                setTimeout(() => setActionMessage(null), 3000);
-                                                                fetchTransportRequests();
-                                                            } catch (err) {
-                                                                console.error('Error confirming transport:', err);
-                                                                alert('Erro ao confirmar. Verifique os logs.');
-                                                            }
-                                                        }}
+                                                        onClick={() => handleTransportDecision(event.id, 'confirmed')}
                                                         className="h-11 px-6 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-md shadow-slate-200/50 active:scale-95"
                                                     >
                                                         <span className="material-symbols-outlined text-[18px]">check_circle</span>
                                                         Confirmar
                                                     </button>
                                                     <button 
-                                                        onClick={async () => {
-                                                            const justification = prompt('Motivo da recusa:');
-                                                            if (justification === null) return;
-                                                            try {
-                                                                // Use backend API to bypass restrictive API Rules for non-owners
-                                                                await pb.send('/api/transport_decision', {
-                                                                    method: 'POST',
-                                                                    body: { 
-                                                                        event_id: event.id, 
-                                                                        status: 'rejected',
-                                                                        justification: justification
-                                                                    }
-                                                                });
-                                                                setActionMessage('Recusado');
-                                                                setTimeout(() => setActionMessage(null), 3000);
-                                                                fetchTransportRequests();
-                                                            } catch (err) {
-                                                                console.error('Error rejecting transport:', err);
-                                                                alert('Erro ao recusar. Verifique os logs.');
-                                                            }
-                                                        }}
+                                                        onClick={() => handleTransportDecision(event.id, 'rejected')}
                                                         className="h-11 px-6 bg-white text-slate-500 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all active:scale-95"
                                                     >
                                                         Recusar

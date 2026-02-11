@@ -62,6 +62,17 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     };
   }, []);
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsOpen(!isOpen);
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
   const handleSelect = (optionValue: string) => {
     if (multiSelect && Array.isArray(value)) {
       let newValue: string[];
@@ -87,9 +98,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     <div className={`relative ${className} ${isOpen ? 'z-[100]' : 'z-20'}`} ref={containerRef}>
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
+        onKeyDown={handleKeyDown}
+        tabIndex={disabled ? -1 : 0}
+        role="button"
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
         className={`
           w-full h-full px-5 rounded-2xl bg-white border border-[#e2e8f0]/60 
           flex items-center justify-between cursor-pointer transition-all duration-300
+          outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary
           ${isOpen ? 'ring-4 ring-primary/10 border-primary' : ''}
           ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-primary/50'}
         `}

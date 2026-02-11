@@ -326,27 +326,26 @@ const CreateEvent: React.FC = () => {
          const created = await pb.collection('agenda_cap53_eventos').create(eventData);
          eventId = created.id;
          if (selectedParticipants.length > 0) {
-          for (const participantId of selectedParticipants) {
-            try {
-              await pb.collection('agenda_cap53_participantes').create({
-                event: eventId,
-                user: participantId,
-                status: 'pending',
-                role: participantsRoles[participantId] || involvementLevel || 'ORGANIZADOR'
-              });
-              await pb.collection('agenda_cap53_notifications').create({
-                user: participantId,
-                title: 'Novo Convite de Evento',
-                message: `Você foi convidado para o evento "${title}".`,
-                type: 'event_invite',
-                read: false,
-                event: eventId,
-                invite_status: 'pending'
-              });
-            } catch (err) {
-              console.error(`Erro ao criar registros para o participante ${participantId}:`, err);
+          // Create participante records
+          await Promise.all(selectedParticipants.map(participantId => 
+            pb.collection('agenda_cap53_participantes').create({
+              event: eventId,
+              user: participantId,
+              status: 'pending',
+              role: participantsRoles[participantId] || involvementLevel || 'ORGANIZADOR'
+            })
+          ));
+
+          // Send notifications using service
+          await notificationService.bulkCreateNotifications(
+            selectedParticipants.filter(pId => pId !== user?.id),
+            {
+              title: 'Novo Convite de Evento',
+              message: `Você foi convidado para o evento "${title}".`,
+              type: 'event_invite',
+              event: eventId || undefined
             }
-          }
+          );
          }
       }
 
@@ -442,43 +441,49 @@ const CreateEvent: React.FC = () => {
                     .filter((u: any) => u.role === targetRole && u.id !== user?.id)
                     .map((u: any) => u.id);
 
-                  return targetUserIds.map((targetId: string) =>
-                    pb.collection('agenda_cap53_notifications').create({
-                      user: targetId,
+                  if (targetUserIds.length === 0) return [];
+
+                  return notificationService.bulkCreateNotifications(
+                    targetUserIds,
+                    {
                       title: 'Solicitação de Item',
                       message: `O evento "${title}" solicitou o item "${itemNameById.get(req.item) || 'Item'}" (Qtd: ${req.quantity || 1}).`,
-                      type: 'system',
-                      read: false,
+                      type: 'almc_item_request',
                       related_request: req.id,
-                      event: eventId,
-                      data: { kind: 'almc_item_request', quantity: req.quantity || 1, item: req.item },
-                      acknowledged: false,
-                    })
+                      event: eventId || undefined,
+                      data: { kind: 'almc_item_request', quantity: req.quantity || 1, item: req.item }
+                    }
                   );
                 })
               );
             }
 
             if (transporteSuporte && (!isEditing || !originalTransporteSuporte)) {
-              const traUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ filter: 'role = "TRA"' });
-              const traIds = traUsers.filter((traUser: any) => traUser.id !== user?.id).map((traUser: any) => traUser.id);
-              if (traIds.length > 0) {
-                await Promise.all(
-                  traIds.map((traId: string) =>
-                    pb.collection('agenda_cap53_notifications').create({
-                      user: traId,
-                      title: 'Solicitação de Transporte',
-                      message: `O evento "${title}" solicitou suporte de transporte.`,
-                      type: 'system',
-                      read: false,
-                      event: eventId,
-                      data: { kind: 'transport_request' },
-                      acknowledged: false,
-                    })
-                  )
-                );
-              }
+      try {
+        const traUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ 
+          filter: 'role = "TRA"' 
+        });
+        
+        const traIds = traUsers
+          .filter((traUser: any) => traUser.id !== user?.id)
+          .map((traUser: any) => traUser.id);
+
+        if (traIds.length > 0) {
+          await notificationService.bulkCreateNotifications(
+            traIds,
+            {
+              title: 'Solicitação de Transporte',
+              message: `O evento "${title}" solicitou suporte de transporte.`,
+              type: 'transport_request',
+              event: eventId || undefined,
+              data: { kind: 'transport_request' }
             }
+          );
+        }
+      } catch (err) {
+        console.error('Error creating TRA notifications:', err);
+      }
+    }
           } catch (reqErr: any) {
             console.error('Falha ao criar/atualizar solicitações de logística:', reqErr);
             alert(`Evento salvo, mas houve erro ao atualizar itens: ${reqErr.message || 'Erro desconhecido'}`);
@@ -1131,7 +1136,7 @@ const CreateEvent: React.FC = () => {
           {/* Row 1: Essential Data & Participants (Balanced Height) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch relative z-30">
             {/* Essential Information Card */}
-            <section className="lg:col-span-8 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-6">
+            <section className="lg:col-span-8 relative z-20 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-6">
               <div className="flex items-center gap-3 pb-2 border-b border-slate-100/50">
                 <div className="size-12 rounded-2xl bg-slate-800 text-white shadow-lg transition-all duration-500 flex items-center justify-center">
                   <span className="material-symbols-outlined text-2xl font-bold">bolt</span>
@@ -1187,6 +1192,7 @@ const CreateEvent: React.FC = () => {
                   <CustomDatePicker
                     required
                     value={dateStart}
+                    tabIndex={-1}
                     onChange={(val) => {
                       setDateStart(val);
                       // Auto-update end date to +1 hour
@@ -1206,6 +1212,7 @@ const CreateEvent: React.FC = () => {
                   <CustomDatePicker
                     required
                     value={dateEnd}
+                    tabIndex={-1}
                     onChange={setDateEnd}
                   />
                 </div>
@@ -1269,7 +1276,7 @@ const CreateEvent: React.FC = () => {
             </section>
 
             {/* Participants Picker */}
-            <section className="lg:col-span-4 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-5">
+            <section className="lg:col-span-4 relative z-10 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-5">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
                   <div className="size-10 rounded-xl bg-slate-900 text-white shadow-lg flex items-center justify-center">

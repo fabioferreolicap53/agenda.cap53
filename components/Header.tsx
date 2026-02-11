@@ -8,29 +8,42 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [mySpaceCount, setMySpaceCount] = useState(0);
+  const [traPendingCount, setTraPendingCount] = useState(0);
 
   useEffect(() => {
-    if (!user || location.pathname !== '/meu-envolvimento') return;
+    if (!user) return;
 
-    const fetchCount = async () => {
+    const fetchCounts = async () => {
       try {
-        const res = await pb.collection('agenda_cap53_notifications').getList(1, 1, {
-          filter: `user = "${user.id}" && read = false && (type = "event_invite" || type = "event_participation_request")`
-        });
-        setMySpaceCount(res.totalItems);
+        // My Space Count
+        if (location.pathname === '/meu-envolvimento') {
+          const res = await pb.collection('agenda_cap53_notifications').getList(1, 1, {
+            filter: `user = "${user.id}" && read = false && (type = "event_invite" || type = "event_participation_request")`
+          });
+          setMySpaceCount(res.totalItems);
+        }
+
+        // TRA Pending Count
+        if (location.pathname === '/transporte' && (user.role === 'TRA' || user.role === 'ADMIN')) {
+          const res = await pb.collection('agenda_cap53_eventos').getList(1, 1, {
+            filter: 'transporte_suporte = true && transporte_status = "pending"'
+          });
+          setTraPendingCount(res.totalItems);
+        }
       } catch (e) {
-        console.error("Error fetching my space count in header", e);
+        console.error("Error fetching counts in header", e);
       }
     };
 
-    fetchCount();
+    fetchCounts();
 
-    const unsubscribe = pb.collection('agenda_cap53_notifications').subscribe('*', () => {
-      fetchCount();
-    });
+    const collections = ['agenda_cap53_notifications', 'agenda_cap53_eventos'];
+    const unsubscribes = collections.map(col => 
+      pb.collection(col).subscribe('*', () => fetchCounts())
+    );
 
     return () => {
-      pb.collection('agenda_cap53_notifications').unsubscribe('*');
+      unsubscribes.forEach(async (unsub) => (await unsub)());
     };
   }, [user, location.pathname]);
 
@@ -105,6 +118,11 @@ const Header: React.FC = () => {
               {location.pathname === '/meu-envolvimento' && mySpaceCount > 0 && (
                 <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center animate-in zoom-in shadow-sm">
                   {mySpaceCount > 9 ? '9+' : mySpaceCount}
+                </span>
+              )}
+              {location.pathname === '/transporte' && traPendingCount > 0 && (
+                <span className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center animate-in zoom-in shadow-sm">
+                  {traPendingCount > 9 ? '9+' : traPendingCount}
                 </span>
               )}
             </div>
