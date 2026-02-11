@@ -6,7 +6,8 @@ import { useAuth } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
 
 import EventDetailsModal from '../components/EventDetailsModal';
-import { INVOLVEMENT_LEVELS } from '../lib/constants';
+import AdvancedFilters from '../components/AdvancedFilters';
+import { INVOLVEMENT_LEVELS, UNIDADES } from '../lib/constants';
 
 const Calendar: React.FC = () => {
   const { user } = useAuth();
@@ -16,17 +17,97 @@ const Calendar: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Filter State
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    unidades: [] as string[],
+    users: [] as string[],
+    types: [] as string[],
+    involvementLevels: [] as string[],
+    locations: [] as string[],
+    timeRange: [0, 1440] as [number, number],
+  });
+
+  // Options State
+  const [filterOptions, setFilterOptions] = useState({
+    unidades: UNIDADES,
+    users: [] as { id: string; name: string }[],
+    types: [] as { id: string; name: string }[],
+    involvementLevels: INVOLVEMENT_LEVELS,
+    locations: [] as { id: string; name: string }[],
+  });
+
   // Group events by date for efficient lookup
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, any[]> = {};
-    events.forEach(event => {
+    
+    // Apply Filters
+    const filteredEvents = events.filter(event => {
+      // Unidade Filter
+      if (filters.unidades.length > 0) {
+        const eventUnidades = event.unidades || [];
+        if (!filters.unidades.some(u => eventUnidades.includes(u))) return false;
+      }
+
+      // User Filter (Participant/Organizer/Co-organizer)
+      if (filters.users.length > 0) {
+        const isCreator = filters.users.includes(event.user);
+        const isParticipant = (event.participants || []).some((pId: string) => filters.users.includes(pId));
+        if (!isCreator && !isParticipant) return false;
+      }
+
+      // Type Filter
+      if (filters.types.length > 0) {
+        if (!filters.types.includes(event.type)) return false;
+      }
+
+      // Involvement Level Filter
+      if (filters.involvementLevels.length > 0) {
+        // Check creator role
+        const creatorRole = event.creator_role || 'PARTICIPANTE';
+        const isCreatorMatch = filters.involvementLevels.includes(creatorRole) && filters.users.includes(event.user);
+        
+        // Check participant roles
+        const participantRoles = event.participants_roles || {};
+        const isParticipantMatch = (event.participants || []).some((pId: string) => 
+          filters.involvementLevels.includes(participantRoles[pId]) && (filters.users.length === 0 || filters.users.includes(pId))
+        );
+
+        // If user filter is active, we check if the filtered users have the filtered roles
+        // If no user filter, we check if ANY participant/creator has the filtered role
+        if (filters.users.length > 0) {
+          if (!isCreatorMatch && !isParticipantMatch) return false;
+        } else {
+          const hasAnyRoleMatch = filters.involvementLevels.includes(creatorRole) || 
+            Object.values(participantRoles).some((role: any) => filters.involvementLevels.includes(role));
+          if (!hasAnyRoleMatch) return false;
+        }
+      }
+
+      // Location Filter
+      if (filters.locations.length > 0) {
+        if (!filters.locations.includes(event.location)) return false;
+      }
+
+      // Time Range Filter
+      const [minMins, maxMins] = filters.timeRange;
+      if (minMins !== 0 || maxMins !== 1440) {
+        const startDate = new Date(event.date_start);
+        const eventMins = startDate.getHours() * 60 + startDate.getMinutes();
+        if (eventMins < minMins || eventMins > maxMins) return false;
+      }
+
+      return true;
+    });
+
+    filteredEvents.forEach(event => {
       const date = new Date(event.date_start || event.date);
       const key = date.toDateString();
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(event);
     });
     return grouped;
-  }, [events]);
+  }, [events, filters]);
   
   // Initialize state from URL or defaults
   const [currentDate, setCurrentDate] = useState(() => {
@@ -147,6 +228,38 @@ const Calendar: React.FC = () => {
   useEffect(() => {
     fetchEvents();
   }, [currentDate]);
+
+  // Fetch Filter Options
+  useEffect(() => {
+    const fetchFilterOptions = async () => {
+      try {
+        const [users, types, locations] = await Promise.all([
+          pb.collection('agenda_cap53_usuarios').getFullList({
+            sort: 'name',
+            fields: 'id,name'
+          }),
+          pb.collection('agenda_cap53_tipos_evento').getFullList({
+            sort: 'name',
+            filter: 'active = true'
+          }),
+          pb.collection('agenda_cap53_locais').getFullList({
+            sort: 'name'
+          })
+        ]);
+
+        setFilterOptions(prev => ({
+          ...prev,
+          users: users.map(u => ({ id: u.id, name: u.name })),
+          types: types.map(t => ({ id: t.id, name: t.name })),
+          locations: locations.map(l => ({ id: l.id, name: l.name }))
+        }));
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+      }
+    };
+
+    fetchFilterOptions();
+  }, []);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -321,73 +434,161 @@ const Calendar: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full gap-3 max-w-[1700px] mx-auto overflow-hidden">
-      {/* Filters Bar - Fixed Top */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-xl border border-border-light shadow-sm sticky top-0 z-30 transition-all duration-300">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              const today = new Date();
-              setCurrentDate(today);
-              updateURL(viewType, today, true);
-            }}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[18px]">today</span>
-            Hoje
-          </button>
-
-          <div className="flex items-center bg-white rounded-lg p-1 border border-border-light">
+    <div className="flex h-full gap-3 max-w-[1700px] mx-auto overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-full gap-3 overflow-hidden">
+        {/* Filters Bar - Fixed Top */}
+        <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-xl border border-border-light shadow-sm sticky top-0 z-30 transition-all duration-300">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => handleNavigate('prev')}
-              className="size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300 shadow-sm"
+              onClick={() => {
+                const today = new Date();
+                setCurrentDate(today);
+                updateURL(viewType, today, true);
+              }}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
             >
-              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+              <span className="material-symbols-outlined text-[18px]">today</span>
+              Hoje
             </button>
-            <span className="px-4 text-sm font-bold text-text-main min-w-[180px] text-center capitalize">
-              {viewType === 'day'
-                ? currentDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-                : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
-            </span>
+
+            <div className="flex items-center bg-white rounded-lg p-1 border border-border-light">
+              <button
+                onClick={() => handleNavigate('prev')}
+                className="size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+              </button>
+              <span className="px-4 text-sm font-bold text-text-main min-w-[180px] text-center capitalize">
+                {viewType === 'day'
+                  ? currentDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                  : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                onClick={() => handleNavigate('next')}
+                className="size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex bg-white p-1 rounded-lg border border-border-light">
+              <button
+                onClick={() => updateURL('day', currentDate)}
+                className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'day' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+              >
+                Dia
+              </button>
+              <button
+                onClick={() => updateURL('week', currentDate)}
+                className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'week' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+              >
+                Semana
+              </button>
+              <button
+                onClick={() => updateURL('month', currentDate)}
+                className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'month' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+              >
+                Mês
+              </button>
+              <button
+                onClick={() => updateURL('agenda', currentDate)}
+                className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'agenda' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+              >
+                Agenda
+              </button>
+            </div>
+
             <button
-              onClick={() => handleNavigate('next')}
-              className="size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300 shadow-sm"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className={`flex items-center gap-2 px-3 py-2 text-sm font-bold rounded-lg border transition-all duration-300 ${showAdvancedFilters ? 'bg-primary text-white border-primary shadow-md' : 'bg-white text-text-secondary border-border-light hover:border-primary/30 hover:bg-primary/[0.02]'}`}
             >
-              <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+              <span className="material-symbols-outlined text-[20px]">filter_list</span>
+              <span className="hidden sm:inline">Filtros</span>
+              {Object.values(filters).some(f => f.length > 0) && (
+                <span className="flex items-center justify-center size-5 bg-white text-primary text-[10px] rounded-full font-black">
+                  {Object.values(filters).reduce((a, b) => a + b.length, 0)}
+                </span>
+              )}
             </button>
           </div>
         </div>
 
-        <div className="flex bg-white p-1 rounded-lg border border-border-light">
-          <button
-            onClick={() => updateURL('day', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'day' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
-          >
-            Dia
-          </button>
-          <button
-            onClick={() => updateURL('week', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'week' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
-          >
-            Semana
-          </button>
-          <button
-            onClick={() => updateURL('month', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'month' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
-          >
-            Mês
-          </button>
-          <button
-            onClick={() => updateURL('agenda', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'agenda' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
-          >
-            Agenda
-          </button>
-        </div>
-      </div>
+        {/* Active Filter Chips */}
+        {Object.entries(filters).some(([k, v]) => k === 'timeRange' ? (v as [number, number])[0] !== 0 || (v as [number, number])[1] !== 1440 : (v as any[]).length > 0) && (
+          <div className="flex flex-wrap gap-2 pb-1">
+            {Object.entries(filters).map(([category, values]) => {
+              if (category === 'timeRange') {
+                const [min, max] = values as [number, number];
+                if (min === 0 && max === 1440) return null;
+                const formatTime = (mins: number) => {
+                  const h = Math.floor(mins / 60).toString().padStart(2, '0');
+                  const m = (mins % 60).toString().padStart(2, '0');
+                  return `${h}:${m}`;
+                };
+                return (
+                  <div 
+                    key="timeRange-chip"
+                    className="flex items-center gap-1.5 px-3 py-1 bg-white border border-primary/20 rounded-full text-[11px] font-bold text-primary shadow-sm"
+                  >
+                    <span>{formatTime(min)} - {formatTime(max)}</span>
+                    <button 
+                      onClick={() => setFilters(prev => ({ ...prev, timeRange: [0, 1440] }))}
+                      className="hover:text-primary-active transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">close</span>
+                    </button>
+                  </div>
+                );
+              }
+              
+              return (values as string[]).map((value) => {
+                let label = value;
+                if (category === 'users') label = filterOptions.users.find(u => u.id === value)?.name || value;
+                if (category === 'types') label = filterOptions.types.find(t => t.id === value)?.name || value;
+                if (category === 'locations') label = filterOptions.locations.find(l => l.id === value)?.name || value;
+                if (category === 'involvementLevels') label = filterOptions.involvementLevels.find(l => l.value === value)?.label || value;
+                
+                return (
+                  <div 
+                    key={`${category}-${value}`}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-white border border-primary/20 rounded-full text-[11px] font-bold text-primary shadow-sm"
+                  >
+                    <span className="max-w-[150px] truncate">{label}</span>
+                    <button 
+                      onClick={() => {
+                        setFilters(prev => ({
+                          ...prev,
+                          [category]: (prev[category as keyof typeof filters] as string[]).filter(v => v !== value)
+                        }));
+                      }}
+                      className="hover:text-primary-active transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">close</span>
+                    </button>
+                  </div>
+                );
+              });
+            })}
+            <button 
+              onClick={() => setFilters({
+                unidades: [],
+                users: [],
+                types: [],
+                involvementLevels: [],
+                locations: [],
+                timeRange: [0, 1440],
+              })}
+              className="text-[11px] font-bold text-text-secondary hover:text-primary transition-colors px-2 py-1"
+            >
+              Limpar tudo
+            </button>
+          </div>
+        )}
 
-      {/* Calendar Grid Container */}
-      <div className="bg-white rounded-xl border border-border-light shadow-sm flex-1 flex flex-col overflow-hidden min-h-[400px]">
+        {/* Calendar Grid Container */}
+        <div className="bg-white rounded-xl border border-border-light shadow-sm flex-1 flex flex-col overflow-hidden min-h-[400px]">
         {viewType === 'month' && (
           <>
             <div className="grid grid-cols-7 border-b border-border-light bg-white sticky top-0 z-10">
@@ -638,8 +839,17 @@ const Calendar: React.FC = () => {
           initialChatOpen={initialChatOpen}
         />
       )}
+
+      <AdvancedFilters
+        isOpen={showAdvancedFilters}
+        onClose={() => setShowAdvancedFilters(false)}
+        filters={filters}
+        setFilters={setFilters}
+        options={filterOptions}
+      />
     </div>
-  );
+  </div>
+);
 };
 
 const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: number, height: number }> = ({ event: propEvent, visible, x, y, height }) => {

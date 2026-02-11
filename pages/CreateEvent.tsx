@@ -3,44 +3,12 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
+import { INVOLVEMENT_LEVELS, UNIDADES, CATEGORIAS_PROFISSIONAIS } from '../lib/constants';
 import CustomSelect from '../components/CustomSelect';
 import CustomDatePicker from '../components/CustomDatePicker';
 import CustomTimePicker from '../components/CustomTimePicker';
 import LocationField, { LocationState, normalizeBoolean } from '../components/LocationField';
 import ConflictModal from '../components/ConflictModal';
-
-const UNIDADES = [
-  'CF ALICE DE JESUS REGO', 'CF DEOLINDO COUTO', 'CF EDSON ABDALLA SAAD',
-  'CF ERNANI DE PAIVA FERREIRA BRAGA', 'CF HELANDE DE MELLO GONÇALVES',
-  'CF ILZO MOTTA DE MELLO', 'CF JAMIL HADDAD', 'CF JOÃO BATISTA CHAGAS',
-  'CF JOSÉ ANTÔNIO CIRAUDO', 'CF LENICE MARIA MONTEIRO COELHO',
-  'CF LOURENÇO DE MELLO', 'CF SAMUEL PENHA VALLE', 'CF SÉRGIO AROUCA',
-  'CF VALÉRIA GOMES ESTEVES', 'CF WALDEMAR BERARDINELLI', 'CMS ADELINO SIMÕES',
-  'CMS ALOYSIO AMÂNCIO DA SILVA', 'CMS CATTAPRETA', 'CMS CESÁRIO DE MELO',
-  'CMS CYRO DE MELLO', 'CMS DÉCIO AMARAL FILHO', 'CMS EMYDIO CABRAL',
-  'CMS FLORIPES GALDINO PEREIRA', 'CMS MARIA APARECIDA DE ALMEIDA',
-  'CMS SÁVIO ANTUNES', 'CAPS SIMÃO BACAMARTE', 'CAPSAD II JÚLIO CÉSAR DE CARVALHO',
-  'SMS POLICLÍNICA LINCOLN DE FREITAS FILHO'
-];
-
-const CATEGORIAS_PROFISSIONAIS = [
-  'ADMINISTRATIVO(A)', 'AGENTE COMUNITÁRIO DE SAÚDE (ACS)',
-  'AGENTE DE VIGILÂNCIA SANITÁRIA (AVS)', 'ASSISTENTE SOCIAL',
-  'AUXILIAR DE SAÚDE BUCAL', 'AUXILIAR DE SERVIÇOS GERAIS',
-  'CONTROLADOR DE ACESSO', 'DENTISTA', 'DIRETOR',
-  'ENFERMEIRO(A)', 'FARMACÊUTICO(A)', 'FISIOTERAPEUTA',
-  'FONOAUDIÓLOGO(A)', 'GERENTE', 'MÉDICO(A)', 'NUTRICIONISTA',
-  'PROFESSOR(A) ED. FÍSICA', 'PSICÓLOGO(A)',
-  'RT DE ENFERMAGEM (UNIDADE)', 'RT MÉDICO (UNIDADE)',
-  'TÉCNICO(A) DE ENFERMAGEM', 'TÉCNICO(A) DE FARMÁCIA',
-  'TÉCNICO(A) DE SAÚDE BUCAL', 'TERAPEUTA OCUPACIONAL'
-];
-
-const INVOLVEMENT_LEVELS = [
-  { value: 'PARTICIPANTE', label: 'PARTICIPANTE' },
-  { value: 'ORGANIZADOR', label: 'ORGANIZADOR' },
-  { value: 'COORGANIZADOR', label: 'COORGANIZADOR' }
-];
 
 const CreateEvent: React.FC = () => {
   const { user } = useAuth();
