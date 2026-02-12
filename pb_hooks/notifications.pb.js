@@ -52,9 +52,43 @@ $app.onBeforeServe((e) => {
             $app.dao().saveRecord(event);
             $app.logger().info(`Transport Decision saved successfully: Event=${eventId}, Status=${status}`);
 
-            // Notification is now handled by onRecordAfterUpdateRequest trigger
-            // This ensures notifications are sent regardless of how the record was updated (API or Direct)
-            
+            // --- NOVA LÓGICA DE NOTIFICAÇÃO DIRETA (Bypass Hook) ---
+            try {
+                const creatorId = event.getString('user');
+                if (creatorId) {
+                    const notifications = $app.dao().findCollectionByNameOrId('agenda_cap53_notifications');
+                    const record = new Record(notifications);
+                    const eventTitle = event.getString('title') || 'Evento';
+
+                    record.set('user', creatorId);
+                    record.set('read', false);
+                    record.set('event', eventId);
+                    record.set('acknowledged', false);
+                    record.set('type', status === 'rejected' ? 'refusal' : 'system');
+                    record.set('title', status === 'rejected' ? 'Transporte Recusado' : 'Transporte Confirmado');
+                    
+                    const msgBase = status === 'rejected' ? 'foi recusada' : 'foi confirmada';
+                    record.set('message', `A solicitação de transporte para o evento "${eventTitle}" ${msgBase}.\n\nJustificativa: ${justification}`);
+                    
+                    record.set('data', JSON.stringify({
+                        kind: 'transport_decision',
+                        action: status,
+                        decided_by: authRecord.id,
+                        decided_by_name: authRecord.getString('name') || authRecord.getString('email'),
+                        rejected_by: status === 'rejected' ? authRecord.id : undefined,
+                        rejected_by_name: status === 'rejected' ? (authRecord.getString('name') || authRecord.getString('email')) : undefined,
+                        justification: justification,
+                        decided_at: new Date().toISOString()
+                    }));
+
+                    $app.dao().saveRecord(record);
+                    $app.logger().info(`Direct Notification Created for ${creatorId}`);
+                }
+            } catch (notifErr) {
+                $app.logger().error('Error creating direct notification', notifErr);
+            }
+            // -------------------------------------------------------
+
             return c.json(200, { success: true });
         } catch (err) {
             $app.logger().error('Error in transport_decision API', err);
