@@ -745,14 +745,39 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
   const endDate = new Date(event.date_end || event.date_start || event.date);
   const creatorInitial = (event.expand?.user?.name || 'S')[0].toUpperCase();
 
-  // Helper to determine status for Almc/Copa
-  const almcStatus = event.almoxarifado_items?.length > 0 
-    ? (event.almoxarifado_confirmed_items?.length === event.almoxarifado_items.length ? 'confirmed' : 'pending') 
-    : null;
+  // Helper to determine status for Almc/Copa/Inf
+  const getRequestStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
+    // Priority 1: Check actual requests (real-time data)
+    const categoryRequests = requests.filter(r => r.expand?.item?.category === category);
     
-  const copaStatus = event.copa_items?.length > 0 
-    ? (event.copa_confirmed_items?.length === event.copa_items.length ? 'confirmed' : 'pending') 
-    : null;
+    if (categoryRequests.length > 0) {
+      const allConfirmed = categoryRequests.every(r => r.status === 'approved');
+      const anyRejected = categoryRequests.some(r => r.status === 'rejected');
+
+      if (anyRejected) return 'rejected';
+      if (allConfirmed) return 'confirmed';
+      return 'pending';
+    }
+
+    // Priority 2: Fallback to event summary fields (static data from fetchEvents)
+    // This is useful for Informática and initial states
+    const items = category === 'ALMOXARIFADO' ? (event.almoxarifado_items || []) :
+                  category === 'COPA' ? (event.copa_items || []) :
+                  (event.informatica_items || []);
+                  
+    if (items.length === 0) return null;
+
+    const confirmedCount = category === 'ALMOXARIFADO' ? (event.almoxarifado_confirmed_items?.length || 0) :
+                           category === 'COPA' ? (event.copa_confirmed_items?.length || 0) :
+                           (event.informatica_confirmed_items?.length || 0);
+
+    // If we don't have request records yet, we only know if it's all confirmed or pending
+    return (confirmedCount === items.length && items.length > 0) ? 'confirmed' : 'pending';
+  };
+
+  const almcStatus = getRequestStatus('ALMOXARIFADO');
+  const copaStatus = getRequestStatus('COPA');
+  const infStatus = getRequestStatus('INFORMATICA');
 
   const pStatus = event.participants_status || {};
   const pRoles = event.participants_roles || {};
@@ -788,11 +813,15 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
   }
 
   const getStatusStyle = (status: string) => {
-    return status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100';
+    if (status === 'confirmed') return 'bg-green-50 text-green-700 border-green-100';
+    if (status === 'rejected') return 'bg-red-50 text-red-700 border-red-100';
+    return 'bg-yellow-50 text-yellow-700 border-yellow-100';
   };
 
   const getStatusLabel = (status: string) => {
-    return status === 'confirmed' ? 'Confirmado' : 'Pendente';
+    if (status === 'confirmed') return 'Confirmado';
+    if (status === 'rejected') return 'Recusado';
+    return 'Pendente';
   };
 
   return createPortal(
@@ -870,7 +899,7 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
         </div>
 
         {/* Minimal Status Indicators */}
-        {(event.transporte_suporte || almcStatus || copaStatus) && (
+        {(event.transporte_suporte || almcStatus || copaStatus || infStatus) && (
           <div className="flex flex-wrap gap-1.5 pt-1">
             {event.transporte_suporte && (
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${
@@ -894,6 +923,12 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getStatusStyle(copaStatus)}`}>
                 <span className="material-symbols-outlined text-[12px]">restaurant</span>
                 Copa {getStatusLabel(copaStatus)}
+              </div>
+            )}
+            {infStatus && (
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getStatusStyle(infStatus)}`}>
+                <span className="material-symbols-outlined text-[12px]">terminal</span>
+                Inf {getStatusLabel(infStatus)}
               </div>
             )}
           </div>
