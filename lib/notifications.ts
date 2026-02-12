@@ -54,7 +54,7 @@ export const notificationService = {
       event,
       related_request,
       read: false,
-      invite_status: type === 'event_invite' ? 'pending' : null,
+      invite_status: (type === 'event_invite' || type === 'event_participation_request') ? 'pending' : null,
       data,
       acknowledged: false
     });

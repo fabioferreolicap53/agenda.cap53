@@ -333,7 +333,7 @@ const MyInvolvement: React.FC = () => {
                 setCreatedEvents(res.items as any);
             } else if (activeTab === 'invites') {
                 res = await pb.collection('agenda_cap53_notifications').getList(page, 20, {
-                    filter: `user = "${user.id}" && (type = "event_invite" || type = "event_participation_request") && invite_status = "pending"${debouncedSearch ? ` && title ~ "${debouncedSearch}"` : ''}`,
+                    filter: `user = "${user.id}" && (type = "event_invite" || type = "event_participation_request") && (invite_status = "pending" || invite_status = null)${debouncedSearch ? ` && title ~ "${debouncedSearch}"` : ''}`,
                     sort: '-created',
                     expand: 'event,event.location,event.user'
                 });
