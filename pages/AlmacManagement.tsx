@@ -398,17 +398,6 @@ const AlmacManagement: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Estoque Inicial</label>
-                                    <input
-                                        type="number"
-                                        value={newItemStock}
-                                        onChange={(e) => setNewItemStock(Number(e.target.value))}
-                                        className="rounded-xl border border-slate-100 bg-slate-50/50 h-12 px-4 focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900/20 outline-none transition-all text-sm font-medium"
-                                        min="0"
-                                    />
-                                </div>
-
                                 <div className="flex gap-3 pt-4">
                                     {editingId && (
                                         <button
@@ -457,14 +446,13 @@ const AlmacManagement: React.FC = () => {
                                         <tr className="bg-slate-50/50 border-b border-slate-100">
                                             <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
                                             <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
-                                            <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Estoque</th>
                                             <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
                                         {loading ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-20 text-center">
+                                                <td colSpan={4} className="px-6 py-20 text-center">
                                                     <div className="flex flex-col items-center gap-3">
                                                         <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
                                                         <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando estoque...</p>
@@ -473,7 +461,7 @@ const AlmacManagement: React.FC = () => {
                                             </tr>
                                         ) : filteredItems.length === 0 ? (
                                             <tr>
-                                                <td colSpan={5} className="px-6 py-32 text-center">
+                                                <td colSpan={4} className="px-6 py-32 text-center">
                                                     <div className="flex flex-col items-center gap-4">
                                                         <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center">
                                                             <span className="material-symbols-outlined text-3xl text-slate-200">inventory_2</span>
@@ -502,14 +490,6 @@ const AlmacManagement: React.FC = () => {
                                                         }`}>
                                                             {item.category === 'COPA' ? 'Copa' : 'Almoxarifado'}
                                                         </span>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-sm font-black ${item.stock <= 5 ? 'text-rose-600' : 'text-slate-700'}`}>
-                                                                {item.stock || 0}
-                                                            </span>
-                                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{item.unit || 'un'}</span>
-                                                        </div>
                                                     </td>
                                                     <td className="px-6 py-5">
                                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">

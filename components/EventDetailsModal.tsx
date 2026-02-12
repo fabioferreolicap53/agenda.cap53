@@ -184,6 +184,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const handleRequestParticipation = async () => {
     if (!user) return;
     
+    // Verifica se o evento é restrito
+    if (event.is_restricted) {
+      alert('Este evento é restrito e não permite novas solicitações de participação.');
+      return;
+    }
+
     // Safety check for restricted roles
     if (['TRA', 'ALMC', 'DCA', 'CE'].includes(user.role)) {
       alert('Seu perfil não possui permissão para solicitar participação em eventos.');

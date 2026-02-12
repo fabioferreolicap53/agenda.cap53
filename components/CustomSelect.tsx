@@ -104,10 +104,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={`
-          w-full h-full px-5 rounded-2xl bg-white border border-[#e2e8f0]/60 
+          w-full h-full px-4 rounded-lg bg-white border border-gray-300 
           flex items-center justify-between cursor-pointer transition-all duration-300
-          outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary
-          ${isOpen ? 'ring-4 ring-primary/10 border-primary' : ''}
+          outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+          ${isOpen ? 'ring-2 ring-primary border-transparent' : ''}
           ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-primary/50'}
         `}
       >
@@ -117,7 +117,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     {startIcon}
                 </span>
             )}
-            <span className={`font-semibold text-sm truncate ${value && (Array.isArray(value) ? value.length > 0 : value !== '') ? 'text-[#1e293b]' : 'text-gray-400'}`}>
+            <span className={`text-sm truncate ${value && (Array.isArray(value) ? value.length > 0 : value !== '') ? 'text-[#1e293b]' : 'text-gray-400'}`}>
               {getLabel()}
             </span>
         </div>
