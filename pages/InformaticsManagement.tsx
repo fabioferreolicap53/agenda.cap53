@@ -285,11 +285,6 @@ const InformaticsManagement: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-8 max-w-[1400px] mx-auto w-full p-4 md:p-8">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Gestão de Informática</h1>
-                <p className="text-slate-500 font-medium">Controle de inventário e solicitações de recursos tecnológicos.</p>
-            </div>
-
             <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl w-fit">
                 <button
                     onClick={() => setActiveView('inventory')}

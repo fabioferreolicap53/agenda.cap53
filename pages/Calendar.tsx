@@ -321,65 +321,65 @@ const Calendar: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full gap-3 max-w-[1700px] mx-auto overflow-hidden">
+    <div className="flex flex-col h-full gap-2 md:gap-3 max-w-[1700px] mx-auto overflow-hidden">
       {/* Filters Bar - Fixed Top */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-white p-3 rounded-xl border border-border-light shadow-sm sticky top-0 z-30 transition-all duration-300">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-4 bg-white p-3 md:p-4 rounded-xl border border-border-light shadow-sm sticky top-0 z-30 transition-all duration-300">
+        <div className="flex items-center justify-between md:justify-start gap-3">
           <button
             onClick={() => {
               const today = new Date();
               setCurrentDate(today);
               updateURL(viewType, today, true);
             }}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs font-black uppercase tracking-wider text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
+            className="flex items-center gap-2 px-3 py-2 md:py-1.5 text-[10px] md:text-xs font-black uppercase tracking-wider text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
           >
             <span className="material-symbols-outlined text-[18px]">today</span>
             Hoje
           </button>
 
-          <div className="flex items-center bg-white rounded-lg p-1 border border-border-light">
+          <div className="flex flex-1 md:flex-none items-center justify-between bg-slate-50 md:bg-white rounded-lg p-1 border border-border-light">
             <button
               onClick={() => handleNavigate('prev')}
-              className="size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300 shadow-sm"
+              className="size-9 md:size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300"
             >
               <span className="material-symbols-outlined text-[20px]">chevron_left</span>
             </button>
-            <span className="px-4 text-sm font-bold text-text-main min-w-[180px] text-center capitalize">
+            <span className="px-2 md:px-4 text-[11px] md:text-sm font-bold text-text-main min-w-[120px] md:min-w-[180px] text-center capitalize">
               {viewType === 'day'
-                ? currentDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+                ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
                 : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
             </span>
             <button
               onClick={() => handleNavigate('next')}
-              className="size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300 shadow-sm"
+              className="size-9 md:size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300"
             >
               <span className="material-symbols-outlined text-[20px]">chevron_right</span>
             </button>
           </div>
         </div>
 
-        <div className="flex bg-white p-1 rounded-lg border border-border-light">
+        <div className="flex bg-slate-100/50 md:bg-white p-1 rounded-xl md:rounded-lg border border-border-light overflow-x-auto custom-scrollbar-hide">
           <button
             onClick={() => updateURL('day', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'day' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'day' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
           >
             Dia
           </button>
           <button
             onClick={() => updateURL('week', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'week' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'week' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
           >
             Semana
           </button>
           <button
             onClick={() => updateURL('month', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'month' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'month' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
           >
             Mês
           </button>
           <button
             onClick={() => updateURL('agenda', currentDate)}
-            className={`px-4 py-1.5 text-sm font-medium rounded transition-all duration-300 ${viewType === 'agenda' ? 'bg-primary text-white shadow-sm border border-primary/20 font-bold' : 'text-text-secondary hover:text-text-main hover:bg-primary/[0.02]'}`}
+            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'agenda' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
           >
             Agenda
           </button>

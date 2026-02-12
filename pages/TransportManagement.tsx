@@ -148,11 +148,6 @@ const TransportManagement: React.FC = () => {
                     </div>
                 </div>
             )}
-
-            <div className="flex flex-col gap-2">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">Gestão de Transporte</h1>
-                <p className="text-slate-500 font-medium">Controle e acompanhamento de solicitações de deslocamento para eventos.</p>
-            </div>
             
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4">
                 <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">

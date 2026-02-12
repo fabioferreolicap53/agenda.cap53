@@ -789,31 +789,20 @@ const Requests: React.FC = () => {
     }, [historyNotifications, canSeeAlmac]);
 
     return (
-        <div className="flex flex-col gap-6 max-w-[1300px] mx-auto w-full">
-            <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-                    {user?.role === 'DCA' ? 'Central de TI' : user?.role === 'ALMC' ? 'Gestão de Recursos' : 'Minhas Notificações'}
-                </h1>
-                <p className="text-slate-500 text-sm font-medium">
-                    {user?.role === 'DCA' ? 'Gerencie solicitações de equipamentos e suporte para eventos.' : 
-                     user?.role === 'ALMC' ? 'Acompanhe e responda pedidos de almoxarifado e copa.' : 
-                     'Acompanhe seus convites e atualizações de eventos.'}
-                </p>
-            </div>
-
+        <div className="flex flex-col gap-4 md:gap-6 max-w-[1300px] mx-auto w-full px-4 md:px-0">
             {actionMessage && (
-                <div className="fixed top-4 right-4 bg-green-600 text-white px-6 py-4 rounded-xl shadow-2xl z-50 animate-bounce flex items-center gap-3 border-2 border-green-400">
-                    <span className="material-symbols-outlined">notifications_active</span>
-                    <p className="font-bold">{actionMessage}</p>
+                <div className="fixed top-4 right-4 left-4 md:left-auto bg-green-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl shadow-2xl z-50 animate-bounce flex items-center gap-3 border-2 border-green-400">
+                    <span className="material-symbols-outlined text-[20px] md:text-2xl">notifications_active</span>
+                    <p className="font-bold text-xs md:text-base">{actionMessage}</p>
                 </div>
             )}
             
             {canSeeAlmac && (
-                 <div className="flex gap-4 border-b border-slate-200">
+                 <div className="flex gap-1 md:gap-4 border-b border-slate-200 overflow-x-auto custom-scrollbar-hide">
                     {canSeeAlmac && (
                         <button
                             onClick={() => setActiveTab('almac')}
-                            className={`pb-3 px-4 text-sm font-bold transition-all relative ${activeTab === 'almac' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`pb-3 px-3 md:px-4 text-[11px] md:text-sm font-bold transition-all relative whitespace-nowrap ${activeTab === 'almac' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             {user?.role === 'DCA' ? 'Informática' : 'Almoxarifado & Copa'}
                             {activeTab === 'almac' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-t-full" />}
@@ -821,11 +810,11 @@ const Requests: React.FC = () => {
                     )}
                     <button
                         onClick={() => setActiveTab('notifications')}
-                        className={`pb-3 px-4 text-sm font-bold transition-all relative ${activeTab === 'notifications' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
+                        className={`pb-3 px-3 md:px-4 text-[11px] md:text-sm font-bold transition-all relative whitespace-nowrap ${activeTab === 'notifications' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'}`}
                     >
                         Notificações
                         {filteredNotifications.length > 0 && (
-                            <span className="ml-2 bg-slate-800 text-white text-[10px] px-1.5 py-0.5 rounded-full">{filteredNotifications.length}</span>
+                            <span className="ml-2 bg-slate-800 text-white text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full">{filteredNotifications.length}</span>
                         )}
                         {activeTab === 'notifications' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-t-full" />}
                     </button>

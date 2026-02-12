@@ -4,7 +4,7 @@ import { useAuth, UserRole } from './AuthContext';
 import { pb } from '../lib/pocketbase';
 
 const Sidebar: React.FC = () => {
-  const { user, setRole, logout, updateStatus } = useAuth();
+  const { user, setRole, logout, updateStatus, isSidebarOpen, setSidebarOpen } = useAuth();
   const [showStatusMenu, setShowStatusMenu] = React.useState(false);
   const [notificationCount, setNotificationCount] = React.useState(0);
   const [mySpaceCount, setMySpaceCount] = React.useState(0);
@@ -94,251 +94,268 @@ const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="hidden w-64 flex-col border-r border-border-light bg-white lg:flex h-full">
-      <div className="flex flex-col h-full justify-between p-4">
-        <div className="flex flex-col gap-6">
-          <div className="flex gap-3 px-2 py-2 items-center">
-            <div className="bg-primary rounded-lg size-10 flex items-center justify-center text-white shadow-lg shadow-primary/30">
-              <span className="material-symbols-outlined text-2xl">event_note</span>
-            </div>
-            <div className="flex flex-col">
-              <h1 className="text-text-main text-lg font-bold leading-normal">Agenda Cap5.3</h1>
-              <p className="text-text-secondary text-xs font-normal">
-                {user?.role === 'ADMIN' ? 'Espaço do Admin' : `Portal ${
-                  user?.role === 'ALMC' ? 'Almoxarifado' :
-                  user?.role === 'TRA' ? 'Transporte' :
-                  user?.role === 'CE' ? 'Cerimonial' :
-                  user?.role === 'DCA' ? 'Informática' :
-                  user?.role || 'Usuário'
-                }`}
-              </p>
-            </div>
-          </div>
+    <>
+      {/* Mobile Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] lg:hidden animate-in fade-in duration-300"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
-          <nav className="flex flex-col gap-1">
-            <NavLink to="/calendar" className={linkClass}>
-              {({ isActive }) => (
-                <>
-                  <span className={iconClass(isActive)}>calendar_month</span>
-                  <p className="text-sm font-bold">Calendário</p>
-                </>
-              )}
-            </NavLink>
-
-            {(user?.role === 'ADMIN' || user?.role === 'USER' || user?.role === 'CE' || !user?.role) && (
-              <NavLink to="/create-event" className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <span className={iconClass(isActive)}>add_circle</span>
-                    <p className="text-sm font-bold">Novo Evento</p>
-                  </>
-                )}
-              </NavLink>
-            )}
-
-            <NavLink to="/chat" className={linkClass}>
-              {({ isActive }) => (
-                <>
-                  <span className={iconClass(isActive)}>chat</span>
-                  <p className="text-sm font-bold">Mensagens</p>
-                </>
-              )}
-            </NavLink>
-
-            <NavLink to="/requests" className={linkClass}>
-              {({ isActive }) => (
-                <>
-                  <div className="relative">
-                    <span className={iconClass(isActive)}>notifications</span>
-                    {notificationCount > 0 && (
-                      <span className="absolute -top-1 -right-1 size-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[10px] text-white font-bold">
-                        {notificationCount > 9 ? '9+' : notificationCount}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm font-bold">Notificações</p>
-                </>
-              )}
-            </NavLink>
-
-            {user?.role === 'ADMIN' && (
-              <NavLink to="/reports" className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <span className={iconClass(isActive)}>bar_chart</span>
-                    <p className="text-sm font-bold">Relatórios</p>
-                  </>
-                )}
-              </NavLink>
-            )}
-
-            {(user?.role === 'ADMIN' || user?.role === 'ALMC') && (
-              <NavLink to="/almoxarifado" className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <span className={iconClass(isActive)}>inventory_2</span>
-                    <p className="text-sm font-bold">Almoxarifado e Copa</p>
-                  </>
-                )}
-              </NavLink>
-            )}
-
-            {(user?.role === 'ADMIN' || user?.role === 'DCA') && (
-              <NavLink to="/informatica" className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <span className={iconClass(isActive)}>computer</span>
-                    <p className="text-sm font-bold">Informática</p>
-                  </>
-                )}
-              </NavLink>
-            )}
-
-            {(user?.role === 'ADMIN' || user?.role === 'TRA') && (
-              <NavLink to="/transporte" className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <span className={iconClass(isActive)}>directions_car</span>
-                    <p className="text-sm font-bold">Transporte</p>
-                  </>
-                )}
-              </NavLink>
-            )}
-
-            {(user?.role === 'ADMIN' || user?.role === 'CE') && (
-              <NavLink to="/locais" className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <span className={iconClass(isActive)}>location_on</span>
-                    <p className="text-sm font-bold">Gestão de Locais e Eventos</p>
-                  </>
-                )}
-              </NavLink>
-            )}
-
-            <NavLink to="/equipe" className={linkClass}>
-              {({ isActive }) => (
-                <>
-                  <span className={iconClass(isActive)}>groups</span>
-                  <p className="text-sm font-bold">Equipe</p>
-                </>
-              )}
-            </NavLink>
-
-            {(user?.role === 'ADMIN' || user?.role === 'USER' || user?.role === 'CE') && (
-              <NavLink to="/meu-envolvimento" className={linkClass}>
-                {({ isActive }) => (
-                  <>
-                    <div className="relative">
-                      <span className={iconClass(isActive)}>analytics</span>
-                      {mySpaceCount > 0 && (
-                        <span className="absolute -top-1 -right-1 size-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[10px] text-white font-bold">
-                          {mySpaceCount > 9 ? '9+' : mySpaceCount}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm font-bold">Meu Espaço</p>
-                  </>
-                )}
-              </NavLink>
-            )}
-          </nav>
-        </div>
-
-        <div className="flex flex-col gap-4 border-t border-border-light pt-4">
-          <div className="flex flex-col gap-2 px-3">
-            <div className="flex items-center gap-3">
-              <div
-                className="relative cursor-pointer"
-                onClick={() => setShowStatusMenu(!showStatusMenu)}
-              >
-                <div
-                  className="size-10 rounded-full bg-cover bg-center ring-2 ring-primary/5 hover:ring-primary/40 transition-all"
-                  style={{ backgroundImage: `url(${user?.avatar ? pb.files.getUrl(user, user.avatar) : 'https://picsum.photos/100/100'})` }}
-                ></div>
-                <div className={`absolute -bottom-0.5 -right-0.5 size-3.5 border-2 border-white rounded-full ${user?.status === 'Online' ? 'bg-green-500' :
-                  user?.status === 'Ausente' ? 'bg-amber-500' :
-                    user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-primary/20'
-                    }`}></div>
-
-                {/* Status Selector Dropdown */}
-                {showStatusMenu && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-[40]"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowStatusMenu(false);
-                      }}
-                    />
-                    <div
-                      className="absolute bottom-full left-0 mb-2 w-32 bg-white rounded-lg shadow-xl border border-border-light z-[50] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <div className="py-1">
-                        {(['Online', 'Ausente', 'Ocupado', 'Offline'] as const).map((s) => (
-                          <button
-                            key={s}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                await updateStatus(s);
-                              } catch (err) {
-                                console.error('Error updating status:', err);
-                                alert('Erro ao atualizar status. Tente novamente.');
-                              }
-                              setShowStatusMenu(false);
-                            }}
-                            className="w-full px-3 py-1.5 text-[10px] font-bold text-left hover:bg-primary/[0.02] flex items-center gap-2 transition-colors uppercase"
-                          >
-                            <span className={`size-2 rounded-full ${s === 'Online' ? 'bg-green-500' :
-                              s === 'Ausente' ? 'bg-amber-500' :
-                                s === 'Ocupado' ? 'bg-red-500' : 'bg-primary/20'
-                              }`}></span>
-                            {s}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              <div className="flex flex-col overflow-hidden">
-                <p className="text-sm font-bold text-text-main truncate">{user?.name || 'Membro do Time'}</p>
-                <p className="text-[10px] text-text-secondary truncate font-medium">
-                    {user?.sector || (
-                      user?.role === 'ADMIN' ? 'Administrador' :
+      <aside className={`fixed inset-y-0 left-0 w-72 flex-col border-r border-border-light bg-white z-[70] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:w-64 h-full ${
+        isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+      }`}>
+        <div className="flex flex-col h-full justify-between p-4">
+          <div className="flex flex-col gap-6">
+            <div className="flex gap-3 px-2 py-2 items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary rounded-lg size-10 flex items-center justify-center text-white shadow-lg shadow-primary/30">
+                  <span className="material-symbols-outlined text-2xl">event_note</span>
+                </div>
+                <div className="flex flex-col">
+                  <h1 className="text-text-main text-lg font-bold leading-normal">Agenda Cap5.3</h1>
+                  <p className="text-text-secondary text-[10px] font-bold uppercase tracking-wider">
+                    {user?.role === 'ADMIN' ? 'Espaço do Admin' : `Portal ${
                       user?.role === 'ALMC' ? 'Almoxarifado' :
                       user?.role === 'TRA' ? 'Transporte' :
                       user?.role === 'CE' ? 'Cerimonial' :
                       user?.role === 'DCA' ? 'Informática' :
-                      user?.role || 'Colaborador'
-                    )}
-                </p>
-                {user?.observations && (
-                  <p className="text-[9px] text-text-secondary/70 mt-0.5 italic leading-tight truncate">
-                    {user.observations}
+                      user?.role || 'Usuário'
+                    }`}
                   </p>
-                )}
+                </div>
               </div>
+              
+              {/* Close Button Mobile */}
+              <button 
+                onClick={() => setSidebarOpen(false)}
+                className="lg:hidden size-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-100 transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
             </div>
 
-            <button
-              onClick={logout}
-              className="text-xs text-text-secondary text-left hover:text-red-500 flex items-center gap-1 transition-colors pl-1"
-            >
-              <span className="material-symbols-outlined text-sm">logout</span>
-              Sair
-            </button>
+            <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)] custom-scrollbar pr-1">
+              <NavLink to="/calendar" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                {({ isActive }) => (
+                  <>
+                    <span className={iconClass(isActive)}>calendar_month</span>
+                    <p className="text-sm font-bold">Calendário</p>
+                  </>
+                )}
+              </NavLink>
+
+              {(user?.role === 'ADMIN' || user?.role === 'USER' || user?.role === 'CE' || !user?.role) && (
+                <NavLink to="/create-event" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconClass(isActive)}>add_circle</span>
+                      <p className="text-sm font-bold">Novo Evento</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
+
+              <NavLink to="/chat" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                {({ isActive }) => (
+                  <>
+                    <span className={iconClass(isActive)}>chat</span>
+                    <p className="text-sm font-bold">Mensagens</p>
+                  </>
+                )}
+              </NavLink>
+
+              <NavLink to="/requests" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                {({ isActive }) => (
+                  <>
+                    <div className="relative">
+                      <span className={iconClass(isActive)}>notifications</span>
+                      {notificationCount > 0 && (
+                        <span className="absolute -top-1 -right-1 size-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[10px] text-white font-bold">
+                          {notificationCount > 9 ? '9+' : notificationCount}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-bold">Notificações</p>
+                  </>
+                )}
+              </NavLink>
+
+              {user?.role === 'ADMIN' && (
+                <NavLink to="/reports" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconClass(isActive)}>bar_chart</span>
+                      <p className="text-sm font-bold">Relatórios</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
+
+              {(user?.role === 'ADMIN' || user?.role === 'ALMC') && (
+                <NavLink to="/almoxarifado" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconClass(isActive)}>inventory_2</span>
+                      <p className="text-sm font-bold">Almoxarifado e Copa</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
+
+              {(user?.role === 'ADMIN' || user?.role === 'DCA') && (
+                <NavLink to="/informatica" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconClass(isActive)}>computer</span>
+                      <p className="text-sm font-bold">Informática</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
+
+              {(user?.role === 'ADMIN' || user?.role === 'TRA') && (
+                <NavLink to="/transporte" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconClass(isActive)}>directions_car</span>
+                      <p className="text-sm font-bold">Transporte</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
+
+              {(user?.role === 'ADMIN' || user?.role === 'CE') && (
+                <NavLink to="/locais" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconClass(isActive)}>location_on</span>
+                      <p className="text-sm font-bold">Gestão de Locais</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
+
+              <NavLink to="/equipe" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                {({ isActive }) => (
+                  <>
+                    <span className={iconClass(isActive)}>groups</span>
+                    <p className="text-sm font-bold">Equipe</p>
+                  </>
+                )}
+              </NavLink>
+
+              {(user?.role === 'ADMIN' || user?.role === 'USER' || user?.role === 'CE') && (
+                <NavLink to="/meu-envolvimento" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <div className="relative">
+                        <span className={iconClass(isActive)}>analytics</span>
+                        {mySpaceCount > 0 && (
+                          <span className="absolute -top-1 -right-1 size-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[10px] text-white font-bold">
+                            {mySpaceCount > 9 ? '9+' : mySpaceCount}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm font-bold">Meu Espaço</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
+            </nav>
           </div>
 
-          <p className="text-[9px] text-text-secondary/40 text-center px-2">
-            Desenvolvido por Fabio Ferreira de Oliveira<br />DAPS/CAP5.3
-          </p>
+          <div className="flex flex-col gap-4 border-t border-border-light pt-4">
+            <div className="flex flex-col gap-2 px-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className="relative cursor-pointer"
+                  onClick={() => setShowStatusMenu(!showStatusMenu)}
+                >
+                  <div
+                    className="size-10 rounded-full bg-cover bg-center ring-2 ring-primary/5 hover:ring-primary/40 transition-all"
+                    style={{ backgroundImage: `url(${user?.avatar ? user.avatar : 'https://picsum.photos/100/100'})` }}
+                  ></div>
+                  <div className={`absolute -bottom-0.5 -right-0.5 size-3.5 border-2 border-white rounded-full ${user?.status === 'Online' ? 'bg-green-500' :
+                    user?.status === 'Ausente' ? 'bg-amber-500' :
+                      user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-primary/20'
+                      }`}></div>
+
+                  {/* Status Selector Dropdown */}
+                  {showStatusMenu && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-[40]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowStatusMenu(false);
+                        }}
+                      />
+                      <div
+                        className="absolute bottom-full left-0 mb-2 w-32 bg-white rounded-lg shadow-xl border border-border-light z-[50] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="py-1">
+                          {(['Online', 'Ausente', 'Ocupado', 'Offline'] as const).map((s) => (
+                            <button
+                              key={s}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await updateStatus(s);
+                                } catch (err) {
+                                  console.error('Error updating status:', err);
+                                  alert('Erro ao atualizar status. Tente novamente.');
+                                }
+                                setShowStatusMenu(false);
+                              }}
+                              className="w-full px-3 py-1.5 text-[10px] font-bold text-left hover:bg-primary/[0.02] flex items-center gap-2 transition-colors uppercase"
+                            >
+                              <span className={`size-2 rounded-full ${s === 'Online' ? 'bg-green-500' :
+                                s === 'Ausente' ? 'bg-amber-500' :
+                                  s === 'Ocupado' ? 'bg-red-500' : 'bg-primary/20'
+                                }`}></span>
+                              {s}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-text-main truncate">{user?.name || 'Membro do Time'}</p>
+                  <p className="text-[10px] text-text-secondary truncate font-medium">
+                      {user?.sector || (
+                        user?.role === 'ADMIN' ? 'Administrador' :
+                        user?.role === 'ALMC' ? 'Almoxarifado' :
+                        user?.role === 'TRA' ? 'Transporte' :
+                        user?.role === 'CE' ? 'Cerimonial' :
+                        user?.role === 'DCA' ? 'Informática' :
+                        user?.role || 'Colaborador'
+                      )}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={logout}
+                className="text-[10px] font-bold uppercase tracking-wider text-text-secondary text-left hover:text-red-500 flex items-center gap-2 transition-colors py-1"
+              >
+                <span className="material-symbols-outlined text-lg">logout</span>
+                Encerrar Sessão
+              </button>
+            </div>
+
+            <p className="text-[8px] font-bold uppercase tracking-widest text-text-secondary/30 text-center px-2 leading-relaxed">
+              Desenvolvido por Fabio Ferreira de Oliveira<br />DAPS/CAP5.3
+            </p>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 };
 

@@ -15,7 +15,28 @@ const Chat: React.FC = () => {
   const [editContent, setEditContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showChatMobile, setShowChatMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Handle window resize for responsiveness
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Set showChatMobile based on userId presence
+  useEffect(() => {
+    if (userId && isMobile) {
+      setShowChatMobile(true);
+    } else if (!userId) {
+      setShowChatMobile(false);
+    }
+  }, [userId, isMobile]);
+
   const currentUser = pb.authStore.model;
 
   // Scroll to bottom on new messages
@@ -255,94 +276,120 @@ const Chat: React.FC = () => {
   );
 
   return (
-    <div className="flex h-[calc(100vh-140px)] border border-border-light rounded-xl overflow-hidden bg-white shadow-sm">
+    <div className="flex h-[calc(100vh-100px)] lg:h-[calc(100vh-140px)] border-none lg:border lg:border-border-light rounded-none lg:rounded-xl overflow-hidden bg-white shadow-none lg:shadow-sm">
       {/* Chat Sidebar */}
-      <div className="w-80 border-r border-border-light flex flex-col bg-white">
-        <div className="p-4 border-b border-border-light">
-             <div className="relative">
-                <span className="absolute left-3 top-2.5 text-gray-400 material-symbols-outlined text-[20px]">search</span>
+      <div className={`${isMobile && showChatMobile ? 'hidden' : 'flex'} w-full lg:w-80 border-r border-border-light flex-col bg-white`}>
+        <div className="p-4 border-b border-border-light bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+             <div className="relative group">
+                <span className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-primary material-symbols-outlined text-[20px] transition-colors">search</span>
                 <input 
-                    className="w-full h-10 pl-10 pr-4 rounded-lg bg-white border border-border-light text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
-                    placeholder="Filtrar por nome..." 
+                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50 border-none text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all placeholder:text-gray-400" 
+                    placeholder="Buscar conversa..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
              </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="flex-1 overflow-y-auto p-3 space-y-1 bg-white">
             {filteredUsers.map((user) => (
                 <div 
                     key={user.id} 
-                    onClick={() => navigate(`/chat?userId=${user.id}`)}
-                    className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors ${user.id === userId ? 'bg-primary/5 shadow-sm border border-primary/10' : 'hover:bg-primary/[0.02]'}`}
+                    onClick={() => {
+                        navigate(`/chat?userId=${user.id}`);
+                        if (isMobile) setShowChatMobile(true);
+                    }}
+                    className={`flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer transition-all duration-200 group ${
+                        user.id === userId 
+                        ? 'bg-primary/5 border border-primary/10 shadow-sm' 
+                        : 'hover:bg-slate-50 border border-transparent'
+                    }`}
                 >
-                    <div className="relative">
+                    <div className="relative shrink-0">
                         <div 
-                            className="size-10 rounded-full bg-primary/10 bg-cover bg-center" 
+                            className="size-12 rounded-2xl bg-primary/10 bg-cover bg-center shadow-sm group-hover:scale-105 transition-transform" 
                             style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
                         ></div>
-                        <span className={`absolute bottom-0 right-0 size-3 border-2 border-white rounded-full ${getStatusColor(user.status)}`}></span>
+                        <span className={`absolute -bottom-1 -right-1 size-4 border-2 border-white rounded-full shadow-sm ${getStatusColor(user.status)}`}></span>
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-baseline">
-                            <p className={`text-sm font-bold truncate ${user.id === userId ? 'text-primary' : 'text-text-main'}`}>{user.name}</p>
-                            <span className={`text-[10px] font-medium ${user.status === 'Online' ? 'text-green-500' : 'text-gray-400'}`}>
+                        <div className="flex justify-between items-center mb-0.5">
+                            <p className={`text-[15px] font-bold truncate ${user.id === userId ? 'text-primary' : 'text-slate-800'}`}>
+                                {user.name}
+                            </p>
+                            {unreadCounts[user.id] > 0 && (
+                                <div className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-300">
+                                    {unreadCounts[user.id]}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <p className="text-xs text-slate-500 truncate font-medium flex-1">
+                                {user.sector || 'Sem setor'}
+                            </p>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider ${user.status === 'Online' ? 'text-green-500' : 'text-slate-300'}`}>
                                 {user.status || 'Offline'}
                             </span>
                         </div>
-                        <p className="text-xs text-text-secondary truncate font-medium">{user.sector || 'Sem setor'}</p>
-                        {user.observations && (
-                            <p className="text-[9px] text-text-secondary/70 truncate italic mt-0.5 leading-tight">
-                                {user.observations}
-                            </p>
-                        )}
                     </div>
-                    {unreadCounts[user.id] > 0 && (
-                        <div className="bg-red-500 text-white text-[10px] font-bold size-5 flex items-center justify-center rounded-full shrink-0 animate-pulse">
-                            {unreadCounts[user.id]}
-                        </div>
-                    )}
                 </div>
             ))}
             {filteredUsers.length === 0 && (
-                <div className="p-8 text-center text-text-secondary text-sm">
-                    Nenhum usuário encontrado
+                <div className="p-12 text-center flex flex-col items-center gap-3">
+                    <span className="material-symbols-outlined text-slate-200 text-5xl">person_search</span>
+                    <p className="text-slate-400 text-sm font-medium">Nenhum usuário encontrado</p>
                 </div>
             )}
         </div>
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col bg-white">
-        <div className="h-16 border-b border-border-light flex items-center justify-between px-6">
-            <div className="flex items-center gap-3">
-                 <div className="relative">
+      <div className={`${isMobile && !showChatMobile ? 'hidden' : 'flex'} flex-1 flex flex-col bg-white relative`}>
+        <div className="h-16 lg:h-20 border-b border-border-light flex items-center justify-between px-4 lg:px-6 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+            <div className="flex items-center gap-3 min-w-0">
+                 {isMobile && (
+                     <button 
+                        onClick={() => {
+                            setShowChatMobile(false);
+                            navigate('/chat');
+                        }}
+                        className="size-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-600 active:scale-90 transition-transform"
+                     >
+                         <span className="material-symbols-outlined text-[24px]">arrow_back</span>
+                     </button>
+                 )}
+                 <div className="relative shrink-0">
                     <div 
-                        className="size-10 rounded-full bg-primary/10 bg-cover bg-center" 
+                        className="size-10 lg:size-11 rounded-xl lg:rounded-2xl bg-primary/10 bg-cover bg-center shadow-sm" 
                         style={{ backgroundImage: `url(${getAvatarUrl(selectedUser)})` }}
                     ></div>
-                    <span className={`absolute bottom-0 right-0 size-3 border-2 border-white rounded-full ${getStatusColor(selectedUser?.status)}`}></span>
+                    {selectedUser && (
+                        <span className={`absolute -bottom-1 -right-1 size-3.5 border-2 border-white rounded-full shadow-sm ${getStatusColor(selectedUser?.status)}`}></span>
+                    )}
                 </div>
-                <div>
-                    <h3 className="text-sm font-bold text-text-main">{selectedUser?.name || 'Selecione um usuário'}</h3>
-                    <p className={`text-xs font-medium ${selectedUser?.status === 'Online' ? 'text-green-600' : 'text-gray-500'}`}>{selectedUser?.status || 'Offline'}</p>
+                <div className="min-w-0">
+                    <h3 className="text-sm lg:text-base font-bold text-slate-800 truncate">{selectedUser?.name || 'Selecione um contato'}</h3>
+                    <p className={`text-[11px] lg:text-xs font-bold uppercase tracking-widest ${selectedUser?.status === 'Online' ? 'text-green-500' : 'text-slate-400'}`}>
+                        {selectedUser?.status || (selectedUser ? 'Offline' : 'Para começar')}
+                    </p>
                 </div>
             </div>
-            <div className="flex gap-1 text-text-secondary items-center">
+            <div className="flex gap-1 text-slate-400 items-center">
                  {userId && messages.length > 0 && (
                    <button 
                      onClick={handleDeleteConversation}
-                     className="size-9 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-300 rounded-full group"
+                     className="size-10 flex items-center justify-center hover:text-red-500 hover:bg-red-50 transition-all rounded-xl group"
                      title="Excluir conversa"
                    >
-                     <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">delete_sweep</span>
+                     <span className="material-symbols-outlined text-[22px] group-hover:scale-110 transition-transform">delete_sweep</span>
                    </button>
                  )}
-                 <button className="size-9 flex items-center justify-center hover:bg-primary/[0.05] rounded-full text-slate-400 hover:text-primary transition-all"><span className="material-symbols-outlined text-[20px]">more_vert</span></button>
+                 <button className="size-10 flex items-center justify-center hover:bg-slate-50 rounded-xl hover:text-primary transition-all">
+                    <span className="material-symbols-outlined text-[22px]">more_vert</span>
+                 </button>
             </div>
         </div>
   
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white">
+          <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6 bg-[#f8fafc]/50 custom-scrollbar">
                {messages.length === 0 ? (
                  <div className="h-full flex flex-col items-center justify-center text-text-secondary opacity-50">
                     <span className="material-symbols-outlined text-6xl mb-2">forum</span>
@@ -364,26 +411,28 @@ const Chat: React.FC = () => {
                              </span>
                            </div>
                          )}
-                         <div className={`flex gap-4 max-w-2xl group ${isMe ? 'flex-row-reverse ml-auto' : ''}`}>
+                         <div className={`flex gap-3 lg:gap-4 max-w-[90%] lg:max-w-2xl group ${isMe ? 'flex-row-reverse ml-auto' : ''}`}>
                              <div 
-                               className="size-8 rounded-full bg-primary/10 bg-cover shrink-0" 
+                               className="size-7 lg:size-8 rounded-lg lg:rounded-xl bg-primary/10 bg-cover shrink-0 shadow-sm" 
                                style={{ backgroundImage: `url(${getAvatarUrl(isMe ? currentUser : selectedUser)})` }}
                              ></div>
                             <div className={`flex flex-col gap-1 relative ${isMe ? 'items-end' : ''}`}>
-                                <span className={`text-xs font-bold text-text-main ${isMe ? 'mr-1' : 'ml-1'}`}>
-                                  {isMe ? 'Você' : selectedUser?.name} 
-                                  <span className="text-gray-400 font-normal ml-1">
-                                    {new Date(msg.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  {msg.is_edited && !msg.is_deleted && (
-                                    <span className="text-[10px] text-gray-400 font-normal ml-1 italic">(editada)</span>
-                                  )}
-                                </span>
+                                <div className={`flex items-center gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
+                                    <span className="text-[11px] lg:text-xs font-black text-slate-800">
+                                      {isMe ? 'Você' : selectedUser?.name} 
+                                    </span>
+                                    <span className="text-[10px] lg:text-[11px] font-bold text-slate-400">
+                                      {new Date(msg.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                    {msg.is_edited && !msg.is_deleted && (
+                                      <span className="text-[10px] text-slate-400 font-medium italic">(editada)</span>
+                                    )}
+                                </div>
 
                                 {editingMessageId === msg.id ? (
-                                  <div className="flex flex-col gap-2 min-w-[200px]">
+                                  <div className="flex flex-col gap-2 min-w-[200px] bg-white p-3 rounded-2xl shadow-xl border border-primary/20">
                                     <textarea
-                                      className="p-3 rounded-2xl shadow-sm text-sm border border-primary focus:ring-2 focus:ring-primary/20 outline-none resize-none"
+                                      className="p-3 rounded-xl text-sm border-none bg-slate-50 focus:ring-2 focus:ring-primary/20 outline-none resize-none"
                                       value={editContent}
                                       onChange={(e) => setEditContent(e.target.value)}
                                       rows={2}
@@ -392,13 +441,13 @@ const Chat: React.FC = () => {
                                     <div className="flex justify-end gap-2">
                                       <button 
                                         onClick={() => setEditingMessageId(null)}
-                                        className="text-[10px] font-bold uppercase tracking-wider text-text-secondary hover:text-text-main"
+                                        className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500 hover:text-slate-800 transition-colors"
                                       >
                                         Cancelar
                                       </button>
                                       <button 
                                         onClick={() => handleEditMessage(msg.id)}
-                                        className="text-[10px] font-bold uppercase tracking-wider text-primary hover:text-primary-hover"
+                                        className="px-4 py-1.5 bg-primary text-white text-[10px] font-black uppercase tracking-wider rounded-lg shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-all"
                                       >
                                         Salvar
                                       </button>
@@ -406,34 +455,36 @@ const Chat: React.FC = () => {
                                   </div>
                                 ) : (
                                   <div className="relative group/msg">
-                                    <div className={`p-3 rounded-2xl shadow-sm text-sm ${
+                                    <div className={`p-3 lg:p-4 rounded-2xl shadow-sm text-sm lg:text-[15px] leading-relaxed transition-all ${
                                       msg.is_deleted 
-                                        ? 'bg-gray-50 text-gray-400 italic border border-gray-100' 
-                                        : isMe ? 'bg-primary text-white rounded-tr-none' : 'bg-white border border-gray-200 text-text-main rounded-tl-none'
+                                        ? 'bg-slate-50 text-slate-400 italic border border-slate-100' 
+                                        : isMe 
+                                          ? 'bg-primary text-white rounded-tr-none shadow-md shadow-primary/10' 
+                                          : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'
                                     }`}>
                                         {msg.content}
                                     </div>
                                     
                                     {!msg.is_deleted && (
-                                      <div className={`absolute top-0 flex gap-1 opacity-0 group-hover/msg:opacity-100 transition-opacity p-1 ${isMe ? 'right-full mr-2' : 'left-full ml-2'}`}>
+                                      <div className={`absolute top-0 flex gap-1 opacity-0 group-hover/msg:opacity-100 transition-all duration-200 p-1 z-10 ${isMe ? 'right-full mr-2' : 'left-full ml-2'}`}>
                                         {isMe && (
                                           <button 
                                             onClick={() => {
                                               setEditingMessageId(msg.id);
                                               setEditContent(msg.content);
                                             }}
-                                            className="size-7 flex items-center justify-center rounded-full bg-white border border-gray-100 text-gray-400 hover:text-primary hover:border-primary/20 shadow-sm"
+                                            className="size-8 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-primary hover:border-primary/20 shadow-lg"
                                             title="Editar"
                                           >
-                                            <span className="material-symbols-outlined text-[16px]">edit</span>
+                                            <span className="material-symbols-outlined text-[18px]">edit</span>
                                           </button>
                                         )}
                                         <button 
                                           onClick={() => handleDeleteMessage(msg)}
-                                          className="size-7 flex items-center justify-center rounded-full text-slate-300 hover:text-red-400 hover:bg-red-50/50 transition-all duration-300"
-                                          title={isMe ? "Excluir para todos" : "Excluir para mim"}
+                                          className="size-8 flex items-center justify-center rounded-xl bg-white border border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 shadow-lg"
+                                          title="Excluir"
                                         >
-                                          <span className="material-symbols-outlined text-[16px]">delete</span>
+                                          <span className="material-symbols-outlined text-[18px]">delete</span>
                                         </button>
                                       </div>
                                     )}
@@ -448,36 +499,48 @@ const Chat: React.FC = () => {
                  </>
                )}
           </div>
-
-        <div className="p-4 bg-white border-t border-border-light">
-             <form onSubmit={handleSendMessage} className="flex items-end gap-2 bg-white p-2 rounded-xl border border-border-light focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all">
-                <textarea 
-                    className="flex-1 bg-transparent border-none focus:ring-0 resize-none text-sm max-h-32 py-2 ml-2" 
-                    placeholder={selectedUser ? `Mensagem para ${selectedUser.name}...` : 'Selecione um usuário...'}
-                    rows={1} 
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                    disabled={!selectedUser || loading}
-                />
-                <button 
-                  type="submit"
-                  disabled={!selectedUser || !newMessage.trim() || loading}
-                  className="p-2 bg-primary text-white rounded-lg hover:bg-primary-hover shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {loading ? (
-                      <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    ) : (
-                      <span className="material-symbols-outlined text-[20px]">send</span>
-                    )}
-                </button>
-             </form>
-        </div>
+  
+          {userId && (
+            <div className="p-4 lg:p-6 bg-white border-t border-border-light">
+               <form 
+                 onSubmit={handleSendMessage}
+                 className="flex items-end gap-2 lg:gap-3 max-w-5xl mx-auto"
+               >
+                  <div className="flex-1 relative group">
+                    <textarea 
+                      className="w-full p-3 lg:p-4 pr-12 rounded-2xl bg-slate-50 border-none text-sm lg:text-[15px] focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all placeholder:text-slate-400 resize-none min-h-[48px] max-h-32 custom-scrollbar"
+                      placeholder="Escreva sua mensagem..."
+                      rows={1}
+                      value={newMessage}
+                      onChange={(e) => {
+                        setNewMessage(e.target.value);
+                        e.target.style.height = 'auto';
+                        e.target.style.height = e.target.scrollHeight + 'px';
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                    />
+                    <button 
+                      type="button"
+                      className="absolute right-3 bottom-2.5 size-8 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
+                    </button>
+                  </div>
+                  <button 
+                    type="submit"
+                    disabled={!newMessage.trim() || loading}
+                    className="size-11 lg:size-12 flex items-center justify-center bg-primary text-white rounded-xl lg:rounded-2xl shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 transition-all shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[24px] lg:text-[26px]">send</span>
+                  </button>
+               </form>
+            </div>
+          )}
       </div>
     </div>
   );

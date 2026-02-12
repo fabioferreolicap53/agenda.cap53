@@ -1415,21 +1415,21 @@ const CreateEvent: React.FC = () => {
           </div>
 
           {/* Row 2: Professional Scope (Full Width) - SWAPPED TO TOP */}
-          <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-8 relative z-10 ${!envolverProfissionais && 'opacity-90'}`}>
-            <div className="flex items-center justify-between pb-6 border-b border-slate-100/50">
+          <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!envolverProfissionais && 'opacity-90'}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100/50">
               <div className="flex items-center gap-4">
-                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${envolverProfissionais ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${envolverProfissionais ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
                   <span className="material-symbols-outlined text-2xl font-bold">groups</span>
                 </div>
                 <div>
-                  <h3 className={`text-xl font-bold tracking-tight transition-colors duration-500 ${envolverProfissionais ? 'text-slate-800' : 'text-slate-400'}`}>Envolvimento de Unidades e Profissionais</h3>
+                  <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${envolverProfissionais ? 'text-slate-800' : 'text-slate-400'}`}>Envolvimento de Unidades e Profissionais</h3>
                   <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Defina o público-alvo nas unidades</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setEnvolverProfissionais(!envolverProfissionais)}
-                className={`group flex items-center gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${envolverProfissionais ? 'bg-slate-800 text-white shadow-xl shadow-slate-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${envolverProfissionais ? 'bg-slate-800 text-white shadow-xl shadow-slate-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
               >
                 <span className="relative flex h-2 w-2">
                   {envolverProfissionais && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
@@ -1594,14 +1594,14 @@ const CreateEvent: React.FC = () => {
           </section>
 
           {/* Row 3: Logistics (Full Width) - SWAPPED TO BOTTOM */}
-          <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-8 relative z-10 ${!logisticaRecursos && 'opacity-90'}`}>
-            <div className="flex items-center justify-between pb-6 border-b border-slate-100/50">
+          <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!logisticaRecursos && 'opacity-90'}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100/50">
               <div className="flex items-center gap-4">
-                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${logisticaRecursos ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${logisticaRecursos ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
                   <span className="material-symbols-outlined text-2xl font-bold">inventory_2</span>
                 </div>
                 <div>
-                  <h3 className={`text-xl font-bold tracking-tight transition-colors duration-500 ${logisticaRecursos ? 'text-slate-800' : 'text-slate-400'}`}>Logística & Recursos</h3>
+                  <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${logisticaRecursos ? 'text-slate-800' : 'text-slate-400'}`}>Logística & Recursos</h3>
                   <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Solicite insumos e apoio para o evento</p>
                 </div>
               </div>
@@ -1609,7 +1609,7 @@ const CreateEvent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setLogisticaRecursos(!logisticaRecursos)}
-                className={`group flex items-center gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${logisticaRecursos ? 'bg-slate-800 text-white shadow-xl shadow-slate-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${logisticaRecursos ? 'bg-slate-800 text-white shadow-xl shadow-slate-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
               >
                 <span className="relative flex h-2 w-2">
                   {logisticaRecursos && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}

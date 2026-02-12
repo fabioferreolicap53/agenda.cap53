@@ -22,6 +22,8 @@ export const SECTORS = [
 interface AuthContextType {
     user: User | null;
     loading: boolean;
+    isSidebarOpen: boolean;
+    setSidebarOpen: (open: boolean) => void;
     login: (email: string, password: string) => Promise<void>;
     register: (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => Promise<{ needsVerification: boolean }>;
     logout: () => void;
@@ -105,6 +107,7 @@ const translateError = (error: any): string => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
     // Local override for dev role switching
     const [devRoleOverride, setDevRoleOverride] = useState<UserRole | null>(null);
 
@@ -302,14 +305,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <AuthContext.Provider value={{ 
             user, 
             loading, 
+            isSidebarOpen,
+            setSidebarOpen,
             login, 
             register, 
             logout, 
             updateProfile, 
             updateStatus, 
-            setRole,
-            requestPasswordReset,
-            confirmPasswordReset
+            setRole, 
+            requestPasswordReset, 
+            confirmPasswordReset 
         }}>
             {children}
         </AuthContext.Provider>

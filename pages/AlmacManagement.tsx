@@ -298,11 +298,6 @@ const AlmacManagement: React.FC = () => {
         <div className="flex flex-col gap-8 max-w-[1400px] mx-auto w-full p-4 md:p-8 animate-in fade-in duration-700">
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">Almoxarifado e Copa</h1>
-                    <p className="text-slate-500 font-medium text-sm md:text-base">Gestão de estoque, suprimentos e serviços de copa para eventos.</p>
-                </div>
-
                 <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl w-fit border border-slate-200/50">
                     <button
                         onClick={() => setActiveView('inventory')}

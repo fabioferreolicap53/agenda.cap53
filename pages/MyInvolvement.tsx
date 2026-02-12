@@ -892,31 +892,33 @@ const MyInvolvement: React.FC = () => {
         };
 
         return (
-            <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in duration-500">
-                <div className="size-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-sm">
-                    <span className="material-symbols-outlined text-slate-300 text-4xl">{icons[tab] || 'event_busy'}</span>
+            <div className="flex flex-col items-center justify-center py-12 md:py-20 text-center animate-in fade-in zoom-in duration-500">
+                <div className="size-16 md:size-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6 border border-slate-100 shadow-sm">
+                    <span className="material-symbols-outlined text-slate-300 text-3xl md:text-4xl">{icons[tab] || 'event_busy'}</span>
                 </div>
-                <h3 className="text-slate-800 font-bold text-lg">{messages[tab] || t('labels.no_events')}</h3>
-                <p className="text-slate-500 text-sm mt-1">{t('labels.all_clear')}</p>
+                <h3 className="text-slate-800 font-bold text-base md:text-lg max-w-[280px] md:max-w-none mx-auto leading-relaxed">
+                    {messages[tab] || t('labels.no_events')}
+                </h3>
+                <p className="text-slate-400 text-xs md:text-sm mt-2 font-medium tracking-wide uppercase">{t('labels.all_clear')}</p>
             </div>
         );
     };
 
     return (
-        <div className="flex flex-col gap-6 max-w-7xl mx-auto px-4 py-6">
+        <div className="flex flex-col gap-4 md:gap-6 max-w-7xl mx-auto px-3 md:px-4 py-4 md:py-6">
             {/* Tabs Navigation */}
-            <div className="flex items-center gap-1 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 w-full">
+            <div className="flex items-center gap-1 p-1 bg-slate-100/80 backdrop-blur-sm rounded-2xl border border-slate-200/50 w-full overflow-x-auto custom-scrollbar-hide">
                 {(['created', 'invites', 'pending', 'history', 'stats'] as const).map(tab => (
                     <button
                         key={tab}
                         onClick={() => { setActiveTab(tab); setPage(1); }}
-                        className={`flex-1 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 relative ${
+                        className={`flex-1 min-w-[140px] md:min-w-0 px-4 md:px-5 py-2.5 rounded-xl text-[11px] md:text-xs font-bold transition-all duration-300 flex items-center justify-center gap-2 relative whitespace-nowrap ${
                             activeTab === tab 
                             ? 'bg-white text-primary shadow-md shadow-primary/5 ring-1 ring-slate-200/50' 
                             : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'
                         }`}
                     >
-                        <span className="material-symbols-outlined text-[18px]">
+                        <span className="material-symbols-outlined text-[18px] md:text-[20px]">
                             {tab === 'created' ? 'settings_suggest' : 
                              tab === 'invites' ? 'mail' : 
                              tab === 'pending' ? 'hourglass_top' : 
