@@ -485,17 +485,10 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   return (
     <div className={`relative ${className} ${isOpen ? 'z-[100]' : ''}`} ref={containerRef}>
       {/* Trigger Input */}
-      <div
-        className={`
-          group w-full h-14 px-5 rounded-2xl bg-[#f8fafc]/50 border border-[#e2e8f0]/60 
-          flex items-center justify-between transition-all duration-300 relative
-          ${isOpen ? 'bg-white border-slate-300 shadow-sm' : 'hover:bg-white hover:border-slate-300'}
-        `}
+      <div 
+        className="group w-full flex items-center gap-2 px-3.5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-slate-400 focus-within:border-slate-800 focus-within:ring-4 focus-within:ring-slate-50 transition-all duration-300"
       >
-        <div className="flex flex-col justify-center flex-1">
-            <span className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 ${value ? 'text-slate-400' : 'text-slate-400'}`}>
-                {value ? 'Data Selecionada' : 'Definir Data'}
-            </span>
+        <div className="flex-1 min-w-0">
             <input 
                 ref={inputRef}
                 type="text"
@@ -506,16 +499,31 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                 onFocus={() => setIsOpen(true)}
                 placeholder="DD/MM/AAAA HH:mm"
                 tabIndex={tabIndex}
-                className={`font-semibold text-sm bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-300 w-full outline-none transition-colors duration-200 ${isInvalid ? 'text-red-500' : value ? 'text-[#1e293b]' : 'text-slate-400'}`}
+                className={`font-bold text-[13px] bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-300 w-full outline-none transition-colors duration-200 ${isInvalid ? 'text-red-500' : value ? 'text-slate-800' : 'text-slate-400'}`}
             />
         </div>
+
+        {value && (
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onChange('');
+                }}
+                className="p-1 rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-200"
+                title="Limpar"
+            >
+                <span className="material-symbols-outlined text-[17px]">close</span>
+            </button>
+        )}
+
         <div 
             onClick={() => setIsOpen(!isOpen)}
             className={`
-            size-8 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer
-            ${isOpen ? 'bg-slate-800 text-white rotate-90' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'}
+            size-7 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer
+            ${isOpen ? 'bg-slate-800 text-white rotate-90 shadow-lg shadow-slate-200' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'}
         `}>
-            <span className="material-symbols-outlined text-lg">calendar_today</span>
+            <span className="material-symbols-outlined text-base">calendar_today</span>
         </div>
       </div>
 
@@ -534,33 +542,33 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         <div 
           role="dialog"
           aria-label="Calendário e seletor de horário"
-          className="fixed md:absolute top-1/2 md:top-full left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 mt-0 md:mt-3 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 z-[100] p-4 md:p-6 animate-in fade-in slide-in-from-top-4 duration-300 flex flex-col md:flex-row gap-4 md:gap-8 w-[95vw] md:w-auto max-w-[400px] md:max-w-none max-h-[90vh] overflow-y-auto"
+          className="fixed md:absolute top-1/2 md:top-[calc(100%+8px)] left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 bg-white rounded-[28px] shadow-[0_20px_50px_rgba(15,23,42,0.15)] border border-slate-100 z-[110] p-4 md:p-5 animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300 flex flex-col md:flex-row gap-5 md:gap-6 w-[92vw] md:w-[480px] max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible"
         >
           
           {/* Calendar Section */}
-          <div className="flex-1">
+          <div className="flex-[1.2]">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4 md:mb-8 px-1">
+            <div className="flex items-center justify-between mb-4 md:mb-5 px-1">
               <div className="flex flex-col">
-                <span className="font-bold text-lg md:text-xl text-[#1e293b] capitalize">
+                <span className="font-black text-xl md:text-xl text-slate-800 tracking-tight capitalize">
                   {MONTHS[viewDate.getMonth()]}
                 </span>
-                <span className="text-slate-400 text-xs md:text-sm font-medium tracking-tight">
+                <span className="text-slate-400 text-[10px] md:text-xs font-bold tracking-[0.1em] mt-0.5">
                   {viewDate.getFullYear()}
                 </span>
               </div>
-              <div className="flex gap-1 md:gap-2">
-                <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-xl text-slate-400 hover:text-[#1e293b] transition-all border border-transparent hover:border-slate-100">
-                  <span className="material-symbols-outlined text-lg md:text-xl">chevron_left</span>
+              <div className="flex gap-1.5">
+                <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-800 transition-all border border-slate-50">
+                  <span className="material-symbols-outlined text-lg">chevron_left</span>
                 </button>
-                <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-xl text-slate-400 hover:text-[#1e293b] transition-all border border-transparent hover:border-slate-100">
-                  <span className="material-symbols-outlined text-lg md:text-xl">chevron_right</span>
+                <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-800 transition-all border border-slate-50">
+                  <span className="material-symbols-outlined text-lg">chevron_right</span>
                 </button>
               </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2 mb-4 md:mb-6">
+            <div className="flex gap-2 mb-4 md:mb-5">
               <button
                 onClick={(e) => {
                   e.preventDefault();
@@ -568,7 +576,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                   setViewDate(today);
                   handleDateSelect(today.getDate());
                 }}
-                className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-[10px] md:text-xs font-bold hover:bg-slate-100 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-wider hover:bg-slate-100 transition-colors border border-slate-100/50"
               >
                 Hoje
               </button>
@@ -580,36 +588,35 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                   setViewDate(tomorrow);
                   handleDateSelect(tomorrow.getDate());
                 }}
-                className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-[10px] md:text-xs font-bold hover:bg-slate-100 transition-colors"
+                className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-wider hover:bg-slate-100 transition-colors border border-slate-100/50"
               >
                 Amanhã
               </button>
             </div>
 
-            {/* Days Header */}
-            <div className="grid grid-cols-7 mb-2 md:mb-4">
+            <div className="grid grid-cols-7 gap-1 mb-1.5">
               {DAYS_OF_WEEK.map((d, i) => (
-                <span key={i} className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] text-center">{d}</span>
+                <div key={i} className="h-8 flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                  {d}
+                </div>
               ))}
             </div>
-
-            {/* Days Grid */}
             <div className="grid grid-cols-7 gap-1">
               {renderCalendarDays()}
             </div>
           </div>
 
           {/* Time Picker Section */}
-          <div className="w-full md:w-36 flex flex-col border-t md:border-t-0 md:border-l border-slate-50 pt-4 md:pt-0 md:pl-8">
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em] mb-4 md:mb-6 text-center">Horário</span>
+          <div className="flex-1 flex flex-col border-t md:border-t-0 md:border-l border-slate-100 pt-5 md:pt-0 md:pl-6">
+            <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4 text-center md:text-left">Horário</span>
             
-            <div className="flex md:flex-col gap-2 h-[150px] md:h-[280px] relative bg-slate-50/50 rounded-2xl p-2">
+            <div className="flex gap-3 h-[200px] md:h-[220px] relative bg-slate-50/50 rounded-[20px] p-2 border border-slate-100/50">
                 {/* Hours */}
                 <div 
                   ref={hoursRef}
-                  className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth no-scrollbar hover:scrollbar-visible"
+                  className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth no-scrollbar"
                 >
-                    <div className="flex flex-col gap-1 pb-32">
+                    <div className="flex flex-col gap-1 py-16">
                         {hours.map(h => {
                             const isSel = h === currentHour;
                             return (
@@ -618,10 +625,10 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                                     data-selected={isSel}
                                     onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
                                     className={`
-                                        flex-shrink-0 h-10 w-full rounded-xl text-xs transition-all duration-200
+                                        flex-shrink-0 h-10 w-full rounded-xl text-xs transition-all duration-300
                                         ${isSel 
-                                            ? 'bg-[#1e293b] text-white font-bold shadow-md' 
-                                            : 'text-slate-400 hover:text-[#1e293b] hover:bg-white hover:shadow-sm'}
+                                            ? 'bg-slate-800 text-white font-black shadow-md shadow-slate-200 scale-105 z-10' 
+                                            : 'text-slate-400 font-bold hover:text-slate-800 hover:bg-white hover:shadow-sm'}
                                     `}
                                 >
                                     {String(h).padStart(2, '0')}h
@@ -636,7 +643,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                   ref={minutesRef}
                   className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth no-scrollbar"
                 >
-                    <div className="flex flex-col gap-1 pb-32">
+                    <div className="flex flex-col gap-1 py-16">
                         {allMinutes.map(m => {
                             const isSel = m === currentMinute;
                             return (
@@ -645,10 +652,10 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                                     data-selected={isSel}
                                     onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
                                     className={`
-                                        flex-shrink-0 h-10 w-full rounded-xl text-xs transition-all duration-200
+                                        flex-shrink-0 h-10 w-full rounded-xl text-xs transition-all duration-300
                                         ${isSel 
-                                            ? 'bg-[#1e293b] text-white font-bold shadow-md' 
-                                            : 'text-slate-400 hover:text-[#1e293b] hover:bg-white hover:shadow-sm'}
+                                            ? 'bg-slate-800 text-white font-black shadow-md shadow-slate-200 scale-105 z-10' 
+                                            : 'text-slate-400 font-bold hover:text-slate-800 hover:bg-white hover:shadow-sm'}
                                     `}
                                 >
                                     {String(m).padStart(2, '0')}m
@@ -659,14 +666,17 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                 </div>
                 
                 {/* Overlays for better depth */}
-                <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-slate-50 to-transparent pointer-events-none rounded-t-2xl"></div>
-                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none rounded-b-2xl"></div>
+                <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-slate-50/90 to-transparent pointer-events-none rounded-t-[20px]"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50/90 to-transparent pointer-events-none rounded-b-[20px]"></div>
+                
+                {/* Center Indicator */}
+                <div className="absolute top-1/2 left-2.5 right-2.5 h-10 -translate-y-1/2 border-y border-slate-200/50 pointer-events-none"></div>
             </div>
 
-            <div className="mt-4 md:mt-6">
+            <div className="mt-5">
                 <button 
                     onClick={(e) => { e.preventDefault(); setIsOpen(false); }}
-                    className="w-full py-3 rounded-2xl bg-[#1e293b] text-white text-[10px] font-bold hover:bg-slate-800 transition-colors uppercase tracking-widest shadow-lg shadow-slate-200"
+                    className="w-full py-3.5 rounded-[16px] bg-slate-800 text-white text-[10px] font-black hover:bg-slate-900 transition-all uppercase tracking-[0.15em] shadow-lg shadow-slate-200 active:scale-[0.98]"
                 >
                     Confirmar
                 </button>
@@ -675,7 +685,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
           {/* Mobile Overlay Background */}
           <div 
-            className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-[-1] md:hidden"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[-1] md:hidden"
             onClick={() => setIsOpen(false)}
           />
         </div>
