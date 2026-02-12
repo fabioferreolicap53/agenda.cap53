@@ -59,13 +59,13 @@ const translations = {
             creator_badge: 'CRIADOR'
         },
         statuses: {
-            active: 'Ativo',
-            pending: 'Pendente',
-            canceled: 'Cancelado',
-            refused: 'Recusado',
-            finished: 'Finalizado',
-            rejected: 'Rejeitado',
-            accepted: 'Aceito'
+            active: 'ATIVO',
+            pending: 'PEND',
+            canceled: 'CANC',
+            refused: 'REC',
+            finished: 'FIM',
+            rejected: 'REC',
+            accepted: 'OK'
         },
         stats: {
             participation_dist: 'Distribuição de participações',

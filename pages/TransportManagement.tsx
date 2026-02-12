@@ -18,25 +18,33 @@ const TransportManagement: React.FC = () => {
 
     const handleTransportDecision = async (eventId: string, status: 'confirmed' | 'rejected') => {
         try {
-            console.log('Sending transport decision directly to custom API:', { eventId, status });
+            console.log('Processing transport decision:', { eventId, status });
             
-            // Forçamos o uso da API customizada sempre para garantir a execução da lógica de notificação no backend
-            const response = await pb.send('/api/transport_decision', {
-                method: 'POST',
-                body: { 
-                    event_id: eventId, 
-                    status: status,
-                    justification: 'Ação realizada pelo setor de transporte.'
-                }
-            });
+            // Tentativa 1: Atualização direta via Collection (mais robusto se o endpoint falhar)
+            try {
+                await pb.collection('agenda_cap53_eventos').update(eventId, {
+                    transporte_status: status,
+                    transporte_justification: 'Ação realizada pelo setor de transporte.'
+                });
+                console.log('Direct collection update successful');
+            } catch (directErr: any) {
+                console.warn('Direct update failed, trying custom API...', directErr);
+                
+                // Tentativa 2: API customizada (fallback)
+                await pb.send('/api/transport_decision', {
+                    method: 'POST',
+                    body: JSON.stringify({ 
+                        event_id: eventId, 
+                        status: status,
+                        justification: 'Ação realizada pelo setor de transporte.'
+                    })
+                });
+            }
             
-            console.log('Response from custom API:', response);
-            
-            setActionMessage(status === 'confirmed' ? 'Confirmado' : 'Recusado');
-            setTimeout(() => setActionMessage(null), 3000);
+            // Notificação removida conforme solicitação
             fetchTransportRequests();
         } catch (err: any) {
-            console.error(`Error processing transport ${status} via custom API:`, err);
+            console.error(`Error processing transport ${status}:`, err);
             const errorMsg = err.data?.message || err.message || 'Erro desconhecido';
             alert(`Erro ao ${status === 'confirmed' ? 'confirmar' : 'recusar'}: ${errorMsg}\n\nVerifique se você tem permissão de acesso ao setor de transporte.`);
         }
@@ -123,14 +131,7 @@ const TransportManagement: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-8 max-w-[1400px] mx-auto w-full p-4 md:p-8">
-            {actionMessage && (
-                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="bg-slate-900/90 backdrop-blur-md text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/10">
-                        <span className="material-symbols-outlined text-green-400">check_circle</span>
-                        <span className="text-sm font-semibold">{actionMessage}</span>
-                    </div>
-                </div>
-            )}
+            {/* Bloco de notificação removido conforme solicitação */}
             
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4">
                 <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">

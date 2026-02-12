@@ -1,4 +1,3 @@
-/// <reference path="../pb_data/types.d.ts" />
 
 // 0. Teste de Carga do Hook
 $app.logger().info("CRITICAL: notifications.pb.js is starting to load at " + new Date().toISOString());

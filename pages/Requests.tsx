@@ -508,8 +508,7 @@ const Requests: React.FC = () => {
                     method: 'POST',
                     body: { notification_id: notification.id }
                 });
-                setActionMessage('Ciência confirmada e notificação enviada (Via API).');
-                setTimeout(() => setActionMessage(null), 5000);
+                // Notificação removida conforme solicitação
                 await fetchPendingNotifications();
                 await fetchHistoryNotifications(1, false);
                 return;
@@ -609,11 +608,10 @@ const Requests: React.FC = () => {
                  console.log('Creating acknowledgment notification (Client-side):', notifData);
                  await pb.collection('agenda_cap53_notifications').create(notifData);
                  
-                 setActionMessage('Ciência confirmada e notificação enviada (Client-side).');
-                 setTimeout(() => setActionMessage(null), 5000);
+                 // Notificação removida conforme solicitação
             } else {
                 console.warn('Cannot send acknowledgment: Missing target user ID (rejected_by).', notification);
-                setActionMessage('Ciência confirmada (Aviso: Não foi possível notificar o setor responsável).');
+                // Notificação removida conforme solicitação
             }
             
             await fetchPendingNotifications();
@@ -652,8 +650,7 @@ const Requests: React.FC = () => {
                 
                 // Atualizar estado local após sucesso na API
                 setAlmacRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action, justification } : r));
-                setActionMessage(`Solicitação ${action === 'approved' ? 'aprovada' : 'recusada'} com sucesso (Via API).`);
-                setTimeout(() => setActionMessage(null), 5000);
+                // Notificação removida conforme solicitação
                 return;
             } catch (apiError) {
                 console.warn('Backend endpoint /api/almac_decision failed or not found. Falling back to client-side logic.', apiError);
@@ -790,12 +787,7 @@ const Requests: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-4 md:gap-6 max-w-[1300px] mx-auto w-full px-4 md:px-0">
-            {actionMessage && (
-                <div className="fixed top-4 right-4 left-4 md:left-auto bg-green-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl shadow-2xl z-50 animate-bounce flex items-center gap-3 border-2 border-green-400">
-                    <span className="material-symbols-outlined text-[20px] md:text-2xl">notifications_active</span>
-                    <p className="font-bold text-xs md:text-base">{actionMessage}</p>
-                </div>
-            )}
+            {/* Bloco de notificação verde removido conforme solicitação */}
             
             {canSeeAlmac && (
                  <div className="flex gap-1 md:gap-4 border-b border-slate-200 overflow-x-auto custom-scrollbar-hide">

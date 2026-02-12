@@ -173,8 +173,23 @@ const Calendar: React.FC = () => {
         fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,expand',
         requestKey: null
       });
-      console.log('Eventos carregados:', res.length);
-      setEvents(res);
+
+      // Also fetch all requests for these events to determine accurate status in cards
+      const requests = await pb.collection('agenda_cap53_almac_requests').getFullList({
+        filter: res.length > 0 ? res.map(e => `event = "${e.id}"`).join(' || ') : 'id = "none"',
+        expand: 'item',
+        fields: 'id,event,status,expand.item.category',
+        requestKey: null
+      });
+
+      // Map requests to events
+      const eventsWithRequests = res.map(event => ({
+        ...event,
+        almac_requests: requests.filter(r => r.event === event.id)
+      }));
+
+      console.log('Eventos carregados:', eventsWithRequests.length);
+      setEvents(eventsWithRequests);
     } catch (error) {
       console.error('Error fetching events:', error);
     } finally {
@@ -813,15 +828,15 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
   }
 
   const getStatusStyle = (status: string) => {
-    if (status === 'confirmed') return 'bg-green-50 text-green-700 border-green-100';
-    if (status === 'rejected') return 'bg-red-50 text-red-700 border-red-100';
-    return 'bg-yellow-50 text-yellow-700 border-yellow-100';
+    if (status === 'confirmed') return 'bg-green-50 text-green-700 border-green-200';
+    if (status === 'rejected') return 'bg-red-50 text-red-700 border-red-200';
+    return 'bg-yellow-50 text-yellow-700 border-yellow-200';
   };
 
   const getStatusLabel = (status: string) => {
-    if (status === 'confirmed') return 'Confirmado';
-    if (status === 'rejected') return 'Recusado';
-    return 'Pendente';
+    if (status === 'confirmed') return 'OK';
+    if (status === 'rejected') return 'REC';
+    return 'PEND';
   };
 
   return createPortal(
@@ -902,31 +917,31 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
         {(event.transporte_suporte || almcStatus || copaStatus || infStatus) && (
           <div className="flex flex-wrap gap-1.5 pt-1">
             {event.transporte_suporte && (
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${
-                event.transporte_status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-100' : 
-                event.transporte_status === 'rejected' ? 'bg-red-50 text-red-700 border-red-100' :
-                'bg-yellow-50 text-yellow-700 border-yellow-100'
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[8px] font-black uppercase tracking-wider ${
+                event.transporte_status === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' : 
+                (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 text-red-700 border-red-200' :
+                'bg-yellow-50 text-yellow-700 border-yellow-200'
               }`}>
                 <span className="material-symbols-outlined text-[12px]">directions_car</span>
                 {event.transporte_status === 'confirmed' ? 'Carro OK' : 
-                 event.transporte_status === 'rejected' ? 'Carro Rec' : 
-                 'Carro Pend'}
+                 (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'Carro REC' : 
+                 'Carro PEND'}
               </div>
             )}
             {almcStatus && (
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getStatusStyle(almcStatus)}`}>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[8px] font-black uppercase tracking-wider ${getStatusStyle(almcStatus)}`}>
                 <span className="material-symbols-outlined text-[12px]">inventory_2</span>
                 Almc {getStatusLabel(almcStatus)}
               </div>
             )}
             {copaStatus && (
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getStatusStyle(copaStatus)}`}>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[8px] font-black uppercase tracking-wider ${getStatusStyle(copaStatus)}`}>
                 <span className="material-symbols-outlined text-[12px]">restaurant</span>
                 Copa {getStatusLabel(copaStatus)}
               </div>
             )}
             {infStatus && (
-              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[8px] font-black uppercase tracking-wider ${getStatusStyle(infStatus)}`}>
+              <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[8px] font-black uppercase tracking-wider ${getStatusStyle(infStatus)}`}>
                 <span className="material-symbols-outlined text-[12px]">terminal</span>
                 Inf {getStatusLabel(infStatus)}
               </div>
@@ -949,6 +964,31 @@ const CalendarEventCard: React.FC<{
 }> = ({ event, user, onCancel, setTooltipData, detailed, onSelect }) => {
   const isCancelled = event.status === 'cancelled';
   
+  const getCategoryStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
+    const categoryRequests = event.almac_requests?.filter((r: any) => r.expand?.item?.category === category) || [];
+    if (categoryRequests.length > 0) {
+      const allApproved = categoryRequests.every((r: any) => r.status === 'approved');
+      const anyRejected = categoryRequests.some((r: any) => r.status === 'rejected');
+      if (anyRejected) return 'rejected';
+      if (allApproved) return 'confirmed';
+      return 'pending';
+    }
+    const items = category === 'ALMOXARIFADO' ? (event.almoxarifado_items || []) :
+                  category === 'COPA' ? (event.copa_items || []) :
+                  (event.informatica_items || []);
+    const confirmed = category === 'ALMOXARIFADO' ? (event.almoxarifado_confirmed_items || []) :
+                      category === 'COPA' ? (event.copa_confirmed_items || []) :
+                      (event.informatica_confirmed_items || []);
+    if (items.length === 0) return null;
+    return (confirmed.length === items.length && items.length > 0) ? 'confirmed' : 'pending';
+  };
+
+  const getStatusStyle = (status: string | null) => {
+    if (status === 'confirmed') return 'bg-green-50 border-green-200 text-green-700';
+    if (status === 'rejected') return 'bg-red-50 border-red-200 text-red-700';
+    return 'bg-yellow-50 border-yellow-200 text-yellow-700';
+  };
+
   const handleMouseEnter = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setTooltipData({
@@ -1002,25 +1042,27 @@ const CalendarEventCard: React.FC<{
       )}
 
       <div className="flex flex-wrap gap-1.5 mt-3">
-        {event.almoxarifado_items?.length > 0 && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 ${event.almoxarifado_confirmed_items?.length === event.almoxarifado_items.length
-            ? 'bg-green-50 border-green-200 text-green-700'
-            : 'bg-yellow-50 border-yellow-200 text-yellow-700'
-            }`}>ALMC</span>
+        {getCategoryStatus('ALMOXARIFADO') !== null && (
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('ALMOXARIFADO'))}`}>ALMC</span>
         )}
-        {event.copa_items?.length > 0 && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 ${event.copa_confirmed_items?.length === event.copa_items.length
-            ? 'bg-orange-50 border-orange-200 text-orange-700'
-            : 'bg-yellow-50 border-yellow-200 text-yellow-700'
-            }`}>COPA</span>
+        {getCategoryStatus('COPA') !== null && (
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('COPA'))}`}>COPA</span>
+        )}
+        {getCategoryStatus('INFORMATICA') !== null && (
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('INFORMATICA'))}`}>INFO</span>
         )}
         {event.transporte_suporte && (
-          <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full border ${event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-100 text-green-600' :
-            event.transporte_status === 'rejected' ? 'bg-red-50 border-red-100 text-red-600' :
-              'bg-yellow-50 border-yellow-100 text-yellow-600'
-            }`}>TRA</span>
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${
+            event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-700' :
+            (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-700' :
+            'bg-yellow-50 border-yellow-200 text-yellow-700'
+          }`}>TRA</span>
         )}
-        {isCancelled && <span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-red-50 border border-red-100 text-red-600 uppercase">CANCELADO</span>}
+        {isCancelled && (
+          <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-red-50 border-2 border-red-200 text-red-700 uppercase tracking-wider">
+            CANCELADO
+          </span>
+        )}
       </div>
     </div>
   );

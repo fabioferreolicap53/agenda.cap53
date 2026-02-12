@@ -510,10 +510,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending': return 'Pendente';
-      case 'approved': return 'Aprovado';
-      case 'rejected': return 'Recusado';
-      default: return 'Desconhecido';
+      case 'pending': return 'PEND';
+      case 'approved': return 'OK';
+      case 'rejected': return 'REC';
+      default: return '?';
     }
   };
 
@@ -942,11 +942,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     }`}>
                                                         {status === 'approved' ? 'ACEITO' : status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
                                                     </span>
-                                                    {status === 'rejected' && (
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                            {refusalAckByRequest[almcReqs.find(r => r.status === 'rejected')?.id || ''] ? 'CIENTE' : 'PENDENTE CIÊNCIA'}
-                                                        </span>
-                                                    )}
+                                                    {/* Status de ciência removido conforme solicitação */}
                                                 </div>
                                             );
                                         })()}
@@ -973,11 +969,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     }`}>
                                                         {status === 'approved' ? 'ACEITO' : status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
                                                     </span>
-                                                    {status === 'rejected' && (
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                            {refusalAckByRequest[dcaReqs.find(r => r.status === 'rejected')?.id || ''] ? 'CIENTE' : 'PENDENTE CIÊNCIA'}
-                                                        </span>
-                                                    )}
+                                                    {/* Status de ciência removido conforme solicitação */}
                                                 </div>
                                             );
                                         })()}
@@ -998,11 +990,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     {event.transporte_status === 'confirmed' ? 'ACEITO' : 
                                                      event.transporte_status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
                                                 </span>
-                                                {event.transporte_status === 'rejected' && (
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                                        {transportRefusalAck ? 'CIENTE' : 'PENDENTE CIÊNCIA'}
-                                                    </span>
-                                                )}
+                                                {/* Status de ciência removido conforme solicitação */}
                                             </div>
                                         ) : (
                                             <span className="text-[11px] font-black text-slate-300 uppercase">NÃO SOLIC.</span>
