@@ -120,13 +120,13 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
       {isOpen && (
         <div 
           onClick={(e) => e.stopPropagation()}
-          className="absolute top-full left-0 mt-2 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 z-[100] p-1.5 animate-in fade-in slide-in-from-top-2 duration-300 min-w-[200px]"
+          className="fixed md:absolute top-1/2 md:top-full left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 mt-0 md:mt-2 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-slate-100 z-[100] p-1.5 animate-in fade-in slide-in-from-top-2 duration-300 w-[90vw] max-w-[280px] md:min-w-[200px]"
         >
           <div className="flex p-1 gap-1">
             {/* Hours Column */}
             <div 
               ref={hoursRef}
-              className="flex-1 max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5"
+              className="flex-1 max-h-[200px] md:max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5"
               role="listbox"
               aria-label="Selecionar hora"
             >
@@ -141,7 +141,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                     data-hour={h}
                     onClick={() => handleSelectHour(h)}
                     className={`
-                      w-full py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center
+                      w-full py-3 md:py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center
                       ${isSelected 
                         ? 'bg-slate-900 text-white font-bold shadow-md' 
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-medium'}
@@ -158,7 +158,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
             {/* Minutes Column */}
             <div 
               ref={minutesRef}
-              className="flex-1 max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5"
+              className="flex-1 max-h-[200px] md:max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5"
               role="listbox"
               aria-label="Selecionar minutos"
             >
@@ -173,7 +173,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                     data-minute={m}
                     onClick={() => handleSelectMinute(m)}
                     className={`
-                      w-full py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center
+                      w-full py-3 md:py-2.5 rounded-xl text-xs transition-all duration-200 flex items-center justify-center
                       ${isSelected 
                         ? 'bg-slate-900 text-white font-bold shadow-md' 
                         : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 font-medium'}
@@ -190,11 +190,17 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
             <button 
               type="button"
               onClick={() => setIsOpen(false)}
-              className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-[10px] font-bold hover:bg-slate-800 transition-colors uppercase tracking-widest shadow-sm"
+              className="w-full py-3.5 md:py-2.5 rounded-xl bg-slate-900 text-white text-[10px] font-bold hover:bg-slate-800 transition-colors uppercase tracking-widest shadow-sm"
             >
               Confirmar
             </button>
           </div>
+          
+          {/* Mobile Overlay Background */}
+          <div 
+            className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] z-[-1] md:hidden"
+            onClick={() => setIsOpen(false)}
+          />
         </div>
       )}
     </div>

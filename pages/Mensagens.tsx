@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
+import { useAuth } from '../components/AuthContext';
 
 const Chat: React.FC = () => {
+  const { user: currentUser } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const userId = searchParams.get('userId');
   
   const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -37,8 +41,6 @@ const Chat: React.FC = () => {
     }
   }, [userId, isMobile]);
 
-  const currentUser = pb.authStore.model;
-
   // Scroll to bottom on new messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -48,19 +50,71 @@ const Chat: React.FC = () => {
     scrollToBottom();
   }, [messages]);
 
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  // Fetch all users for the sidebar and their unread counts
+  useEffect(() => {
+    if (!currentUser?.id) return;
 
-  const fetchUsersAndUnread = async () => {
+    const fetchUsersAndUnread = async () => {
+      try {
+        setLoadingUsers(true);
+        const userRecords = await pb.collection('agenda_cap53_usuarios').getFullList({
+          sort: 'name',
+          filter: `id != "${currentUser.id}"`
+        });
+        setUsers(userRecords);
+
+        // Fetch unread counts for each user
+        const unreadRecords = await pb.collection('agenda_cap53_mensagens').getFullList({
+          filter: `receiver = "${currentUser.id}" && read = false`
+        });
+
+        const counts: Record<string, number> = {};
+        unreadRecords.forEach(msg => {
+          counts[msg.sender] = (counts[msg.sender] || 0) + 1;
+        });
+        setUnreadCounts(counts);
+      } catch (error) {
+        console.error("Error fetching users/unread:", error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchUsersAndUnread();
+
+    // Subscribe to user changes for status/name/avatar updates
+    let unsubscribe: (() => void) | undefined;
+    const setupSubscription = async () => {
+      try {
+        unsubscribe = await pb.collection('agenda_cap53_usuarios').subscribe('*', (e) => {
+          if (e.action === 'update') {
+            setUsers(prev => prev.map(u => u.id === e.record.id ? e.record : u));
+          } else if (e.action === 'create') {
+            if (e.record.id !== currentUser.id) {
+              setUsers(prev => [e.record, ...prev].sort((a, b) => (a.name || '').localeCompare(b.name || '')));
+            }
+          } else if (e.action === 'delete') {
+            setUsers(prev => prev.filter(u => u.id !== e.record.id));
+          }
+        });
+      } catch (err) {
+        console.error("Erro na subscrição de usuários:", err);
+      }
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [currentUser?.id]);
+
+  // Helper function to refresh unread counts
+  const refreshUnread = async () => {
+    if (!currentUser?.id) return;
     try {
-      const userRecords = await pb.collection('agenda_cap53_usuarios').getFullList({
-        sort: 'name',
-        filter: `id != "${currentUser?.id}"`
-      });
-      setUsers(userRecords);
-
-      // Fetch unread counts for each user
       const unreadRecords = await pb.collection('agenda_cap53_mensagens').getFullList({
-        filter: `receiver = "${currentUser?.id}" && read = false`
+        filter: `receiver = "${currentUser.id}" && read = false`
       });
 
       const counts: Record<string, number> = {};
@@ -69,14 +123,9 @@ const Chat: React.FC = () => {
       });
       setUnreadCounts(counts);
     } catch (error) {
-      console.error("Error fetching users/unread:", error);
+      console.error("Error refreshing unread counts:", error);
     }
   };
-
-  // Fetch all users for the sidebar and their unread counts
-  useEffect(() => {
-    fetchUsersAndUnread();
-  }, [currentUser?.id]);
 
   // Fetch selected user and their messages
   useEffect(() => {
@@ -103,64 +152,72 @@ const Chat: React.FC = () => {
         setMessages(messageRecords);
 
         // Mark messages as read
-        const unreadMessages = messageRecords.filter(m => m.receiver === currentUser?.id && !m.read);
-        if (unreadMessages.length > 0) {
-          for (const msg of unreadMessages) {
-            await pb.collection('agenda_cap53_mensagens').update(msg.id, { read: true });
-          }
-          // Refresh sidebar unread counts
-          fetchUsersAndUnread();
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-
-    // Subscribe to real-time messages
-    if (userId) {
-      pb.collection('agenda_cap53_mensagens').subscribe('*', async (data) => {
-        if (data.action === 'create') {
-          const msg = data.record;
-          // Check if message belongs to the current conversation
-          if ((msg.sender === currentUser?.id && msg.receiver === userId) || 
-              (msg.sender === userId && msg.receiver === currentUser?.id)) {
-            setMessages(prev => [...prev, msg]);
-            
-            // Mark as read if received
-            if (msg.receiver === currentUser?.id) {
+          const unreadMessages = messageRecords.filter(m => m.receiver === currentUser?.id && !m.read);
+          if (unreadMessages.length > 0) {
+            for (const msg of unreadMessages) {
               await pb.collection('agenda_cap53_mensagens').update(msg.id, { read: true });
-              // Refresh unread counts after marking as read
-              fetchUsersAndUnread();
             }
-          } else if (msg.receiver === currentUser?.id) {
-            // New message for another conversation, refresh unread counts
-            fetchUsersAndUnread();
+            // Refresh sidebar unread counts
+            refreshUnread();
           }
-        } else if (data.action === 'update') {
-          const msg = data.record;
-          // Update message in the list if it belongs to current conversation AND is not hidden for current user
-          const isRelevant = (msg.sender === currentUser?.id && msg.receiver === userId) || 
-                            (msg.sender === userId && msg.receiver === currentUser?.id);
-          
-          if (isRelevant) {
-            const isHiddenForMe = (msg.sender === currentUser?.id && msg.deleted_by_sender) || 
-                                (msg.receiver === currentUser?.id && msg.deleted_by_receiver);
-            
-            if (isHiddenForMe) {
-              setMessages(prev => prev.filter(m => m.id !== msg.id));
-            } else {
-              setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
-            }
-          }
-        } else if (data.action === 'delete') {
-          setMessages(prev => prev.filter(m => m.id !== data.record.id));
+        } catch (error) {
+          console.error("Error fetching data:", error);
+        } finally {
+          setLoading(false);
         }
-      });
-    }
+      };
+  
+      fetchData();
+  
+      // Subscribe to real-time messages
+      if (userId) {
+        const setupMessageSubscription = async () => {
+          try {
+            await pb.collection('agenda_cap53_mensagens').subscribe('*', async (data) => {
+              if (data.action === 'create') {
+                const msg = data.record;
+                // Check if message belongs to the current conversation
+                if ((msg.sender === currentUser?.id && msg.receiver === userId) || 
+                    (msg.sender === userId && msg.receiver === currentUser?.id)) {
+                  setMessages(prev => [...prev, msg]);
+                  
+                  // Mark as read if received
+                  if (msg.receiver === currentUser?.id) {
+                    await pb.collection('agenda_cap53_mensagens').update(msg.id, { read: true });
+                    // Refresh unread counts after marking as read
+                    refreshUnread();
+                  }
+                } else if (msg.receiver === currentUser?.id) {
+                  // New message for another conversation, refresh unread counts
+                  refreshUnread();
+                }
+              } else if (data.action === 'update') {
+                const msg = data.record;
+                // Update message in the list if it belongs to current conversation AND is not hidden for current user
+                const isRelevant = (msg.sender === currentUser?.id && msg.receiver === userId) || 
+                                  (msg.sender === userId && msg.receiver === currentUser?.id);
+                
+                if (isRelevant) {
+                  const isHiddenForMe = (msg.sender === currentUser?.id && msg.deleted_by_sender) || 
+                                      (msg.receiver === currentUser?.id && msg.deleted_by_receiver);
+                  
+                  if (isHiddenForMe) {
+                    setMessages(prev => prev.filter(m => m.id !== msg.id));
+                  } else {
+                    setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+                  }
+                }
+              } else if (data.action === 'delete') {
+                setMessages(prev => prev.filter(m => m.id !== data.record.id));
+              }
+            });
+          } catch (err) {
+            console.error("Erro na subscrição de mensagens:", err);
+          }
+        };
+
+        setupMessageSubscription();
+      }
 
     return () => {
       pb.collection('agenda_cap53_mensagens').unsubscribe();
@@ -272,11 +329,11 @@ const Chat: React.FC = () => {
   };
 
   const filteredUsers = users.filter(u => 
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
-    <div className="flex h-[calc(100vh-100px)] lg:h-[calc(100vh-140px)] border-none lg:border lg:border-border-light rounded-none lg:rounded-xl overflow-hidden bg-white shadow-none lg:shadow-sm">
+    <div className="flex h-[calc(100vh-120px)] lg:h-[calc(100vh-160px)] border-none lg:border lg:border-border-light rounded-none lg:rounded-xl overflow-hidden bg-white shadow-none lg:shadow-sm">
       {/* Chat Sidebar */}
       <div className={`${isMobile && showChatMobile ? 'hidden' : 'flex'} w-full lg:w-80 border-r border-border-light flex-col bg-white`}>
         <div className="p-4 border-b border-border-light bg-white/50 backdrop-blur-sm sticky top-0 z-10">
@@ -291,53 +348,62 @@ const Chat: React.FC = () => {
              </div>
         </div>
         <div className="flex-1 overflow-y-auto p-3 space-y-1 bg-white">
-            {filteredUsers.map((user) => (
-                <div 
-                    key={user.id} 
-                    onClick={() => {
-                        navigate(`/chat?userId=${user.id}`);
-                        if (isMobile) setShowChatMobile(true);
-                    }}
-                    className={`flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer transition-all duration-200 group ${
-                        user.id === userId 
-                        ? 'bg-primary/5 border border-primary/10 shadow-sm' 
-                        : 'hover:bg-slate-50 border border-transparent'
-                    }`}
-                >
-                    <div className="relative shrink-0">
+            {loadingUsers ? (
+                <div className="flex flex-col items-center justify-center h-40 gap-3">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary/30"></div>
+                    <p className="text-xs text-slate-400 animate-pulse">Carregando contatos...</p>
+                </div>
+            ) : (
+                <>
+                    {filteredUsers.map((user) => (
                         <div 
-                            className="size-12 rounded-2xl bg-primary/10 bg-cover bg-center shadow-sm group-hover:scale-105 transition-transform" 
-                            style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
-                        ></div>
-                        <span className={`absolute -bottom-1 -right-1 size-4 border-2 border-white rounded-full shadow-sm ${getStatusColor(user.status)}`}></span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-0.5">
-                            <p className={`text-[15px] font-bold truncate ${user.id === userId ? 'text-primary' : 'text-slate-800'}`}>
-                                {user.name}
-                            </p>
-                            {unreadCounts[user.id] > 0 && (
-                                <div className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-300">
-                                    {unreadCounts[user.id]}
+                            key={user.id} 
+                            onClick={() => {
+                                navigate(`/chat?userId=${user.id}`);
+                                if (isMobile) setShowChatMobile(true);
+                            }}
+                            className={`flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer transition-all duration-200 group ${
+                                user.id === userId 
+                                ? 'bg-primary/5 border border-primary/10 shadow-sm' 
+                                : 'hover:bg-slate-50 border border-transparent'
+                            }`}
+                        >
+                            <div className="relative shrink-0">
+                                <div 
+                                    className="size-12 rounded-2xl bg-primary/10 bg-cover bg-center shadow-sm group-hover:scale-105 transition-transform" 
+                                    style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
+                                ></div>
+                                <span className={`absolute -bottom-1 -right-1 size-4 border-2 border-white rounded-full shadow-sm ${getStatusColor(user.status)}`}></span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-center mb-0.5">
+                                    <p className={`text-[15px] font-bold truncate ${user.id === userId ? 'text-primary' : 'text-slate-800'}`}>
+                                        {user.name || 'Membro do Time'}
+                                    </p>
+                                    {unreadCounts[user.id] > 0 && (
+                                        <div className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-300">
+                                            {unreadCounts[user.id]}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+                                <div className="flex items-center gap-2">
+                                    <p className="text-xs text-slate-500 truncate font-medium flex-1">
+                                        {user.sector || 'Sem setor'}
+                                    </p>
+                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${user.status === 'Online' ? 'text-green-500' : 'text-slate-300'}`}>
+                                        {user.status || 'Offline'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <p className="text-xs text-slate-500 truncate font-medium flex-1">
-                                {user.sector || 'Sem setor'}
-                            </p>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider ${user.status === 'Online' ? 'text-green-500' : 'text-slate-300'}`}>
-                                {user.status || 'Offline'}
-                            </span>
+                    ))}
+                    {!loadingUsers && filteredUsers.length === 0 && (
+                        <div className="p-12 text-center flex flex-col items-center gap-3">
+                            <span className="material-symbols-outlined text-slate-200 text-5xl">person_search</span>
+                            <p className="text-slate-400 text-sm font-medium">Nenhum usuário encontrado</p>
                         </div>
-                    </div>
-                </div>
-            ))}
-            {filteredUsers.length === 0 && (
-                <div className="p-12 text-center flex flex-col items-center gap-3">
-                    <span className="material-symbols-outlined text-slate-200 text-5xl">person_search</span>
-                    <p className="text-slate-400 text-sm font-medium">Nenhum usuário encontrado</p>
-                </div>
+                    )}
+                </>
             )}
         </div>
       </div>

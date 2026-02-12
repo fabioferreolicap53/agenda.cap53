@@ -235,7 +235,7 @@ const TransportManagement: React.FC = () => {
                         {filteredTransportRequests.map((event) => (
                             <div 
                                 key={event.id} 
-                                ref={el => scrollRef.current[event.id] = el}
+                                ref={el => { if (el) scrollRef.current[event.id] = el; }}
                                 className={`group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col md:flex-row items-stretch ${
                                     transportSubTab === 'history' ? 'opacity-90' : ''
                                 } ${highlightEventId === event.id ? 'ring-2 ring-primary ring-offset-2 border-primary shadow-xl shadow-primary/10' : 'border-slate-100'}`}

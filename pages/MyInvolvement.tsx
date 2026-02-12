@@ -161,6 +161,7 @@ interface EventRecord {
     user: string;
     creator_role?: string;
     custom_location?: string;
+    location?: string;
     expand?: any;
 }
 
@@ -1063,7 +1064,7 @@ const MyInvolvement: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-3 text-[10px] text-slate-600 font-medium whitespace-nowrap">
-                                                    {new Date(event.date_start).toLocaleDateString(lang === 'pt' ? 'pt-BR' : 'en-US')}
+                                                    {new Date(event.date_start).toLocaleDateString(lang.startsWith('pt') ? 'pt-BR' : 'en-US')}
                                                 </td>
                                                 <td className="px-4 py-3 whitespace-nowrap">
                                                     <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[9px] font-black uppercase">

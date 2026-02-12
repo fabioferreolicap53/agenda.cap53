@@ -1351,17 +1351,17 @@ const CreateEvent: React.FC = () => {
                             <div className="flex items-center gap-3">
                               <div className={`size-10 rounded-full bg-cover bg-center border-2 ${isSel ? 'border-primary/20' : 'border-white shadow-sm'}`} style={{ backgroundImage: `url(${avatarUrl})` }} />
                               <div className="flex flex-col items-start min-w-0 flex-1 gap-0.5">
-                                <span className={`text-[11px] font-bold uppercase tracking-tight truncate w-full ${isSel ? 'text-primary' : 'text-slate-700'}`}>
+                                <span className={`text-xs font-bold uppercase tracking-tight truncate w-full ${isSel ? 'text-primary' : 'text-slate-700'}`}>
                                   {u.name || (u.email ? u.email.split('@')[0] : 'Usuário')}
                                 </span>
                                 <div className="flex items-center gap-1.5">
-                                  <span className={`text-[9px] font-bold uppercase tracking-wider ${isSel ? 'text-primary/60' : 'text-slate-400'}`}>
+                                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isSel ? 'text-primary/60' : 'text-slate-400'}`}>
                                   {u.role || (u.id === user?.id ? 'Criador' : 'Participante')}
                                 </span>
                                   {u.sector && (
                                     <>
                                       <span className={`size-1 rounded-full ${isSel ? 'bg-primary/20' : 'bg-slate-300'}`} />
-                                      <span className={`text-[9px] font-medium uppercase tracking-tight ${isSel ? 'text-primary/40' : 'text-slate-400/70'}`}>
+                                      <span className={`text-[10px] font-medium uppercase tracking-tight ${isSel ? 'text-primary/40' : 'text-slate-400/70'}`}>
                                         {u.sector}
                                       </span>
                                     </>
@@ -1370,7 +1370,7 @@ const CreateEvent: React.FC = () => {
                               </div>
                               {isCreatorUser ? (
                                 <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/10">
-                                  <span className="text-[8px] font-black uppercase tracking-widest">Você</span>
+                                  <span className="text-[10px] font-black uppercase tracking-widest">Você</span>
                                 </div>
                               ) : (
                                 <button
@@ -1384,18 +1384,23 @@ const CreateEvent: React.FC = () => {
                             </div>
                             
                             {isSel && !isCreatorUser && (
-                              <div className="flex items-center gap-2 mt-1 pt-2 border-t border-primary/10">
-                                <span className="text-[8px] font-bold text-primary/60 uppercase tracking-widest">Nível:</span>
-                                <div className="flex gap-1 flex-1">
+                              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-primary/10">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Nível de Envolvimento:</span>
+                                  <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                    {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-1.5">
                                   {INVOLVEMENT_LEVELS.map(level => (
                                     <button
                                       key={level.value}
                                       type="button"
                                       onClick={() => setParticipantRoles(prev => ({ ...prev, [u.id]: level.value }))}
-                                      className={`flex-1 py-1 rounded-lg text-[8px] font-bold transition-all duration-200 ${
+                                      className={`py-2 px-1 rounded-xl text-[9px] font-bold transition-all duration-300 ${
                                         (participantRoles[u.id] || involvementLevel) === level.value
-                                          ? 'bg-primary text-white shadow-sm'
-                                          : 'bg-white text-slate-400 border border-slate-100 hover:border-primary/30 hover:text-primary/60'
+                                          ? 'bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]'
+                                          : 'bg-white text-slate-400 border border-slate-100 hover:border-primary/30 hover:text-primary/60 active:scale-95'
                                       }`}
                                     >
                                       {level.label}

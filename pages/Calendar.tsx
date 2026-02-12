@@ -321,113 +321,104 @@ const Calendar: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full gap-2 md:gap-3 max-w-[1700px] mx-auto overflow-hidden">
+    <div className="flex flex-col h-full gap-4 max-w-[1800px] mx-auto overflow-hidden p-2 md:p-4">
       {/* Filters Bar - Fixed Top */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 md:gap-4 bg-white p-3 md:p-4 rounded-xl border border-border-light shadow-sm sticky top-0 z-30 transition-all duration-300">
-        <div className="flex items-center justify-between md:justify-start gap-3">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-border-light shadow-sm sticky top-0 z-30 transition-all duration-300">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => {
               const today = new Date();
               setCurrentDate(today);
               updateURL(viewType, today, true);
             }}
-            className="flex items-center gap-2 px-3 py-2 md:py-1.5 text-[10px] md:text-xs font-black uppercase tracking-wider text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-xl transition-all duration-300 active:scale-95"
           >
             <span className="material-symbols-outlined text-[18px]">today</span>
             Hoje
           </button>
 
-          <div className="flex flex-1 md:flex-none items-center justify-between bg-slate-50 md:bg-white rounded-lg p-1 border border-border-light">
+          <div className="flex items-center bg-slate-100/50 rounded-xl p-1 border border-border-light">
             <button
               onClick={() => handleNavigate('prev')}
-              className="size-9 md:size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300"
+              className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
             >
               <span className="material-symbols-outlined text-[20px]">chevron_left</span>
             </button>
-            <span className="px-2 md:px-4 text-[11px] md:text-sm font-bold text-text-main min-w-[120px] md:min-w-[180px] text-center capitalize">
+            <span className="px-4 text-[11px] md:text-xs font-black text-text-main min-w-[140px] md:min-w-[180px] text-center uppercase tracking-widest">
               {viewType === 'day'
                 ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
                 : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
             </span>
             <button
               onClick={() => handleNavigate('next')}
-              className="size-9 md:size-8 flex items-center justify-center rounded hover:bg-primary hover:text-white text-text-main transition-all duration-300"
+              className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
             >
               <span className="material-symbols-outlined text-[20px]">chevron_right</span>
             </button>
           </div>
         </div>
 
-        <div className="flex bg-slate-100/50 md:bg-white p-1 rounded-xl md:rounded-lg border border-border-light overflow-x-auto custom-scrollbar-hide">
-          <button
-            onClick={() => updateURL('day', currentDate)}
-            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'day' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
-          >
-            Dia
-          </button>
-          <button
-            onClick={() => updateURL('week', currentDate)}
-            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'week' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
-          >
-            Semana
-          </button>
-          <button
-            onClick={() => updateURL('month', currentDate)}
-            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'month' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
-          >
-            Mês
-          </button>
-          <button
-            onClick={() => updateURL('agenda', currentDate)}
-            className={`flex-1 md:flex-none px-3 md:px-4 py-2 md:py-1.5 text-[10px] md:text-sm font-medium rounded-lg md:rounded transition-all duration-300 whitespace-nowrap ${viewType === 'agenda' ? 'bg-primary text-white shadow-sm font-bold' : 'text-text-secondary hover:text-text-main'}`}
-          >
-            Agenda
-          </button>
+        <div className="flex bg-slate-100/50 p-1 rounded-xl border border-border-light">
+          {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
+            <button
+              key={view}
+              onClick={() => updateURL(view, currentDate)}
+              className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
+                viewType === view 
+                  ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
+                  : 'text-text-secondary hover:text-text-main'
+              }`}
+            >
+              {view === 'day' ? 'Dia' : view === 'week' ? 'Semana' : view === 'month' ? 'Mês' : 'Agenda'}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Calendar Grid Container */}
-      <div className="bg-white rounded-xl border border-border-light shadow-sm flex-1 flex flex-col overflow-hidden min-h-[400px]">
+      <div className="bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col overflow-hidden min-h-[750px] mb-4">
         {viewType === 'month' && (
-          <>
-            <div className="grid grid-cols-7 border-b border-border-light bg-white sticky top-0 z-10">
+          <div className="flex-1 flex flex-col h-full">
+            <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
               {daysLabels.map((day) => (
-                <div key={day} className="py-2 text-center text-[10px] font-black uppercase tracking-widest text-text-secondary">
+                <div key={day} className="py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary">
                   {day}
                 </div>
               ))}
             </div>
-            <div className={`grid grid-cols-7 flex-1 divide-x divide-y divide-border-light border-l border-border-light bg-white ${getDatesForMonth(currentDate).length > 35 ? 'grid-rows-6' : 'grid-rows-5'
-              }`}>
+            <div className={`grid grid-cols-7 flex-1 divide-x divide-y divide-border-light border-l border-border-light bg-white ${
+              getDatesForMonth(currentDate).length > 35 ? 'grid-rows-6' : 'grid-rows-5'
+            }`}>
               {getDatesForMonth(currentDate).map((dateObj, idx) => {
                 const dateKey = dateObj.date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
                 const isToday = dateObj.date.toDateString() === new Date().toDateString();
-                const isSelected = selectedDate?.toDateString() === dateObj.date.toDateString();
 
                 return (
                   <div
                     key={idx}
                     onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
-                    className={`flex flex-col p-2 relative group transition-all duration-300 cursor-default ${dateObj.type === 'current' 
-                      ? (isToday ? 'bg-primary/[0.03]' : 'bg-white hover:bg-primary/[0.05]') 
-                      : 'bg-slate-100/80 text-text-secondary/60'
-                    } ${isToday ? 'ring-1 ring-inset ring-primary/20' : 'border-slate-100'} ${
-                      dateObj.type === 'current' ? 'shadow-sm' : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.05)]'
+                    className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
+                      dateObj.type === 'current' 
+                        ? (isToday ? 'bg-primary/[0.02]' : 'bg-white hover:bg-slate-50/50') 
+                        : 'bg-slate-50/30 text-text-secondary/40'
                     }`}
                   >
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateURL('day', dateObj.date);
-                      }}
-                      className={`text-xs font-bold self-end mb-1 size-6 flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${isToday ? 'bg-primary text-white rounded-full shadow-md' : (dateObj.type === 'current' ? 'text-text-main group-hover:text-primary' : 'text-text-secondary/40')
+                    <div className="flex items-center justify-between mb-1.5">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateURL('day', dateObj.date);
+                        }}
+                        className={`text-[11px] md:text-xs font-black size-6 md:size-7 flex items-center justify-center transition-all duration-300 rounded-full hover:bg-primary hover:text-white ${
+                          isToday ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-text-secondary group-hover:text-primary'
                         }`}
-                    >
-                      {dateObj.date.getDate()}
-                    </button>
+                      >
+                        {dateObj.date.getDate()}
+                      </button>
+                    </div>
 
-                    <div className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100%-1.5rem)] custom-scrollbar pr-1">
+                    <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 max-h-[100px]">
                       {dayEvents.map(event => (
                         <CalendarEventCard
                           key={event.id}
@@ -443,55 +434,65 @@ const Calendar: React.FC = () => {
                 );
               })}
             </div>
-          </>
+          </div>
         )}
 
         {viewType === 'week' && (
-          <div className={`flex-1 flex flex-col h-full overflow-hidden ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-100/30'}`}>
-            <div className={`grid grid-cols-7 border-b border-border-light bg-white ${isCurrentWeek(currentDate) ? '' : 'ring-1 ring-inset ring-slate-200 shadow-sm'}`}>
+          <div className={`flex-1 flex flex-col h-full overflow-hidden ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
+            <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
               {getDatesForWeek(currentDate).map((date, idx) => (
-                <div key={idx} className={`py-4 flex flex-col items-center gap-1 border-r border-border-light last:border-r-0 transition-all duration-300 ${date.toDateString() === new Date().toDateString() ? 'bg-primary/[0.05] border-t-2 border-primary' : (isCurrentWeek(currentDate) ? '' : 'bg-slate-50/50')
+                <div key={idx} className={`py-3 flex flex-col items-center gap-0.5 border-r border-border-light last:border-r-0 transition-all duration-300 ${
+                  date.toDateString() === new Date().toDateString() ? 'bg-primary/5' : ''
+                }`}>
+                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                    date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-secondary'
                   }`}>
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-secondary'}`}>{daysLabels[idx]}</span>
+                    {daysLabels[idx]}
+                  </span>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       updateURL('day', date);
                     }}
-                    className={`text-lg font-black transition-all duration-300 hover:scale-110 active:scale-95 ${date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-main hover:text-primary'}`}
+                    className={`text-sm md:text-base font-black transition-all duration-300 hover:scale-110 active:scale-95 ${
+                      date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-main hover:text-primary'
+                    }`}
                   >
                     {date.getDate()}
                   </button>
                 </div>
               ))}
             </div>
-            <div className={`grid grid-cols-7 flex-1 divide-x divide-border-light bg-white overflow-y-auto custom-scrollbar ${isCurrentWeek(currentDate) ? '' : 'bg-slate-50/20'}`}>
+            <div className="grid grid-cols-7 flex-1 divide-x divide-border-light bg-white overflow-y-auto custom-scrollbar">
               {getDatesForWeek(currentDate).map((date, idx) => {
                 const isToday = date.toDateString() === new Date().toDateString();
                 const dayEvents = eventsByDate[date.toDateString()] || [];
                 return (
                   <div
-                      key={idx}
-                      onDoubleClick={() => handleDayDoubleClick(date)}
-                      className={`flex flex-col p-3 gap-2 min-h-[500px] cursor-default transition-all duration-300 ${
-                        isToday ? 'bg-primary/[0.02]' : (isCurrentWeek(currentDate) ? 'hover:bg-primary/[0.03]' : 'bg-slate-100/50 hover:bg-slate-100/80')
-                      } ${!isCurrentWeek(currentDate) ? 'shadow-[inset_0_0_0_1px_rgba(0,0,0,0.02)]' : ''}`}
-                    >
-                      {dayEvents.map(event => (
-                      <CalendarEventCard
-                        key={event.id}
-                        event={event}
-                        user={user}
-                        onCancel={handleCancelEvent}
-                        setTooltipData={setTooltipData}
-                        onSelect={setSelectedEvent}
-                      />
-                    ))}
-                    {dayEvents.length === 0 && (
-                      <div className="flex-1 flex flex-col items-center justify-center opacity-20 py-20 grayscale">
-                        <span className="material-symbols-outlined text-4xl">event_busy</span>
-                      </div>
-                    )}
+                    key={idx}
+                    onDoubleClick={() => handleDayDoubleClick(date)}
+                    className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 ${
+                      isToday ? 'bg-primary/[0.02]' : 'hover:bg-slate-50/30'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-1.5 flex-1 group">
+                      {dayEvents.length > 0 ? (
+                        dayEvents.map(event => (
+                          <CalendarEventCard
+                            key={event.id}
+                            event={event}
+                            user={user}
+                            onCancel={handleCancelEvent}
+                            setTooltipData={setTooltipData}
+                            onSelect={setSelectedEvent}
+                          />
+                        ))
+                      ) : (
+                        <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem eventos</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -502,59 +503,71 @@ const Calendar: React.FC = () => {
         {viewType === 'day' && (
           <div 
             onDoubleClick={() => handleDayDoubleClick(currentDate)}
-            className="flex-1 flex flex-col p-4 bg-white overflow-y-auto custom-scrollbar cursor-default"
+            className="flex-1 flex flex-col h-full bg-white overflow-y-auto custom-scrollbar cursor-default"
             title="Clique duplo para novo evento"
           >
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3 transition-all duration-300">
-                <div className="size-12 rounded-xl bg-primary text-white flex items-center justify-center border border-primary/20 shadow-md transition-all duration-300 hover:scale-105">
-                  <span className="text-xl font-black">{currentDate.getDate()}</span>
-                </div>
-                <div className="flex flex-col">
-                  <h3 className="text-xl font-black text-text-main capitalize">
+            <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
+              <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-2xl md:text-3xl font-black text-primary tracking-tight">
+                    {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                  </h2>
+                  <p className="text-sm font-bold text-text-secondary uppercase tracking-[0.2em]">
                     {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
-                  </h3>
-                  <p className="text-[11px] text-text-secondary font-medium">
-                    {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
                   </p>
                 </div>
+                {currentDate.toDateString() === new Date().toDateString() && (
+                  <span className="px-4 py-1.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20">
+                    Hoje
+                  </span>
+                )}
               </div>
-            </div>
 
-            <div className="flex flex-col gap-3">
-              {(() => {
-                const dayEvents = eventsByDate[currentDate.toDateString()] || [];
-                return dayEvents.map(event => (
-                  <div key={event.id} className="max-w-2xl">
-                    <CalendarEventCard
-                      event={event}
-                      user={user}
-                      onCancel={handleCancelEvent}
-                      detailed
-                      setTooltipData={setTooltipData}
-                      onSelect={setSelectedEvent}
-                    />
-                  </div>
-                ));
-              })()}
-              {(eventsByDate[currentDate.toDateString()] || []).length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-text-secondary/40">
-                  <span className="material-symbols-outlined text-6xl mb-4">calendar_today</span>
-                  <p className="text-lg font-bold">Nenhum evento agendado para este dia.</p>
-                </div>
-              )}
+              <div className="space-y-4">
+                {(() => {
+                  const dayEvents = eventsByDate[currentDate.toDateString()] || [];
+                  if (dayEvents.length === 0) {
+                    return (
+                      <div className="py-20 flex flex-col items-center justify-center text-center gap-4 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
+                        <span className="material-symbols-outlined text-5xl text-slate-300">calendar_today</span>
+                        <div className="flex flex-col gap-1">
+                          <p className="text-slate-500 font-bold">Nenhum evento agendado</p>
+                          <p className="text-xs text-slate-400">Clique duas vezes para criar um novo evento</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return dayEvents.map(event => (
+                    <div key={event.id} className="hover:translate-x-1 transition-transform duration-300">
+                      <CalendarEventCard
+                        event={event}
+                        user={user}
+                        onCancel={handleCancelEvent}
+                        detailed
+                        setTooltipData={setTooltipData}
+                        onSelect={setSelectedEvent}
+                      />
+                    </div>
+                  ));
+                })()}
+              </div>
             </div>
           </div>
         )}
 
         {viewType === 'agenda' && (
-          <div className="flex-1 flex flex-col p-6 bg-white overflow-y-auto custom-scrollbar">
-            <div className="flex items-center gap-3 mb-6">
-               <span className="material-symbols-outlined text-primary text-3xl">view_agenda</span>
-               <h3 className="text-xl font-black text-text-main">Agenda do Mês</h3>
+          <div className="flex-1 flex flex-col p-8 bg-white overflow-y-auto custom-scrollbar">
+            <div className="flex items-center gap-4 mb-10 border-b border-slate-50 pb-6">
+               <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                 <span className="material-symbols-outlined text-2xl">view_agenda</span>
+               </div>
+               <div>
+                 <h3 className="text-2xl font-black text-text-main">Agenda do Mês</h3>
+                 <p className="text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
+               </div>
             </div>
             
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-12 max-w-5xl mx-auto w-full">
               {(() => {
                  // Filter events for the current month and year
                  const monthEvents = events.filter(e => {
@@ -565,9 +578,9 @@ const Calendar: React.FC = () => {
 
                  if (monthEvents.length === 0) {
                     return (
-                        <div className="flex flex-col items-center justify-center py-20 text-text-secondary/40">
-                          <span className="material-symbols-outlined text-6xl mb-4">event_note</span>
-                          <p className="text-lg font-bold">Nenhum evento agendado para este mês.</p>
+                        <div className="py-20 flex flex-col items-center justify-center text-center gap-4 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-200">
+                          <span className="material-symbols-outlined text-5xl text-slate-300">event_busy</span>
+                          <p className="text-slate-500 font-bold">Nenhum evento futuro encontrado</p>
                         </div>
                     );
                  }
@@ -585,18 +598,17 @@ const Calendar: React.FC = () => {
                     const isToday = new Date().toDateString() === date.toDateString();
                     
                     return (
-                        <div key={dateStr} className={`flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4 duration-500 ${isToday ? 'bg-primary/[0.01] -mx-2 px-2 py-4 rounded-2xl ring-1 ring-primary/5' : 'opacity-80'}`}>
-                            <div className={`flex items-center gap-3 pb-2 border-b border-border-light ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
-                                <span className={`text-3xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-70'}`}>{date.getDate()}</span>
+                        <div key={dateStr} className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ${isToday ? 'relative' : 'opacity-80 hover:opacity-100 transition-opacity'}`}>
+                            <div className="flex md:flex-col items-center md:items-start gap-3 md:gap-0 md:w-32 shrink-0">
+                                <span className={`text-4xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>{String(date.getDate()).padStart(2, '0')}</span>
                                 <div className="flex flex-col leading-tight">
-                                    <span className="text-sm font-bold uppercase tracking-wider">{date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>
-                                    <span className="text-xs font-medium opacity-70">{date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>{date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
+                                    {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
                                 </div>
-                                {isToday && <span className="ml-auto text-[10px] font-black bg-primary/10 text-primary px-3 py-1 rounded-full uppercase tracking-widest">Hoje</span>}
                             </div>
-                            <div className="pl-4 md:pl-12 flex flex-col gap-3">
+                            <div className="flex-1 flex flex-col gap-4 border-l-2 border-slate-50 pl-6 md:pl-12 pb-8">
                                 {dayEvents.map(event => (
-                                    <div key={event.id} className="max-w-4xl hover:translate-x-1 transition-transform duration-200">
+                                    <div key={event.id} className="hover:translate-x-1 transition-transform duration-300">
                                         <CalendarEventCard
                                             event={event}
                                             user={user}
@@ -904,7 +916,6 @@ const CalendarEventCard: React.FC<{
   
   const handleMouseEnter = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    // Passamos as coordenadas relativas ao viewport
     setTooltipData({
       event,
       x: rect.left + rect.width / 2,
@@ -922,59 +933,59 @@ const CalendarEventCard: React.FC<{
         setTooltipData(null);
         onSelect(event);
       }}
-      className={`w-full border-l-4 rounded-r px-2 py-1.5 cursor-pointer shadow-sm transition-all duration-300 hover:translate-x-1 relative ${isCancelled
-        ? 'bg-white border-border-light opacity-60'
-        : 'bg-primary/[0.04] border-primary hover:bg-primary/[0.08]'
-        } ${detailed ? 'p-4' : ''}`}
-      title={detailed ? (isCancelled ? `Cancelado: ${event.cancel_reason}` : event.title) : undefined}
+      className={`w-full border-l-4 rounded-xl px-3 py-2 cursor-pointer transition-all duration-300 hover:translate-x-1 relative ${isCancelled
+        ? 'bg-white border-slate-200 opacity-60'
+        : 'bg-primary/[0.04] border-primary/50 hover:bg-primary/[0.1] hover:border-primary shadow-sm hover:shadow-md'
+        } ${detailed ? 'p-6' : ''}`}
     >
-
-      <div className="flex items-center justify-between gap-2 overflow-hidden">
-        <p className={`text-[10px] font-black leading-tight transition-colors duration-300 ${detailed ? 'text-sm' : ''} ${isCancelled ? 'text-text-secondary line-through' : 'text-primary'}`}>
+      <div className="flex items-center justify-between gap-3 overflow-hidden">
+        <p className={`text-[11px] font-black leading-tight truncate ${detailed ? 'text-xl' : ''} ${isCancelled ? 'text-text-secondary line-through' : 'text-primary'}`}>
           {event.title}
         </p>
-        {!detailed && <span className="text-[9px] font-bold text-primary/60 whitespace-nowrap transition-colors duration-300">
+        {!detailed && <span className="text-[9px] font-black text-primary/50 whitespace-nowrap uppercase tracking-tighter">
           {new Date(event.date_start || event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>}
       </div>
 
       {detailed && (
-        <div className="flex items-center gap-4 mt-2 text-xs font-medium text-text-secondary">
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-sm">schedule</span>
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 mt-4 text-[12px] font-bold text-text-secondary/80">
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-lg opacity-50">schedule</span>
             {new Date(event.date_start || event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-sm">location_on</span>
-            {event.expand?.location?.name || event.custom_location || 'Local não definido'}
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-lg opacity-50">location_on</span>
+            <span className="truncate max-w-[250px]">
+              {event.expand?.location?.name || event.custom_location || 'Local não definido'}
+            </span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-sm">person</span>
-            Criado por: {event.expand?.user?.name || 'Sistema'}
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-lg opacity-50">person</span>
+            {event.expand?.user?.name || 'Sistema'}
           </div>
         </div>
       )}
 
-      <div className="flex flex-wrap gap-1 mt-1.5">
+      <div className="flex flex-wrap gap-1.5 mt-3">
         {event.almoxarifado_items?.length > 0 && (
-          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${event.almoxarifado_confirmed_items?.length === event.almoxarifado_items.length
-            ? 'bg-green-100 border-green-200 text-green-700'
-            : 'bg-yellow-100 border-yellow-200 text-yellow-700'
-            }`} title="Almoxarifado">ALMC</span>
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 ${event.almoxarifado_confirmed_items?.length === event.almoxarifado_items.length
+            ? 'bg-green-50 border-green-200 text-green-700'
+            : 'bg-yellow-50 border-yellow-200 text-yellow-700'
+            }`}>ALMC</span>
         )}
         {event.copa_items?.length > 0 && (
-          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${event.copa_confirmed_items?.length === event.copa_items.length
-            ? 'bg-orange-100 border-orange-200 text-orange-700'
-            : 'bg-yellow-100 border-yellow-200 text-yellow-700'
-            }`} title="Copa">COPA</span>
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 ${event.copa_confirmed_items?.length === event.copa_items.length
+            ? 'bg-orange-50 border-orange-200 text-orange-700'
+            : 'bg-yellow-50 border-yellow-200 text-yellow-700'
+            }`}>COPA</span>
         )}
         {event.transporte_suporte && (
-          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border ${event.transporte_status === 'confirmed' ? 'bg-green-100 border-green-200 text-green-700' :
-            event.transporte_status === 'rejected' ? 'bg-red-100 border-red-200 text-red-700' :
-              'bg-yellow-100 border-yellow-200 text-yellow-700'
-            }`} title="Transporte">TRA</span>
+          <span className={`text-[7px] font-black px-1.5 py-0.5 rounded-full border ${event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-100 text-green-600' :
+            event.transporte_status === 'rejected' ? 'bg-red-50 border-red-100 text-red-600' :
+              'bg-yellow-50 border-yellow-100 text-yellow-600'
+            }`}>TRA</span>
         )}
-        {isCancelled && <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-red-100 border border-red-200 text-red-700 uppercase">CANCELADO</span>}
+        {isCancelled && <span className="text-[7px] font-black px-1.5 py-0.5 rounded-full bg-red-50 border border-red-100 text-red-600 uppercase">CANCELADO</span>}
       </div>
     </div>
   );

@@ -1,23 +1,23 @@
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import Calendar from './pages/Calendar';
-import CreateEvent from './pages/CreateEvent';
-import Reports from './pages/Reports';
-import Mensagens from './pages/Mensagens';
-import Login from './pages/Login';
-import Requests from './pages/Requests';
-import MyInvolvement from './pages/MyInvolvement';
-import AlmacManagement from './pages/AlmacManagement';
-import InformaticsManagement from './pages/InformaticsManagement';
-import TransportManagement from './pages/TransportManagement';
-import LocationManagement from './pages/LocationManagement';
-import TeamManagement from './pages/TeamManagement';
-import VerifyEmail from './pages/VerifyEmail';
-import ResetPassword from './pages/ResetPassword';
-import Sidebar from './components/Sidebar';
-import RightSidebar from './components/RightSidebar';
-import Header from './components/Header';
-import { AuthProvider, useAuth, UserRole } from './components/AuthContext';
+import Calendar from './pages/Calendar.tsx';
+import CreateEvent from './pages/CreateEvent.tsx';
+import Reports from './pages/Reports.tsx';
+import Mensagens from './pages/Mensagens.tsx';
+import Login from './pages/Login.tsx';
+import Requests from './pages/Requests.tsx';
+import MyInvolvement from './pages/MyInvolvement.tsx';
+import AlmacManagement from './pages/AlmacManagement.tsx';
+import InformaticsManagement from './pages/InformaticsManagement.tsx';
+import TransportManagement from './pages/TransportManagement.tsx';
+import LocationManagement from './pages/LocationManagement.tsx';
+import TeamManagement from './pages/TeamManagement.tsx';
+import VerifyEmail from './pages/VerifyEmail.tsx';
+import ResetPassword from './pages/ResetPassword.tsx';
+import Sidebar from './components/Sidebar.tsx';
+import RightSidebar from './components/RightSidebar.tsx';
+import Header from './components/Header.tsx';
+import { AuthProvider, useAuth, UserRole } from './components/AuthContext.tsx';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
