@@ -121,6 +121,7 @@ const Sidebar: React.FC = () => {
                       user?.role === 'TRA' ? 'Transporte' :
                       user?.role === 'CE' ? 'Cerimonial' :
                       user?.role === 'DCA' ? 'Informática' :
+                      user?.role === 'USER' ? 'Usuário' : 
                       user?.role || 'Usuário'
                     }`}
                   </p>
@@ -334,6 +335,7 @@ const Sidebar: React.FC = () => {
                         user?.role === 'TRA' ? 'Transporte' :
                         user?.role === 'CE' ? 'Cerimonial' :
                         user?.role === 'DCA' ? 'Informática' :
+                        user?.role === 'USER' ? 'Usuário' :
                         user?.role || 'Colaborador'
                       )}
                   </p>

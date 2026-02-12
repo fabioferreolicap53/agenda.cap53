@@ -5,13 +5,15 @@ interface CustomTimePickerProps {
   onChange: (value: string) => void;
   label?: string;
   tabIndex?: number;
+  placeholderTime?: string; // Add this prop
 }
 
 const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
   value,
   onChange,
   label,
-  tabIndex = 0
+  tabIndex = 0,
+  placeholderTime = '08:00' // Default if not provided
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -21,8 +23,8 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
   const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
   const minutes = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0'));
 
-  const currentHour = value ? value.split(':')[0] : '08';
-  const currentMinute = value ? value.split(':')[1] : '00';
+  const currentHour = value ? value.split(':')[0] : placeholderTime.split(':')[0];
+  const currentMinute = value ? value.split(':')[1] : placeholderTime.split(':')[1];
 
   // Close on click outside
   useEffect(() => {
@@ -115,6 +117,20 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
         <span className={`text-sm font-bold ${value ? 'text-slate-700' : 'text-slate-400'}`}>
           {value || '--:--'}
         </span>
+
+        {value && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onChange('');
+            }}
+            className="ml-auto p-1.5 rounded-full text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200"
+            title="Limpar"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        )}
       </div>
 
       {isOpen && (
@@ -189,7 +205,12 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
           <div className="p-1.5 mt-1 border-t border-slate-50">
             <button 
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => {
+                if (!value) {
+                  onChange(`${currentHour}:${currentMinute}`);
+                }
+                setIsOpen(false);
+              }}
               className="w-full py-3.5 md:py-2.5 rounded-xl bg-slate-900 text-white text-[10px] font-bold hover:bg-slate-800 transition-colors uppercase tracking-widest shadow-sm"
             >
               Confirmar

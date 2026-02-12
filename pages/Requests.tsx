@@ -5,9 +5,9 @@ import { pb } from '../lib/pocketbase';
 import CustomSelect from '../components/CustomSelect';
 
 const INVOLVEMENT_LEVELS = [
-    { value: 'PARTICIPANTE', label: 'PARTICIPANTE' },
-    { value: 'ORGANIZADOR', label: 'ORGANIZADOR' },
-    { value: 'COORGANIZADOR', label: 'COORGANIZADOR' }
+    { value: 'PARTICIPANTE', label: 'Participante' },
+    { value: 'ORGANIZADOR', label: 'Organizador' },
+    { value: 'COORGANIZADOR', label: 'Coorganizador' }
 ];
 
 const Requests: React.FC = () => {
@@ -1139,29 +1139,31 @@ const Requests: React.FC = () => {
                                                         </div>
 
                                                         {/* Actions */}
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            {isTransportRequest && event && (
-                                                                <button
-                                                                    onClick={() => navigate(`/transporte?eventId=${event.id}`)}
-                                                                    className="size-10 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center shadow-sm"
-                                                                    title="Ver solicitação de transporte"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-[20px]">local_shipping</span>
-                                                                </button>
-                                                            )}
-                                                            {talkToId && talkToId !== user?.id && !isEventDeleted && (
-                                                                <button
-                                                                    onClick={() => navigate(`/chat?userId=${talkToId}`)}
-                                                                    className="size-10 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center shadow-sm"
-                                                                    title={`Conversar com ${talkToName}`}
-                                                                >
-                                                                    <span className="material-symbols-outlined text-[20px]">chat</span>
-                                                                </button>
-                                                            )}
+                                                        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 shrink-0 w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-t-0 border-slate-100">
+                                                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                                                {isTransportRequest && event && (
+                                                                    <button
+                                                                        onClick={() => navigate(`/transporte?eventId=${event.id}`)}
+                                                                        className="flex-1 md:size-10 md:flex-none h-10 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center shadow-sm"
+                                                                        title="Ver solicitação de transporte"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[20px]">local_shipping</span>
+                                                                    </button>
+                                                                )}
+                                                                {talkToId && talkToId !== user?.id && !isEventDeleted && (
+                                                                    <button
+                                                                        onClick={() => navigate(`/chat?userId=${talkToId}`)}
+                                                                        className="flex-1 md:size-10 md:flex-none h-10 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-primary/5 transition-all flex items-center justify-center shadow-sm"
+                                                                        title={`Conversar com ${talkToName}`}
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[20px]">chat</span>
+                                                                    </button>
+                                                                )}
+                                                            </div>
 
-                                                            <div className="flex items-center gap-2">
+                                                            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
                                                                 {isParticipationRequest && (
-                                                                    <div className="w-48">
+                                                                    <div className="w-full md:w-48">
                                                                         <CustomSelect
                                                                             value={requestRoles[notification.id] || 'PARTICIPANTE'}
                                                                             onChange={(val) => setRequestRoles(prev => ({ ...prev, [notification.id]: val }))}
@@ -1172,72 +1174,74 @@ const Requests: React.FC = () => {
                                                                     </div>
                                                                 )}
 
-                                                                {isAlmcItemRequest ? (
-                                                                    <>
-                                                                        <button
-                                                                            onClick={() => handleAlmcItemNotificationDecision(notification, 'approved')}
-                                                                            className="h-10 px-5 rounded-xl bg-slate-800 text-white text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center gap-2"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-[18px]">check</span>
-                                                                            Confirmar
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleAlmcItemNotificationDecision(notification, 'rejected')}
-                                                                            className="h-10 px-5 rounded-xl bg-white border border-slate-200 text-slate-500 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center gap-2"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-[18px]">close</span>
-                                                                            Recusar
-                                                                        </button>
-                                                                    </>
-                                                                ) : ( (isRefusal || isTransportRequest) && !notification.acknowledged ) ? (
-                                                                    <button
-                                                                        onClick={() => handleAcknowledgement(notification)}
-                                                                        className="h-10 px-5 rounded-xl bg-slate-800 text-white text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center gap-2"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-[18px]">visibility</span>
-                                                                        Ciente
-                                                                    </button>
-                                                                ) : (isSystem || isAcknowledgment || isChatRoomCreated || isEventDeleted) ? (
-                                                                    <>
-                                                                        {isChatRoomCreated && event && (
+                                                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                                                    {isAlmcItemRequest ? (
+                                                                        <>
                                                                             <button
-                                                                                onClick={() => {
-                                                                                    const date = new Date(event.date_start);
-                                                                                    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                                                                                    navigate(`/calendar?view=day&date=${dateStr}&openChat=${event.id}`);
-                                                                                }}
-                                                                                className="h-10 px-5 rounded-xl bg-white border border-slate-200 text-slate-600 text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                                                                                onClick={() => handleAlmcItemNotificationDecision(notification, 'approved')}
+                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-slate-800 text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center justify-center gap-1.5"
                                                                             >
-                                                                                <span className="material-symbols-outlined text-[18px]">forum</span>
-                                                                                Chat
+                                                                                <span className="material-symbols-outlined text-[16px] md:text-[18px]">check</span>
+                                                                                Confirmar
                                                                             </button>
-                                                                        )}
+                                                                            <button
+                                                                                onClick={() => handleAlmcItemNotificationDecision(notification, 'rejected')}
+                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-white border border-slate-200 text-slate-500 text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 transition-all flex items-center justify-center gap-1.5"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-[16px] md:text-[18px]">close</span>
+                                                                                Recusar
+                                                                            </button>
+                                                                        </>
+                                                                    ) : ( (isRefusal || isTransportRequest) && !notification.acknowledged ) ? (
                                                                         <button
-                                                                            onClick={() => handleNotificationAction(notification, 'accepted')}
-                                                                            className="h-10 px-5 rounded-xl bg-slate-800 text-white text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center gap-2"
+                                                                            onClick={() => handleAcknowledgement(notification)}
+                                                                            className="w-full md:w-auto h-10 px-5 rounded-xl bg-slate-800 text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center justify-center gap-2"
                                                                         >
-                                                                            <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                                                            <span className="material-symbols-outlined text-[18px]">visibility</span>
                                                                             Ciente
                                                                         </button>
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <button
-                                                                            onClick={() => handleNotificationAction(notification, 'accepted')}
-                                                                            className="h-10 px-5 rounded-xl bg-primary text-white text-[11px] font-black uppercase tracking-wider hover:bg-primary-dark transition-all shadow-sm flex items-center gap-2"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-[18px]">check</span>
-                                                                            Aceitar
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleNotificationAction(notification, 'rejected')}
-                                                                            className="h-10 px-5 rounded-xl bg-white border border-slate-200 text-slate-500 text-[11px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center gap-2"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-[18px]">close</span>
-                                                                            Recusar
-                                                                        </button>
-                                                                    </>
-                                                                )}
+                                                                    ) : (isSystem || isAcknowledgment || isChatRoomCreated || isEventDeleted) ? (
+                                                                        <div className="flex items-center gap-2 w-full md:w-auto">
+                                                                            {isChatRoomCreated && event && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        const date = new Date(event.date_start);
+                                                                                        const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                                                                                        navigate(`/calendar?view=day&date=${dateStr}&openChat=${event.id}`);
+                                                                                    }}
+                                                                                    className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-white border border-slate-200 text-slate-600 text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[18px]">forum</span>
+                                                                                    Chat
+                                                                                </button>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={() => handleNotificationAction(notification, 'accepted')}
+                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-slate-800 text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center justify-center gap-2"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                                                                Ciente
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <>
+                                                                            <button
+                                                                                onClick={() => handleNotificationAction(notification, 'accepted')}
+                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-primary-dark transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-[16px] md:text-[18px]">check</span>
+                                                                                Aceitar
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleNotificationAction(notification, 'rejected')}
+                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-white border border-slate-200 text-slate-500 text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-1.5"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-[16px] md:text-[18px]">close</span>
+                                                                                Recusar
+                                                                            </button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>

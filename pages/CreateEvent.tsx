@@ -37,9 +37,9 @@ const CATEGORIAS_PROFISSIONAIS = [
 ];
 
 const INVOLVEMENT_LEVELS = [
-  { value: 'PARTICIPANTE', label: 'PARTICIPANTE' },
-  { value: 'ORGANIZADOR', label: 'ORGANIZADOR' },
-  { value: 'COORGANIZADOR', label: 'COORGANIZADOR' }
+  { value: 'PARTICIPANTE', label: 'Participante' },
+  { value: 'ORGANIZADOR', label: 'Organizador' },
+  { value: 'COORGANIZADOR', label: 'Coorganizador' }
 ];
 
 const CreateEvent: React.FC = () => {
@@ -1391,13 +1391,13 @@ const CreateEvent: React.FC = () => {
                                     {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-3 gap-1.5">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                   {INVOLVEMENT_LEVELS.map(level => (
                                     <button
                                       key={level.value}
                                       type="button"
                                       onClick={() => setParticipantRoles(prev => ({ ...prev, [u.id]: level.value }))}
-                                      className={`py-2 px-1 rounded-xl text-[9px] font-bold transition-all duration-300 ${
+                                      className={`py-2 px-1 rounded-xl text-[10px] font-bold transition-all duration-300 ${
                                         (participantRoles[u.id] || involvementLevel) === level.value
                                           ? 'bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]'
                                           : 'bg-white text-slate-400 border border-slate-100 hover:border-primary/30 hover:text-primary/60 active:scale-95'
@@ -1448,9 +1448,9 @@ const CreateEvent: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 animate-in fade-in slide-in-from-top-4 duration-700 mt-10">
                 <div className="space-y-6">
                   <div className="flex flex-col gap-3">
-                    <div className="flex items-center justify-between ml-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 ml-1 mb-1">
                       <label className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.2em]">Unidades Envolvidas</label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                         <button
                           type="button"
                           onClick={() => {
@@ -1476,7 +1476,7 @@ const CreateEvent: React.FC = () => {
                             return allSelected ? 'Desmarcar Tudo' : 'Selecionar Tudo';
                           })()}
                         </button>
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{selectedUnidades.length} selecionadas</span>
+                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">{selectedUnidades.length} selecionadas</span>
                       </div>
                     </div>
                     <div className="relative group">
@@ -1525,9 +1525,9 @@ const CreateEvent: React.FC = () => {
 
                 <div className="space-y-6 relative">
                   <div className={`flex flex-col gap-3 transition-opacity duration-500 ${selectedUnidades.length === 0 ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
-                    <div className="flex items-center justify-between ml-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 ml-1 mb-1">
                       <label className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.2em]">Categorias Profissionais</label>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                         <button
                           type="button"
                           onClick={() => {
@@ -1551,7 +1551,7 @@ const CreateEvent: React.FC = () => {
                             return allSelected ? 'Desmarcar Tudo' : 'Selecionar Tudo';
                           })()}
                         </button>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selectedCategorias.length > 0 ? 'text-slate-400 bg-slate-100' : 'text-red-500 bg-red-50 animate-pulse'}`}>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${selectedCategorias.length > 0 ? 'text-slate-400 bg-slate-100' : 'text-red-500 bg-red-50 animate-pulse'}`}>
                           {selectedCategorias.length > 0 ? `${selectedCategorias.length} selecionadas` : 'OBRIGATÓRIO'}
                         </span>
                       </div>
@@ -1767,6 +1767,7 @@ const CreateEvent: React.FC = () => {
                           <CustomTimePicker
                             label="Horário de Ida (Levar) *"
                             value={transporteHorarioLevar}
+                            placeholderTime={`${String((new Date().getHours() + 1) % 24).padStart(2, '0')}:00`}
                             tabIndex={activeTab === 'transporte' ? 0 : -1}
                             onChange={(val) => {
                               setTransporteHorarioLevar(val);
@@ -1776,6 +1777,7 @@ const CreateEvent: React.FC = () => {
                           <CustomTimePicker
                             label="Horário de Volta (Buscar) *"
                             value={transporteHorarioBuscar}
+                            placeholderTime={transporteHorarioLevar ? `${String((parseInt(transporteHorarioLevar.split(':')[0]) + 1) % 24).padStart(2, '0')}:00` : `${String((new Date().getHours() + 2) % 24).padStart(2, '0')}:00`}
                             tabIndex={activeTab === 'transporte' ? 0 : -1}
                             onChange={(val) => {
                               setTransporteHorarioBuscar(val);
