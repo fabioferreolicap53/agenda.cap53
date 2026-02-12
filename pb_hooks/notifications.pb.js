@@ -551,7 +551,7 @@ $app.onRecordAfterUpdateRequest((e) => {
                 record.set('title', 'Transporte Recusado');
                 record.set('message', `A solicitação de transporte para o evento "${eventTitle}" foi recusada.\n\nJustificativa: ${justification}`);
                 record.set('type', 'refusal');
-                record.set('data', {
+                record.set('data', JSON.stringify({
                     kind: 'transport_decision',
                     action: 'rejected',
                     decided_by: deciderById,
@@ -561,7 +561,7 @@ $app.onRecordAfterUpdateRequest((e) => {
                     justification: justification,
                     decided_at: new Date().toISOString(),
                     refused_at: new Date().toISOString(),
-                });
+                }));
             } else {
                 const justification = e.record.getString('transporte_justification');
                 record.set('title', 'Transporte Confirmado');
@@ -571,7 +571,7 @@ $app.onRecordAfterUpdateRequest((e) => {
                 }
                 record.set('message', message);
                 record.set('type', 'system');
-                record.set('data', {
+                record.set('data', JSON.stringify({
                     kind: 'transport_decision',
                     action: 'confirmed',
                     decided_by: deciderById,
@@ -581,7 +581,7 @@ $app.onRecordAfterUpdateRequest((e) => {
                     justification: justification || '',
                     decided_at: new Date().toISOString(),
                     confirmed_at: new Date().toISOString(),
-                });
+                }));
             }
 
             $app.dao().saveRecord(record);
