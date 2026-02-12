@@ -1,6 +1,6 @@
 import PocketBase from 'pocketbase';
 
-export const pb = new PocketBase('https://centraldedados.duckdns.org');
+export const pb = new PocketBase(import.meta.env.VITE_POCKETBASE_URL);
 
 // Disable auto-cancellation to prevent request aborts when React re-renders quickly
 pb.autoCancellation(false);

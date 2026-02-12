@@ -34,6 +34,74 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const translateError = (error: any): string => {
+    const message = error?.message || '';
+    const status = error?.status;
+    const data = error?.data?.data || {};
+
+    console.log('Translating error:', { message, status, data });
+
+    // PocketBase common error messages
+    if (message.includes('Failed to authenticate')) {
+        return 'Falha na autenticação. E-mail ou senha incorretos.';
+    }
+
+    if (message.includes('The requested resource wasn\'t found')) {
+        return 'Recurso não encontrado.';
+    }
+
+    if (message.includes('Something went wrong while processing your request')) {
+        return 'Ocorreu um erro no servidor. Tente novamente mais tarde.';
+    }
+
+    if (message.toLowerCase().includes('email is already in use')) {
+        return 'Este e-mail já está sendo utilizado por outra conta.';
+    }
+
+    if (message.toLowerCase().includes('identity is already in use')) {
+        return 'Este usuário já está sendo utilizado.';
+    }
+
+    // Validation errors (400)
+    if (status === 400) {
+        if (data.email?.code === 'validation_not_unique') {
+            return 'Este e-mail já está em uso.';
+        }
+        if (data.password?.code === 'validation_length_out_of_range') {
+            return 'A senha deve ter pelo menos 8 caracteres.';
+        }
+        if (message.includes('verified')) {
+            return 'Sua conta ainda não foi verificada. Por favor, verifique seu e-mail.';
+        }
+        
+        // Handle field-specific validation errors if available
+        const fields = Object.keys(data);
+        if (fields.length > 0) {
+            const firstField = fields[0];
+            const fieldError = data[firstField];
+            if (firstField === 'passwordConfirm') return 'As senhas não coincidem.';
+            if (firstField === 'email') return 'E-mail inválido.';
+            return `Erro no campo ${firstField}: ${fieldError.message || fieldError.code}`;
+        }
+
+        return 'Dados inválidos. Verifique as informações fornecidas.';
+    }
+
+    if (status === 403) {
+        return 'Você não tem permissão para realizar esta ação.';
+    }
+
+    if (status === 404) {
+        return 'Usuário ou recurso não encontrado.';
+    }
+
+    if (status === 0 || message.includes('NetworkError') || message.includes('Failed to fetch')) {
+        return 'Erro de conexão. Verifique sua internet.';
+    }
+
+    return 'Ocorreu um erro inesperado. Tente novamente mais tarde.';
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
@@ -105,13 +173,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await pb.collection('agenda_cap53_usuarios').authWithPassword(email, password);
         } catch (error: any) {
             console.error('Login error:', error);
-            
-            // Check if error is due to unverified email
-            if (error.status === 400 && error.data?.message?.includes('verified')) {
-                throw new Error('Sua conta ainda não foi verificada. Por favor, verifique seu e-mail.');
-            }
-            
-            throw error;
+            throw new Error(translateError(error));
         }
     };
 
@@ -147,26 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 await pb.collection('agenda_cap53_usuarios').create(createData);
             } catch (createError: any) {
                 console.error('PocketBase Create User Error:', createError);
-                if (createError.data?.data) {
-                    const errorData = createError.data.data;
-                    
-                    // Specific handling for common PocketBase validation errors
-                    if (errorData.email?.code === 'validation_not_unique') {
-                        throw new Error('Este e-mail já está em uso.');
-                    }
-                    if (errorData.username?.code === 'validation_not_unique') {
-                        throw new Error('Erro de colisão de usuário. Tente novamente.');
-                    }
-
-                    // Log detailed error for debugging
-                    console.error('Detailed validation error:', JSON.stringify(errorData, null, 2));
-                    
-                    // Generic field error with more detail
-                    const firstField = Object.keys(errorData)[0];
-                    const fieldError = errorData[firstField];
-                    throw new Error(`Erro no campo ${firstField}: ${fieldError.message || fieldError.code}`);
-                }
-                throw createError;
+                throw new Error(translateError(createError));
             }
             
             // 2. Request verification email
@@ -188,7 +231,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         } catch (error: any) {
             console.error('Registration flow error:', error);
-            throw new Error(error.message || 'Falha ao criar conta. Verifique seus dados e tente novamente.');
+            if (error.message?.includes('verificada') || error.message?.includes('uso') || error.message?.includes('caracteres')) {
+                throw error;
+            }
+            throw new Error(translateError(error));
         }
     };
 
@@ -235,7 +281,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await pb.collection('agenda_cap53_usuarios').requestPasswordReset(email);
         } catch (error) {
             console.error('Request password reset error:', error);
-            throw error;
+            throw new Error(translateError(error));
         }
     };
 
@@ -248,7 +294,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             );
         } catch (error) {
             console.error('Confirm password reset error:', error);
-            throw error;
+            throw new Error(translateError(error));
         }
     };
 
