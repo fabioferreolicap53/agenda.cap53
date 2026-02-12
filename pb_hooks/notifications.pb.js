@@ -333,7 +333,7 @@ $app.onBeforeServe((e) => {
             $app.dao().saveRecord(notification);
 
             const notifData = notification.get('data');
-            const deciderId = notifData ? (notifData['rejected_by'] || notifData['confirmed_by']) : null;
+            const deciderId = notifData ? (notifData['decided_by'] || notifData['rejected_by'] || notifData['confirmed_by']) : null;
             const action = notifData ? notifData['action'] : 'rejected';
 
             if (deciderId) {
@@ -554,9 +554,12 @@ $app.onRecordAfterUpdateRequest((e) => {
                 record.set('data', {
                     kind: 'transport_decision',
                     action: 'rejected',
+                    decided_by: deciderById,
+                    decided_by_name: deciderByName,
                     rejected_by: deciderById,
                     rejected_by_name: deciderByName,
                     justification: justification,
+                    decided_at: new Date().toISOString(),
                     refused_at: new Date().toISOString(),
                 });
             } else {
@@ -571,9 +574,12 @@ $app.onRecordAfterUpdateRequest((e) => {
                 record.set('data', {
                     kind: 'transport_decision',
                     action: 'confirmed',
+                    decided_by: deciderById,
+                    decided_by_name: deciderByName,
                     confirmed_by: deciderById,
                     confirmed_by_name: deciderByName,
                     justification: justification || '',
+                    decided_at: new Date().toISOString(),
                     confirmed_at: new Date().toISOString(),
                 });
             }
