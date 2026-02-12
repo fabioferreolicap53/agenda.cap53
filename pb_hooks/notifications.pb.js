@@ -505,13 +505,10 @@ $app.onRecordAfterUpdateRequest((e) => {
     const newStatus = e.record.getString('transporte_status');
     const oldStatus = e.original ? e.original.getString('transporte_status') : '';
 
-    // Log the update for debugging
-    $app.logger().info(`Transport Decision Hook Triggered: ID=${e.record.id}, old=${oldStatus}, new=${newStatus}`);
+    $app.logger().info(`DEBUG TRANSPORT: ID=${e.record.id}, old=${oldStatus}, new=${newStatus}`);
 
     if ((newStatus === 'rejected' || newStatus === 'confirmed') && newStatus !== oldStatus) {
-        // Se for uma atualização via API customizada, ela já pode ter criado a notificação.
-        // Mas se for via update direto (fallback do frontend), precisamos criar aqui.
-        // Para evitar duplicidade, podemos checar se há httpContext (indicando update via API/fallback direto)
+        $app.logger().info(`DEBUG TRANSPORT: Status change detected!`);
         
         let deciderById = '';
         let deciderByName = 'Setor de Transporte';
@@ -522,15 +519,18 @@ $app.onRecordAfterUpdateRequest((e) => {
                 if (authRecord) {
                     deciderById = authRecord.id;
                     deciderByName = authRecord.getString('name') || authRecord.getString('email');
+                    $app.logger().info(`DEBUG TRANSPORT: Decider found: ${deciderByName}`);
                 }
             } catch (err) {
-                $app.logger().warn('Notification Hook: Error getting authRecord from context', err);
+                $app.logger().warn('DEBUG TRANSPORT: Error getting authRecord', err);
             }
         }
 
         const creatorId = e.record.getString('user');
+        $app.logger().info(`DEBUG TRANSPORT: Creator ID from record: ${creatorId}`);
+
         if (!creatorId) {
-            $app.logger().warn(`Transport Decision Hook: No creator ID for event ${e.record.id}`);
+            $app.logger().warn(`DEBUG TRANSPORT: ABORTING - No creator ID`);
             return;
         }
 
@@ -585,9 +585,9 @@ $app.onRecordAfterUpdateRequest((e) => {
             }
 
             $app.dao().saveRecord(record);
-            $app.logger().info(`Transport Decision Notification Created: status=${newStatus}, event=${e.record.id}, to_user=${creatorId}`);
+            $app.logger().info(`DEBUG TRANSPORT: SUCCESS - Notification created for ${creatorId}`);
         } catch (err) {
-            $app.logger().error('Failed to create transport decision notification', err);
+            $app.logger().error('DEBUG TRANSPORT: CRITICAL ERROR creating notification', err);
         }
     }
 }, 'agenda_cap53_eventos');
