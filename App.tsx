@@ -79,17 +79,23 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                     location.pathname.startsWith('/verify-email') || 
                     location.pathname.startsWith('/reset-password');
 
-  console.log('LayoutContent render:', { loading, hasUser: !!user, isAuthPage, path: location.pathname });
+  if (import.meta.env.DEV) {
+    console.log('LayoutContent render:', { loading, hasUser: !!user, isAuthPage, path: location.pathname });
+  }
 
   React.useEffect(() => {
     if (!loading && !user && !isAuthPage) {
-      console.log('Redirecting to login...');
+      if (import.meta.env.DEV) {
+        console.log('Redirecting to login...');
+      }
       navigate('/login');
     }
   }, [user, loading, isAuthPage, navigate]);
 
   if (loading) {
-    console.log('Rendering loading spinner...');
+    if (import.meta.env.DEV) {
+      console.log('Rendering loading spinner...');
+    }
     return (
       <div className="flex items-center justify-center h-screen w-full bg-white text-primary">
         <div className="flex flex-col items-center gap-4">
