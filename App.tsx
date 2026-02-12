@@ -75,6 +75,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = React.useState(false);
   const isAuthPage = location.pathname === '/login' || 
                     location.pathname.startsWith('/verify-email') || 
                     location.pathname.startsWith('/reset-password');
@@ -117,7 +118,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   return (
     <div className="flex h-screen w-full overflow-hidden bg-white">
       <Sidebar />
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/30">
+      <main className={`flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/30 transition-all duration-500 ease-in-out ${isRightSidebarOpen ? 'lg:mr-72' : 'mr-0'}`}>
         <Header />
         <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 custom-scrollbar">
           <div className="max-w-[1600px] mx-auto w-full">
@@ -125,7 +126,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </div>
         </div>
       </main>
-      <RightSidebar />
+      <RightSidebar isOpen={isRightSidebarOpen} setIsOpen={setIsRightSidebarOpen} />
     </div>
   );
 };

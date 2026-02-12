@@ -3,13 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from './AuthContext';
 
-const RightSidebar: React.FC = () => {
+interface RightSidebarProps {
+    isOpen: boolean;
+    setIsOpen: (isOpen: boolean) => void;
+}
+
+const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-    const [isOpen, setIsOpen] = useState(false); // Inicia oculta conforme solicitado
 
     const fetchUnreadCounts = async () => {
         if (!currentUser?.id) return;
