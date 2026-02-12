@@ -18,44 +18,27 @@ const TransportManagement: React.FC = () => {
 
     const handleTransportDecision = async (eventId: string, status: 'confirmed' | 'rejected') => {
         try {
-            console.log('Sending transport decision directly to record update:', { eventId, status });
+            console.log('Sending transport decision directly to custom API:', { eventId, status });
             
-            // Bypass the custom API and try to update the record directly
-            // Note: This requires the user to have update permissions on the agenda_cap53_eventos collection
-            await pb.collection('agenda_cap53_eventos').update(eventId, {
-                transporte_status: status,
-                transporte_justification: ''
+            // Forçamos o uso da API customizada sempre para garantir a execução da lógica de notificação no backend
+            const response = await pb.send('/api/transport_decision', {
+                method: 'POST',
+                body: { 
+                    event_id: eventId, 
+                    status: status,
+                    justification: 'Ação realizada pelo setor de transporte.'
+                }
             });
             
-            console.log('Record updated successfully');
+            console.log('Response from custom API:', response);
             
             setActionMessage(status === 'confirmed' ? 'Confirmado' : 'Recusado');
             setTimeout(() => setActionMessage(null), 3000);
             fetchTransportRequests();
         } catch (err: any) {
-            console.error(`Error processing transport ${status} via direct update:`, err);
-            
-            // If direct update fails, it might be due to API Rules. Fallback to custom API with more logging
-                try {
-                    console.log('Direct update failed, falling back to custom API /api/transport_decision...');
-                    const response = await pb.send('/api/transport_decision', {
-                        method: 'POST',
-                        body: { 
-                            event_id: eventId, 
-                            status: status,
-                            justification: 'Ação realizada pelo setor de transporte.'
-                        }
-                    });
-                    console.log('Response from custom API:', response);
-                
-                setActionMessage(status === 'confirmed' ? 'Confirmado' : 'Recusado');
-                setTimeout(() => setActionMessage(null), 3000);
-                fetchTransportRequests();
-            } catch (apiErr: any) {
-                console.error('Custom API also failed:', apiErr);
-                const errorMsg = apiErr.data?.message || apiErr.message || 'Erro desconhecido';
-                alert(`Erro ao ${status === 'confirmed' ? 'confirmar' : 'recusar'}: ${errorMsg}\n\nVerifique se você tem permissão de edição para esta solicitação.`);
-            }
+            console.error(`Error processing transport ${status} via custom API:`, err);
+            const errorMsg = err.data?.message || err.message || 'Erro desconhecido';
+            alert(`Erro ao ${status === 'confirmed' ? 'confirmar' : 'recusar'}: ${errorMsg}\n\nVerifique se você tem permissão de acesso ao setor de transporte.`);
         }
     };
 
