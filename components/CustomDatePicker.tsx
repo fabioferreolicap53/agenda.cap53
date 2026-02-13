@@ -543,12 +543,11 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
           <div 
             role="dialog"
             aria-label="Calendário e seletor de horário"
-            className="fixed md:absolute bottom-0 md:top-[calc(100%+8px)] md:bottom-auto left-0 md:left-0 right-0 md:right-auto md:translate-x-0 bg-white/95 backdrop-blur-xl rounded-t-[32px] md:rounded-[28px] shadow-[0_-8px_40px_rgba(0,0,0,0.04)] md:shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-t md:border border-slate-200/50 z-[110] p-4 md:p-5 animate-in slide-in-from-bottom-full md:slide-in-from-top-4 fade-in duration-300 flex flex-col md:flex-row gap-3 md:gap-6 w-full md:w-[480px] max-h-[90vh] md:max-h-none overflow-hidden"
+            className="fixed md:absolute top-1/2 md:top-[calc(100%+8px)] left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[110] p-4 md:p-5 animate-in zoom-in-95 fade-in duration-300 flex flex-col md:flex-row gap-2 md:gap-6 w-[94%] md:w-[480px] max-h-[90vh] md:max-h-none overflow-hidden"
           >
-            {/* Mobile Handle */}
-            <div className="w-10 h-1 bg-slate-200/50 rounded-full mx-auto mb-3 md:hidden shrink-0" />
+            {/* Mobile Handle - Removed as it's now a centered modal */}
             
-            <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col md:flex-row gap-3 md:gap-6">
+            <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col md:flex-row gap-4 md:gap-6">
               {/* Calendar Section */}
               <div className="flex-[1.2] min-w-0">
                 {/* Header */}
@@ -623,13 +622,13 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                   )}
                 </div>
 
-                <div className="flex gap-2 h-[180px] md:h-[220px] relative bg-slate-50/30 rounded-2xl p-1 overflow-hidden">
+                <div className="flex gap-1 h-[180px] md:h-[220px] relative bg-transparent rounded-2xl overflow-hidden">
                 {/* Hours */}
                 <div 
                   ref={hoursRef}
                   className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
                 >
-                  <div className="flex flex-col gap-0.5 py-16 md:py-12 px-0.5">
+                  <div className="flex flex-col gap-1 py-16 md:py-12 px-0.5">
                       {hours.map(h => {
                         const isSel = h === currentHour;
                         return (
@@ -638,10 +637,10 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                             data-selected={isSel}
                             onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
                             className={`
-                              flex-shrink-0 h-9 w-full rounded-lg text-xs transition-all duration-300
+                              flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                               ${isSel 
-                                ? 'bg-slate-800 text-white font-bold shadow-md scale-100 z-10' 
-                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-white'}
+                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
                             `}
                           >
                             {String(h).padStart(2, '0')}
@@ -651,14 +650,14 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                     </div>
                   </div>
 
-                  <div className="w-[1px] bg-slate-200/50 my-2 shrink-0" />
+                  <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
 
                   {/* Minutes */}
                 <div 
                   ref={minutesRef}
                   className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
                 >
-                  <div className="flex flex-col gap-0.5 py-16 md:py-12 px-0.5">
+                  <div className="flex flex-col gap-1 py-16 md:py-12 px-0.5">
                       {allMinutes.map(m => {
                         const isSel = m === currentMinute;
                         return (
@@ -667,10 +666,10 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                             data-selected={isSel}
                             onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
                             className={`
-                              flex-shrink-0 h-9 w-full rounded-lg text-xs transition-all duration-300
+                              flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                               ${isSel 
-                                ? 'bg-slate-800 text-white font-bold shadow-md scale-100 z-10' 
-                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-white'}
+                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
                             `}
                           >
                             {String(m).padStart(2, '0')}
@@ -681,11 +680,11 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                   </div>
                     
                     {/* Overlays for better depth */}
-                    <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-slate-50/50 to-transparent pointer-events-none rounded-t-2xl"></div>
-                    <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-slate-50/50 to-transparent pointer-events-none rounded-b-2xl"></div>
+                    <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
                     
                     {/* Center Indicator */}
-                    <div className="absolute top-1/2 left-1 right-1 h-9 -translate-y-1/2 border-y border-slate-200/30 pointer-events-none"></div>
+                    <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
                 </div>
               </div>
             </div>
@@ -703,7 +702,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
           {/* Mobile Overlay Background */}
           <div 
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] md:hidden"
+            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[100] md:hidden"
             onClick={() => setIsOpen(false)}
           />
         </>

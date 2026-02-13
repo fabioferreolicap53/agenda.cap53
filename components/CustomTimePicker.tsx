@@ -137,10 +137,10 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
         <>
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="fixed md:absolute bottom-0 md:top-full md:bottom-auto left-0 md:left-0 right-0 md:right-auto md:translate-x-0 mt-0 md:mt-2 bg-white/95 backdrop-blur-xl rounded-t-[32px] md:rounded-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.04)] md:shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-t md:border border-slate-200/50 z-[100] p-4 md:p-1.5 animate-in slide-in-from-bottom-full md:slide-in-from-top-2 fade-in duration-300 w-full md:w-auto md:min-w-[240px] overflow-hidden"
+            className="fixed md:absolute top-1/2 md:top-full left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 mt-0 md:mt-2 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[100] p-4 md:p-1.5 animate-in zoom-in-95 fade-in duration-300 w-[94%] md:w-auto md:min-w-[240px] overflow-hidden"
           >
-            {/* Mobile Handle */}
-            <div className="w-10 h-1 bg-slate-200/50 rounded-full mx-auto mb-4 md:hidden shrink-0" />
+            {/* Mobile Handle - Removed for centered modal */}
+            
 
             <div className="flex-1 overflow-y-auto no-scrollbar min-w-0">
               <div className="flex items-center justify-between mb-3 px-2 md:hidden">
@@ -150,15 +150,15 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                 </div>
               </div>
 
-              <div className="flex p-0.5 gap-2 md:gap-1 bg-slate-50/30 md:bg-transparent rounded-2xl md:rounded-none overflow-hidden">
+              <div className="flex p-0.5 gap-1 bg-transparent rounded-2xl overflow-hidden relative h-[180px] md:h-[220px]">
                 {/* Hours Column */}
                 <div 
                   ref={hoursRef}
-                  className="flex-1 max-h-[180px] md:max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5 min-w-0"
+                  className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
                   role="listbox"
                   aria-label="Selecionar hora"
                 >
-                  <div className="py-16 md:py-0 px-0.5">
+                  <div className="py-16 md:py-12 px-0.5 space-y-1">
                     {hours.map((h) => {
                       const isSelected = h === currentHour;
                       return (
@@ -170,10 +170,10 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                           data-hour={h}
                           onClick={() => handleSelectHour(h)}
                           className={`
-                            w-full py-2.5 rounded-lg text-xs transition-all duration-200 flex items-center justify-center
+                            w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                             ${isSelected 
-                              ? 'bg-slate-800 text-white font-bold shadow-md scale-100 z-10' 
-                              : 'text-slate-400 hover:bg-white hover:text-slate-800 font-medium'}
+                              ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
                           `}
                         >
                           {h}
@@ -183,16 +183,16 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                   </div>
                 </div>
 
-                <div className="w-[1px] bg-slate-200/30 my-2 md:my-2 shrink-0" />
+                <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
 
                 {/* Minutes Column */}
                 <div 
                   ref={minutesRef}
-                  className="flex-1 max-h-[180px] md:max-h-[220px] overflow-y-auto scrollbar-hide p-1 space-y-0.5 min-w-0"
+                  className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
                   role="listbox"
                   aria-label="Selecionar minutos"
                 >
-                  <div className="py-16 md:py-0 px-0.5">
+                  <div className="py-16 md:py-12 px-0.5 space-y-1">
                     {minutes.map((m) => {
                       const isSelected = m === currentMinute;
                       return (
@@ -204,10 +204,10 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                           data-minute={m}
                           onClick={() => handleSelectMinute(m)}
                           className={`
-                            w-full py-2.5 rounded-lg text-xs transition-all duration-200 flex items-center justify-center
+                            w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                             ${isSelected 
-                              ? 'bg-slate-800 text-white font-bold shadow-md scale-100 z-10' 
-                              : 'text-slate-400 hover:bg-white hover:text-slate-800 font-medium'}
+                              ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
                           `}
                         >
                           {m}
@@ -216,6 +216,13 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                     })}
                   </div>
                 </div>
+
+                {/* Overlays for better depth */}
+                <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
+                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
+                
+                {/* Center Indicator */}
+                <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
               </div>
             </div>
             
@@ -237,7 +244,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
             
           {/* Mobile Overlay Background */}
           <div 
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[90] md:hidden"
+            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[90] md:hidden"
             onClick={() => setIsOpen(false)}
           />
         </>
