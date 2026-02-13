@@ -439,7 +439,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
     // Empty slots for days before start of month
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-10 w-10" />);
+      days.push(<div key={`empty-${i}`} className="h-8 w-full" />);
     }
 
     // Days
@@ -456,15 +456,15 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
       days.push(
         <button
-          key={day}
+          key={`day-${day}`}
           onClick={(e) => { e.preventDefault(); handleDateSelect(day); }}
           className={`
-            h-10 w-10 rounded-full flex items-center justify-center text-sm transition-all duration-200
+            h-8 w-full rounded-lg text-[10px] flex items-center justify-center transition-all duration-200 relative
             ${isSelected 
-              ? 'bg-[#1e293b] text-white shadow-lg shadow-slate-200 scale-100 font-bold' 
+              ? 'bg-slate-800 text-white font-black shadow-lg shadow-slate-200 scale-105 z-10' 
               : isToday
-                ? 'bg-slate-50 text-[#1e293b] font-bold ring-1 ring-slate-200'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-[#1e293b]'}
+                ? 'bg-slate-100 text-slate-900 font-black'
+                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-bold'}
           `}
         >
           {day}
@@ -539,156 +539,174 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
       {/* Popup */}
       {isOpen && (
-        <div 
-          role="dialog"
-          aria-label="Calendário e seletor de horário"
-          className="fixed md:absolute top-1/2 md:top-[calc(100%+8px)] left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 bg-white rounded-[28px] shadow-[0_20px_50px_rgba(15,23,42,0.15)] border border-slate-100 z-[110] p-4 md:p-5 animate-in fade-in zoom-in-95 slide-in-from-top-4 duration-300 flex flex-col md:flex-row gap-5 md:gap-6 w-[92vw] md:w-[480px] max-h-[90vh] md:max-h-none overflow-y-auto md:overflow-visible"
-        >
-          
-          {/* Calendar Section */}
-          <div className="flex-[1.2]">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-4 md:mb-5 px-1">
-              <div className="flex flex-col">
-                <span className="font-black text-xl md:text-xl text-slate-800 tracking-tight capitalize">
-                  {MONTHS[viewDate.getMonth()]}
-                </span>
-                <span className="text-slate-400 text-[10px] md:text-xs font-bold tracking-[0.1em] mt-0.5">
-                  {viewDate.getFullYear()}
-                </span>
-              </div>
-              <div className="flex gap-1.5">
-                <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-800 transition-all border border-slate-50">
-                  <span className="material-symbols-outlined text-lg">chevron_left</span>
-                </button>
-                <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-xl text-slate-400 hover:text-slate-800 transition-all border border-slate-50">
-                  <span className="material-symbols-outlined text-lg">chevron_right</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="flex gap-2 mb-4 md:mb-5">
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  const today = new Date();
-                  setViewDate(today);
-                  handleDateSelect(today.getDate());
-                }}
-                className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-wider hover:bg-slate-100 transition-colors border border-slate-100/50"
-              >
-                Hoje
-              </button>
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  setViewDate(tomorrow);
-                  handleDateSelect(tomorrow.getDate());
-                }}
-                className="px-3 py-1.5 rounded-lg bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-wider hover:bg-slate-100 transition-colors border border-slate-100/50"
-              >
-                Amanhã
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-1.5">
-              {DAYS_OF_WEEK.map((d, i) => (
-                <div key={i} className="h-8 flex items-center justify-center text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                  {d}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {renderCalendarDays()}
-            </div>
-          </div>
-
-          {/* Time Picker Section */}
-          <div className="flex-1 flex flex-col border-t md:border-t-0 md:border-l border-slate-100 pt-5 md:pt-0 md:pl-6">
-            <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mb-4 text-center md:text-left">Horário</span>
+        <>
+          <div 
+            role="dialog"
+            aria-label="Calendário e seletor de horário"
+            className="fixed md:absolute bottom-0 md:top-[calc(100%+8px)] md:bottom-auto left-0 md:left-0 right-0 md:right-auto md:translate-x-0 bg-white/95 backdrop-blur-xl rounded-t-[32px] md:rounded-[28px] shadow-[0_-8px_40px_rgba(0,0,0,0.04)] md:shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-t md:border border-slate-200/50 z-[110] p-4 md:p-5 animate-in slide-in-from-bottom-full md:slide-in-from-top-4 fade-in duration-300 flex flex-col md:flex-row gap-3 md:gap-6 w-full md:w-[480px] max-h-[90vh] md:max-h-none overflow-hidden"
+          >
+            {/* Mobile Handle */}
+            <div className="w-10 h-1 bg-slate-200/50 rounded-full mx-auto mb-3 md:hidden shrink-0" />
             
-            <div className="flex gap-3 h-[200px] md:h-[220px] relative bg-slate-50/50 rounded-[20px] p-2 border border-slate-100/50">
+            <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col md:flex-row gap-3 md:gap-6">
+              {/* Calendar Section */}
+              <div className="flex-[1.2] min-w-0">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <div className="flex flex-col">
+                    <span className="font-bold text-lg text-slate-800 tracking-tight capitalize">
+                      {MONTHS[viewDate.getMonth()]}
+                    </span>
+                    <span className="text-slate-400 text-[10px] font-medium tracking-wider">
+                      {viewDate.getFullYear()}
+                    </span>
+                  </div>
+                  <div className="flex gap-1">
+                    <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                      <span className="material-symbols-outlined text-lg">chevron_left</span>
+                    </button>
+                    <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                      <span className="material-symbols-outlined text-lg">chevron_right</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Actions */}
+                <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar pb-0.5">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const today = new Date();
+                      setViewDate(today);
+                      handleDateSelect(today.getDate());
+                    }}
+                    className="px-3 py-1.5 rounded-full bg-slate-50 text-slate-500 text-[9px] font-bold uppercase tracking-wider hover:bg-slate-100 transition-colors whitespace-nowrap"
+                  >
+                    Hoje
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      setViewDate(tomorrow);
+                      handleDateSelect(tomorrow.getDate());
+                    }}
+                    className="px-3 py-1.5 rounded-full bg-slate-50 text-slate-500 text-[9px] font-bold uppercase tracking-wider hover:bg-slate-100 transition-colors whitespace-nowrap"
+                  >
+                    Amanhã
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-0.5 mb-1">
+                  {DAYS_OF_WEEK.map((d, i) => (
+                    <div key={i} className="h-7 flex items-center justify-center text-[9px] font-medium text-slate-400 uppercase tracking-widest">
+                      {d}
+                    </div>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-0.5">
+                  {renderCalendarDays()}
+                </div>
+              </div>
+
+              {/* Time Section */}
+              <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex items-center justify-between mb-2 px-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Horário</span>
+                  {value && (
+                    <div className="px-2 py-0.5 bg-slate-50 rounded-full">
+                      <span className="text-[10px] font-bold text-slate-500">
+                        {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 h-[180px] md:h-[220px] relative bg-slate-50/30 rounded-2xl p-1 overflow-hidden">
                 {/* Hours */}
                 <div 
                   ref={hoursRef}
-                  className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth no-scrollbar"
+                  className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
                 >
-                    <div className="flex flex-col gap-1 py-16">
-                        {hours.map(h => {
-                            const isSel = h === currentHour;
-                            return (
-                                <button
-                                    key={h}
-                                    data-selected={isSel}
-                                    onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
-                                    className={`
-                                        flex-shrink-0 h-10 w-full rounded-xl text-xs transition-all duration-300
-                                        ${isSel 
-                                            ? 'bg-slate-800 text-white font-black shadow-md shadow-slate-200 scale-105 z-10' 
-                                            : 'text-slate-400 font-bold hover:text-slate-800 hover:bg-white hover:shadow-sm'}
-                                    `}
-                                >
-                                    {String(h).padStart(2, '0')}h
-                                </button>
-                            );
-                        })}
+                  <div className="flex flex-col gap-0.5 py-16 md:py-12 px-0.5">
+                      {hours.map(h => {
+                        const isSel = h === currentHour;
+                        return (
+                          <button
+                            key={h}
+                            data-selected={isSel}
+                            onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
+                            className={`
+                              flex-shrink-0 h-9 w-full rounded-lg text-xs transition-all duration-300
+                              ${isSel 
+                                ? 'bg-slate-800 text-white font-bold shadow-md scale-100 z-10' 
+                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-white'}
+                            `}
+                          >
+                            {String(h).padStart(2, '0')}
+                          </button>
+                        );
+                      })}
                     </div>
-                </div>
+                  </div>
 
-                {/* Minutes */}
+                  <div className="w-[1px] bg-slate-200/50 my-2 shrink-0" />
+
+                  {/* Minutes */}
                 <div 
                   ref={minutesRef}
-                  className="flex-1 overflow-y-auto custom-scrollbar scroll-smooth no-scrollbar"
+                  className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
                 >
-                    <div className="flex flex-col gap-1 py-16">
-                        {allMinutes.map(m => {
-                            const isSel = m === currentMinute;
-                            return (
-                                <button
-                                    key={m}
-                                    data-selected={isSel}
-                                    onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
-                                    className={`
-                                        flex-shrink-0 h-10 w-full rounded-xl text-xs transition-all duration-300
-                                        ${isSel 
-                                            ? 'bg-slate-800 text-white font-black shadow-md shadow-slate-200 scale-105 z-10' 
-                                            : 'text-slate-400 font-bold hover:text-slate-800 hover:bg-white hover:shadow-sm'}
-                                    `}
-                                >
-                                    {String(m).padStart(2, '0')}m
-                                </button>
-                            );
-                        })}
+                  <div className="flex flex-col gap-0.5 py-16 md:py-12 px-0.5">
+                      {allMinutes.map(m => {
+                        const isSel = m === currentMinute;
+                        return (
+                          <button
+                            key={m}
+                            data-selected={isSel}
+                            onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
+                            className={`
+                              flex-shrink-0 h-9 w-full rounded-lg text-xs transition-all duration-300
+                              ${isSel 
+                                ? 'bg-slate-800 text-white font-bold shadow-md scale-100 z-10' 
+                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-white'}
+                            `}
+                          >
+                            {String(m).padStart(2, '0')}
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
+                    
+                    {/* Overlays for better depth */}
+                    <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-slate-50/50 to-transparent pointer-events-none rounded-t-2xl"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-slate-50/50 to-transparent pointer-events-none rounded-b-2xl"></div>
+                    
+                    {/* Center Indicator */}
+                    <div className="absolute top-1/2 left-1 right-1 h-9 -translate-y-1/2 border-y border-slate-200/30 pointer-events-none"></div>
                 </div>
-                
-                {/* Overlays for better depth */}
-                <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-slate-50/90 to-transparent pointer-events-none rounded-t-[20px]"></div>
-                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50/90 to-transparent pointer-events-none rounded-b-[20px]"></div>
-                
-                {/* Center Indicator */}
-                <div className="absolute top-1/2 left-2.5 right-2.5 h-10 -translate-y-1/2 border-y border-slate-200/50 pointer-events-none"></div>
+              </div>
             </div>
 
-            <div className="mt-5">
-                <button 
-                    onClick={(e) => { e.preventDefault(); setIsOpen(false); }}
-                    className="w-full py-3.5 rounded-[16px] bg-slate-800 text-white text-[10px] font-black hover:bg-slate-900 transition-all uppercase tracking-[0.15em] shadow-lg shadow-slate-200 active:scale-[0.98]"
-                >
-                    Confirmar
-                </button>
+            {/* Confirm Button */}
+            <div className="mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-none border-slate-100 shrink-0">
+              <button 
+                onClick={(e) => { e.preventDefault(); setIsOpen(false); }}
+                className="w-full py-3.5 md:py-3 rounded-2xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
+              >
+                Confirmar
+              </button>
             </div>
           </div>
 
           {/* Mobile Overlay Background */}
           <div 
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[-1] md:hidden"
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] md:hidden"
             onClick={() => setIsOpen(false)}
           />
-        </div>
+        </>
       )}
     </div>
   );

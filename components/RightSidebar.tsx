@@ -153,7 +153,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
             {/* Toggle Button - Minimalista e Profissional */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={`fixed right-4 bottom-4 z-[100] size-12 rounded-2xl bg-white shadow-2xl border border-slate-100 flex items-center justify-center text-slate-600 transition-all duration-300 hover:scale-110 active:scale-95 group ${isOpen ? 'rotate-180 text-primary' : ''}`}
+                className={`fixed right-4 bottom-4 z-[100] size-12 rounded-2xl bg-white shadow-2xl border border-slate-100 hidden lg:flex items-center justify-center text-slate-600 transition-all duration-300 hover:scale-110 active:scale-95 group ${isOpen ? 'rotate-180 text-primary' : ''}`}
                 title={isOpen ? 'Ocultar Equipe' : 'Mostrar Equipe'}
             >
                 <span className="material-symbols-outlined text-[24px]">
@@ -165,7 +165,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
             </button>
 
             <aside 
-                className={`fixed right-0 top-0 h-full w-72 flex-col border-l border-border-light bg-white z-[90] transition-all duration-500 ease-in-out shadow-2xl lg:flex ${
+                className={`fixed right-0 top-0 h-full w-72 flex-col border-l border-border-light bg-white z-[90] transition-all duration-500 ease-in-out shadow-2xl hidden lg:flex ${
                     isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
                 }`}
             >
@@ -266,10 +266,10 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                 </div>
             </aside>
             
-            {/* Overlay para fechar ao clicar fora em telas menores */}
+            {/* Overlay para fechar ao clicar fora em telas menores - Desabilitado em mobile conforme solicitado */}
             {isOpen && (
                 <div 
-                    className="fixed inset-0 z-[80] bg-slate-900/10 backdrop-blur-[2px] lg:hidden"
+                    className="fixed inset-0 z-[80] bg-slate-900/10 backdrop-blur-[2px] hidden"
                     onClick={() => setIsOpen(false)}
                 />
             )}
