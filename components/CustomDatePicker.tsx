@@ -540,38 +540,201 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       {/* Popup */}
       {isOpen && (
         <>
+          {/* Mobile Center Wrapper */}
+          <div className="fixed inset-0 z-[110] md:hidden flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
+              onClick={() => setIsOpen(false)}
+            />
+            <div 
+              role="dialog"
+              aria-label="Calendário e seletor de horário"
+              className="relative bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 p-3 animate-in zoom-in-95 fade-in duration-300 flex flex-col gap-2 w-full max-h-[90vh] overflow-hidden"
+            >
+              <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-4">
+                {/* Calendar Section */}
+                <div className="flex-[1.2] min-w-0">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-lg text-slate-800 tracking-tight capitalize">
+                        {MONTHS[viewDate.getMonth()]}
+                      </span>
+                      <span className="text-slate-400 text-[10px] font-medium tracking-wider">
+                        {viewDate.getFullYear()}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                        <span className="material-symbols-outlined text-lg">chevron_left</span>
+                      </button>
+                      <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                        <span className="material-symbols-outlined text-lg">chevron_right</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar pb-0.5">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const today = new Date();
+                        setViewDate(today);
+                        handleDateSelect(today.getDate());
+                      }}
+                      className="whitespace-nowrap px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-[10px] font-bold hover:bg-slate-800 hover:text-white transition-all"
+                    >
+                      HOJE
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        setViewDate(tomorrow);
+                        handleDateSelect(tomorrow.getDate());
+                      }}
+                      className="whitespace-nowrap px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-[10px] font-bold hover:bg-slate-800 hover:text-white transition-all"
+                    >
+                      AMANHÃ
+                    </button>
+                  </div>
+
+                  {/* Calendar Grid */}
+                  <div className="grid grid-cols-7 gap-px mb-2">
+                    {DAYS_OF_WEEK.map(day => (
+                      <div key={day} className="text-center text-[10px] font-black text-slate-200 py-2 uppercase tracking-widest">
+                        {day}
+                      </div>
+                    ))}
+                    {renderCalendarDays()}
+                  </div>
+                </div>
+
+                <div className="h-px bg-slate-100/60 my-1 mx-1" />
+
+                {/* Time Section */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2 px-1">
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Horário</h3>
+                    <div className="px-2 py-0.5 bg-slate-50 rounded-lg border border-slate-100">
+                      <span className="text-xs font-bold text-slate-700">
+                        {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-1 h-[140px] relative bg-transparent rounded-2xl overflow-hidden">
+                    {/* Hours */}
+                    <div 
+                      ref={hoursRef}
+                      className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
+                    >
+                      <div className="flex flex-col gap-1 py-12 px-0.5">
+                        {hours.map(h => {
+                          const isSel = h === currentHour;
+                          return (
+                            <button
+                              key={h}
+                              data-selected={isSel}
+                              onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
+                              className={`
+                                flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                                ${isSel 
+                                  ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                  : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
+                              `}
+                            >
+                              {String(h).padStart(2, '0')}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
+
+                    {/* Minutes */}
+                    <div 
+                      ref={minutesRef}
+                      className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
+                    >
+                      <div className="flex flex-col gap-1 py-12 px-0.5">
+                        {allMinutes.map(m => {
+                          const isSel = m === currentMinute;
+                          return (
+                            <button
+                              key={m}
+                              data-selected={isSel}
+                              onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
+                              className={`
+                                flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                                ${isSel 
+                                  ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                  : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
+                              `}
+                            >
+                              {String(m).padStart(2, '0')}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    {/* Overlays for better depth */}
+                    <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
+                    
+                    {/* Center Indicator */}
+                    <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="w-full py-3 bg-slate-800 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-slate-900 transition-all active:scale-95"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop Popup */}
           <div 
             role="dialog"
             aria-label="Calendário e seletor de horário"
-            className="fixed md:absolute top-1/2 md:top-[calc(100%+8px)] left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[110] p-4 md:p-5 animate-in zoom-in-95 fade-in duration-300 flex flex-col md:flex-row gap-2 md:gap-6 w-[94%] md:w-[480px] max-h-[90vh] md:max-h-none overflow-hidden"
+            className="hidden md:flex absolute top-[calc(100%+8px)] left-0 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[110] p-5 animate-in zoom-in-95 fade-in duration-300 flex-row gap-6 w-[480px] overflow-hidden"
           >
-            {/* Mobile Handle - Removed as it's now a centered modal */}
-            
-            <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col md:flex-row gap-4 md:gap-6">
+            <div className="flex-1 no-scrollbar flex flex-row gap-6">
               {/* Calendar Section */}
               <div className="flex-[1.2] min-w-0">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-2 px-1">
+                <div className="flex items-center justify-between mb-4 px-1">
                   <div className="flex flex-col">
-                    <span className="font-bold text-lg text-slate-800 tracking-tight capitalize">
+                    <span className="font-bold text-xl text-slate-800 tracking-tight capitalize">
                       {MONTHS[viewDate.getMonth()]}
                     </span>
-                    <span className="text-slate-400 text-[10px] font-medium tracking-wider">
+                    <span className="text-slate-400 text-xs font-medium tracking-wider">
                       {viewDate.getFullYear()}
                     </span>
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                      <span className="material-symbols-outlined text-lg">chevron_left</span>
+                    <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-10 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                      <span className="material-symbols-outlined text-xl">chevron_left</span>
                     </button>
-                    <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                      <span className="material-symbols-outlined text-lg">chevron_right</span>
+                    <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-10 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                      <span className="material-symbols-outlined text-xl">chevron_right</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Quick Actions */}
-                <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar pb-0.5">
+                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-0.5">
                   <button
                     onClick={(e) => {
                       e.preventDefault();
@@ -579,9 +742,9 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                       setViewDate(today);
                       handleDateSelect(today.getDate());
                     }}
-                    className="px-3 py-1.5 rounded-full bg-slate-50 text-slate-500 text-[9px] font-bold uppercase tracking-wider hover:bg-slate-100 transition-colors whitespace-nowrap"
+                    className="whitespace-nowrap px-4 py-1.5 rounded-full bg-slate-50 text-slate-500 text-xs font-bold hover:bg-slate-800 hover:text-white transition-all"
                   >
-                    Hoje
+                    HOJE
                   </button>
                   <button
                     onClick={(e) => {
@@ -591,44 +754,43 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                       setViewDate(tomorrow);
                       handleDateSelect(tomorrow.getDate());
                     }}
-                    className="px-3 py-1.5 rounded-full bg-slate-50 text-slate-500 text-[9px] font-bold uppercase tracking-wider hover:bg-slate-100 transition-colors whitespace-nowrap"
+                    className="whitespace-nowrap px-4 py-1.5 rounded-full bg-slate-50 text-slate-500 text-xs font-bold hover:bg-slate-800 hover:text-white transition-all"
                   >
-                    Amanhã
+                    AMANHÃ
                   </button>
                 </div>
 
-                <div className="grid grid-cols-7 gap-0.5 mb-1">
-                  {DAYS_OF_WEEK.map((d, i) => (
-                    <div key={i} className="h-7 flex items-center justify-center text-[9px] font-medium text-slate-400 uppercase tracking-widest">
-                      {d}
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7 gap-px mb-2">
+                  {DAYS_OF_WEEK.map(day => (
+                    <div key={day} className="text-center text-[11px] font-black text-slate-200 py-3 uppercase tracking-widest">
+                      {day}
                     </div>
                   ))}
-                </div>
-                <div className="grid grid-cols-7 gap-0.5">
                   {renderCalendarDays()}
                 </div>
               </div>
 
+              <div className="w-px bg-slate-100/60 my-2" />
+
               {/* Time Section */}
-              <div className="flex-1 flex flex-col min-w-0">
-                <div className="flex items-center justify-between mb-2 px-1">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Horário</span>
-                  {value && (
-                    <div className="px-2 py-0.5 bg-slate-50 rounded-full">
-                      <span className="text-[10px] font-bold text-slate-500">
-                        {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
-                      </span>
-                    </div>
-                  )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Horário</h3>
+                  <div className="px-3 py-1 bg-slate-50 rounded-xl border border-slate-100">
+                    <span className="text-sm font-bold text-slate-700">
+                      {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex gap-1 h-[180px] md:h-[220px] relative bg-transparent rounded-2xl overflow-hidden">
-                {/* Hours */}
-                <div 
-                  ref={hoursRef}
-                  className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
-                >
-                  <div className="flex flex-col gap-1 py-16 md:py-12 px-0.5">
+                <div className="flex gap-1 h-[220px] relative bg-transparent rounded-2xl overflow-hidden">
+                  {/* Hours */}
+                  <div 
+                    ref={hoursRef}
+                    className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
+                  >
+                    <div className="flex flex-col gap-1 py-12 px-0.5">
                       {hours.map(h => {
                         const isSel = h === currentHour;
                         return (
@@ -653,11 +815,11 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                   <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
 
                   {/* Minutes */}
-                <div 
-                  ref={minutesRef}
-                  className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
-                >
-                  <div className="flex flex-col gap-1 py-16 md:py-12 px-0.5">
+                  <div 
+                    ref={minutesRef}
+                    className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
+                  >
+                    <div className="flex flex-col gap-1 py-12 px-0.5">
                       {allMinutes.map(m => {
                         const isSel = m === currentMinute;
                         return (
@@ -678,33 +840,26 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                       })}
                     </div>
                   </div>
-                    
-                    {/* Overlays for better depth */}
-                    <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
-                    
-                    {/* Center Indicator */}
-                    <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
+                  
+                  {/* Overlays for better depth */}
+                  <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
+                  
+                  {/* Center Indicator */}
+                  <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
+                </div>
+                
+                <div className="mt-6">
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="w-full py-3.5 bg-slate-800 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest shadow-lg hover:bg-slate-900 transition-all active:scale-95"
+                  >
+                    Confirmar
+                  </button>
                 </div>
               </div>
             </div>
-
-            {/* Confirm Button */}
-            <div className="mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-none border-slate-100 shrink-0">
-              <button 
-                onClick={(e) => { e.preventDefault(); setIsOpen(false); }}
-                className="w-full py-3.5 md:py-3 rounded-2xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
-              >
-                Confirmar
-              </button>
-            </div>
           </div>
-
-          {/* Mobile Overlay Background */}
-          <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[100] md:hidden"
-            onClick={() => setIsOpen(false)}
-          />
         </>
       )}
     </div>

@@ -135,22 +135,124 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
 
       {isOpen && (
         <>
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="fixed md:absolute top-1/2 md:top-full left-1/2 md:left-0 -translate-x-1/2 md:translate-x-0 -translate-y-1/2 md:translate-y-0 mt-0 md:mt-2 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[100] p-4 md:p-1.5 animate-in zoom-in-95 fade-in duration-300 w-[94%] md:w-auto md:min-w-[240px] overflow-hidden"
-          >
-            {/* Mobile Handle - Removed for centered modal */}
-            
+          {/* Mobile Center Wrapper */}
+          <div className="fixed inset-0 z-[100] md:hidden flex items-center justify-center p-4">
+            <div 
+              className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
+              onClick={() => setIsOpen(false)}
+            />
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 p-3 animate-in zoom-in-95 fade-in duration-300 w-full overflow-hidden"
+            >
+              <div className="overflow-y-auto no-scrollbar min-w-0">
+                <div className="flex items-center justify-between mb-3 px-2">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Selecionar Horário</span>
+                  <div className="px-2 py-0.5 bg-slate-50/50 rounded-full">
+                    <span className="text-[10px] font-bold text-slate-500">{currentHour}:{currentMinute}</span>
+                  </div>
+                </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar min-w-0">
-              <div className="flex items-center justify-between mb-3 px-2 md:hidden">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Selecionar Horário</span>
-                <div className="px-2 py-0.5 bg-slate-50/50 rounded-full">
-                  <span className="text-[10px] font-bold text-slate-500">{currentHour}:{currentMinute}</span>
+                <div className="flex p-0.5 gap-1 bg-transparent rounded-2xl overflow-hidden relative h-[140px]">
+                  {/* Hours Column */}
+                  <div 
+                    ref={hoursRef}
+                    className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
+                    role="listbox"
+                    aria-label="Selecionar hora"
+                  >
+                    <div className="py-12 px-0.5 space-y-1">
+                      {hours.map((h) => {
+                        const isSelected = h === currentHour;
+                        return (
+                          <button
+                            key={h}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            data-hour={h}
+                            onClick={() => handleSelectHour(h)}
+                            className={`
+                              w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                              ${isSelected 
+                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
+                            `}
+                          >
+                            {h}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
+
+                  {/* Minutes Column */}
+                  <div 
+                    ref={minutesRef}
+                    className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
+                    role="listbox"
+                    aria-label="Selecionar minutos"
+                  >
+                    <div className="py-12 px-0.5 space-y-1">
+                      {minutes.map((m) => {
+                        const isSelected = m === currentMinute;
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            data-minute={m}
+                            onClick={() => handleSelectMinute(m)}
+                            className={`
+                              w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                              ${isSelected 
+                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
+                            `}
+                          >
+                            {m}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Overlays for better depth */}
+                  <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
+                  
+                  {/* Center Indicator */}
+                  <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
                 </div>
               </div>
+              
+              <div className="p-1.5 mt-3 border-t border-slate-100/50 shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (!value) {
+                      onChange(`${currentHour}:${currentMinute}`);
+                    }
+                    setIsOpen(false);
+                  }}
+                  className="w-full py-3 rounded-full bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          </div>
 
-              <div className="flex p-0.5 gap-1 bg-transparent rounded-2xl overflow-hidden relative h-[180px] md:h-[220px]">
+          {/* Desktop Popup */}
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="hidden md:block absolute top-full left-0 mt-2 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[100] p-1.5 animate-in zoom-in-95 fade-in duration-300 md:min-w-[240px] overflow-hidden"
+          >
+            <div className="overflow-y-auto no-scrollbar min-w-0">
+              <div className="flex p-0.5 gap-1 bg-transparent rounded-2xl overflow-hidden relative h-[220px]">
                 {/* Hours Column */}
                 <div 
                   ref={hoursRef}
@@ -158,7 +260,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                   role="listbox"
                   aria-label="Selecionar hora"
                 >
-                  <div className="py-16 md:py-12 px-0.5 space-y-1">
+                  <div className="py-12 px-0.5 space-y-1">
                     {hours.map((h) => {
                       const isSelected = h === currentHour;
                       return (
@@ -192,7 +294,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                   role="listbox"
                   aria-label="Selecionar minutos"
                 >
-                  <div className="py-16 md:py-12 px-0.5 space-y-1">
+                  <div className="py-12 px-0.5 space-y-1">
                     {minutes.map((m) => {
                       const isSelected = m === currentMinute;
                       return (
@@ -226,7 +328,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
               </div>
             </div>
             
-            <div className="p-0.5 md:p-1.5 mt-3 md:mt-1 border-t md:border-t border-slate-100/50 shrink-0">
+            <div className="p-1.5 mt-1 border-t border-slate-100/50 shrink-0">
               <button 
                 type="button"
                 onClick={() => {
@@ -241,12 +343,6 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
               </button>
             </div>
           </div>
-            
-          {/* Mobile Overlay Background */}
-          <div 
-            className="fixed inset-0 bg-black/20 backdrop-blur-[2px] z-[90] md:hidden"
-            onClick={() => setIsOpen(false)}
-          />
         </>
       )}
     </div>
