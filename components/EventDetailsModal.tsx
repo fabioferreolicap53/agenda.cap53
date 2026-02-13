@@ -113,6 +113,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           const request = eventParticipationRequests.find(r => r.id === requestId);
           if (!request) return;
 
+          const selectedRole = requestRoles[requestId] || 'PARTICIPANTE';
+
           // 1. Update request status
           await pb.collection('agenda_cap53_solicitacoes_evento').update(requestId, {
               status: action === 'approve' ? 'approved' : 'rejected'
@@ -123,7 +125,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
               const currentParticipants = event.participants || [];
               const currentStatus = event.participants_status || {};
               const currentRoles = event.participants_roles || {};
-              const selectedRole = requestRoles[requestId] || 'PARTICIPANTE';
               
               if (!currentParticipants.includes(request.user)) {
                   const updatedParticipants = [...currentParticipants, request.user];

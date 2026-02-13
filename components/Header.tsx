@@ -100,7 +100,7 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-border-light px-4 md:px-6 py-3 md:py-4 flex-shrink-0 sticky top-0 z-20">
+    <header className="bg-white border-b border-border-light px-4 md:px-6 py-3 md:py-4 flex-shrink-0 sticky top-0 z-[100]">
       <div className="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 md:gap-4">
           {/* Hamburger Button Mobile */}

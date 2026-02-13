@@ -352,73 +352,78 @@ const Calendar: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full gap-4 max-w-[1800px] mx-auto p-2 md:p-4">
-      {/* Filters Bar - Fixed Top */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/95 backdrop-blur-md p-3 rounded-2xl border border-border-light shadow-sm sticky top-[-12px] md:top-0 z-30 transition-all duration-300">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => {
-              const today = new Date();
-              const isAlreadyToday = currentDate.toDateString() === today.toDateString();
-              setCurrentDate(today);
-              updateURL(viewType, today, true);
-              if (isAlreadyToday) {
-                scrollToToday();
-              }
-            }}
-            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-xl transition-all duration-300 active:scale-95"
-          >
-            <span className="material-symbols-outlined text-[18px]">today</span>
-            Hoje
-          </button>
+    <div className="flex flex-col min-h-screen w-full">
+      {/* Filters Bar - Fixed Top of Page */}
+      <div className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-border-light shadow-sm w-full">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3">
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                const today = new Date();
+                const isAlreadyToday = currentDate.toDateString() === today.toDateString();
+                setCurrentDate(today);
+                updateURL(viewType, today, true);
+                if (isAlreadyToday) {
+                  scrollToToday();
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-xl transition-all duration-300 active:scale-95"
+            >
+              <span className="material-symbols-outlined text-[18px]">today</span>
+              Hoje
+            </button>
 
-          <div className="flex items-center bg-slate-100/50 rounded-xl p-1 border border-border-light">
-            <button
-              onClick={() => handleNavigate('prev')}
-              className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
-            >
-              <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-            </button>
-            <span className="px-4 text-[11px] md:text-xs font-black text-text-main min-w-[140px] md:min-w-[180px] text-center uppercase tracking-widest">
-              {viewType === 'day'
-                ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
-                : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
-            </span>
-            <button
-              onClick={() => handleNavigate('next')}
-              className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
-            >
-              <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-            </button>
+            <div className="flex items-center bg-slate-100/50 rounded-xl p-1 border border-border-light">
+              <button
+                onClick={() => handleNavigate('prev')}
+                className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+              </button>
+              <span className="px-4 text-[11px] md:text-xs font-black text-text-main min-w-[140px] md:min-w-[180px] text-center uppercase tracking-widest">
+                {viewType === 'day'
+                  ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
+                  : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+              </span>
+              <button
+                onClick={() => handleNavigate('next')}
+                className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+              >
+                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex bg-slate-100/50 p-1 rounded-xl border border-border-light">
+            {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
+              <button
+                key={view}
+                onClick={() => updateURL(view, currentDate)}
+                className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
+                  viewType === view 
+                    ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
+                    : 'text-text-secondary hover:text-text-main'
+                }`}
+              >
+                {view === 'day' ? 'Dia' : view === 'week' ? 'Semana' : view === 'month' ? 'Mês' : 'Agenda'}
+              </button>
+            ))}
           </div>
         </div>
-
-        <div className="flex bg-slate-100/50 p-1 rounded-xl border border-border-light">
-          {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
-            <button
-              key={view}
-              onClick={() => updateURL(view, currentDate)}
-              className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
-                viewType === view 
-                  ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
-                  : 'text-text-secondary hover:text-text-main'
-              }`}
-            >
-              {view === 'day' ? 'Dia' : view === 'week' ? 'Semana' : view === 'month' ? 'Mês' : 'Agenda'}
-            </button>
-          ))}
-        </div>
       </div>
+    </div>
 
-      {/* Calendar Grid Container */}
-      <div className="bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col overflow-hidden min-h-[750px] mb-4">
-        {viewType === 'month' && (
-          <div className="flex-1 flex flex-col h-full">
-            {/* Desktop Grid View */}
-            <div className="hidden md:flex flex-col flex-1">
-              <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
+      <div className="max-w-[1600px] mx-auto w-full p-2 md:p-4 lg:p-6">
+        {/* Calendar Grid Container */}
+        <div className="bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative">
+          {viewType === 'month' && (
+            <div className="flex-1 flex flex-col">
+              {/* Desktop Grid View */}
+              <div className="hidden md:flex flex-col flex-1">
+                <div className="grid grid-cols-7 border-b border-border-light bg-slate-50 sticky top-[120px] md:top-[64px] z-[90] shadow-sm">
                 {daysLabels.map((day) => (
-                  <div key={day} className="py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary">
+                    <div key={day} className="py-1.5 text-center text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary">
                     {day}
                   </div>
                 ))}
@@ -453,6 +458,14 @@ const Calendar: React.FC = () => {
                         >
                           {dateObj.date.getDate()}
                         </button>
+                        {dayEvents.length > 0 && (
+                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200/50 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300">
+                            <span className="material-symbols-outlined text-[10px] text-text-secondary/50 group-hover/badge:text-primary transition-colors">calendar_today</span>
+                            <span className="text-[9px] font-black text-text-secondary group-hover/badge:text-primary transition-colors">
+                              {dayEvents.length}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 max-h-[100px]">
@@ -493,9 +506,19 @@ const Calendar: React.FC = () => {
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
-                            {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                              {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                            </span>
+                            {dayEvents.length > 0 && (
+                              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200/50">
+                                <span className="material-symbols-outlined text-[10px] text-text-secondary/50">event</span>
+                                <span className="text-[9px] font-black text-text-secondary">
+                                  {dayEvents.length}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                           {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit">Hoje</span>}
                         </div>
                       </div>
@@ -532,34 +555,44 @@ const Calendar: React.FC = () => {
         )}
 
         {viewType === 'week' && (
-          <div className={`flex-1 flex flex-col h-full overflow-hidden ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
+          <div className={`flex-1 flex flex-col ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
             {/* Desktop Week View */}
-            <div className="hidden md:flex flex-col flex-1 overflow-hidden">
-              <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
+            <div className="hidden md:flex flex-col flex-1">
+              <div className="grid grid-cols-7 border-b border-border-light bg-slate-50 sticky top-[120px] md:top-[64px] z-[90] shadow-sm">
                 {getDatesForWeek(currentDate).map((date, idx) => (
-                  <div key={idx} className={`py-3 flex flex-col items-center gap-0.5 border-r border-border-light last:border-r-0 transition-all duration-300 ${
-                    date.toDateString() === new Date().toDateString() ? 'bg-primary/5' : ''
+                    <div key={idx} className={`py-1.5 flex flex-col items-center gap-0.5 border-r border-border-light last:border-r-0 transition-all duration-300 ${
+                    date.toDateString() === new Date().toDateString() ? 'bg-primary/10' : 'bg-slate-50'
                   }`}>
                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
                       date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-secondary'
                     }`}>
                       {daysLabels[idx]}
                     </span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        updateURL('day', date);
-                      }}
-                      className={`text-sm md:text-base font-black transition-all duration-300 hover:scale-110 active:scale-95 ${
-                        date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-main hover:text-primary'
-                      }`}
-                    >
-                      {date.getDate()}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateURL('day', date);
+                        }}
+                        className={`text-sm md:text-base font-black transition-all duration-300 hover:scale-110 active:scale-95 ${
+                          date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-main hover:text-primary'
+                        }`}
+                      >
+                        {date.getDate()}
+                      </button>
+                      {(eventsByDate[date.toDateString()] || []).length > 0 && (
+                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-white/50 border border-slate-200/50">
+                          <span className="material-symbols-outlined text-[10px] text-text-secondary/50">calendar_month</span>
+                          <span className="text-[9px] font-black text-text-secondary">
+                            {(eventsByDate[date.toDateString()] || []).length}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
-              <div className="grid grid-cols-7 flex-1 divide-x divide-border-light bg-white overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-7 flex-1 divide-x divide-border-light bg-white">
                 {getDatesForWeek(currentDate).map((date, idx) => {
                   const isToday = date.toDateString() === new Date().toDateString();
                   const dayEvents = eventsByDate[date.toDateString()] || [];
@@ -655,15 +688,26 @@ const Calendar: React.FC = () => {
         {viewType === 'day' && (
           <div 
             onDoubleClick={() => handleDayDoubleClick(currentDate)}
-            className="flex-1 flex flex-col h-full bg-white overflow-y-auto custom-scrollbar cursor-default"
+            className="flex-1 flex flex-col bg-white cursor-default relative"
             title="Clique duplo para novo evento"
           >
-            <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
-              <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
+            <div className="sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-100 px-4 md:px-8 py-3 shadow-sm">
+              <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
                 <div className="flex flex-col gap-1">
-                  <h2 className="text-2xl md:text-3xl font-black text-primary tracking-tight">
-                    {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-                  </h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-2xl md:text-3xl font-black text-primary tracking-tight">
+                      {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                    </h2>
+                    {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 shadow-sm">
+                        <span className="material-symbols-outlined text-lg text-primary/60">event_available</span>
+                        <span className="text-xs font-black text-primary">
+                          {(eventsByDate[currentDate.toDateString()] || []).length}
+                          <span className="ml-1 opacity-60 text-[10px] uppercase tracking-wider hidden sm:inline">Eventos</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <p className="text-sm font-bold text-text-secondary uppercase tracking-[0.2em]">
                     {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
                   </p>
@@ -674,6 +718,8 @@ const Calendar: React.FC = () => {
                   </span>
                 )}
               </div>
+            </div>
+            <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
 
               <div className="space-y-4">
                 {(() => {
@@ -708,18 +754,20 @@ const Calendar: React.FC = () => {
         )}
 
         {viewType === 'agenda' && (
-          <div className="flex-1 flex flex-col p-4 md:p-8 bg-white md:overflow-y-auto custom-scrollbar">
-            <div className="flex items-center gap-4 mb-10 border-b border-slate-50 pb-6">
-               <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                 <span className="material-symbols-outlined text-2xl">view_agenda</span>
-               </div>
-               <div>
-                 <h3 className="text-2xl font-black text-text-main">Agenda do Mês</h3>
-                 <p className="text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
-               </div>
+          <div className="flex-1 flex flex-col bg-white relative">
+            <div className="sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-50 px-4 md:px-8 py-3 shadow-sm">
+              <div className="max-w-5xl mx-auto w-full flex items-center gap-4">
+                <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <span className="material-symbols-outlined text-2xl">view_agenda</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-black text-text-main">Agenda do Mês</h3>
+                  <p className="text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
+                </div>
+              </div>
             </div>
             
-            <div className="flex flex-col gap-12 max-w-5xl mx-auto w-full">
+            <div className="p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full">
               {(() => {
                  // Filter events for the current month and year
                  const monthEvents = events.filter(e => {
@@ -807,7 +855,8 @@ const Calendar: React.FC = () => {
         />
       )}
     </div>
-  );
+  </div>
+);
 };
 
 const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: number, height: number }> = ({ event: propEvent, visible, x, y, height }) => {

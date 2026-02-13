@@ -122,7 +122,6 @@ const ResetPassword: React.FC = () => {
 
                         <button
                             type="submit"
-                            disabled={status === 'loading'}
                             className="flex w-full items-center justify-center rounded-lg h-11 px-4 bg-primary hover:bg-primary-hover text-white font-bold shadow-lg shadow-primary/20 transition-all text-sm uppercase mt-2"
                         >
                             Alterar Senha

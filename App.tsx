@@ -120,8 +120,8 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <Sidebar />
       <main className={`flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/30 transition-all duration-500 ease-in-out ${isRightSidebarOpen ? 'lg:mr-72' : 'mr-0'}`}>
         <Header />
-        <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 custom-scrollbar">
-          <div className="max-w-[1600px] mx-auto w-full">
+        <div className={`flex-1 overflow-y-auto custom-scrollbar ${location.pathname === '/calendar' ? '' : 'p-3 md:p-4 lg:p-6'}`}>
+          <div className={`${location.pathname === '/calendar' ? '' : 'max-w-[1600px] mx-auto w-full'}`}>
             {children}
           </div>
         </div>
