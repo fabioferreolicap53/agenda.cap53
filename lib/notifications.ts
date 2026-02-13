@@ -22,6 +22,27 @@ export interface CreateNotificationParams {
   data?: any;
 }
 
+export interface NotificationRecord {
+  id: string;
+  user: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  read: boolean;
+  event?: string;
+  related_request?: string;
+  invite_status?: 'pending' | 'accepted' | 'rejected';
+  data?: any;
+  acknowledged: boolean;
+  created: string;
+  updated: string;
+  expand?: {
+    event?: any;
+    related_request?: any;
+    user?: any;
+  };
+}
+
 /**
  * Centralized service for handling notifications.
  */

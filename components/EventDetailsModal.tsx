@@ -905,7 +905,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Status de Confirmação</span>
                                 <div className="space-y-4">
                                     {[
-                                        { label: 'Confirmados', color: 'bg-green-500', count: Object.values(participantStatus).filter(s => s === 'accepted').length },
+                                        { label: 'Confirmados', color: 'bg-green-500', count: Object.values(participantStatus).filter(s => s === 'accepted').length + 1 },
                                         { label: 'Pendentes', color: 'bg-yellow-500', count: Object.values(participantStatus).filter(s => s === 'pending').length },
                                         { label: 'Recusados', color: 'bg-red-500', count: Object.values(participantStatus).filter(s => s === 'rejected').length }
                                     ].map(item => (
@@ -929,7 +929,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                             <span className="text-[11px] font-bold text-slate-600">Almoxarifado</span>
                                         </div>
                                         {(() => {
-                                            const almcReqs = requests.filter(r => r.expand?.item?.category === 'ALMOXARIFADO' || r.expand?.item?.category === 'COPA');
+                                            const almcReqs = requests.filter(r => r.expand?.item?.category === 'ALMOXARIFADO');
                                             if (almcReqs.length === 0) return <span className="text-[11px] font-black text-slate-300 uppercase">NÃO SOLIC.</span>;
                                             
                                             const status = almcReqs.some(r => r.status === 'rejected') ? 'rejected' : 
@@ -943,7 +943,32 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     }`}>
                                                         {status === 'approved' ? 'ACEITO' : status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
                                                     </span>
-                                                    {/* Status de ciência removido conforme solicitação */}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    {/* COPA Status */}
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-lg text-slate-400">coffee</span>
+                                            <span className="text-[11px] font-bold text-slate-600">Copa</span>
+                                        </div>
+                                        {(() => {
+                                            const copaReqs = requests.filter(r => r.expand?.item?.category === 'COPA');
+                                            if (copaReqs.length === 0) return <span className="text-[11px] font-black text-slate-300 uppercase">NÃO SOLIC.</span>;
+                                            
+                                            const status = copaReqs.some(r => r.status === 'rejected') ? 'rejected' : 
+                                                          copaReqs.some(r => r.status === 'pending') ? 'pending' : 'approved';
+                                            
+                                            return (
+                                                <div className="flex flex-col items-end">
+                                                    <span className={`text-[11px] font-black uppercase ${
+                                                        status === 'approved' ? 'text-green-600' : 
+                                                        status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
+                                                    }`}>
+                                                        {status === 'approved' ? 'ACEITO' : status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
+                                                    </span>
                                                 </div>
                                             );
                                         })()}

@@ -5,6 +5,7 @@ import CreateEvent from './pages/CreateEvent.tsx';
 import Reports from './pages/Reports.tsx';
 import Mensagens from './pages/Mensagens.tsx';
 import Login from './pages/Login.tsx';
+import Notifications from './pages/Notifications.tsx';
 import Requests from './pages/Requests.tsx';
 import MyInvolvement from './pages/MyInvolvement.tsx';
 import AlmacManagement from './pages/AlmacManagement.tsx';
@@ -154,7 +155,8 @@ const App: React.FC = () => {
               <Route path="/create-event" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
               <Route path="/chat" element={<Mensagens />} />
-              <Route path="/requests" element={<Requests />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/requests" element={<Navigate to="/notifications" replace />} />
               <Route path="/meu-envolvimento" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><MyInvolvement /></ProtectedRoute>} />
               <Route path="/almoxarifado" element={<ProtectedRoute roles={['ADMIN', 'ALMC']}><AlmacManagement /></ProtectedRoute>} />
               <Route path="/informatica" element={<ProtectedRoute roles={['ADMIN', 'DCA']}><InformaticsManagement /></ProtectedRoute>} />

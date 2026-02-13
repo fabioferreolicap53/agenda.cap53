@@ -98,12 +98,12 @@ const Sidebar: React.FC = () => {
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] lg:hidden animate-in fade-in duration-300"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[998] lg:hidden animate-in fade-in duration-300"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 w-72 flex-col border-r border-border-light bg-white z-[70] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:w-64 h-full ${
+      <aside className={`fixed inset-y-0 left-0 w-72 flex-col border-r border-border-light bg-white z-[999] transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:w-64 h-full ${
         isSidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
       }`}>
         <div className="flex flex-col h-full justify-between p-4">
@@ -167,7 +167,7 @@ const Sidebar: React.FC = () => {
                 )}
               </NavLink>
 
-              <NavLink to="/requests" className={linkClass} onClick={() => setSidebarOpen(false)}>
+              <NavLink to="/notifications" className={linkClass} onClick={() => setSidebarOpen(false)}>
                 {({ isActive }) => (
                   <>
                     <div className="relative">

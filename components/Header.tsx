@@ -56,6 +56,7 @@ const Header: React.FC = () => {
       case '/create-event': return isEditing ? 'Editar Evento' : 'Novo Evento';
       case '/reports': return 'Relatórios e Análises';
       case '/chat': return 'Comunicação';
+      case '/notifications': return 'Central de Notificações';
       case '/requests': 
         return user?.role === 'ALMC' ? 'Notificações (ALMC)' : 'Notificações Recebidas';
       case '/transporte': return 'Suporte de Transporte';
@@ -71,6 +72,9 @@ const Header: React.FC = () => {
   const getDescription = () => {
     if (location.pathname === '/create-event') {
       return 'Preencha os dados para criar ou editar um evento de compromisso profissional.';
+    }
+    if (location.pathname === '/notifications') {
+      return 'Acompanhe seus convites, avisos e atualizações do sistema.';
     }
     if (location.pathname === '/requests' && user?.role === 'ALMC') {
       return 'Gerencie notificações e solicitações.';
