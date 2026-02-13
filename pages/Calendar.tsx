@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
@@ -73,6 +73,16 @@ const Calendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [initialChatOpen, setInitialChatOpen] = useState(false);
+  const todayRef = useRef<HTMLDivElement>(null);
+
+  // Function to scroll to today on mobile
+  const scrollToToday = () => {
+    setTimeout(() => {
+      if (todayRef.current) {
+        todayRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
 
   // Handle openChat from URL
   useEffect(() => {
@@ -147,6 +157,12 @@ const Calendar: React.FC = () => {
   useEffect(() => {
     fetchEvents();
   }, [currentDate]);
+
+  useEffect(() => {
+    if (currentDate.toDateString() === new Date().toDateString()) {
+      scrollToToday();
+    }
+  }, [currentDate, viewType]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -336,15 +352,19 @@ const Calendar: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full gap-4 max-w-[1800px] mx-auto overflow-hidden p-2 md:p-4">
+    <div className="flex flex-col h-full gap-4 max-w-[1800px] mx-auto p-2 md:p-4">
       {/* Filters Bar - Fixed Top */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-3 rounded-2xl border border-border-light shadow-sm sticky top-0 z-30 transition-all duration-300">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/95 backdrop-blur-md p-3 rounded-2xl border border-border-light shadow-sm sticky top-[-12px] md:top-0 z-30 transition-all duration-300">
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
               const today = new Date();
+              const isAlreadyToday = currentDate.toDateString() === today.toDateString();
               setCurrentDate(today);
               updateURL(viewType, today, true);
+              if (isAlreadyToday) {
+                scrollToToday();
+              }
             }}
             className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-xl transition-all duration-300 active:scale-95"
           >
@@ -394,103 +414,99 @@ const Calendar: React.FC = () => {
       <div className="bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col overflow-hidden min-h-[750px] mb-4">
         {viewType === 'month' && (
           <div className="flex-1 flex flex-col h-full">
-            <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
-              {daysLabels.map((day) => (
-                <div key={day} className="py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary">
-                  {day}
-                </div>
-              ))}
+            {/* Desktop Grid View */}
+            <div className="hidden md:flex flex-col flex-1">
+              <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
+                {daysLabels.map((day) => (
+                  <div key={day} className="py-3 text-center text-[10px] font-black uppercase tracking-[0.2em] text-text-secondary">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div className={`grid grid-cols-7 flex-1 divide-x divide-y divide-border-light border-l border-border-light bg-white ${
+                getDatesForMonth(currentDate).length > 35 ? 'grid-rows-6' : 'grid-rows-5'
+              }`}>
+                {getDatesForMonth(currentDate).map((dateObj, idx) => {
+                  const dateKey = dateObj.date.toDateString();
+                  const dayEvents = eventsByDate[dateKey] || [];
+                  const isToday = dateObj.date.toDateString() === new Date().toDateString();
+
+                  return (
+                    <div
+                      key={idx}
+                      onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
+                      className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
+                        dateObj.type === 'current' 
+                          ? (isToday ? 'bg-primary/[0.02]' : 'bg-white hover:bg-slate-50/50') 
+                          : 'bg-slate-50/30 text-text-secondary/40'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateURL('day', dateObj.date);
+                          }}
+                          className={`text-[11px] md:text-xs font-black size-6 md:size-7 flex items-center justify-center transition-all duration-300 rounded-full hover:bg-primary hover:text-white ${
+                            isToday ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-text-secondary group-hover:text-primary'
+                          }`}
+                        >
+                          {dateObj.date.getDate()}
+                        </button>
+                      </div>
+
+                      <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 max-h-[100px]">
+                        {dayEvents.map(event => (
+                          <CalendarEventCard
+                            key={event.id}
+                            event={event}
+                            user={user}
+                            onCancel={handleCancelEvent}
+                            setTooltipData={setTooltipData}
+                            onSelect={setSelectedEvent}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-            <div className={`grid grid-cols-7 flex-1 divide-x divide-y divide-border-light border-l border-border-light bg-white ${
-              getDatesForMonth(currentDate).length > 35 ? 'grid-rows-6' : 'grid-rows-5'
-            }`}>
-              {getDatesForMonth(currentDate).map((dateObj, idx) => {
-                const dateKey = dateObj.date.toDateString();
+
+            {/* Mobile List View */}
+            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-4">
+              {getDatesForMonth(currentDate).filter(d => d.type === 'current').map((dateObj, idx) => {
+                const date = dateObj.date;
+                const dateKey = date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
-                const isToday = dateObj.date.toDateString() === new Date().toDateString();
+                const isToday = dateKey === new Date().toDateString();
 
                 return (
-                  <div
-                    key={idx}
-                    onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
-                    className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
-                      dateObj.type === 'current' 
-                        ? (isToday ? 'bg-primary/[0.02]' : 'bg-white hover:bg-slate-50/50') 
-                        : 'bg-slate-50/30 text-text-secondary/40'
-                    }`}
+                  <div 
+                    key={idx} 
+                    ref={isToday ? todayRef : null}
+                    className={`bg-white rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'ring-2 ring-primary/20 border-primary/20' : ''}`}
                   >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          updateURL('day', dateObj.date);
-                        }}
-                        className={`text-[11px] md:text-xs font-black size-6 md:size-7 flex items-center justify-center transition-all duration-300 rounded-full hover:bg-primary hover:text-white ${
-                          isToday ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-text-secondary group-hover:text-primary'
-                        }`}
+                    <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-2xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                          {String(date.getDate()).padStart(2, '0')}
+                        </span>
+                        <div className="flex flex-col leading-tight">
+                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                            {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                          </span>
+                          {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit">Hoje</span>}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => updateURL('day', date)}
+                        className="size-8 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
                       >
-                        {dateObj.date.getDate()}
+                        <span className="material-symbols-outlined text-[18px]">open_in_new</span>
                       </button>
                     </div>
-
-                    <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 max-h-[100px]">
-                      {dayEvents.map(event => (
-                        <CalendarEventCard
-                          key={event.id}
-                          event={event}
-                          user={user}
-                          onCancel={handleCancelEvent}
-                          setTooltipData={setTooltipData}
-                          onSelect={setSelectedEvent}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {viewType === 'week' && (
-          <div className={`flex-1 flex flex-col h-full overflow-hidden ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
-            <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
-              {getDatesForWeek(currentDate).map((date, idx) => (
-                <div key={idx} className={`py-3 flex flex-col items-center gap-0.5 border-r border-border-light last:border-r-0 transition-all duration-300 ${
-                  date.toDateString() === new Date().toDateString() ? 'bg-primary/5' : ''
-                }`}>
-                  <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
-                    date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-secondary'
-                  }`}>
-                    {daysLabels[idx]}
-                  </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      updateURL('day', date);
-                    }}
-                    className={`text-sm md:text-base font-black transition-all duration-300 hover:scale-110 active:scale-95 ${
-                      date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-main hover:text-primary'
-                    }`}
-                  >
-                    {date.getDate()}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 flex-1 divide-x divide-border-light bg-white overflow-y-auto custom-scrollbar">
-              {getDatesForWeek(currentDate).map((date, idx) => {
-                const isToday = date.toDateString() === new Date().toDateString();
-                const dayEvents = eventsByDate[date.toDateString()] || [];
-                return (
-                  <div
-                    key={idx}
-                    onDoubleClick={() => handleDayDoubleClick(date)}
-                    className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 ${
-                      isToday ? 'bg-primary/[0.02]' : 'hover:bg-slate-50/30'
-                    }`}
-                  >
-                    <div className="flex flex-col gap-1.5 flex-1 group">
+                    <div className="p-3 flex flex-col gap-2">
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -503,7 +519,128 @@ const Calendar: React.FC = () => {
                           />
                         ))
                       ) : (
-                        <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="py-4 flex items-center justify-center text-center">
+                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem eventos</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {viewType === 'week' && (
+          <div className={`flex-1 flex flex-col h-full overflow-hidden ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
+            {/* Desktop Week View */}
+            <div className="hidden md:flex flex-col flex-1 overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-border-light bg-slate-50/50 sticky top-0 z-10">
+                {getDatesForWeek(currentDate).map((date, idx) => (
+                  <div key={idx} className={`py-3 flex flex-col items-center gap-0.5 border-r border-border-light last:border-r-0 transition-all duration-300 ${
+                    date.toDateString() === new Date().toDateString() ? 'bg-primary/5' : ''
+                  }`}>
+                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
+                      date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-secondary'
+                    }`}>
+                      {daysLabels[idx]}
+                    </span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateURL('day', date);
+                      }}
+                      className={`text-sm md:text-base font-black transition-all duration-300 hover:scale-110 active:scale-95 ${
+                        date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-main hover:text-primary'
+                      }`}
+                    >
+                      {date.getDate()}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 flex-1 divide-x divide-border-light bg-white overflow-y-auto custom-scrollbar">
+                {getDatesForWeek(currentDate).map((date, idx) => {
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  const dayEvents = eventsByDate[date.toDateString()] || [];
+                  return (
+                    <div
+                      key={idx}
+                      onDoubleClick={() => handleDayDoubleClick(date)}
+                      className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 ${
+                        isToday ? 'bg-primary/[0.02]' : 'hover:bg-slate-50/30'
+                      }`}
+                    >
+                      <div className="flex flex-col gap-1.5 flex-1 group">
+                        {dayEvents.length > 0 ? (
+                          dayEvents.map(event => (
+                            <CalendarEventCard
+                              key={event.id}
+                              event={event}
+                              user={user}
+                              onCancel={handleCancelEvent}
+                              setTooltipData={setTooltipData}
+                              onSelect={setSelectedEvent}
+                            />
+                          ))
+                        ) : (
+                          <div className="flex-1 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem eventos</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Mobile Week List View */}
+            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-4">
+              {getDatesForWeek(currentDate).map((date, idx) => {
+                const dateKey = date.toDateString();
+                const dayEvents = eventsByDate[dateKey] || [];
+                const isToday = dateKey === new Date().toDateString();
+
+                return (
+                  <div 
+                    key={idx} 
+                    ref={isToday ? todayRef : null}
+                    className={`bg-white rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'ring-2 ring-primary/20 border-primary/20' : ''}`}
+                  >
+                    <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-2xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                          {String(date.getDate()).padStart(2, '0')}
+                        </span>
+                        <div className="flex flex-col leading-tight">
+                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                            {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                          </span>
+                          {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit">Hoje</span>}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => updateURL('day', date)}
+                        className="size-8 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                      </button>
+                    </div>
+                    <div className="p-3 flex flex-col gap-2">
+                      {dayEvents.length > 0 ? (
+                        dayEvents.map(event => (
+                          <CalendarEventCard
+                            key={event.id}
+                            event={event}
+                            user={user}
+                            onCancel={handleCancelEvent}
+                            setTooltipData={setTooltipData}
+                            onSelect={setSelectedEvent}
+                          />
+                        ))
+                      ) : (
+                        <div className="py-4 flex items-center justify-center text-center">
                           <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem eventos</span>
                         </div>
                       )}
@@ -571,7 +708,7 @@ const Calendar: React.FC = () => {
         )}
 
         {viewType === 'agenda' && (
-          <div className="flex-1 flex flex-col p-8 bg-white overflow-y-auto custom-scrollbar">
+          <div className="flex-1 flex flex-col p-4 md:p-8 bg-white md:overflow-y-auto custom-scrollbar">
             <div className="flex items-center gap-4 mb-10 border-b border-slate-50 pb-6">
                <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
                  <span className="material-symbols-outlined text-2xl">view_agenda</span>
@@ -613,7 +750,11 @@ const Calendar: React.FC = () => {
                     const isToday = new Date().toDateString() === date.toDateString();
                     
                     return (
-                        <div key={dateStr} className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ${isToday ? 'relative' : 'opacity-80 hover:opacity-100 transition-opacity'}`}>
+                        <div 
+                            key={dateStr} 
+                            ref={isToday ? todayRef : null}
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ${isToday ? 'relative' : 'opacity-80 hover:opacity-100 transition-opacity'}`}
+                        >
                             <div className="flex md:flex-col items-center md:items-start gap-3 md:gap-0 md:w-32 shrink-0">
                                 <span className={`text-4xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>{String(date.getDate()).padStart(2, '0')}</span>
                                 <div className="flex flex-col leading-tight">
