@@ -84,8 +84,9 @@ const CreateEvent: React.FC = () => {
 
   // Form State
   const [title, setTitle] = useState('');
+  const [originalTitle, setOriginalTitle] = useState(''); // To track title changes
   const [type, setType] = useState('');
-  const [involvementLevel, setInvolvementLevel] = useState('');
+  const [involvementLevel, setInvolvementLevel] = useState('PARTICIPANTE');
   const [locationState, setLocationState] = useState<LocationState>({ mode: 'fixed', fixedId: '', freeText: '' });
   const [observacoes, setObservacoes] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -231,7 +232,7 @@ const CreateEvent: React.FC = () => {
       // Ensure the creator/user is included in selectedParticipants if they are the one creating
       // but in this app, creator is separate from participants list usually.
       // However, if the user chose an involvementLevel, we should respect that for the creator's role record.
-      const creatorRoleToUse = involvementLevel || 'ORGANIZADOR';
+      const creatorRoleToUse = involvementLevel || 'PARTICIPANTE';
 
       selectedParticipants.forEach(pId => {
           if (!participantsRoles[pId]) {
@@ -269,7 +270,9 @@ const CreateEvent: React.FC = () => {
       }
 
       const eventData = {
-        title, type, 
+        title, 
+        nature: type, // Sincronizando com o campo Natureza usado nos relatórios
+        type, 
         description: observacoes,
         observacoes,
         location: locationState.mode === 'fixed' && locationState.fixedId ? locationState.fixedId : null, 
@@ -291,7 +294,7 @@ const CreateEvent: React.FC = () => {
         transporte_status: transporteSuporte ? (existingTransporteStatus || 'pending') : null,
         participants_status: participantsStatus,
         participants_roles: participantsRoles,
-        creator_role: involvementLevel || 'PARTICIPANTE' // Default to PARTICIPANTE if empty
+        creator_role: involvementLevel || 'PARTICIPANTE'
       };
 
       let eventId = editingEventId;
@@ -299,6 +302,34 @@ const CreateEvent: React.FC = () => {
       if (isEditing && editingEventId) {
          console.log('--- UPDATING EVENT ---', editingEventId, eventData);
          await pb.collection('agenda_cap53_eventos').update(editingEventId, eventData);
+
+         // Sincronizar atualizações de título em notificações pendentes
+         if (title !== originalTitle) {
+           try {
+             const pendingNotifications = await pb.collection('agenda_cap53_notifications').getFullList({
+               filter: `event = "${editingEventId}" && invite_status = "pending"`
+             });
+
+             await Promise.all(pendingNotifications.map(notif => {
+               let newMessage = notif.message;
+               // Atualiza o título do evento na mensagem se ele estiver presente entre aspas
+               if (originalTitle && newMessage.includes(`"${originalTitle}"`)) {
+                 newMessage = newMessage.split(`"${originalTitle}"`).join(`"${title}"`);
+               }
+               
+               // Garante que o campo data também seja preservado e passado adiante
+               const updatedData = { ...(notif.data || {}) };
+
+               return pb.collection('agenda_cap53_notifications').update(notif.id, {
+                 message: newMessage,
+                 data: updatedData // Re-envia o data para garantir o disparo do realtime
+               });
+             }));
+           } catch (err) {
+             console.error('Erro ao atualizar título nas notificações:', err);
+           }
+         }
+
          const newParticipants = selectedParticipants.filter(pId => !originalParticipants.includes(pId));
          if (newParticipants.length > 0) {
             try {
@@ -308,7 +339,7 @@ const CreateEvent: React.FC = () => {
                     event: editingEventId,
                     user: pId,
                     status: 'pending',
-                    role: participantsRoles[pId] || involvementLevel || 'ORGANIZADOR'
+                    role: participantsRoles[pId] || involvementLevel || 'PARTICIPANTE'
                   })
                 ));
 
@@ -333,7 +364,7 @@ const CreateEvent: React.FC = () => {
               event: eventId,
               user: participantId,
               status: 'pending',
-              role: participantsRoles[participantId] || involvementLevel || 'ORGANIZADOR'
+              role: participantsRoles[participantId] || involvementLevel || 'PARTICIPANTE'
             })
           ));
 
@@ -364,7 +395,18 @@ const CreateEvent: React.FC = () => {
 
             const removedRequests = existingRequests.filter((r: any) => r.item && !selectedItemIds.includes(r.item));
             if (removedRequests.length > 0) {
-              await Promise.all(removedRequests.map((r: any) => pb.collection('agenda_cap53_almac_requests').delete(r.id)));
+              await Promise.all(removedRequests.map(async (r: any) => {
+                // Remove as notificações pendentes associadas a este pedido
+                try {
+                  const pendingNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
+                    filter: `related_request = "${r.id}" && invite_status = "pending"`
+                  });
+                  await Promise.all(pendingNotifs.map(n => pb.collection('agenda_cap53_notifications').delete(n.id)));
+                } catch (err) {
+                  console.error('Erro ao remover notificações de pedido excluído:', err);
+                }
+                return pb.collection('agenda_cap53_almac_requests').delete(r.id);
+              }));
             }
 
             const createdRequests: any[] = [];
@@ -386,7 +428,8 @@ const CreateEvent: React.FC = () => {
                 createdRequests.push(createdReq);
               } else if (existing.status === 'pending') {
                 const updateData: any = {};
-                if ((existing.quantity || 1) !== quantity) updateData.quantity = quantity;
+                const oldQuantity = existing.quantity || 1;
+                if (oldQuantity !== quantity) updateData.quantity = quantity;
                 if (currentItem) {
                   const isAvailable = currentItem.is_available !== false;
                   if (existing.item_snapshot_available !== isAvailable) {
@@ -395,26 +438,47 @@ const CreateEvent: React.FC = () => {
                 }
                 if (Object.keys(updateData).length > 0) {
                   await pb.collection('agenda_cap53_almac_requests').update(existing.id, updateData);
-                  if (updateData.quantity) {
-                    try {
-                      const relatedNotifications = await pb.collection('agenda_cap53_notifications').getFullList({
-                        filter: `related_request = "${existing.id}"`,
-                      });
-                      if (relatedNotifications.length > 0) {
-                        const itemName = currentItem?.name || 'Item';
-                        const newQuantity = updateData.quantity;
-                        await Promise.all(relatedNotifications.map(notif => {
-                          let newMessage = notif.message;
-                          if (newMessage.includes('(Qtd:')) {
-                            newMessage = newMessage.replace(/\(Qtd: \d+\)/, `(Qtd: ${newQuantity})`);
-                          }
-                          return pb.collection('agenda_cap53_notifications').update(notif.id, {
-                            message: newMessage,
-                            data: { ...notif.data, quantity: newQuantity }
-                          });
-                        }));
-                      }
-                    } catch (notifErr) { console.error("Erro ao atualizar notificações relacionadas:", notifErr); }
+                  
+                  // Atualiza notificações relacionadas (quantidade ou título se mudou)
+                  try {
+                    const relatedNotifications = await pb.collection('agenda_cap53_notifications').getFullList({
+                      filter: `related_request = "${existing.id}" && invite_status = "pending"`,
+                    });
+
+                    if (relatedNotifications.length > 0) {
+                      const itemName = currentItem?.name || 'Item';
+                      const newQuantity = quantity;
+                      
+                      await Promise.all(relatedNotifications.map(notif => {
+                        let newMessage = notif.message;
+                        
+                        // Sincroniza título se mudou (caso a lógica anterior tenha falhado ou para reforçar)
+                        if (title !== originalTitle && originalTitle && newMessage.includes(`"${originalTitle}"`)) {
+                          newMessage = newMessage.split(`"${originalTitle}"`).join(`"${title}"`);
+                        }
+
+                        // Sincroniza quantidade na mensagem
+                        if (newMessage.includes('(Qtd:')) {
+                          newMessage = newMessage.replace(/\(Qtd: \d+\)/, `(Qtd: ${newQuantity})`);
+                        } else {
+                          // Se por algum motivo não tinha a quantidade na mensagem, adiciona
+                          newMessage = newMessage.replace(`item "${itemName}"`, `item "${itemName}" (Qtd: ${newQuantity})`);
+                        }
+
+                        // GARANTE que o campo data.quantity seja atualizado para refletir no badge
+                        const updatedData = { 
+                          ...(notif.data || {}), 
+                          quantity: newQuantity 
+                        };
+
+                        return pb.collection('agenda_cap53_notifications').update(notif.id, {
+                          message: newMessage,
+                          data: updatedData
+                        });
+                      }));
+                    }
+                  } catch (notifErr) { 
+                    console.error("Erro ao atualizar notificações relacionadas:", notifErr); 
                   }
                 }
               }
@@ -460,31 +524,41 @@ const CreateEvent: React.FC = () => {
             }
 
             if (transporteSuporte && (!isEditing || !originalTransporteSuporte)) {
-      try {
-        const traUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ 
-          filter: 'role = "TRA"' 
-        });
-        
-        const traIds = traUsers
-          .filter((traUser: any) => traUser.id !== user?.id)
-          .map((traUser: any) => traUser.id);
+              try {
+                const traUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ 
+                  filter: 'role = "TRA"' 
+                });
+                
+                const traIds = traUsers
+                  .filter((traUser: any) => traUser.id !== user?.id)
+                  .map((traUser: any) => traUser.id);
 
-        if (traIds.length > 0) {
-          await notificationService.bulkCreateNotifications(
-            traIds,
-            {
-              title: 'Solicitação de Transporte',
-              message: `O evento "${title}" solicitou suporte de transporte.`,
-              type: 'transport_request',
-              event: eventId || undefined,
-              data: { kind: 'transport_request' }
+                if (traIds.length > 0) {
+                  await notificationService.bulkCreateNotifications(
+                    traIds,
+                    {
+                      title: 'Solicitação de Transporte',
+                      message: `O evento "${title}" solicitou suporte de transporte.`,
+                      type: 'transport_request',
+                      event: eventId || undefined,
+                      data: { kind: 'transport_request' }
+                    }
+                  );
+                }
+              } catch (err) {
+                console.error('Error creating TRA notifications:', err);
+              }
+            } else if (!transporteSuporte && isEditing && originalTransporteSuporte) {
+              // Se o suporte de transporte foi removido, cancela notificações pendentes
+              try {
+                const pendingTraNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
+                  filter: `event = "${editingEventId}" && type = "transport_request" && invite_status = "pending"`
+                });
+                await Promise.all(pendingTraNotifs.map(n => pb.collection('agenda_cap53_notifications').delete(n.id)));
+              } catch (err) {
+                console.error('Erro ao remover notificações de transporte cancelado:', err);
+              }
             }
-          );
-        }
-      } catch (err) {
-        console.error('Error creating TRA notifications:', err);
-      }
-    }
           } catch (reqErr: any) {
             console.error('Falha ao criar/atualizar solicitações de logística:', reqErr);
             alert(`Evento salvo, mas houve erro ao atualizar itens: ${reqErr.message || 'Erro desconhecido'}`);
@@ -548,6 +622,7 @@ const CreateEvent: React.FC = () => {
           console.log('--- DADOS DO EVENTO RECEBIDOS ---', event);
           
           setTitle(event.title || '');
+          setOriginalTitle(event.title || '');
           setType(event.type || '');
           setInvolvementLevel(event.creator_role || 'PARTICIPANTE');
           setObservacoes(event.observacoes || event.description || '');
@@ -1391,21 +1466,37 @@ const CreateEvent: React.FC = () => {
                                     {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                  {INVOLVEMENT_LEVELS.map(level => (
-                                    <button
-                                      key={level.value}
-                                      type="button"
-                                      onClick={() => setParticipantRoles(prev => ({ ...prev, [u.id]: level.value }))}
-                                      className={`py-2 px-1 rounded-xl text-[10px] font-bold transition-all duration-300 ${
-                                        (participantRoles[u.id] || involvementLevel) === level.value
-                                          ? 'bg-primary text-white shadow-md shadow-primary/20 scale-[1.02]'
-                                          : 'bg-white text-slate-400 border border-slate-100 hover:border-primary/30 hover:text-primary/60 active:scale-95'
-                                      }`}
-                                    >
-                                      {level.label}
-                                    </button>
-                                  ))}
+                                <div className="grid grid-cols-3 gap-1.5">
+                                  {INVOLVEMENT_LEVELS.map(level => {
+                                    const isSelected = (participantRoles[u.id] || involvementLevel) === level.value;
+                                    const getIcon = (val: string) => {
+                                      switch(val) {
+                                        case 'ORGANIZADOR': return 'assignment_ind';
+                                        case 'COORGANIZADOR': return 'group_work';
+                                        default: return 'person';
+                                      }
+                                    };
+                                    
+                                    return (
+                                      <button
+                                        key={level.value}
+                                        type="button"
+                                        onClick={() => setParticipantRoles(prev => ({ ...prev, [u.id]: level.value }))}
+                                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all duration-300 border ${
+                                          isSelected
+                                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02] z-10'
+                                            : 'bg-slate-50 text-slate-400 border-slate-100 hover:border-primary/30 hover:bg-white hover:text-primary active:scale-95'
+                                        }`}
+                                      >
+                                        <span className={`material-symbols-outlined text-base mb-1 ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                                          {getIcon(level.value)}
+                                        </span>
+                                        <span className="text-[9px] font-bold uppercase tracking-tighter">
+                                          {level.label}
+                                        </span>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             )}
@@ -1641,7 +1732,7 @@ const CreateEvent: React.FC = () => {
                     onClick={() => setActiveTab('copa')}
                     className={`px-6 py-3 rounded-[18px] text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'copa' ? 'bg-white text-slate-800 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <span className="material-symbols-outlined text-[20px]">coffee</span>
+                    <span className="material-symbols-outlined text-[20px]">local_cafe</span>
                     Serviços de Copa
                   </button>
                   <button
@@ -1649,7 +1740,7 @@ const CreateEvent: React.FC = () => {
                     onClick={() => setActiveTab('informatica')}
                     className={`px-6 py-3 rounded-[18px] text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'informatica' ? 'bg-white text-slate-800 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <span className="material-symbols-outlined text-[20px]">computer</span>
+                    <span className="material-symbols-outlined text-[20px]">laptop_mac</span>
                     Informática
                   </button>
                   <button
@@ -1657,7 +1748,7 @@ const CreateEvent: React.FC = () => {
                     onClick={() => setActiveTab('transporte')}
                     className={`px-6 py-3 rounded-[18px] text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'transporte' ? 'bg-white text-slate-800 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    <span className="material-symbols-outlined text-[20px]">local_taxi</span>
+                    <span className="material-symbols-outlined text-[20px]">directions_car</span>
                     Transporte
                   </button>
                 </div>

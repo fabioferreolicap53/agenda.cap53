@@ -472,7 +472,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
   const handleShare = () => {
     const locationName = event.expand?.location?.name || event.custom_location || 'Local não definido';
-    const text = `📅 ${event.title}\n🕒 ${startDate.toLocaleString('pt-BR')} - ${endDate.toLocaleTimeString('pt-BR')}\n📍 ${locationName}\n\n${event.description || ''}`;
+    const text = `📅 ${event.title}\n🕒 ${startDate.toLocaleDateString('pt-BR')} ${startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n📍 ${locationName}\n\n${event.description || ''}`;
     navigator.clipboard.writeText(text);
     alert('Detalhes copiados para a área de transferência!');
   };
@@ -536,7 +536,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
                             <span className="px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                {event.type || 'Evento'}
+                                {event.nature || event.type || 'Evento'}
                             </span>
                             {isCancelled && (
                                 <span className="px-2 py-0.5 rounded-full bg-red-50 border border-red-100 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-red-500">
@@ -547,7 +547,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         <h2 className="text-xl sm:text-3xl font-bold text-slate-900 leading-tight tracking-tight truncate">{event.title}</h2>
                     </div>
                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                        {!isCancelled && (event.user === user?.id || participantStatus[user?.id] === 'accepted') && (
+                        {!isCancelled && (
+                            event.user === user?.id || 
+                            participantStatus[user?.id] === 'accepted' || 
+                            ['ADMIN', 'ALMC', 'TRA', 'CE', 'DCA'].includes(user?.role)
+                        ) && (
                             <button 
                                 onClick={() => setIsChatOpen(true)}
                                 className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-200 border border-primary/10 group relative"
@@ -601,12 +605,20 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         {/* Summary Grid */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="p-5 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Início</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Início e Término</span>
                                 <div className="flex items-center gap-2 text-slate-900 font-bold">
                                     <span className="material-symbols-outlined text-slate-400 text-lg">event</span>
                                     {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                     <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                    {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    <div className="flex items-center gap-1">
+                                        <span>{startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                        {event.date_end && !isNaN(endDate.getTime()) && (
+                                            <>
+                                                <span className="text-slate-300 font-black text-[9px] uppercase tracking-widest mx-1">até</span>
+                                                <span>{endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="p-5 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
@@ -725,7 +737,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         <div className="flex items-center justify-between">
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Recursos Solicitados</h3>
                             <span className="px-3 py-1 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 uppercase">
-                                ALMC & COPA
+                                ALM, COP & INF
                             </span>
                         </div>
                         
@@ -733,53 +745,62 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             <div className="py-12 flex justify-center"><div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full" /></div>
                         ) : requests.length > 0 ? (
                             <div className="space-y-4">
-                                {requests.map(req => (
-                                    <div key={req.id} className="p-5 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center justify-between group">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`size-12 rounded-2xl flex items-center justify-center text-xl shadow-sm ${
-                                                req.type === 'ALMC' ? 'bg-blue-50 text-blue-500' : 'bg-orange-50 text-orange-500'
-                                            }`}>
-                                                <span className="material-symbols-outlined">{req.type === 'ALMC' ? 'inventory_2' : 'restaurant'}</span>
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <span className="text-sm font-bold text-slate-900">{req.expand?.item?.name || 'Recurso'}</span>
-                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>
-                                                        {getStatusLabel(req.status)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{req.type}</span>
-                                                    {req.quantity > 0 && (
-                                                        <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/5 rounded-md">QTD: {req.quantity}</span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                                {requests.map(req => {
+                                    const itemCategory = req.expand?.item?.category || req.type;
+                                    const resourceConfig = {
+                                        ALMOXARIFADO: { icon: 'inventory_2', color: 'bg-blue-50 text-blue-500', label: 'ALM' },
+                                        ALMC: { icon: 'inventory_2', color: 'bg-blue-50 text-blue-500', label: 'ALM' },
+                                        COPA: { icon: 'local_cafe', color: 'bg-orange-50 text-orange-500', label: 'COP' },
+                                        INFORMATICA: { icon: 'laptop_mac', color: 'bg-indigo-50 text-indigo-500', label: 'INF' },
+                                        INFO: { icon: 'laptop_mac', color: 'bg-indigo-50 text-indigo-500', label: 'INF' }
+                                    }[itemCategory as 'ALMOXARIFADO' | 'ALMC' | 'COPA' | 'INFORMATICA' | 'INFO'] || { icon: 'inventory_2', color: 'bg-slate-50 text-slate-500', label: itemCategory };
 
-                                        {/* ALMC Availability Toggle */}
-                                        {user?.role === 'ALMC' && req.expand?.item && (
-                                          <button 
-                                            onClick={() => toggleItemAvailability(req.id, req.expand.item.is_available)}
-                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                                              req.expand.item.is_available 
-                                              ? 'bg-green-50 text-green-600 hover:bg-green-100' 
-                                              : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                            }`}
-                                          >
-                                            {req.expand.item.is_available ? 'Disponível' : 'Indisponível'}
-                                          </button>
-                                        )}
-                                        
-                                        {/* Refusal notification check */}
-                                        {req.status === 'rejected' && refusalAckByRequest[req.id] === false && (
-                                            <div className="flex items-center gap-2 text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
-                                                <span className="material-symbols-outlined text-lg animate-pulse">warning</span>
-                                                <span className="text-[10px] font-bold uppercase">Ciência Pendente</span>
+                                    return (
+                                        <div key={req.id} className="p-5 rounded-[1.5rem] bg-white border border-slate-100 shadow-sm flex items-center justify-between group">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`size-12 rounded-2xl flex items-center justify-center text-xl shadow-sm ${resourceConfig.color}`}>
+                                                    <span className="material-symbols-outlined">{resourceConfig.icon}</span>
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-0.5">
+                                                        <span className="text-sm font-bold text-slate-900">{req.expand?.item?.name || 'Recurso'}</span>
+                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>
+                                                            {getStatusLabel(req.status)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{resourceConfig.label}</span>
+                                                        {req.quantity > 0 && (
+                                                            <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/5 rounded-md">QTD: {req.quantity}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        )}
-                                    </div>
-                                ))}
+
+                                            {/* ALMC Availability Toggle */}
+                                            {user?.role === 'ALMC' && req.expand?.item && (
+                                              <button 
+                                                onClick={() => toggleItemAvailability(req.id, req.expand.item.is_available)}
+                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                  req.expand.item.is_available 
+                                                  ? 'bg-green-50 text-green-600 hover:bg-green-100' 
+                                                  : 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                }`}
+                                              >
+                                                {req.expand.item.is_available ? 'Disponível' : 'Indisponível'}
+                                              </button>
+                                            )}
+                                            
+                                            {/* Refusal notification check */}
+                                            {req.status === 'rejected' && refusalAckByRequest[req.id] === false && (
+                                                <div className="flex items-center gap-2 text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+                                                    <span className="material-symbols-outlined text-lg animate-pulse">warning</span>
+                                                    <span className="text-[10px] font-bold uppercase">Ciência Pendente</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="py-12 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
@@ -951,7 +972,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     {/* COPA Status */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-lg text-slate-400">coffee</span>
+                                            <span className="material-symbols-outlined text-lg text-slate-400">local_cafe</span>
                                             <span className="text-[11px] font-bold text-slate-600">Copa</span>
                                         </div>
                                         {(() => {
@@ -977,7 +998,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     {/* DCA Status */}
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-lg text-slate-400">computer</span>
+                                            <span className="material-symbols-outlined text-lg text-slate-400">laptop_mac</span>
                                             <span className="text-[11px] font-bold text-slate-600">Informática</span>
                                         </div>
                                         {(() => {

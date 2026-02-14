@@ -7,45 +7,6 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, setSidebarOpen } = useAuth();
-  const [mySpaceCount, setMySpaceCount] = useState(0);
-  const [traPendingCount, setTraPendingCount] = useState(0);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchCounts = async () => {
-      try {
-        // My Space Count
-        if (location.pathname === '/meu-envolvimento') {
-          const res = await pb.collection('agenda_cap53_notifications').getList(1, 1, {
-            filter: `user = "${user.id}" && read = false && (type = "event_invite" || type = "event_participation_request")`
-          });
-          setMySpaceCount(res.totalItems);
-        }
-
-        // TRA Pending Count
-        if (location.pathname === '/transporte' && (user.role === 'TRA' || user.role === 'ADMIN')) {
-          const res = await pb.collection('agenda_cap53_eventos').getList(1, 1, {
-            filter: 'transporte_suporte = true && transporte_status = "pending"'
-          });
-          setTraPendingCount(res.totalItems);
-        }
-      } catch (e) {
-        console.error("Error fetching counts in header", e);
-      }
-    };
-
-    fetchCounts();
-
-    const collections = ['agenda_cap53_notifications', 'agenda_cap53_eventos'];
-    const unsubscribes = collections.map(col => 
-      pb.collection(col).subscribe('*', () => fetchCounts())
-    );
-
-    return () => {
-      unsubscribes.forEach(async (unsub) => (await unsub)());
-    };
-  }, [user, location.pathname]);
 
   const getTitle = () => {
     const searchParams = new URLSearchParams(location.search);
@@ -128,16 +89,6 @@ const Header: React.FC = () => {
               <h2 className="text-text-main text-lg md:text-2xl font-black leading-tight tracking-tight">
                 {getTitle()}
               </h2>
-              {location.pathname === '/meu-envolvimento' && mySpaceCount > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] h-4.5 flex items-center justify-center animate-in zoom-in shadow-sm">
-                  {mySpaceCount > 9 ? '9+' : mySpaceCount}
-                </span>
-              )}
-              {location.pathname === '/transporte' && traPendingCount > 0 && (
-                <span className="bg-amber-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] h-4.5 flex items-center justify-center animate-in zoom-in shadow-sm">
-                  {traPendingCount > 9 ? '9+' : traPendingCount}
-                </span>
-              )}
             </div>
             <p className="text-text-secondary text-xs md:text-sm font-normal hidden md:block mt-0.5">
               {getDescription()}

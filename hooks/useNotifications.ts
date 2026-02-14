@@ -13,20 +13,37 @@ export const useNotifications = () => {
     if (!user?.id) return;
 
     try {
-      const result = await pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
-        filter: `user = "${user.id}"`,
-        sort: '-created',
-        expand: 'event,related_request,related_request.item,related_request.created_by'
-      });
+      const [notifResult, almcResult, traResult] = await Promise.all([
+        pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
+          filter: `user = "${user.id}"`,
+          sort: '-created',
+          expand: 'event,related_request,related_request.item,related_request.created_by'
+        }),
+        (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'ADMIN') 
+          ? pb.collection('agenda_cap53_almac_requests').getList(1, 1, { 
+              filter: `status = "pending"${
+                user.role === 'ALMC' ? ' && (item.category = "ALMOXARIFADO" || item.category = "COPA")' :
+                user.role === 'DCA' ? ' && item.category = "INFORMATICA"' :
+                ''
+              }` 
+            })
+          : Promise.resolve({ totalItems: 0 }),
+        (user.role === 'TRA' || user.role === 'ADMIN')
+          ? pb.collection('agenda_cap53_eventos').getList(1, 1, { filter: 'transporte_suporte = true && transporte_status = "pending"' })
+          : Promise.resolve({ totalItems: 0 })
+      ]);
 
-      setNotifications(result.items);
-      setUnreadCount(result.items.filter(n => !n.read).length);
+      setNotifications(notifResult.items);
+      
+      // The badge count is the sum of unread system notifications + pending administrative requests
+      const systemUnread = notifResult.items.filter(n => !n.read).length;
+      setUnreadCount(systemUnread + almcResult.totalItems + traResult.totalItems);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, user?.role]);
 
   useEffect(() => {
     fetchNotifications();
@@ -34,11 +51,26 @@ export const useNotifications = () => {
     if (!user?.id) return;
 
     const subscribe = async () => {
-      return await pb.collection('agenda_cap53_notifications').subscribe('*', (e) => {
-        if (e.record.user === user.id) {
-          fetchNotifications();
-        }
+      const unsubs: (() => void)[] = [];
+      
+      const u1 = await pb.collection('agenda_cap53_notifications').subscribe('*', (e) => {
+        if (e.record.user === user.id) fetchNotifications();
       });
+      unsubs.push(u1);
+
+      if (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'ADMIN') {
+        const u2 = await pb.collection('agenda_cap53_almac_requests').subscribe('*', () => fetchNotifications());
+        unsubs.push(u2);
+      }
+
+      if (user.role === 'TRA' || user.role === 'ADMIN') {
+        const u3 = await pb.collection('agenda_cap53_eventos').subscribe('*', (e) => {
+          if (e.record.transporte_suporte === true) fetchNotifications();
+        });
+        unsubs.push(u3);
+      }
+
+      return () => unsubs.forEach(unsub => unsub());
     };
 
     let unsubscribe: (() => void) | undefined;
@@ -47,7 +79,7 @@ export const useNotifications = () => {
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [user?.id, fetchNotifications]);
+  }, [user?.id, user?.role, fetchNotifications]);
 
   const markAsRead = async (id: string) => {
     try {
@@ -101,7 +133,29 @@ export const useNotifications = () => {
         invite_status: action === 'approved' ? 'accepted' : action 
       };
       
+      // Atualiza a notificação atual
       await pb.collection('agenda_cap53_notifications').update(notification.id, updatePayload);
+
+      // Sincroniza o status com outras notificações idênticas para outros usuários do mesmo setor
+      try {
+        if (notification.related_request) {
+          const others = await pb.collection('agenda_cap53_notifications').getFullList({
+            filter: `related_request = "${notification.related_request}" && id != "${notification.id}" && invite_status = "pending"`
+          });
+          await Promise.all(others.map(n => 
+            pb.collection('agenda_cap53_notifications').update(n.id, { invite_status: updatePayload.invite_status })
+          ));
+        } else if (notification.type === 'transport_request' && notification.event) {
+          const others = await pb.collection('agenda_cap53_notifications').getFullList({
+            filter: `event = "${notification.event}" && type = "transport_request" && id != "${notification.id}" && invite_status = "pending"`
+          });
+          await Promise.all(others.map(n => 
+            pb.collection('agenda_cap53_notifications').update(n.id, { invite_status: updatePayload.invite_status })
+          ));
+        }
+      } catch (err) {
+        console.error('Erro ao sincronizar notificações relacionadas:', err);
+      }
 
       // 1. Event Invitation Logic
       if (notification.type === 'event_invite') {
@@ -175,9 +229,75 @@ export const useNotifications = () => {
       if (notification.type === 'almc_item_request') {
         const requestId = notification.related_request;
         if (requestId) {
+          const status = action === 'approved' || action === 'accepted' ? 'approved' : 'rejected';
           await pb.collection('agenda_cap53_almac_requests').update(requestId, {
-            status: action === 'approved' ? 'approved' : 'rejected'
+            status: status
           });
+
+          // Notify Requester
+          const request = await pb.collection('agenda_cap53_almac_requests').getOne(requestId, {
+            expand: 'item,event'
+          });
+          
+          if (request.created_by && request.created_by !== user.id) {
+            await pb.collection('agenda_cap53_notifications').create({
+              user: request.created_by,
+              title: `Solicitação de Item ${status === 'approved' ? 'Aprovada' : 'Recusada'}`,
+              message: `Sua solicitação para o item "${request.expand?.item?.name || 'Item'}" foi ${status === 'approved' ? 'aprovada' : 'recusada'}.`,
+              type: status === 'approved' ? 'system' : 'refusal',
+              event: request.event,
+              read: false,
+              data: { kind: 'almc_item_decision', action: status }
+            });
+          }
+        }
+      }
+
+      // 4. Transport Request Logic
+      if (notification.type === 'transport_request') {
+        const eventId = notification.event;
+        if (eventId) {
+          const status = action === 'approved' || action === 'accepted' ? 'approved' : 'rejected';
+          await pb.collection('agenda_cap53_eventos').update(eventId, {
+            transporte_status: status
+          });
+
+          // Notify Creator
+          const event = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+          if (event.user && event.user !== user.id) {
+            await pb.collection('agenda_cap53_notifications').create({
+              user: event.user,
+              title: `Transporte ${status === 'approved' ? 'Aprovado' : 'Recusado'}`,
+              message: `A solicitação de transporte para o evento "${event.title}" foi ${status === 'approved' ? 'aprovada' : 'recusada'}.`,
+              type: status === 'approved' ? 'system' : 'refusal',
+              event: eventId,
+              read: false,
+              data: { kind: 'transport_decision', action: status }
+            });
+          }
+        }
+      }
+
+      // 5. Service Request Logic (Generic)
+      if (notification.type === 'service_request') {
+        const eventId = notification.event;
+        const requesterId = notification.data?.requester_id || notification.expand?.event?.user;
+        
+        if (eventId && requesterId) {
+          const status = action === 'accepted' ? 'approved' : 'rejected';
+          
+          // Notify Requester
+          if (requesterId !== user.id) {
+            await pb.collection('agenda_cap53_notifications').create({
+              user: requesterId,
+              title: `Serviço ${status === 'approved' ? 'Aceito' : 'Recusado'}`,
+              message: `Sua solicitação de serviço para o evento "${notification.expand?.event?.title || 'Evento'}" foi ${status === 'approved' ? 'aceita' : 'recusada'}.`,
+              type: status === 'rejected' ? 'refusal' : 'system',
+              event: eventId,
+              read: false,
+              data: { kind: 'service_decision', action: status }
+            });
+          }
         }
       }
 

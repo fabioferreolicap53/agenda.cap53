@@ -75,7 +75,13 @@ export const notificationService = {
       event,
       related_request,
       read: false,
-      invite_status: (type === 'event_invite' || type === 'event_participation_request') ? 'pending' : null,
+      invite_status: (
+        type === 'event_invite' || 
+        type === 'event_participation_request' || 
+        type === 'almc_item_request' || 
+        type === 'transport_request' || 
+        type === 'service_request'
+      ) ? 'pending' : null,
       data,
       acknowledged: false
     });

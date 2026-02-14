@@ -48,6 +48,10 @@ async function setupEventChats() {
 
         if (!chatRoomsCol) {
             console.log(`Creating ${chatRoomsName} collection...`);
+            // Rules: Only event participants or creator or privileged roles can view/create
+            const privilegedRolesRule = '@request.auth.role = "ADMIN" || @request.auth.role = "ALMC" || @request.auth.role = "TRA" || @request.auth.role = "CE" || @request.auth.role = "DCA"';
+            const roomRule = `@request.auth.id != "" && (event.participants.id ?= @request.auth.id || event.user = @request.auth.id || ${privilegedRolesRule})`;
+
             chatRoomsCol = await pb.collections.create({
                 name: chatRoomsName,
                 type: 'base',
@@ -82,11 +86,10 @@ async function setupEventChats() {
                         }
                     }
                 ],
-                // Rules: Only event participants or creator can view/create
-                listRule: '@request.auth.id != "" && (event.participants.id ?= @request.auth.id || event.user = @request.auth.id)',
-                viewRule: '@request.auth.id != "" && (event.participants.id ?= @request.auth.id || event.user = @request.auth.id)',
-                createRule: '@request.auth.id != "" && (event.participants.id ?= @request.auth.id || event.user = @request.auth.id)',
-                updateRule: '@request.auth.id != "" && (event.participants.id ?= @request.auth.id || event.user = @request.auth.id)',
+                listRule: roomRule,
+                viewRule: roomRule,
+                createRule: roomRule,
+                updateRule: roomRule,
                 deleteRule: '@request.auth.id != "" && (event.user = @request.auth.id || @request.auth.role = "ADMIN")'
             });
             console.log(`${chatRoomsName} created successfully`);
@@ -98,6 +101,11 @@ async function setupEventChats() {
 
         if (!chatMessagesCol) {
             console.log(`Creating ${chatMessagesName} collection...`);
+            // Rules: Only room participants or privileged roles can view/create
+            const privilegedRolesRule = '@request.auth.role = "ADMIN" || @request.auth.role = "ALMC" || @request.auth.role = "TRA" || @request.auth.role = "CE" || @request.auth.role = "DCA"';
+            const messageViewRule = `@request.auth.id != "" && (room.event.participants.id ?= @request.auth.id || room.event.user = @request.auth.id || ${privilegedRolesRule})`;
+            const messageCreateRule = `@request.auth.id != "" && sender = @request.auth.id && (room.event.participants.id ?= @request.auth.id || room.event.user = @request.auth.id || ${privilegedRolesRule})`;
+
             chatMessagesCol = await pb.collections.create({
                 name: chatMessagesName,
                 type: 'base',
@@ -137,10 +145,9 @@ async function setupEventChats() {
                         defaultValue: false
                     }
                 ],
-                // Rules: Only room participants can view/create
-                listRule: '@request.auth.id != "" && room.event.participants.id ?= @request.auth.id || room.event.user = @request.auth.id',
-                viewRule: '@request.auth.id != "" && room.event.participants.id ?= @request.auth.id || room.event.user = @request.auth.id',
-                createRule: '@request.auth.id != "" && sender = @request.auth.id && (room.event.participants.id ?= @request.auth.id || room.event.user = @request.auth.id)',
+                listRule: messageViewRule,
+                viewRule: messageViewRule,
+                createRule: messageCreateRule,
                 updateRule: '@request.auth.id != "" && sender = @request.auth.id',
                 deleteRule: '@request.auth.id != "" && sender = @request.auth.id'
             });

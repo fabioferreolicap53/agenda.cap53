@@ -2,79 +2,12 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth, UserRole } from './AuthContext';
 import { pb } from '../lib/pocketbase';
+import { useNotifications } from '../hooks/useNotifications';
 
 const Sidebar: React.FC = () => {
   const { user, setRole, logout, updateStatus, isSidebarOpen, setSidebarOpen } = useAuth();
   const [showStatusMenu, setShowStatusMenu] = React.useState(false);
-  const [notificationCount, setNotificationCount] = React.useState(0);
-  const [mySpaceCount, setMySpaceCount] = React.useState(0);
-
-  React.useEffect(() => {
-    const fetchCounts = async () => {
-      if (!user) return;
-      try {
-        // Notifications (excluding My Space notifications)
-        const notifRes = await pb.collection('agenda_cap53_notifications').getList(1, 1, {
-          filter: `user = "${user.id}" && read = false && type != "event_invite" && type != "event_participation_request"${(user.role === 'ALMC' || user.role === 'ADMIN') ? ' && data.kind != "almc_item_request"' : ''}${(user.role === 'TRA' || user.role === 'ADMIN') ? ' && data.kind != "transport_request"' : ''}`
-        });
-        let total = notifRes.totalItems;
-
-        // ALMC Requests
-        if (user.role === 'ALMC' || user.role === 'ADMIN') {
-          const reqRes = await pb.collection('agenda_cap53_almac_requests').getList(1, 1, {
-            filter: 'status = "pending"'
-          });
-          total += reqRes.totalItems;
-        }
-
-        // TRA Requests
-        if (user.role === 'TRA' || user.role === 'ADMIN') {
-          const traRes = await pb.collection('agenda_cap53_eventos').getList(1, 1, {
-            filter: 'transporte_suporte = true && transporte_status = "pending"'
-          });
-          total += traRes.totalItems;
-        }
-
-        setNotificationCount(total);
-
-        // My Space Notifications (Invites and Participation Requests)
-        const mySpaceRes = await pb.collection('agenda_cap53_notifications').getList(1, 1, {
-          filter: `user = "${user.id}" && read = false && (type = "event_invite" || type = "event_participation_request")`
-        });
-        setMySpaceCount(mySpaceRes.totalItems);
-      } catch (e) {
-        console.error("Error fetching counts", e);
-      }
-    };
-
-    fetchCounts();
-    
-    // Subscribe to updates
-    let unsubscribeNotifs: (() => void) | undefined;
-    let unsubscribeRequests: (() => void) | undefined;
-
-    const setupSubscriptions = async () => {
-        unsubscribeNotifs = await pb.collection('agenda_cap53_notifications').subscribe('*', () => fetchCounts());
-        if (user?.role === 'ALMC' || user?.role === 'ADMIN') {
-            unsubscribeRequests = await pb.collection('agenda_cap53_almac_requests').subscribe('*', () => fetchCounts());
-        }
-        if (user?.role === 'TRA' || user?.role === 'ADMIN') {
-            // Subscribe to events with transport support
-            await pb.collection('agenda_cap53_eventos').subscribe('*', (e) => {
-                if (e.record.transporte_suporte === true) {
-                    fetchCounts();
-                }
-            });
-        }
-    };
-
-    setupSubscriptions();
-    
-    return () => {
-        if (unsubscribeNotifs) unsubscribeNotifs();
-        if (unsubscribeRequests) unsubscribeRequests();
-    };
-  }, [user]);
+  const { unreadCount: notificationCount } = useNotifications();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${isActive
@@ -251,14 +184,7 @@ const Sidebar: React.FC = () => {
                 <NavLink to="/meu-envolvimento" className={linkClass} onClick={() => setSidebarOpen(false)}>
                   {({ isActive }) => (
                     <>
-                      <div className="relative">
-                        <span className={iconClass(isActive)}>analytics</span>
-                        {mySpaceCount > 0 && (
-                          <span className="absolute -top-1 -right-1 size-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[10px] text-white font-bold">
-                            {mySpaceCount > 9 ? '9+' : mySpaceCount}
-                          </span>
-                        )}
-                      </div>
+                      <span className={iconClass(isActive)}>analytics</span>
                       <p className="text-sm font-bold">Meu Espaço</p>
                     </>
                   )}

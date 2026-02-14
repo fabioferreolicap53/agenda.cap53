@@ -18,11 +18,14 @@ const AlmacManagement: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState<'inventory' | 'history'>('inventory');
     const [searchTerm, setSearchTerm] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ALMOXARIFADO' | 'COPA'>('ALL');
 
-    const filteredItems = items.filter(item => 
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredItems = items.filter(item => {
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                            item.category.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = categoryFilter === 'ALL' || item.category.toUpperCase() === categoryFilter;
+        return matchesSearch && matchesCategory;
+    });
 
     const availableItemsCount = items.filter(i => i.is_available === true || String(i.is_available) === 'true').length;
     const unavailableItemsCount = items.length - availableItemsCount;
@@ -439,20 +442,32 @@ const AlmacManagement: React.FC = () => {
                         {/* Inventory Table */}
                         <div className="lg:col-span-8 flex flex-col gap-6">
                             {/* Search and Filters */}
-                            <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
+                            <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-3 rounded-3xl border border-slate-100 shadow-sm">
                                 <div className="relative flex-1 w-full">
                                     <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                                    <input
+                                    <input 
                                         type="text"
-                                        placeholder="Buscar por nome ou categoria..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl h-12 pl-12 pr-4 text-sm font-medium focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900/20 outline-none transition-all"
+                                        placeholder="Buscar por nome ou categoria..."
+                                        className="w-full pl-12 pr-4 h-12 bg-slate-50/50 border-none rounded-2xl text-sm font-medium focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
                                     />
                                 </div>
-                                <div className="flex items-center gap-2 text-slate-400 bg-slate-50/50 px-4 py-2 rounded-2xl border border-slate-100">
-                                    <span className="material-symbols-outlined text-lg">inventory</span>
-                                    <span className="text-xs font-bold uppercase tracking-widest">{filteredItems.length} Itens</span>
+                                
+                                <div className="flex items-center gap-1 p-1 bg-slate-50/50 rounded-2xl border border-slate-100 w-full md:w-auto">
+                                    {(['ALL', 'ALMOXARIFADO', 'COPA'] as const).map((cat) => (
+                                        <button
+                                            key={cat}
+                                            onClick={() => setCategoryFilter(cat)}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                categoryFilter === cat 
+                                                ? 'bg-white text-slate-900 shadow-sm' 
+                                                : 'text-slate-400 hover:text-slate-600'
+                                            }`}
+                                        >
+                                            {cat === 'ALL' ? 'Todos' : cat}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 

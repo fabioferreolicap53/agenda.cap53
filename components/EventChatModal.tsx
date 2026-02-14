@@ -29,11 +29,14 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
         const checkAccess = () => {
             const isCreator = event.user === user.id;
             // Access is granted if user is creator OR if they have accepted the invitation
-            setIsParticipant(isCreator || isAccepted === true);
+            // New: Privileged roles (ADMIN, ALMC, TRA, CE, DCA) have unrestricted access
+            const hasPrivilegedRole = ['ADMIN', 'ALMC', 'TRA', 'CE', 'DCA'].includes(user?.role);
+            
+            setIsParticipant(isCreator || isAccepted === true || hasPrivilegedRole);
         };
 
         checkAccess();
-    }, [event.user, user.id, isAccepted]);
+    }, [event.user, user?.id, isAccepted, user?.role]);
 
     useEffect(() => {
         const initChat = async () => {
@@ -239,7 +242,7 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                                             {msg.content}
                                             <div className={`absolute bottom-[-18px] ${isMe ? 'right-1' : 'left-1'} opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2`}>
                                                 <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter whitespace-nowrap">
-                                                    {new Date(msg.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(msg.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                                 {isMe && (
                                                     <button 

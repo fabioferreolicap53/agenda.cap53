@@ -1067,7 +1067,7 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
           <span className="material-symbols-outlined text-lg text-primary opacity-70">schedule</span>
           <div className="flex flex-col leading-tight">
             <span className="text-xs font-bold text-text-main">
-              De {startDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })} às {endDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+              De {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} às {endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
             </span>
             <span className="text-[10px] font-medium text-text-secondary capitalize">
               {startDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
@@ -1113,27 +1113,27 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
                 'bg-yellow-50 text-yellow-700 border-yellow-200'
               }`}>
                 <span className="material-symbols-outlined text-[12px]">directions_car</span>
-                {event.transporte_status === 'confirmed' ? 'Carro OK' : 
-                 (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'Carro REC' : 
-                 'Carro PEND'}
+                {event.transporte_status === 'confirmed' ? 'TRA OK' : 
+                 (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'TRA REC' : 
+                 'TRA PEND'}
               </div>
             )}
             {almcStatus && (
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[8px] font-black uppercase tracking-wider ${getStatusStyle(almcStatus)}`}>
                 <span className="material-symbols-outlined text-[12px]">inventory_2</span>
-                Almc {getStatusLabel(almcStatus)}
+                ALM {getStatusLabel(almcStatus)}
               </div>
             )}
             {copaStatus && (
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[8px] font-black uppercase tracking-wider ${getStatusStyle(copaStatus)}`}>
                 <span className="material-symbols-outlined text-[12px]">restaurant</span>
-                Copa {getStatusLabel(copaStatus)}
+                COP {getStatusLabel(copaStatus)}
               </div>
             )}
             {infStatus && (
               <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border-2 text-[8px] font-black uppercase tracking-wider ${getStatusStyle(infStatus)}`}>
                 <span className="material-symbols-outlined text-[12px]">terminal</span>
-                Inf {getStatusLabel(infStatus)}
+                INF {getStatusLabel(infStatus)}
               </div>
             )}
           </div>
@@ -1208,7 +1208,12 @@ const CalendarEventCard: React.FC<{
           {event.title}
         </p>
         {!detailed && <span className="text-[9px] font-black text-primary/50 whitespace-nowrap uppercase tracking-tighter">
-          {new Date(event.date_start || event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          {event.date_end && (
+            <span className="ml-1 opacity-60">
+              - {new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
         </span>}
       </div>
 
@@ -1216,7 +1221,15 @@ const CalendarEventCard: React.FC<{
         <div className="flex flex-wrap items-center gap-x-8 gap-y-3 mt-4 text-[12px] font-bold text-text-secondary/80">
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-lg opacity-50">schedule</span>
-            {new Date(event.date_start || event.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            <div className="flex items-center gap-1.5">
+              <span>{new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+              {event.date_end && (
+                <>
+                  <span className="text-[10px] opacity-40 uppercase tracking-tighter font-black mx-0.5">até</span>
+                  <span>{new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                </>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2.5">
             <span className="material-symbols-outlined text-lg opacity-50">location_on</span>
@@ -1233,13 +1246,13 @@ const CalendarEventCard: React.FC<{
 
       <div className="flex flex-wrap gap-1.5 mt-3">
         {getCategoryStatus('ALMOXARIFADO') !== null && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('ALMOXARIFADO'))}`}>ALMC</span>
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('ALMOXARIFADO'))}`}>ALM</span>
         )}
         {getCategoryStatus('COPA') !== null && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('COPA'))}`}>COPA</span>
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('COPA'))}`}>COP</span>
         )}
         {getCategoryStatus('INFORMATICA') !== null && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('INFORMATICA'))}`}>INFO</span>
+          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('INFORMATICA'))}`}>INF</span>
         )}
         {event.transporte_suporte && (
           <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${
