@@ -248,70 +248,19 @@ const Calendar: React.FC = () => {
     if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"?`)) return;
 
     try {
-        const notifications = [];
-        const recipients = new Set<string>();
-        
-        // 1. Add Participants
-        if (event.participants && event.participants.length > 0) {
-            event.participants.forEach((p: string) => recipients.add(p));
-        }
-
-        // 2. Check ALMC involvement (Requests or Items)
-        const almacRequests = await pb.collection('agenda_cap53_almac_requests').getList(1, 1, {
-            filter: `event = "${event.id}"`
-        });
-        
-        const isAlmcInvolved = almacRequests.totalItems > 0 || (event.almoxarifado_items && event.almoxarifado_items.length > 0) || (event.copa_items && event.copa_items.length > 0);
-        
-        if (isAlmcInvolved) {
-             const almcUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ filter: 'role = "ALMC"' });
-             almcUsers.forEach(u => recipients.add(u.id));
-        }
-
-        // 3. Check TRA involvement
-        if (event.transporte_suporte) {
-             const traUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ filter: 'role = "TRA"' });
-             traUsers.forEach(u => recipients.add(u.id));
-        }
-
-        // 4. Check CE/Location involvement
-        if (event.location || event.expand?.location) {
-             const ceUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ filter: 'role = "CE"' });
-             ceUsers.forEach(u => recipients.add(u.id));
-        }
-
-        // Remove the creator from recipients (no need to notify themselves about their own action)
-        if (user?.id) recipients.delete(user.id);
-
-        // Create notifications (NOT linked to the event to avoid cascade delete)
-        const timestamp = new Date().toLocaleString('pt-BR');
-        const notifPromises = Array.from(recipients).map(recipientId => 
-            pb.collection('agenda_cap53_notifications').create({
-                user: recipientId,
-                title: 'Evento Excluído',
-                message: `O evento "${event.title}" foi excluído pelo criador em ${timestamp}.`,
-                type: 'event_deleted',
-                read: false,
-                data: {
-                    deleted_by: user.id,
-                    deleted_by_name: user.name || user.email,
-                    deleted_at: new Date().toISOString()
-                }
-                // event: event.id // DO NOT LINK to avoid cascade delete
-            })
-        );
-        
-        await Promise.all(notifPromises);
-
-        // Delete the event
+        // Delete the event directly. 
+        // The server-side hook (onRecordBeforeDeleteRequest) in pb_hooks/notifications.pb.js
+        // handles the cleanup of all related records (requests, participants, chat, etc.)
+        // and sends notifications to involved users.
         await pb.collection('agenda_cap53_eventos').delete(event.id);
 
         alert('Evento excluído com sucesso.');
         setSelectedEvent(null);
         fetchEvents();
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error deleting event:', error);
-        alert('Erro ao excluir evento.');
+        const msg = error.data?.message || error.message || 'Erro desconhecido';
+        alert(`Erro ao excluir evento: ${msg}`);
     }
   };
 

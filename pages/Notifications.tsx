@@ -5,15 +5,22 @@ import { useNotifications } from '../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { debugLog } from '../src/lib/debug';
+import ReRequestModal from '../components/ReRequestModal';
 
 type FilterType = 'all' | 'unread' | 'actions';
 
 const Notifications: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { notifications, loading, markAsRead, markAllAsRead, deleteNotification, clearHistory, handleDecision, refresh } = useNotifications();
+  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification, clearHistory, handleDecision, refresh } = useNotifications();
   const [filter, setFilter] = useState<FilterType>('all');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [reRequestNotification, setReRequestNotification] = useState<any | null>(null);
+
+  const getData = (n: any) => {
+    if (!n.data) return {};
+    return typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
+  };
 
   const filteredNotifications = useMemo(() => {
     debugLog('Notifications', 'Filtrando notificações', {
@@ -27,10 +34,11 @@ const Notifications: React.FC = () => {
         debugLog('Notifications', 'Filtro unread:', unread.length);
         return unread;
       case 'actions':
-        const actions = notifications.filter(n => 
-          (n.type === 'event_invite' || n.type === 'event_participation_request' || n.type === 'service_request' || n.type === 'almc_item_request' || n.type === 'transport_request') && 
-          n.invite_status === 'pending'
-        );
+        const actions = notifications.filter(n => {
+          const data = getData(n);
+          return n.invite_status === 'pending' || 
+          (n.type === 'refusal' && (data.kind === 'almc_item_decision' || data.kind === 'transport_decision'));
+        });
         debugLog('Notifications', 'Filtro actions:', actions.length);
         return actions;
       default:
@@ -221,44 +229,40 @@ const Notifications: React.FC = () => {
                 </p>
 
                 {/* Badge de Quantidade se disponível no data */}
-                {(notification.data?.quantity !== undefined || (typeof notification.data === 'string' && JSON.parse(notification.data).quantity !== undefined)) && (
+                {getData(notification).quantity !== undefined && (
                   <div className="flex items-center gap-1.5 mb-3">
                     <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-md border border-indigo-100 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">inventory_2</span>
-                      Quantidade: {
-                        notification.data?.quantity !== undefined 
-                          ? notification.data.quantity 
-                          : JSON.parse(notification.data as unknown as string).quantity
-                      }
+                      Quantidade: {getData(notification).quantity}
                     </span>
                   </div>
                 )}
 
                 {/* Detalhes de Transporte se disponível no data */}
-                {notification.type === 'transport_request' && notification.data && (
+                {notification.type === 'transport_request' && getData(notification) && (
                   <div className="flex flex-wrap gap-1.5 mb-3">
-                    {notification.data.origem && (
+                    {getData(notification).origem && (
                       <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">location_on</span>
-                        De: {notification.data.origem}
+                        De: {getData(notification).origem}
                       </span>
                     )}
-                    {notification.data.destino && (
+                    {getData(notification).destino && (
                       <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">near_me</span>
-                        Para: {notification.data.destino}
+                        Para: {getData(notification).destino}
                       </span>
                     )}
-                    {notification.data.horario_levar && (
+                    {getData(notification).horario_levar && (
                       <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">schedule</span>
-                        Ida: {notification.data.horario_levar}
+                        Ida: {getData(notification).horario_levar}
                       </span>
                     )}
-                    {notification.data.horario_buscar && (
+                    {getData(notification).horario_buscar && (
                       <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">history</span>
-                        Volta: {notification.data.horario_buscar}
+                        Volta: {getData(notification).horario_buscar}
                       </span>
                     )}
                   </div>
@@ -285,6 +289,19 @@ const Notifications: React.FC = () => {
                       className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all disabled:opacity-50"
                     >
                       Recusar
+                    </button>
+                  </div>
+                )}
+
+                {/* Botão de Tentar Novamente para Recusas */}
+                {notification.type === 'refusal' && (getData(notification).kind === 'almc_item_decision' || getData(notification).kind === 'transport_decision') && (
+                  <div className="flex items-center gap-2 mt-4">
+                    <button
+                      onClick={() => setReRequestNotification(notification)}
+                      className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-hover transition-all flex items-center gap-2 shadow-sm shadow-primary/20"
+                    >
+                      <span className="material-symbols-outlined text-sm">restart_alt</span>
+                      Solicitar Novamente
                     </button>
                   </div>
                 )}
@@ -336,6 +353,17 @@ const Notifications: React.FC = () => {
           ))
         )}
       </div>
+
+      {reRequestNotification && (
+        <ReRequestModal
+          notification={reRequestNotification}
+          onClose={() => setReRequestNotification(null)}
+          onSuccess={() => {
+            refresh();
+            setReRequestNotification(null);
+          }}
+        />
+      )}
     </div>
   );
 };

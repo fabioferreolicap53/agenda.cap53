@@ -6,8 +6,12 @@ $app.logger().info("CRITICAL: notifications.pb.js is starting to load at " + new
 function createMissingNotificationsForRequest(app, request, event, log) {
     try {
         const itemId = request.getString('item');
+        if (!itemId) return 0;
+
         const item = app.dao().findRecordById("agenda_cap53_itens_servico", itemId);
-        const itemCategory = item.getString('category');
+        
+        // Normalize category check (case insensitive)
+        const itemCategory = (item.getString('category') || '').toUpperCase();
         const targetRole = itemCategory === 'INFORMATICA' ? 'DCA' : 'ALMC';
         
         const sectorUsers = app.dao().findRecordsByFilter(
@@ -50,7 +54,7 @@ function createMissingNotificationsForRequest(app, request, event, log) {
             app.dao().saveRecord(record);
             createdCount++;
         });
-        if (log) log(`Created ${createdCount} missing notifications for item ${item.getString("name")}`);
+        if (log) log(`Created ${createdCount} missing notifications for item ${item.getString("name")} (Role: ${targetRole})`);
         return createdCount;
     } catch (err) {
         if (log) log(`Error creating missing notifications: ${err.message}`);
@@ -66,26 +70,221 @@ function handleAfterChange(e) {
     // Log para depuração
     $app.logger().info(`[AFTER CHANGE] Collection: ${collectionName} ID: ${e.record.id}`);
 
-    // --- ALMAC REQUESTS ---
+    // --- ALMAC REQUESTS (ALMC / DCA) ---
     if (collectionName === 'agenda_cap53_almac_requests') {
         try {
             const eventId = e.record.getString('event');
             const event = $app.dao().findRecordById("agenda_cap53_eventos", eventId);
+            
+            // 1. Create notifications for Approvers (if new request)
             createMissingNotificationsForRequest($app, e.record, event, (msg) => $app.logger().info(`[HOOK] ${msg}`));
+
+            // 2. Notify Requester/Creator on Decision (Status Change)
+            const status = e.record.getString('status');
+            if (status === 'approved' || status === 'rejected') {
+                const requestId = e.record.id;
+                
+                // Check if notification already exists for this decision
+                let alreadyNotified = false;
+                try {
+                    const existing = $app.dao().findFirstRecordByFilter(
+                        "agenda_cap53_notifications",
+                        `related_request = '${requestId}' && data.action = '${status}'`
+                    );
+                    if (existing) alreadyNotified = true;
+                } catch (_) {}
+
+                if (!alreadyNotified) {
+                    const itemId = e.record.getString('item');
+                    if (!itemId) return; // Skip if no item
+                    
+                    const item = $app.dao().findRecordById("agenda_cap53_itens_servico", itemId);
+                    const itemName = item.getString('name');
+                    const quantity = e.record.getInt('quantity');
+                    const justification = e.record.getString('justification');
+                    
+                    const eventTitle = event.getString('title') || 'Evento';
+                    const eventCreatorId = event.getString('user');
+                    const requesterId = e.record.getString('created_by');
+
+                    // Determine who to notify: Requester and Event Creator
+                    const usersToNotify = new Set();
+                    if (requesterId) usersToNotify.add(requesterId);
+                    if (eventCreatorId) usersToNotify.add(eventCreatorId);
+
+                    const notifications = $app.dao().findCollectionByNameOrId("agenda_cap53_notifications");
+
+                    usersToNotify.forEach(userId => {
+                        try {
+                            const record = new Record(notifications);
+                            record.set("user", userId);
+                            record.set("title", `Item ${status === 'approved' ? 'Aprovado' : 'Reprovado'}`);
+                            
+                            let message = `O pedido de "${itemName}" (Qtd: ${quantity}) para o evento "${eventTitle}" foi ${status === 'approved' ? 'aprovado' : 'reprovado'}.`;
+                            if (status === 'rejected' && justification) {
+                                message += ` Motivo: ${justification}`;
+                            }
+                            
+                            record.set("message", message);
+                            record.set("type", status === 'rejected' ? 'refusal' : 'system');
+                            record.set("read", false);
+                            record.set("event", eventId);
+                            record.set("related_request", requestId);
+                            record.set("data", {
+                                kind: 'almc_item_decision',
+                                action: status,
+                                item_name: itemName,
+                                event_title: eventTitle
+                            });
+                            
+                            $app.dao().saveRecord(record);
+                            $app.logger().info(`[HOOK] Notification sent to ${userId} regarding request ${requestId} (${status})`);
+                        } catch (err) {
+                            $app.logger().error(`[HOOK] Error notifying user ${userId}: ${err.message}`);
+                        }
+                    });
+                }
+            }
         } catch (notifErr) {
             $app.logger().error('Error in hook for almac_requests', notifErr);
+        }
+    }
+
+    // --- EVENT CHANGES (TRANSPORTE - TRA) ---
+    if (collectionName === 'agenda_cap53_eventos') {
+        try {
+            const isTransport = e.record.getBool('transporte_suporte');
+            
+            // Se transporte for solicitado
+            if (isTransport) {
+                const eventId = e.record.id;
+                const eventTitle = e.record.getString('title') || 'Evento';
+                
+                // Verifica se já enviamos notificação de transporte para este evento
+                // Evita duplicidade em updates
+                let alreadyNotified = false;
+                try {
+                    const existing = $app.dao().findFirstRecordByFilter(
+                        "agenda_cap53_notifications",
+                        `event = '${eventId}' && type = 'transport_request'`
+                    );
+                    if (existing) alreadyNotified = true;
+                } catch (_) {}
+
+                if (!alreadyNotified) {
+                    $app.logger().info(`[HOOK] Creating transport notifications for event ${eventId}`);
+                    
+                    // Busca usuários do setor de Transporte (TRA)
+                    const traUsers = $app.dao().findRecordsByFilter("agenda_cap53_usuarios", "role = 'TRA'");
+                    
+                    const notifications = $app.dao().findCollectionByNameOrId("agenda_cap53_notifications");
+                    
+                    traUsers.forEach(u => {
+                        try {
+                            const record = new Record(notifications);
+                            record.set("user", u.id);
+                            record.set("title", "Solicitação de Transporte");
+                            record.set("message", `O evento "${eventTitle}" solicitou apoio de transporte.`);
+                            record.set("type", "transport_request");
+                            record.set("read", false);
+                            record.set("event", eventId);
+                            record.set("invite_status", "pending");
+                            record.set("acknowledged", false);
+                            record.set("data", { 
+                                kind: "transport_request",
+                                event_title: eventTitle,
+                                origem: e.record.getString('transporte_origem'),
+                                destino: e.record.getString('transporte_destino'),
+                                horario_levar: e.record.getString('transporte_horario_levar'),
+                                horario_buscar: e.record.getString('transporte_horario_buscar')
+                            });
+                            $app.dao().saveRecord(record);
+                            $app.logger().info(`[HOOK] Transport notification sent to ${u.id}`);
+                        } catch (err) {
+                            $app.logger().error(`[HOOK] Error creating transport notification for ${u.id}: ${err.message}`);
+                        }
+                    });
+                }
+            }
+        } catch (err) {
+            $app.logger().error(`[HOOK] Error processing event transport logic: ${err.message}`);
         }
     }
 }
 
 $app.onRecordAfterCreateRequest().add((e) => {
-    handleAfterChange(e);
-    return e.next();
+    $app.logger().info("[HOOK] onRecordAfterCreateRequest triggered");
+    try {
+        handleAfterChange(e);
+    } catch (err) {
+        $app.logger().error("[HOOK ERROR] onRecordAfterCreateRequest: " + err.message);
+    }
 });
 
 $app.onRecordAfterUpdateRequest().add((e) => {
-    handleAfterChange(e);
-    return e.next();
+    $app.logger().info("[HOOK] onRecordAfterUpdateRequest triggered");
+    try {
+        handleAfterChange(e);
+    } catch (err) {
+        $app.logger().error("[HOOK ERROR] onRecordAfterUpdateRequest: " + err.message);
+    }
+});
+
+// --- HOOK DE EXCLUSÃO DE EVENTO ---
+// Garante que ao excluir um evento, todas as dependências sejam removidas
+$app.onRecordBeforeDeleteRequest("agenda_cap53_eventos").add((e) => {
+    $app.logger().info("[DELETE HOOK] Hook disparado para evento: " + e.record.id);
+    
+    const app = $app;
+    const eventId = e.record.id;
+
+    // Helper function to safely delete related records
+    const deleteRelated = (collectionName, filter) => {
+        try {
+            // Check if collection exists implicitly by trying to find records
+            const records = app.dao().findRecordsByFilter(collectionName, filter);
+            if (records.length > 0) {
+                records.forEach(r => app.dao().deleteRecord(r));
+                app.logger().info(`[DELETE HOOK] Deleted ${records.length} records from ${collectionName}`);
+            }
+        } catch (err) {
+            // Log warning but don't stop execution
+            app.logger().warn(`[DELETE HOOK WARN] Failed to delete from ${collectionName}: ${err.message}`);
+        }
+    };
+
+    try {
+        // 1. Chat System
+        // Delete messages first (via rooms), then rooms
+        try {
+            const rooms = app.dao().findRecordsByFilter("agenda_cap53_salas_batepapo", `event = '${eventId}'`);
+            rooms.forEach(room => {
+                deleteRelated("agenda_cap53_mensagens_salas", `room = '${room.id}'`);
+                app.dao().deleteRecord(room);
+            });
+            if (rooms.length > 0) app.logger().info(`[DELETE HOOK] Deleted ${rooms.length} chat rooms`);
+        } catch (err) {
+            app.logger().warn(`[DELETE HOOK WARN] Failed to process chat rooms: ${err.message}`);
+        }
+
+        // 2. Notifications (prioritize this as they might reference other things)
+        deleteRelated("agenda_cap53_notifications", `event = '${eventId}'`);
+
+        // 3. Requests (Almac/Informatica)
+        deleteRelated("agenda_cap53_almac_requests", `event = '${eventId}'`);
+
+        // 4. Participants
+        deleteRelated("agenda_cap53_participantes", `event = '${eventId}'`);
+        
+        // 5. Event Solicitations (Misc)
+        deleteRelated("agenda_cap53_solicitacoes_evento", `event = '${eventId}'`);
+
+    } catch (mainErr) {
+        // Log critical error but try to proceed to let DB handle it if possible
+        app.logger().error("[DELETE HOOK CRITICAL] " + mainErr.message);
+    }
+
+    return;
 });
 
 // --- ROUTES (REGISTRADAS NO onBeforeServe) ---
