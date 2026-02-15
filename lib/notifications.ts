@@ -54,39 +54,63 @@ export const notificationService = {
   async createNotification(params: CreateNotificationParams) {
     const { user, title, message, type, event, related_request, data } = params;
 
+    console.log('🔔 DEBUG createNotification:', { user, title, message, type, event, related_request });
+
     // 1. Prevent Duplicates for event invites
     if (type === 'event_invite' && event) {
+      console.log('🔍 Verificando notificação duplicada...');
       const existing = await pb.collection('agenda_cap53_notifications').getList(1, 1, {
         filter: `user = "${user}" && event = "${event}" && type = "event_invite"`
       });
 
       if (existing.totalItems > 0) {
-        console.log(`Notification already exists for user ${user} and event ${event}`);
+        console.log(`✅ Notificação já existe para usuário ${user} e evento ${event}`);
         return existing.items[0];
       }
     }
 
     // 2. Create the internal PocketBase notification
-    const notification = await pb.collection('agenda_cap53_notifications').create({
-      user,
-      title,
-      message,
-      type,
-      event,
-      related_request,
-      read: false,
-      invite_status: (
-        type === 'event_invite' || 
-        type === 'event_participation_request' || 
-        type === 'almc_item_request' || 
-        type === 'transport_request' || 
-        type === 'service_request'
-      ) ? 'pending' : null,
-      data,
-      acknowledged: false
-    });
+    console.log('💾 Tentando criar notificação no banco de dados...');
+    console.log('📋 Dados completos:', { user, title, message, type, event, related_request, data });
+    
+    let notification;
+    try {
+      console.log('⏳ Iniciando create no PocketBase...');
+      const startTime = Date.now();
+      
+      notification = await pb.collection('agenda_cap53_notifications').create({
+        user,
+        title,
+        message,
+        type,
+        event,
+        related_request,
+        read: false,
+        invite_status: (
+          type === 'event_invite' || 
+          type === 'event_participation_request' || 
+          type === 'almc_item_request' || 
+          type === 'transport_request' || 
+          type === 'service_request'
+        ) ? 'pending' : null,
+        data,
+        acknowledged: false
+      });
+      
+      const endTime = Date.now();
+      console.log(`✅ Notificação criada com sucesso! ID: ${notification.id} (tempo: ${endTime - startTime}ms)`);
+      console.log('📊 Notificação completa:', notification);
+      
+    } catch (error) {
+      console.error('❌ ERRO ao criar notificação:', error.message);
+      console.error('📄 Tipo do erro:', error.constructor.name);
+      console.error('📋 Detalhes do erro:', error.data || error);
+      console.error('🔍 Stack:', error.stack);
+      throw error;
+    }
 
     // 3. Simulate Push/Email Notification
+    console.log('📧 Simulando notificação externa...');
     this.simulateExternalNotification(params);
 
     // 4. Create Audit Log
@@ -131,8 +155,23 @@ export const notificationService = {
    * Creates notifications for multiple users.
    */
   async bulkCreateNotifications(userIds: string[], params: Omit<CreateNotificationParams, 'user'>) {
-    return Promise.all(
-      userIds.map(userId => this.createNotification({ ...params, user: userId }))
+    console.log('🔔 DEBUG bulkCreateNotifications:', { userIds, params });
+    
+    const results = await Promise.allSettled(
+      userIds.map(userId => {
+        console.log(`📝 Criando notificação para usuário ${userId}...`);
+        return this.createNotification({ ...params, user: userId });
+      })
     );
+    
+    const successful = results.filter(r => r.status === 'fulfilled').map(r => (r as PromiseFulfilledResult<any>).value);
+    const failed = results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason);
+    
+    console.log(`✅ bulkCreateNotifications concluído: ${successful.length} sucessos, ${failed.length} falhas`);
+    if (failed.length > 0) {
+      console.error('❌ Falhas:', failed);
+    }
+    
+    return successful;
   }
 };

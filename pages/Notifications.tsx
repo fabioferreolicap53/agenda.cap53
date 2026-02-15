@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { debugLog } from '../src/lib/debug';
 
 type FilterType = 'all' | 'unread' | 'actions';
 
@@ -15,15 +16,25 @@ const Notifications: React.FC = () => {
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const filteredNotifications = useMemo(() => {
+    debugLog('Notifications', 'Filtrando notificações', {
+      total: notifications.length,
+      filter: filter
+    });
+    
     switch (filter) {
       case 'unread':
-        return notifications.filter(n => !n.read);
+        const unread = notifications.filter(n => !n.read);
+        debugLog('Notifications', 'Filtro unread:', unread.length);
+        return unread;
       case 'actions':
-        return notifications.filter(n => 
+        const actions = notifications.filter(n => 
           (n.type === 'event_invite' || n.type === 'event_participation_request' || n.type === 'service_request' || n.type === 'almc_item_request' || n.type === 'transport_request') && 
           n.invite_status === 'pending'
         );
+        debugLog('Notifications', 'Filtro actions:', actions.length);
+        return actions;
       default:
+        debugLog('Notifications', 'Filtro all:', notifications.length);
         return notifications;
     }
   }, [notifications, filter]);
@@ -90,7 +101,7 @@ const Notifications: React.FC = () => {
       <div className="flex flex-col gap-4 p-4 animate-pulse max-w-4xl mx-auto">
         {[1, 2, 3, 4, 5].map(i => (
           <div key={i} className="h-24 bg-slate-100 rounded-2xl border border-slate-200"></div>
-        ))}
+          ))}
       </div>
     );
   }
@@ -121,6 +132,19 @@ const Notifications: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
+          {import.meta.env.DEV && (
+            <button
+              onClick={() => {
+                const notifications = JSON.parse(localStorage.getItem('debug_notifications') || '[]');
+                console.table(notifications);
+                debugLog('Notifications', 'Debug ativado:', notifications);
+              }}
+              className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+              title="Debug notificações"
+            >
+              <span className="material-symbols-outlined text-sm">bug_report</span>
+            </button>
+          )}
           <button
             onClick={markAllAsRead}
             className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
@@ -155,6 +179,11 @@ const Notifications: React.FC = () => {
             <div>
               <h3 className="text-slate-900 font-bold">Nenhuma notificação</h3>
               <p className="text-slate-500 text-sm">Tudo limpo por aqui! Você não tem notificações {filter !== 'all' ? 'neste filtro' : ''}.</p>
+              {import.meta.env.DEV && (
+                <p className="text-slate-400 text-xs mt-2">
+                  Debug: Total={notifications.length}, Filtrado={filteredNotifications.length}, Filtro={filter}
+                </p>
+              )}
             </div>
           </div>
         ) : (
@@ -192,12 +221,46 @@ const Notifications: React.FC = () => {
                 </p>
 
                 {/* Badge de Quantidade se disponível no data */}
-                {notification.data?.quantity !== undefined && (
+                {(notification.data?.quantity !== undefined || (typeof notification.data === 'string' && JSON.parse(notification.data).quantity !== undefined)) && (
                   <div className="flex items-center gap-1.5 mb-3">
                     <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-md border border-indigo-100 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">inventory_2</span>
-                      Quantidade: {notification.data.quantity}
+                      Quantidade: {
+                        notification.data?.quantity !== undefined 
+                          ? notification.data.quantity 
+                          : JSON.parse(notification.data as unknown as string).quantity
+                      }
                     </span>
+                  </div>
+                )}
+
+                {/* Detalhes de Transporte se disponível no data */}
+                {notification.type === 'transport_request' && notification.data && (
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {notification.data.origem && (
+                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">location_on</span>
+                        De: {notification.data.origem}
+                      </span>
+                    )}
+                    {notification.data.destino && (
+                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">near_me</span>
+                        Para: {notification.data.destino}
+                      </span>
+                    )}
+                    {notification.data.horario_levar && (
+                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">schedule</span>
+                        Ida: {notification.data.horario_levar}
+                      </span>
+                    )}
+                    {notification.data.horario_buscar && (
+                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">history</span>
+                        Volta: {notification.data.horario_buscar}
+                      </span>
+                    )}
                   </div>
                 )}
 

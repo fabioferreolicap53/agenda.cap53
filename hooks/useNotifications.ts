@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { NotificationRecord } from '../lib/notifications';
+import { debugLog } from '../src/lib/debug';
 
 export const useNotifications = () => {
   const { user } = useAuth();
@@ -13,6 +14,8 @@ export const useNotifications = () => {
     if (!user?.id) return;
 
     try {
+      debugLog('useNotifications', 'Iniciando fetch para user:', user.id);
+      
       const [notifResult, almcResult, traResult] = await Promise.all([
         pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
           filter: `user = "${user.id}"`,
@@ -20,24 +23,99 @@ export const useNotifications = () => {
           expand: 'event,related_request,related_request.item,related_request.created_by'
         }),
         (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'ADMIN') 
-          ? pb.collection('agenda_cap53_almac_requests').getList(1, 1, { 
+          ? pb.collection('agenda_cap53_almac_requests').getList(1, 50, { 
               filter: `status = "pending"${
                 user.role === 'ALMC' ? ' && (item.category = "ALMOXARIFADO" || item.category = "COPA")' :
                 user.role === 'DCA' ? ' && item.category = "INFORMATICA"' :
                 ''
-              }` 
+              }`,
+              expand: 'event,item'
             })
-          : Promise.resolve({ totalItems: 0 }),
+          : Promise.resolve({ items: [], totalItems: 0 }),
         (user.role === 'TRA' || user.role === 'ADMIN')
-          ? pb.collection('agenda_cap53_eventos').getList(1, 1, { filter: 'transporte_suporte = true && transporte_status = "pending"' })
-          : Promise.resolve({ totalItems: 0 })
+          ? pb.collection('agenda_cap53_eventos').getList(1, 50, { filter: 'transporte_suporte = true && transporte_status = "pending"' })
+          : Promise.resolve({ items: [], totalItems: 0 })
       ]);
 
-      setNotifications(notifResult.items);
+      // Map pending requests to virtual notifications if they don't exist in notifications list
+      const existingRequestIds = new Set(notifResult.items.map(n => n.related_request));
+      
+      const almcNotifications = (almcResult?.items || [])
+        .filter(req => !existingRequestIds.has(req.id))
+        .map(req => ({
+          id: `req_${req.id}`,
+          collectionId: 'virtual',
+          collectionName: 'virtual',
+          created: req.created,
+          updated: req.updated,
+          user: user.id,
+          title: 'Solicitação Pendente',
+          message: `Solicitação de ${req.expand?.item?.name || 'Item'} para o evento "${req.expand?.event?.title || 'Evento'}"`,
+          type: 'almc_item_request' as const,
+          read: false,
+          event: req.event,
+          related_request: req.id,
+          invite_status: 'pending' as const,
+          data: { 
+            quantity: req.quantity, 
+            item_name: req.expand?.item?.name,
+            event_title: req.expand?.event?.title
+          },
+          acknowledged: false,
+          expand: req.expand
+        }));
+
+      const traNotifications = (traResult?.items || [])
+        .filter(evt => !existingRequestIds.has(evt.id)) // Assuming event ID is used as request ID for transport
+        .map(evt => ({
+          id: `tra_${evt.id}`,
+          collectionId: 'virtual',
+          collectionName: 'virtual',
+          created: evt.created,
+          updated: evt.updated,
+          user: user.id,
+          title: 'Transporte Pendente',
+          message: `Solicitação de transporte para o evento "${evt.title}"`,
+          type: 'transport_request' as const,
+          read: false,
+          event: evt.id,
+          related_request: evt.id,
+          invite_status: 'pending' as const,
+          data: { 
+            destination: evt.transporte_destino,
+            event_title: evt.title
+          },
+          acknowledged: false,
+          expand: { event: evt }
+        }));
+
+      const allNotifications = [
+        ...notifResult.items,
+        ...almcNotifications,
+        ...traNotifications
+      ].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+
+      debugLog('useNotifications', 'Notificações encontradas:', allNotifications.length);
+      
+      // Salvar no localStorage para debug
+      if (import.meta.env.DEV) {
+        localStorage.setItem('debug_notifications', JSON.stringify(allNotifications));
+      }
+      
+      setNotifications(allNotifications);
       
       // The badge count is the sum of unread system notifications + pending administrative requests
       const systemUnread = notifResult.items.filter(n => !n.read).length;
-      setUnreadCount(systemUnread + almcResult.totalItems + traResult.totalItems);
+      const almcCount = almcResult?.items?.length || 0;
+      const traCount = traResult?.items?.length || 0;
+      setUnreadCount(systemUnread + almcCount + traCount);
+      
+      debugLog('useNotifications', 'Unread count calculado:', {
+        system: systemUnread,
+        almc: almcCount,
+        tra: traCount,
+        total: systemUnread + almcCount + traCount
+      });
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -53,13 +131,33 @@ export const useNotifications = () => {
     const subscribe = async () => {
       const unsubs: (() => void)[] = [];
       
-      const u1 = await pb.collection('agenda_cap53_notifications').subscribe('*', (e) => {
-        if (e.record.user === user.id) fetchNotifications();
-      });
+      const u1 = await pb.collection('agenda_cap53_notifications').subscribe<NotificationRecord>('*', (e) => {
+         if (e.record.user === user.id) {
+           if (e.action === 'create') {
+             // Quando uma nova notificação chega, adicionamos ao início
+             setNotifications(prev => [e.record, ...prev]);
+             if (!e.record.read) setUnreadCount(prev => prev + 1);
+           } else if (e.action === 'update') {
+             // Quando uma notificação é atualizada, mesclamos com a existente para preservar o 'expand'
+             setNotifications(prev => prev.map(n => 
+               n.id === e.record.id ? { ...n, ...e.record } : n
+             ));
+             
+             // Recalcula o unreadCount de forma mais precisa
+             fetchNotifications();
+           } else if (e.action === 'delete') {
+             setNotifications(prev => prev.filter(n => n.id !== e.record.id));
+             fetchNotifications();
+           }
+         }
+       });
       unsubs.push(u1);
 
       if (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'ADMIN') {
-        const u2 = await pb.collection('agenda_cap53_almac_requests').subscribe('*', () => fetchNotifications());
+        const u2 = await pb.collection('agenda_cap53_almac_requests').subscribe('*', (e) => {
+          // Quando um pedido de almoxarifado é alterado, recarregamos para atualizar contadores e dados expandidos
+          fetchNotifications();
+        });
         unsubs.push(u2);
       }
 
@@ -82,6 +180,9 @@ export const useNotifications = () => {
   }, [user?.id, user?.role, fetchNotifications]);
 
   const markAsRead = async (id: string) => {
+    // Skip virtual notifications
+    if (id.startsWith('req_') || id.startsWith('tra_')) return;
+
     try {
       await pb.collection('agenda_cap53_notifications').update(id, { read: true });
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
@@ -93,16 +194,26 @@ export const useNotifications = () => {
 
   const markAllAsRead = async () => {
     try {
-      const unread = notifications.filter(n => !n.read);
+      const unread = notifications.filter(n => !n.read && !n.id.startsWith('req_') && !n.id.startsWith('tra_'));
       await Promise.all(unread.map(n => pb.collection('agenda_cap53_notifications').update(n.id, { read: true })));
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
+      
+      // Update local state - keeping virtual notifications as unread since they require action
+      setNotifications(prev => prev.map(n => 
+        (n.id.startsWith('req_') || n.id.startsWith('tra_')) ? n : { ...n, read: true }
+      ));
+      
+      // Recalculate unread count
+      const virtualCount = notifications.filter(n => (n.id.startsWith('req_') || n.id.startsWith('tra_')) && !n.read).length;
+      setUnreadCount(virtualCount);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
   };
 
   const deleteNotification = async (id: string) => {
+    // Skip virtual notifications
+    if (id.startsWith('req_') || id.startsWith('tra_')) return;
+
     try {
       await pb.collection('agenda_cap53_notifications').delete(id);
       setNotifications(prev => prev.filter(n => n.id !== id));
@@ -116,9 +227,9 @@ export const useNotifications = () => {
   const clearHistory = async () => {
     if (!user?.id) return;
     try {
-      const history = notifications.filter(n => n.read);
+      const history = notifications.filter(n => n.read && !n.id.startsWith('req_') && !n.id.startsWith('tra_'));
       await Promise.all(history.map(n => pb.collection('agenda_cap53_notifications').delete(n.id)));
-      setNotifications(prev => prev.filter(n => !n.read));
+      setNotifications(prev => prev.filter(n => !n.read || n.id.startsWith('req_') || n.id.startsWith('tra_')));
     } catch (error) {
       console.error('Error clearing history:', error);
     }
@@ -133,19 +244,25 @@ export const useNotifications = () => {
         invite_status: action === 'approved' ? 'accepted' : action 
       };
       
-      // Atualiza a notificação atual
-      await pb.collection('agenda_cap53_notifications').update(notification.id, updatePayload);
+      // Atualiza a notificação atual (apenas se for real)
+      if (!notification.id.startsWith('req_') && !notification.id.startsWith('tra_')) {
+        await pb.collection('agenda_cap53_notifications').update(notification.id, updatePayload);
+      } else {
+        // Para notificações virtuais, apenas atualizamos o estado local para refletir que foi "lida/processada"
+        // Na verdade, ela será removida no próximo fetch pois o status do request mudará
+        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+      }
 
       // Sincroniza o status com outras notificações idênticas para outros usuários do mesmo setor
       try {
-        if (notification.related_request) {
+        if (notification.related_request && !notification.id.startsWith('req_')) {
           const others = await pb.collection('agenda_cap53_notifications').getFullList({
             filter: `related_request = "${notification.related_request}" && id != "${notification.id}" && invite_status = "pending"`
           });
           await Promise.all(others.map(n => 
             pb.collection('agenda_cap53_notifications').update(n.id, { invite_status: updatePayload.invite_status })
           ));
-        } else if (notification.type === 'transport_request' && notification.event) {
+        } else if (notification.type === 'transport_request' && notification.event && !notification.id.startsWith('tra_')) {
           const others = await pb.collection('agenda_cap53_notifications').getFullList({
             filter: `event = "${notification.event}" && type = "transport_request" && id != "${notification.id}" && invite_status = "pending"`
           });

@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
+import { debugLog } from '../src/lib/debug';
 import CustomSelect from '../components/CustomSelect';
 import CustomDatePicker from '../components/CustomDatePicker';
 import CustomTimePicker from '../components/CustomTimePicker';
@@ -303,26 +304,22 @@ const CreateEvent: React.FC = () => {
          console.log('--- UPDATING EVENT ---', editingEventId, eventData);
          await pb.collection('agenda_cap53_eventos').update(editingEventId, eventData);
 
-         // Sincronizar atualizações de título em notificações pendentes
+         // Sincronizar atualizações de título em notificações de convite de evento
+         // As notificações de itens/transporte são tratadas especificamente abaixo
          if (title !== originalTitle) {
            try {
              const pendingNotifications = await pb.collection('agenda_cap53_notifications').getFullList({
-               filter: `event = "${editingEventId}" && invite_status = "pending"`
+               filter: `event = "${editingEventId}" && type = "event_invite" && invite_status = "pending"`
              });
 
              await Promise.all(pendingNotifications.map(notif => {
                let newMessage = notif.message;
-               // Atualiza o título do evento na mensagem se ele estiver presente entre aspas
                if (originalTitle && newMessage.includes(`"${originalTitle}"`)) {
                  newMessage = newMessage.split(`"${originalTitle}"`).join(`"${title}"`);
                }
                
-               // Garante que o campo data também seja preservado e passado adiante
-               const updatedData = { ...(notif.data || {}) };
-
                return pb.collection('agenda_cap53_notifications').update(notif.id, {
-                 message: newMessage,
-                 data: updatedData // Re-envia o data para garantir o disparo do realtime
+                 message: newMessage
                });
              }));
            } catch (err) {
@@ -383,20 +380,24 @@ const CreateEvent: React.FC = () => {
 
       if (eventId) {
           try {
-            const selectedItemIds = [...almoxarifadoItems, ...copaItems, ...informaticaItems];
+            const selectedItemIds = confirmedItems;
+            console.log('--- SYNC LOGÍSTICA START ---', { eventId, selectedItemIds, itemQuantities });
+            
             const existingRequests = await pb.collection('agenda_cap53_almac_requests').getFullList({
               filter: `event = "${eventId}"`,
             });
+            console.log('--- EXISTING REQUESTS ---', existingRequests.length);
 
             const existingByItem = new Map<string, any>();
             existingRequests.forEach((r: any) => {
               if (r.item) existingByItem.set(r.item, r);
             });
 
+            // 1. Remover itens que não estão mais na lista confirmada
             const removedRequests = existingRequests.filter((r: any) => r.item && !selectedItemIds.includes(r.item));
             if (removedRequests.length > 0) {
+              console.log('--- REMOVING REQUESTS ---', removedRequests.length);
               await Promise.all(removedRequests.map(async (r: any) => {
-                // Remove as notificações pendentes associadas a este pedido
                 try {
                   const pendingNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
                     filter: `related_request = "${r.id}" && invite_status = "pending"`
@@ -409,6 +410,7 @@ const CreateEvent: React.FC = () => {
               }));
             }
 
+            // 2. Criar ou Atualizar itens
             const createdRequests: any[] = [];
             for (const itemId of selectedItemIds) {
               const existing = existingByItem.get(itemId);
@@ -416,75 +418,53 @@ const CreateEvent: React.FC = () => {
               const currentItem = availableItems.find(i => i.id === itemId);
 
               if (!existing) {
+                console.log('--- CREATING NEW REQUEST ---', itemId, quantity);
                 const isAvailable = currentItem ? (currentItem.is_available !== false) : true;
                 const createdReq = await pb.collection('agenda_cap53_almac_requests').create({
                   event: eventId,
                   item: itemId,
                   status: 'pending',
                   created_by: user?.id,
-                  quantity,
+                  quantity: Number(quantity), // Garantir que é número
                   item_snapshot_available: isAvailable
                 });
                 createdRequests.push(createdReq);
-              } else if (existing.status === 'pending') {
+              } else {
+                // Se o pedido já existe, atualizamos a quantidade e sincronizamos notificações
+                const oldQuantity = Number(existing.quantity) || 1;
+                const newQuantity = Number(quantity);
+                
+                const quantityChanged = oldQuantity !== newQuantity;
+                const titleChanged = title !== originalTitle;
+
+                console.log(`--- CHECKING UPDATE FOR ${itemId} ---`, { oldQuantity, newQuantity, quantityChanged, titleChanged });
+
                 const updateData: any = {};
-                const oldQuantity = existing.quantity || 1;
-                if (oldQuantity !== quantity) updateData.quantity = quantity;
+                if (quantityChanged) updateData.quantity = newQuantity;
+                
                 if (currentItem) {
                   const isAvailable = currentItem.is_available !== false;
                   if (existing.item_snapshot_available !== isAvailable) {
                     updateData.item_snapshot_available = isAvailable;
                   }
                 }
-                if (Object.keys(updateData).length > 0) {
-                  await pb.collection('agenda_cap53_almac_requests').update(existing.id, updateData);
-                  
-                  // Atualiza notificações relacionadas (quantidade ou título se mudou)
-                  try {
-                    const relatedNotifications = await pb.collection('agenda_cap53_notifications').getFullList({
-                      filter: `related_request = "${existing.id}" && invite_status = "pending"`,
-                    });
 
-                    if (relatedNotifications.length > 0) {
-                      const itemName = currentItem?.name || 'Item';
-                      const newQuantity = quantity;
-                      
-                      await Promise.all(relatedNotifications.map(notif => {
-                        let newMessage = notif.message;
-                        
-                        // Sincroniza título se mudou (caso a lógica anterior tenha falhado ou para reforçar)
-                        if (title !== originalTitle && originalTitle && newMessage.includes(`"${originalTitle}"`)) {
-                          newMessage = newMessage.split(`"${originalTitle}"`).join(`"${title}"`);
-                        }
-
-                        // Sincroniza quantidade na mensagem
-                        if (newMessage.includes('(Qtd:')) {
-                          newMessage = newMessage.replace(/\(Qtd: \d+\)/, `(Qtd: ${newQuantity})`);
-                        } else {
-                          // Se por algum motivo não tinha a quantidade na mensagem, adiciona
-                          newMessage = newMessage.replace(`item "${itemName}"`, `item "${itemName}" (Qtd: ${newQuantity})`);
-                        }
-
-                        // GARANTE que o campo data.quantity seja atualizado para refletir no badge
-                        const updatedData = { 
-                          ...(notif.data || {}), 
-                          quantity: newQuantity 
-                        };
-
-                        return pb.collection('agenda_cap53_notifications').update(notif.id, {
-                          message: newMessage,
-                          data: updatedData
-                        });
-                      }));
-                    }
-                  } catch (notifErr) { 
-                    console.error("Erro ao atualizar notificações relacionadas:", notifErr); 
+                if (Object.keys(updateData).length > 0 || titleChanged) {
+                  // 1. Atualiza o pedido
+                  if (Object.keys(updateData).length > 0) {
+                    console.log('--- UPDATING REQUEST ---', existing.id, updateData);
+                    await pb.collection('agenda_cap53_almac_requests').update(existing.id, updateData);
                   }
+                  
+                  // 2. A sincronização de notificações (quantidade/título) é feita automaticamente
+                  // pelo Hook do PocketBase (onRecordAfterUpdateRequest) para garantir consistência.
+                  console.log('--- SYNC DELEGADO PARA O BACKEND HOOK ---');
                 }
               }
             }
 
             if (createdRequests.length > 0) {
+              console.log('--- CREATING NOTIFICATIONS FOR NEW REQUESTS ---', createdRequests.length);
               // Buscar usuários ALMC e DCA
               const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ 
                 filter: 'role = "ALMC" || role = "DCA"' 
@@ -506,7 +486,14 @@ const CreateEvent: React.FC = () => {
                     .filter((u: any) => u.role === targetRole && u.id !== user?.id)
                     .map((u: any) => u.id);
 
-                  if (targetUserIds.length === 0) return [];
+                  console.log(`--- NOTIFYING ${targetUserIds.length} USERS FOR ITEM ${req.item} (ROLE: ${targetRole}) ---`);
+
+                  if (targetUserIds.length === 0) {
+                    console.log('❌ Nenhum usuário encontrado para notificar');
+                    return [];
+                  }
+
+                  console.log('🎯 Usuários a serem notificados:', targetUserIds);
 
                   return notificationService.bulkCreateNotifications(
                     targetUserIds,
@@ -518,7 +505,13 @@ const CreateEvent: React.FC = () => {
                       event: eventId || undefined,
                       data: { kind: 'almc_item_request', quantity: req.quantity || 1, item: req.item }
                     }
-                  );
+                  ).then(results => {
+                    console.log('✅ bulkCreateNotifications concluído:', results.length, 'notificações criadas');
+                    return results;
+                  }).catch(error => {
+                    console.error('❌ ERRO em bulkCreateNotifications:', error);
+                    throw error;
+                  });
                 })
               );
             }
@@ -541,13 +534,22 @@ const CreateEvent: React.FC = () => {
                       message: `O evento "${title}" solicitou suporte de transporte.`,
                       type: 'transport_request',
                       event: eventId || undefined,
-                      data: { kind: 'transport_request' }
+                      data: { 
+                        kind: 'transport_request',
+                        origem: transporteOrigem,
+                        destino: transporteDestino,
+                        horario_levar: transporteHorarioLevar,
+                        horario_buscar: transporteHorarioBuscar
+                      }
                     }
                   );
                 }
               } catch (err) {
                 console.error('Error creating TRA notifications:', err);
               }
+            } else if (transporteSuporte && isEditing && originalTransporteSuporte) {
+              // Sync de transporte também delegado ao Backend Hook
+              console.log('--- SYNC DE TRANSPORTE DELEGADO PARA O BACKEND HOOK ---');
             } else if (!transporteSuporte && isEditing && originalTransporteSuporte) {
               // Se o suporte de transporte foi removido, cancela notificações pendentes
               try {
@@ -563,6 +565,160 @@ const CreateEvent: React.FC = () => {
             console.error('Falha ao criar/atualizar solicitações de logística:', reqErr);
             alert(`Evento salvo, mas houve erro ao atualizar itens: ${reqErr.message || 'Erro desconhecido'}`);
           }
+      }
+
+      // Função auxiliar para sincronizar notificações no cliente (Fallback para servidor remoto)
+      const clientSideSync = async (evtId: string) => {
+          try {
+              console.log('--- INICIANDO SYNC CLIENT-SIDE (FALLBACK) ---');
+              const notifs = await pb.collection('agenda_cap53_notifications').getFullList({
+                  filter: `event = "${evtId}" && (type = "almc_item_request" || type = "service_request")`
+              });
+              
+              const reqs = await pb.collection('agenda_cap53_almac_requests').getFullList({
+                  filter: `event = "${evtId}"`,
+                  expand: 'item'
+              });
+              
+              console.log(`Encontradas ${notifs.length} notificações e ${reqs.length} pedidos.`);
+              
+              // Mapeia pedidos
+              const reqMap = new Map();
+              reqs.forEach((r: any) => reqMap.set(r.id, r));
+              
+              const updates = [];
+              const processedReqIds = new Set();
+              
+              for (const notif of notifs) {
+                  let shouldUpdate = false;
+                  let data: any = notif.data;
+                  
+                  // Normaliza data
+                  if (typeof data === 'string') {
+                      try { data = JSON.parse(data); } catch(e) {}
+                  }
+                  data = data || {};
+                  
+                  // Tenta achar o pedido correspondente
+                  let req = null;
+                  if (notif.related_request && reqMap.has(notif.related_request)) {
+                      req = reqMap.get(notif.related_request);
+                  } else if (data.item) {
+                      // Fallback por item
+                      req = reqs.find((r: any) => r.item === data.item);
+                  }
+                  
+                  if (req) {
+                      processedReqIds.add(req.id);
+                      const correctQty = req.quantity;
+                      
+                      // Verifica se precisa atualizar data
+                      if (data.quantity !== correctQty) {
+                          data.quantity = correctQty;
+                          shouldUpdate = true;
+                      }
+                      
+                      // Verifica se precisa atualizar mensagem
+                      let msg = notif.message || '';
+                      if (msg.includes('(Qtd:')) {
+                          // Substitui padrão existente
+                          const newMsg = msg.replace(/\(Qtd: \d+\)/, `(Qtd: ${correctQty})`);
+                          if (newMsg !== msg) {
+                              msg = newMsg;
+                              shouldUpdate = true;
+                          }
+                      } else {
+                          const itemName = req.expand?.item?.name || 'Item';
+                          if (!msg.includes(`(Qtd: ${correctQty})` || !msg.includes(itemName))) {
+                              msg = `O evento "${title}" solicitou o item "${itemName}" (Qtd: ${correctQty}).`;
+                              shouldUpdate = true;
+                          }
+                      }
+                      
+                      if (shouldUpdate) {
+                          console.log(`Atualizando notificação ${notif.id} para Qtd: ${correctQty}`);
+                          updates.push(
+                              pb.collection('agenda_cap53_notifications').update(notif.id, {
+                                  message: msg,
+                                  data: data,
+                                  related_request: req.id // Garante vínculo
+                              }).catch(err => console.warn(`Falha ao atualizar notificação ${notif.id}:`, err))
+                          );
+                      }
+                  }
+              }
+
+              // CRIA NOTIFICAÇÕES FALTANTES NO CLIENTE (SE O BACKEND FALHAR)
+              for (const req of reqs) {
+                  if (!processedReqIds.has(req.id)) {
+                      debugLog('CreateEvent', `Criando notificações faltantes para pedido ${req.id} no cliente...`);
+                      const item = req.expand?.item;
+                      if (!item) continue;
+                      
+                      const targetRole = item.category === 'INFORMATICA' ? 'DCA' : 'ALMC';
+                      debugLog('CreateEvent', `Target role para item ${item.name}: ${targetRole}`);
+                      
+                      try {
+                          const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
+                              filter: `role = "${targetRole}"`
+                          });
+                          
+                          debugLog('CreateEvent', `Usuários encontrados para ${targetRole}:`, sectorUsers.length);
+                          
+                          for (const u of sectorUsers) {
+                              // Removido o skip do próprio criador para garantir que ele veja a notificação na lista
+                              // se ele for do setor responsável (ALMC/DCA)
+                              
+                              debugLog('CreateEvent', `Criando notificação para usuário ${u.id} (${u.name || u.email})`);
+                              
+                              updates.push(
+                                  pb.collection('agenda_cap53_notifications').create({
+                                      user: u.id,
+                                      title: 'Solicitação de Item',
+                                      message: `O evento "${title}" solicitou o item "${item.name}" (Qtd: ${req.quantity}).`,
+                                      type: 'almc_item_request',
+                                      read: false,
+                                      event: evtId,
+                                      related_request: req.id,
+                                      invite_status: 'pending',
+                                      acknowledged: false,
+                                      data: { 
+                                          kind: 'almc_item_request', 
+                                          quantity: req.quantity, 
+                                          item: item.id,
+                                          event_title: title
+                                      }
+                                  }).catch(err => console.warn(`Falha ao criar notificação para ${u.id}:`, err))
+                              );
+                          }
+                      } catch (err) {
+                          console.error(`Erro ao buscar usuários ${targetRole} para sync cliente:`, err);
+                      }
+                  }
+              }
+              
+              await Promise.all(updates);
+              console.log('--- SYNC CLIENT-SIDE CONCLUÍDO ---');
+          } catch (err) {
+              console.error('Erro no sync client-side:', err);
+          }
+      };
+
+      if (isEditing) {
+        // Tenta endpoint do servidor primeiro, se falhar (404), usa fallback cliente
+        try {
+           console.log('--- TENTANDO SYNC VIA SERVIDOR ---');
+           const syncRes = await pb.send('/api/sync_event_notifications', {
+              method: 'POST',
+              body: { event_id: eventId }
+           });
+           console.log('--- SYNC VIA SERVIDOR SUCESSO ---', syncRes);
+        } catch(syncErr: any) {
+           console.warn('Sync via servidor falhou (endpoint não existe ou erro), usando fallback local.', syncErr.status);
+           if (syncErr.status === 404 || syncErr.status === 0) {
+               await clientSideSync(eventId);
+           }
+        }
       }
 
       await pb.collection('agenda_audit_logs').create({
