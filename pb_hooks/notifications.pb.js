@@ -32,7 +32,7 @@ onRecordAfterUpdateRequest((e) => {
                             creatorId = eventRecord.getString("user");
                         }
                     } catch (evErr) {
-                        // Silencioso em produção ou log mínimo
+                        // Silencioso em produção
                     }
                 }
             }
@@ -45,10 +45,38 @@ onRecordAfterUpdateRequest((e) => {
                     const action = status === 'approved' ? 'Aprovada' : 'Rejeitada';
                     const icon = status === 'approved' ? 'check_circle' : 'cancel';
                     const color = status === 'approved' ? 'success' : 'error';
+                    
+                    // Tenta obter a quantidade (quantity ou passengers)
+                    // Se não existir, retorna 0 (valor default)
+                    let quantity = record.getInt("quantity");
+                    if (quantity === 0) {
+                        // Tenta ler passengers apenas se quantity for 0, caso exista na coleção
+                        try {
+                            quantity = record.getInt("passengers");
+                        } catch (errPass) {
+                            // Ignora erro se o campo não existir
+                        }
+                    }
+
+                    // Monta a mensagem
+                    let message = `Sua solicitação para ${config.label}`;
+                    
+                    if (quantity > 0) {
+                        message += ` (Qtd: ${quantity})`;
+                    }
+                    
+                    message += ` foi ${status === 'approved' ? 'aprovada' : 'rejeitada'}.`;
+                    
+                    if (status === 'rejected') {
+                        const justification = record.getString("justification");
+                        if (justification) {
+                            message += ` Motivo: ${justification}`;
+                        }
+                    }
 
                     notification.set("user", creatorId);
                     notification.set("title", `Solicitação ${config.label} ${action}`);
-                    notification.set("message", `Sua solicitação para ${config.label} foi ${status === 'approved' ? 'aprovada' : 'rejeitada'}.`);
+                    notification.set("message", message);
                     notification.set("type", config.decisionType);
                     notification.set("read", false);
                     notification.set("related_request", record.id);
