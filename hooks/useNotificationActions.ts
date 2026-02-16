@@ -63,10 +63,20 @@ export const useNotificationActions = (
     }
   };
 
-  const handleDecision = async (notification: NotificationRecord, action: 'accepted' | 'rejected' | 'approved') => {
-    if (!user?.id) return;
+  const clearAllNotifications = async () => {
+    try {
+        await pb.send('/api/notifications/clear_all', { method: 'POST' });
+        // Refresh to get back virtual notifications but clear real ones
+        await refreshNotifications();
+        alert('Todas as notificações foram removidas.');
+    } catch (error: any) {
+        console.error('Error clearing all notifications:', error);
+        alert('Erro ao limpar notificações: ' + (error.message || 'Erro desconhecido'));
+    }
+  };
 
-    console.log(`Processing decision for notification ${notification.id}: ${action}`);
+  const handleDecision = async (notification: NotificationRecord, action: 'accepted' | 'rejected' | 'approved', justification?: string) => {
+    if (!user?.id) return;
 
     try {
       const updatePayload: any = { 
@@ -176,24 +186,17 @@ export const useNotificationActions = (
         if (requestId) {
           const status = action === 'approved' || action === 'accepted' ? 'approved' : 'rejected';
           
-          console.log(`Updating request ${requestId} to status: ${status}`);
-          await pb.collection('agenda_cap53_almac_requests').update(requestId, {
-            status: status
-          });
-
-          // Explicitly call the backend notification endpoint to ensure delivery
           try {
-             await pb.send('/api/notify_decision', {
-                 method: 'POST',
-                 body: {
-                     request_id: requestId,
-                     status: status,
-                     justification: notification.data?.justification || '' // Justification might need to be passed from UI
-                 }
-             });
-             console.log('Notification endpoint called successfully');
-          } catch (apiErr) {
-             console.error('Failed to call notification endpoint:', apiErr);
+              const payload: any = { status: status };
+              // Ensure justification is always sent, even if empty string, to clear previous values or set new ones
+              payload.justification = justification || '';
+              
+              // Perform the update
+              await pb.collection('agenda_cap53_almac_requests').update(requestId, payload, { requestKey: null });
+              
+          } catch (updateError) {
+              console.error('Error updating ALMC request:', updateError);
+              throw updateError;
           }
         }
       }
@@ -202,22 +205,14 @@ export const useNotificationActions = (
       if (notification.type === 'transport_request') {
         const eventId = notification.event;
         if (eventId) {
-          const status = action === 'approved' || action === 'accepted' ? 'approved' : 'rejected';
+          // Transporte usa 'confirmed' ao invés de 'approved'
+          const status = action === 'approved' || action === 'accepted' ? 'confirmed' : 'rejected';
           
-          // Use the dedicated transport endpoint if possible, or update directly + notify endpoint
-          // For now, let's stick to the direct update pattern but we could use /api/transport_decision
-          await pb.collection('agenda_cap53_eventos').update(eventId, {
-            transporte_status: status
-          });
-          
-          // Call transport decision endpoint or generic notify endpoint?
-          // The generic notify endpoint expects request_id which transport doesn't have in the same way (it uses event_id)
-          // But we already have /api/transport_decision in backend. Let's use it if we were refactoring fully,
-          // but here we just want to ensure notification.
-          
-          // Actually, transport logic in backend hook (notifications.pb.js) handles transport notifications via event update.
-          // Let's rely on that for now as the user complained specifically about ITEMS (ALMC/DCA).
-          // If transport also fails, we should use /api/transport_decision here too.
+          const payload: any = { transporte_status: status };
+          // Ensure justification is always sent
+          payload.transporte_justification = justification || '';
+
+          await pb.collection('agenda_cap53_eventos').update(eventId, payload, { requestKey: null });
         }
       }
 
@@ -258,6 +253,7 @@ export const useNotificationActions = (
     markAllAsRead,
     deleteNotification,
     clearHistory,
+    clearAllNotifications,
     handleDecision
   };
 };

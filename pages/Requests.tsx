@@ -351,74 +351,7 @@ const Requests: React.FC = () => {
                 justification: action === 'rejected' ? justification : '',
             });
 
-            // Notify the requester and event creator about the decision
-            const requesterId = notification.expand?.related_request?.created_by || notification.expand?.related_request?.expand?.created_by?.id;
-            const eventCreatorId = notification.expand?.event?.user || notification.event?.user;
-            
-            if (requesterId || eventCreatorId) {
-                const itemName = notification.expand?.related_request?.expand?.item?.name || 'Item';
-                const eventTitle = notification.expand?.event?.title || 'Evento';
-                const quantity = notification.expand?.related_request?.quantity || 1;
-                const eventId = notification.event || notification.expand?.event?.id;
-                
-                const commonData = {
-                    kind: 'almc_item_decision',
-                    action: action,
-                    quantity: quantity,
-                    rejected_by: action === 'rejected' ? user.id : undefined,
-                    rejected_by_name: action === 'rejected' ? user.name || user.email : undefined,
-                    approved_by: action === 'approved' ? user.id : undefined,
-                    approved_by_name: action === 'approved' ? user.name || user.email : undefined
-                };
-
-                // 1. Notify Requester
-                if (requesterId && requesterId !== user.id) {
-                    let message = `Sua solicitação do item "${itemName}" (Qtd: ${quantity}) para o evento "${eventTitle}" foi ${action === 'approved' ? 'aprovada' : 'reprovada'}.`;
-                    if (action === 'rejected' && justification) {
-                        message += ` Motivo: ${justification}`;
-                    }
-
-                    try {
-                        await pb.collection('agenda_cap53_notifications').create({
-                            user: requesterId,
-                            title: `Item ${action === 'approved' ? 'Aprovado' : 'Reprovado'}`,
-                            message: message,
-                            type: action === 'rejected' ? 'refusal' : 'system',
-                            read: false,
-                            event: eventId,
-                            related_request: requestId,
-                            data: commonData,
-                            acknowledged: false
-                        });
-                    } catch (notifErr) {
-                        console.error('Error notifying requester about ALMC decision:', notifErr);
-                    }
-                }
-
-                // 2. Notify Event Creator (if different from requester and user)
-                if (eventCreatorId && eventCreatorId !== user.id && eventCreatorId !== requesterId) {
-                    let message = `O pedido do item "${itemName}" (Qtd: ${quantity}) para o evento "${eventTitle}" foi ${action === 'approved' ? 'aprovado' : 'reprovada'}.`;
-                    if (action === 'rejected' && justification) {
-                        message += ` Motivo: ${justification}`;
-                    }
-
-                    try {
-                        await pb.collection('agenda_cap53_notifications').create({
-                            user: eventCreatorId,
-                            title: `Ciência: Item ${action === 'approved' ? 'Aprovado' : 'Reprovado'}`,
-                            message: message,
-                            type: action === 'rejected' ? 'refusal' : 'system',
-                            read: false,
-                            event: eventId,
-                            related_request: requestId,
-                            data: commonData,
-                            acknowledged: false
-                        });
-                    } catch (notifErr) {
-                        console.error('Error notifying event creator about ALMC decision:', notifErr);
-                    }
-                }
-            }
+            // Notification logic is now handled by backend hooks (notifications.pb.js)
 
             await pb.collection('agenda_cap53_notifications').update(notification.id, { read: true });
 

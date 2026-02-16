@@ -7,6 +7,8 @@ export type NotificationType =
   | 'almc_item_request'
   | 'transport_request'
   | 'event_participation_request'
+  | 'request_decision'
+  | 'transport_decision'
   | 'info'
   | 'refusal'
   | 'acknowledgment'

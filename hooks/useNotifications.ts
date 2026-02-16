@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { NotificationRecord } from '../lib/notifications';
-import { debugLog } from '../src/lib/debug';
 import { useNotificationActions } from './useNotificationActions';
 
 export const useNotifications = () => {
@@ -15,13 +14,15 @@ export const useNotifications = () => {
     if (!user?.id) return;
 
     try {
-      debugLog('useNotifications', 'Iniciando fetch para user:', user.id);
-      
+      // Execute requests independently to prevent one failure from breaking all
       const [notifResult, almcResult, traResult] = await Promise.all([
         pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
           filter: `user = "${user.id}"`,
           sort: '-created',
           expand: 'event,related_request,related_request.item,related_request.created_by,event.user'
+        }).catch(err => {
+          console.error('Error fetching notifications list:', err);
+          return { items: [], totalItems: 0 };
         }),
         (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'ADMIN') 
           ? pb.collection('agenda_cap53_almac_requests').getList(1, 50, { 
@@ -30,11 +31,22 @@ export const useNotifications = () => {
                 user.role === 'DCA' ? ' && item.category = "INFORMATICA"' :
                 ''
               }`,
-              expand: 'event,item,created_by,event.user'
+              expand: 'event,item,created_by,event.user',
+              $autoCancel: false // Disable auto-cancel to prevent abort errors during rapid updates
+            }).catch(err => {
+              console.error('Error fetching almac requests:', err);
+              return { items: [], totalItems: 0 };
             })
           : Promise.resolve({ items: [], totalItems: 0 }),
         (user.role === 'TRA' || user.role === 'ADMIN')
-          ? pb.collection('agenda_cap53_eventos').getList(1, 50, { filter: 'transporte_suporte = true && transporte_status = "pending"', expand: 'user' })
+          ? pb.collection('agenda_cap53_eventos').getList(1, 50, { 
+              filter: 'transporte_suporte = true && transporte_status = "pending"', 
+              expand: 'user',
+              $autoCancel: false
+            }).catch(err => {
+              console.error('Error fetching transport requests:', err);
+              return { items: [], totalItems: 0 };
+            })
           : Promise.resolve({ items: [], totalItems: 0 })
       ]);
 
@@ -60,7 +72,8 @@ export const useNotifications = () => {
           data: { 
             quantity: req.quantity, 
             item_name: req.expand?.item?.name,
-            event_title: req.expand?.event?.title
+            event_title: req.expand?.event?.title,
+            justification: req.justification
           },
           acknowledged: false,
           expand: req.expand
@@ -87,7 +100,8 @@ export const useNotifications = () => {
             event_title: evt.title,
             horario_levar: evt.transporte_horario_levar,
             horario_buscar: evt.transporte_horario_buscar,
-            qtd_pessoas: evt.transporte_qtd_pessoas
+            qtd_pessoas: evt.transporte_qtd_pessoas,
+            justification: evt.transporte_justification
           },
           acknowledged: false,
           expand: { event: evt }
@@ -99,13 +113,6 @@ export const useNotifications = () => {
         ...traNotifications
       ].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
 
-      debugLog('useNotifications', 'Notificações encontradas:', allNotifications.length);
-      
-      // Salvar no localStorage para debug
-      if (import.meta.env.DEV) {
-        localStorage.setItem('debug_notifications', JSON.stringify(allNotifications));
-      }
-      
       setNotifications(allNotifications);
       
       // The badge count is the sum of unread system notifications + pending administrative requests
@@ -113,13 +120,6 @@ export const useNotifications = () => {
       const almcCount = almcResult?.items?.length || 0;
       const traCount = traResult?.items?.length || 0;
       setUnreadCount(systemUnread + almcCount + traCount);
-      
-      debugLog('useNotifications', 'Unread count calculado:', {
-        system: systemUnread,
-        almc: almcCount,
-        tra: traCount,
-        total: systemUnread + almcCount + traCount
-      });
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -133,6 +133,7 @@ export const useNotifications = () => {
     markAllAsRead,
     deleteNotification,
     clearHistory,
+    clearAllNotifications,
     handleDecision
   } = useNotificationActions(notifications, setNotifications, setUnreadCount, fetchNotifications);
 
@@ -145,23 +146,11 @@ export const useNotifications = () => {
       const unsubs: (() => void)[] = [];
       
       const u1 = await pb.collection('agenda_cap53_notifications').subscribe<NotificationRecord>('*', (e) => {
+         // Verifica se a notificação é para o usuário atual
          if (e.record.user === user.id) {
-           if (e.action === 'create') {
-             // Quando uma nova notificação chega, adicionamos ao início
-             setNotifications(prev => [e.record, ...prev]);
-             if (!e.record.read) setUnreadCount(prev => prev + 1);
-           } else if (e.action === 'update') {
-             // Quando uma notificação é atualizada, mesclamos com a existente para preservar o 'expand'
-             setNotifications(prev => prev.map(n => 
-               n.id === e.record.id ? { ...n, ...e.record } : n
-             ));
-             
-             // Recalcula o unreadCount de forma mais precisa
-             fetchNotifications();
-           } else if (e.action === 'delete') {
-             setNotifications(prev => prev.filter(n => n.id !== e.record.id));
-             fetchNotifications();
-           }
+           // Sempre recarrega a lista completa para garantir que temos os dados expandidos (relacionamentos)
+           // O evento realtime 'create'/'update' não traz os campos expandidos, o que causava notificações "vazias" ou erros
+           fetchNotifications();
          }
        });
       unsubs.push(u1);
@@ -200,6 +189,7 @@ export const useNotifications = () => {
     markAllAsRead,
     deleteNotification,
     clearHistory,
+    clearAllNotifications,
     handleDecision,
     refresh: fetchNotifications
   };

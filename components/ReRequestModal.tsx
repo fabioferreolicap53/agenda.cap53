@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { NotificationRecord } from '../lib/notifications';
 import { pb } from '../lib/pocketbase';
+import { AlmacRequest, EventRecord } from '../lib/types';
 
 interface ReRequestModalProps {
   notification?: NotificationRecord;
-  request?: any; // Direct request object (for items)
-  event?: any;   // Direct event object (for transport)
+  request?: AlmacRequest; // Direct request object (for items)
+  event?: EventRecord;   // Direct event object (for transport)
   type?: 'item' | 'transport';
   onClose: () => void;
   onSuccess: () => void;
@@ -25,10 +26,10 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
     initialData = typeof notification.data === 'string' 
       ? JSON.parse(notification.data) 
       : (notification.data || {});
-    isItemRequest = initialData.kind === 'almc_item_decision';
-    isTransportRequest = initialData.kind === 'transport_decision';
-    requestId = notification.related_request;
-    eventId = notification.event;
+    isItemRequest = initialData.kind === 'almc_item_decision' || type === 'item';
+    isTransportRequest = initialData.kind === 'transport_decision' || type === 'transport';
+    requestId = notification.related_request || '';
+    eventId = notification.event || '';
   } else if (request && type === 'item') {
     isItemRequest = true;
     requestId = request.id;
@@ -49,6 +50,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
   }
 
   const [quantity, setQuantity] = useState<number>(initialData.quantity || 1);
+  const [observation, setObservation] = useState<string>('');
   const [transportData, setTransportData] = useState({
     destino: initialData.destination || '',
     horario_levar: initialData.horario_levar || '',
@@ -67,7 +69,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
         await pb.collection('agenda_cap53_almac_requests').update(requestId, {
           status: 'pending',
           quantity: quantity,
-          justification: null
+          justification: observation || null
         });
       } else if (isTransportRequest) {
         if (!eventId) throw new Error('ID do evento não encontrado.');
@@ -78,7 +80,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
           transporte_horario_levar: transportData.horario_levar,
           transporte_horario_buscar: transportData.horario_buscar,
           transporte_qtd_pessoas: transportData.qtd_pessoas,
-          transporte_justification: null
+          transporte_justification: observation || null
         });
       }
 
@@ -179,6 +181,19 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
               </div>
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-bold text-slate-700 mb-1">
+              Observação <span className="text-slate-400 font-normal">(Opcional)</span>
+            </label>
+            <textarea
+              value={observation}
+              onChange={e => setObservation(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+              rows={3}
+              placeholder="Adicione uma observação para o responsável..."
+            />
+          </div>
 
           <div className="flex gap-3 pt-4">
             <button

@@ -4,18 +4,30 @@ import { useAuth } from '../components/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { debugLog } from '../src/lib/debug';
 import ReRequestModal from '../components/ReRequestModal';
+import RefusalModal from '../components/RefusalModal';
 
 type FilterType = 'all' | 'unread' | 'actions';
 
 const Notifications: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification, clearHistory, handleDecision, refresh } = useNotifications();
+  const {
+    notifications,
+    loading,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    clearHistory,
+    clearAllNotifications,
+    handleDecision,
+    refresh
+  } = useNotifications();
+  
   const [filter, setFilter] = useState<FilterType>('all');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [reRequestNotification, setReRequestNotification] = useState<any | null>(null);
+  const [rejectingNotification, setRejectingNotification] = useState<any | null>(null);
 
   const getData = (n: any) => {
     if (!n.data) return {};
@@ -23,26 +35,16 @@ const Notifications: React.FC = () => {
   };
 
   const filteredNotifications = useMemo(() => {
-    debugLog('Notifications', 'Filtrando notificações', {
-      total: notifications.length,
-      filter: filter
-    });
-    
     switch (filter) {
       case 'unread':
-        const unread = notifications.filter(n => !n.read);
-        debugLog('Notifications', 'Filtro unread:', unread.length);
-        return unread;
+        return notifications.filter(n => !n.read);
       case 'actions':
-        const actions = notifications.filter(n => {
+        return notifications.filter(n => {
           const data = getData(n);
           return n.invite_status === 'pending' || 
           (n.type === 'refusal' && (data.kind === 'almc_item_decision' || data.kind === 'transport_decision'));
         });
-        debugLog('Notifications', 'Filtro actions:', actions.length);
-        return actions;
       default:
-        debugLog('Notifications', 'Filtro all:', notifications.length);
         return notifications;
     }
   }, [notifications, filter]);
@@ -55,6 +57,8 @@ const Notifications: React.FC = () => {
       case 'service_request': return 'settings_suggest';
       case 'almc_item_request': return 'inventory_2';
       case 'transport_request': return 'local_shipping';
+      case 'request_decision': return 'fact_check';
+      case 'transport_decision': return 'commute';
       case 'refusal': return 'block';
       case 'acknowledgment': return 'check_circle';
       case 'system': return 'info';
@@ -62,21 +66,30 @@ const Notifications: React.FC = () => {
     }
   };
 
-  const getIconColor = (type: string) => {
+  const getIconStyles = (type: string) => {
     switch (type) {
-      case 'event_invite': return 'text-blue-500 bg-blue-50';
-      case 'event_participation_request': return 'text-purple-500 bg-purple-50';
-      case 'cancellation': return 'text-red-500 bg-red-50';
-      case 'service_request': return 'text-amber-500 bg-amber-50';
-      case 'almc_item_request': return 'text-indigo-500 bg-indigo-50';
+      case 'event_invite': return 'text-blue-600 bg-blue-50';
+      case 'event_participation_request': return 'text-purple-600 bg-purple-50';
+      case 'cancellation': return 'text-red-600 bg-red-50';
+      case 'service_request': return 'text-amber-600 bg-amber-50';
+      case 'almc_item_request': return 'text-indigo-600 bg-indigo-50';
+      case 'transport_request': return 'text-cyan-600 bg-cyan-50';
+      case 'request_decision': return 'text-teal-600 bg-teal-50';
+      case 'transport_decision': return 'text-teal-600 bg-teal-50';
       case 'refusal': return 'text-red-600 bg-red-50';
-      case 'acknowledgment': return 'text-green-500 bg-green-50';
-      case 'system': return 'text-slate-500 bg-slate-50';
-      default: return 'text-primary bg-primary/5';
+      case 'acknowledgment': return 'text-emerald-600 bg-emerald-50';
+      case 'system': return 'text-slate-600 bg-slate-100';
+      default: return 'text-primary bg-primary/10';
     }
   };
 
   const onHandleAction = async (notification: any, action: 'accepted' | 'rejected' | 'approved') => {
+    // If rejecting a request (item or transport), show modal
+    if (action === 'rejected' && (notification.type === 'almc_item_request' || notification.type === 'transport_request')) {
+        setRejectingNotification(notification);
+        return;
+    }
+
     setProcessingId(notification.id);
     try {
       await handleDecision(notification, action);
@@ -87,139 +100,169 @@ const Notifications: React.FC = () => {
     }
   };
 
+  const onConfirmRejection = async (justification: string) => {
+    if (!rejectingNotification) return;
+
+    setProcessingId(rejectingNotification.id);
+    try {
+        await handleDecision(rejectingNotification, 'rejected', justification);
+        setRejectingNotification(null);
+    } catch (error) {
+        console.error('Error rejecting notification:', error);
+        alert('Erro ao processar recusa. Tente novamente.');
+    } finally {
+        setProcessingId(null);
+    }
+  };
+
   const onClearHistory = async () => {
-    if (confirm('Deseja limpar todo o histórico de notificações lidas?')) {
+    if (confirm('Deseja limpar as notificações lidas?')) {
       await clearHistory();
+    }
+  };
+
+  const onClearAll = async () => {
+    if (confirm('ATENÇÃO: Isso apagará TODAS as notificações do sistema. Deseja continuar?')) {
+      await clearAllNotifications();
     }
   };
 
   const handleViewEvent = (notification: any) => {
     if (!notification.event) return;
-    
-    // Tenta pegar a data do evento do expand (PocketBase)
     const eventData = notification.expand?.event;
     const eventDate = eventData?.date_start ? new Date(eventData.date_start) : new Date();
     const dateStr = eventDate.toISOString().split('T')[0];
-    
     navigate(`/calendar?date=${dateStr}&view=agenda&openChat=${notification.event}`);
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4 p-4 animate-pulse max-w-4xl mx-auto">
-        {[1, 2, 3, 4, 5].map(i => (
-          <div key={i} className="h-24 bg-slate-100 rounded-2xl border border-slate-200"></div>
-          ))}
+      <div className="max-w-3xl mx-auto p-6 space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-24 bg-slate-50 rounded-xl animate-pulse"></div>
+        ))}
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 pb-20">
-      {/* Header com Filtros */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 bg-slate-50/80 backdrop-blur-md py-4 z-10">
-        <div className="flex items-center gap-1 p-1 bg-white border border-slate-200 rounded-xl shadow-sm self-start">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'all' ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            Todas
-          </button>
-          <button
-            onClick={() => setFilter('unread')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'unread' ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            Não lidas
-          </button>
-          <button
-            onClick={() => setFilter('actions')}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filter === 'actions' ? 'bg-primary text-white shadow-md' : 'text-slate-500 hover:text-slate-800'}`}
-          >
-            Pendentes
-          </button>
+    <div className="max-w-3xl mx-auto pb-20 px-4 md:px-0 font-sans">
+      
+      {/* Header Minimalista */}
+      <div className="flex flex-col gap-6 mb-8 pt-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Notificações</h1>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={refresh}
+              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+              title="Atualizar"
+            >
+              <span className="material-symbols-outlined text-[20px]">refresh</span>
+            </button>
+            
+            {user?.role === 'ADMIN' && (
+              <button
+                onClick={onClearAll}
+                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all"
+                title="Zerar Tudo (Admin)"
+              >
+                <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+              </button>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {import.meta.env.DEV && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-1">
+          {/* Tabs Clean */}
+          <div className="flex items-center gap-6">
             <button
-              onClick={() => {
-                const notifications = JSON.parse(localStorage.getItem('debug_notifications') || '[]');
-                console.table(notifications);
-                debugLog('Notifications', 'Debug ativado:', notifications);
-              }}
-              className="flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
-              title="Debug notificações"
+              onClick={() => setFilter('all')}
+              className={`pb-3 text-sm font-medium transition-all relative ${
+                filter === 'all' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              }`}
             >
-              <span className="material-symbols-outlined text-sm">bug_report</span>
+              Todas
+              {filter === 'all' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
             </button>
-          )}
-          <button
-            onClick={markAllAsRead}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-600 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
-          >
-            <span className="material-symbols-outlined text-sm">done_all</span>
-            Lidas
-          </button>
-          <button
-            onClick={onClearHistory}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-          >
-            <span className="material-symbols-outlined text-sm">delete_sweep</span>
-            Limpar Histórico
-          </button>
-          <button
-            onClick={refresh}
-            className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
-            title="Atualizar"
-          >
-            <span className="material-symbols-outlined text-[20px]">refresh</span>
-          </button>
+            <button
+              onClick={() => setFilter('unread')}
+              className={`pb-3 text-sm font-medium transition-all relative ${
+                filter === 'unread' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Não lidas
+              {filter === 'unread' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
+            </button>
+            <button
+              onClick={() => setFilter('actions')}
+              className={`pb-3 text-sm font-medium transition-all relative ${
+                filter === 'actions' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Pendentes
+              {filter === 'actions' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
+            </button>
+          </div>
+
+          {/* Ações Secundárias */}
+          <div className="flex items-center gap-3">
+             <button
+              onClick={markAllAsRead}
+              className="text-xs font-medium text-slate-500 hover:text-primary transition-colors flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">done_all</span>
+              Marcar lidas
+            </button>
+            <div className="h-3 w-px bg-slate-200"></div>
+            <button
+              onClick={onClearHistory}
+              className="text-xs font-medium text-slate-500 hover:text-red-500 transition-colors flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">delete</span>
+              Limpar histórico
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Lista de Notificações */}
-      <div className="space-y-3">
+      {/* Lista */}
+      <div className="space-y-4">
         {filteredNotifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-            <div className="size-20 rounded-full bg-slate-100 flex items-center justify-center">
-              <span className="material-symbols-outlined text-slate-300 text-4xl">notifications_off</span>
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
+              <span className="material-symbols-outlined text-slate-300 text-3xl">notifications_off</span>
             </div>
-            <div>
-              <h3 className="text-slate-900 font-bold">Nenhuma notificação</h3>
-              <p className="text-slate-500 text-sm">Tudo limpo por aqui! Você não tem notificações {filter !== 'all' ? 'neste filtro' : ''}.</p>
-              {import.meta.env.DEV && (
-                <p className="text-slate-400 text-xs mt-2">
-                  Debug: Total={notifications.length}, Filtrado={filteredNotifications.length}, Filtro={filter}
-                </p>
-              )}
-            </div>
+            <h3 className="text-slate-900 font-semibold mb-1">Tudo limpo</h3>
+            <p className="text-slate-500 text-sm">Nenhuma notificação encontrada.</p>
           </div>
         ) : (
           filteredNotifications.map((notification) => (
             <div
               key={notification.id}
-              className={`group relative flex items-start gap-4 p-4 rounded-2xl border transition-all duration-300 ${
+              className={`group relative flex gap-4 p-5 rounded-xl border transition-all duration-200 ${
                 notification.read 
-                  ? 'bg-white/50 border-slate-100 opacity-80' 
-                  : 'bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-primary/20'
+                  ? 'bg-white border-transparent hover:border-slate-200' 
+                  : 'bg-white border-slate-200 shadow-sm'
               }`}
             >
               {!notification.read && (
-                <div className="absolute top-4 right-4 size-2 bg-primary rounded-full animate-pulse shadow-sm shadow-primary/40"></div>
+                <div className="absolute top-5 right-5 size-2 bg-primary rounded-full ring-4 ring-primary/10"></div>
               )}
 
-              <div className={`flex-shrink-0 size-12 rounded-xl flex items-center justify-center ${getIconColor(notification.type)}`}>
-                <span className="material-symbols-outlined text-[24px]">
+              <div className={`flex-shrink-0 size-10 rounded-full flex items-center justify-center mt-1 ${getIconStyles(notification.type)}`}>
+                <span className="material-symbols-outlined text-[20px]">
                   {getIcon(notification.type)}
                 </span>
               </div>
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <h4 className={`text-sm font-bold truncate ${notification.read ? 'text-slate-700' : 'text-slate-900'}`}>
+              <div className="flex-1 min-w-0 pt-0.5">
+                <div className="flex items-center justify-between gap-2 mb-1 pr-6">
+                  <h4 className={`text-sm font-semibold ${notification.read ? 'text-slate-700' : 'text-slate-900'}`}>
                     {notification.title}
                   </h4>
-                  <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                  <span className="text-[11px] text-slate-400 whitespace-nowrap">
                     {formatDistanceToNow(new Date(notification.created), { addSuffix: true, locale: ptBR })}
                   </span>
                 </div>
@@ -228,126 +271,97 @@ const Notifications: React.FC = () => {
                   {notification.message}
                 </p>
 
-                {/* Badge de Quantidade se disponível no data */}
-                {getData(notification).quantity !== undefined && (
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-md border border-indigo-100 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px]">inventory_2</span>
-                      Quantidade: {getData(notification).quantity}
+                {/* Metadata Tags */}
+                <div className="flex flex-wrap gap-2">
+                  {getData(notification).quantity !== undefined && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 text-[11px] font-medium rounded-md">
+                       Qtd: {getData(notification).quantity}
                     </span>
-                  </div>
+                  )}
+                  {notification.type === 'transport_request' && getData(notification) && (
+                     <>
+                        {getData(notification).horario_levar && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 text-[11px] font-medium rounded-md">
+                                Ida: {getData(notification).horario_levar}
+                            </span>
+                        )}
+                     </>
+                  )}
+                </div>
+
+                {/* Justification/Observation */}
+                {getData(notification).justification && (
+                   <div className="mt-2 p-2 bg-yellow-50 text-yellow-800 text-xs rounded-md border border-yellow-100 flex items-start gap-1">
+                      <span className="material-symbols-outlined text-[14px] mt-0.5">sticky_note_2</span>
+                      <span>
+                        <strong className="font-semibold">Observação:</strong> {getData(notification).justification}
+                      </span>
+                   </div>
                 )}
 
-                {/* Detalhes de Transporte se disponível no data */}
-                {notification.type === 'transport_request' && getData(notification) && (
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {getData(notification).origem && (
-                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">location_on</span>
-                        De: {getData(notification).origem}
-                      </span>
-                    )}
-                    {getData(notification).destino && (
-                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">near_me</span>
-                        Para: {getData(notification).destino}
-                      </span>
-                    )}
-                    {getData(notification).horario_levar && (
-                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">schedule</span>
-                        Ida: {getData(notification).horario_levar}
-                      </span>
-                    )}
-                    {getData(notification).horario_buscar && (
-                      <span className="px-2 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-md border border-slate-100 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">history</span>
-                        Volta: {getData(notification).horario_buscar}
-                      </span>
-                    )}
-                  </div>
-                )}
+                {/* Actions Area */}
+                <div className="mt-3 flex items-center gap-3">
+                   {/* Decision Buttons */}
+                   {notification.invite_status === 'pending' && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        disabled={processingId === notification.id}
+                        onClick={() => onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'approved' : 'accepted')}
+                        className="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
+                      >
+                         {(notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'Aprovar' : 'Aceitar'}
+                      </button>
+                      <button
+                        disabled={processingId === notification.id}
+                        onClick={() => onHandleAction(notification, 'rejected')}
+                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-all disabled:opacity-50"
+                      >
+                        Recusar
+                      </button>
+                    </div>
+                  )}
 
-                {/* Ações Específicas */}
-                {notification.invite_status === 'pending' && (
-                  <div className="flex items-center gap-2 mt-4">
-                    <button
-                      disabled={processingId === notification.id}
-                      onClick={() => onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'approved' : 'accepted')}
-                      className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-hover transition-all disabled:opacity-50 flex items-center gap-2 shadow-sm shadow-primary/20"
-                    >
-                      {processingId === notification.id ? (
-                        <div className="size-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      ) : (
-                        <span className="material-symbols-outlined text-sm">check</span>
-                      )}
-                      {(notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'Aprovar' : 'Aceitar'}
-                    </button>
-                    <button
-                      disabled={processingId === notification.id}
-                      onClick={() => onHandleAction(notification, 'rejected')}
-                      className="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all disabled:opacity-50"
-                    >
-                      Recusar
-                    </button>
-                  </div>
-                )}
-
-                {/* Botão de Tentar Novamente para Recusas */}
-                {notification.type === 'refusal' && (getData(notification).kind === 'almc_item_decision' || getData(notification).kind === 'transport_decision') && (
-                  <div className="flex items-center gap-2 mt-4">
+                  {/* Re-request Button */}
+                  {(
+                    (notification.type === 'refusal' && (getData(notification).kind === 'almc_item_decision' || getData(notification).kind === 'transport_decision')) ||
+                    (notification.type === 'request_decision' && notification.title.toLowerCase().includes('rejeitada')) ||
+                    (notification.type === 'transport_decision' && notification.title.toLowerCase().includes('rejeitad'))
+                  ) && (
                     <button
                       onClick={() => setReRequestNotification(notification)}
-                      className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary-hover transition-all flex items-center gap-2 shadow-sm shadow-primary/20"
+                      className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-200 transition-all"
                     >
-                      <span className="material-symbols-outlined text-sm">restart_alt</span>
                       Solicitar Novamente
                     </button>
-                  </div>
-                )}
+                  )}
 
-                {/* Status Badge para decisões já tomadas */}
-                {notification.invite_status && notification.invite_status !== 'pending' && (
-                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold mt-4 ${
-                    notification.invite_status === 'accepted' 
-                      ? 'bg-green-50 text-green-600 border border-green-100' 
-                      : 'bg-red-50 text-red-600 border border-red-100'
-                  }`}>
-                    <span className="material-symbols-outlined text-[16px]">
-                      {notification.invite_status === 'accepted' ? 'verified' : 'block'}
-                    </span>
-                    {notification.invite_status === 'accepted' 
-                      ? (notification.type === 'almc_item_request' || notification.type === 'transport_request' ? 'Aprovado' : 'Aceito')
-                      : 'Recusado'
-                    }
-                  </div>
-                )}
+                  {/* Status Badge */}
+                   {notification.invite_status && notification.invite_status !== 'pending' && (
+                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${
+                        notification.invite_status === 'accepted' ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
+                      }`}>
+                         {notification.invite_status === 'accepted' ? 'Aceito' : 'Recusado'}
+                      </span>
+                   )}
+                </div>
 
-                <div className="flex items-center gap-4 mt-4 pt-3 border-t border-slate-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Hover Actions */}
+                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50 opacity-0 group-hover:opacity-100 transition-opacity">
                   {!notification.read && (
-                    <button
-                      onClick={() => markAsRead(notification.id)}
-                      className="text-[11px] font-bold text-primary hover:underline"
-                    >
+                    <button onClick={() => markAsRead(notification.id)} className="text-[10px] font-semibold text-primary hover:text-primary-dark">
                       Marcar como lida
                     </button>
                   )}
-                  <button
-                    onClick={() => deleteNotification(notification.id)}
-                    className="text-[11px] font-bold text-slate-400 hover:text-red-500 transition-colors"
-                  >
-                    Excluir
+                  <button onClick={() => deleteNotification(notification.id)} className="text-[10px] font-semibold text-slate-400 hover:text-red-500">
+                    Remover
                   </button>
                   {notification.event && (
-                    <button
-                      onClick={() => handleViewEvent(notification)}
-                      className="text-[11px] font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1"
-                    >
-                      <span className="material-symbols-outlined text-[14px]">visibility</span>
+                    <button onClick={() => handleViewEvent(notification)} className="text-[10px] font-semibold text-slate-400 hover:text-slate-700">
                       Ver Evento
                     </button>
                   )}
                 </div>
+
               </div>
             </div>
           ))
@@ -357,11 +371,26 @@ const Notifications: React.FC = () => {
       {reRequestNotification && (
         <ReRequestModal
           notification={reRequestNotification}
+          type={
+              (reRequestNotification.type === 'transport_decision' || 
+              (getData(reRequestNotification).kind === 'transport_decision') ||
+              (reRequestNotification.title && reRequestNotification.title.toLowerCase().includes('transporte')))
+              ? 'transport' 
+              : 'item'
+          }
           onClose={() => setReRequestNotification(null)}
           onSuccess={() => {
             refresh();
             setReRequestNotification(null);
           }}
+        />
+      )}
+
+      {rejectingNotification && (
+        <RefusalModal 
+            onClose={() => setRejectingNotification(null)}
+            onConfirm={onConfirmRejection}
+            loading={processingId === rejectingNotification.id}
         />
       )}
     </div>
