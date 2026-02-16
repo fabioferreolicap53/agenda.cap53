@@ -3,30 +3,58 @@ import { NotificationRecord } from '../lib/notifications';
 import { pb } from '../lib/pocketbase';
 
 interface ReRequestModalProps {
-  notification: NotificationRecord;
+  notification?: NotificationRecord;
+  request?: any; // Direct request object (for items)
+  event?: any;   // Direct event object (for transport)
+  type?: 'item' | 'transport';
   onClose: () => void;
   onSuccess: () => void;
 }
 
-const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, onClose, onSuccess }) => {
+const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, event, type, onClose, onSuccess }) => {
   const [loading, setLoading] = useState(false);
-  const data = typeof notification.data === 'string' 
-    ? JSON.parse(notification.data) 
-    : (notification.data || {});
+  
+  // Determine mode and initial data
+  let initialData: any = {};
+  let isItemRequest = false;
+  let isTransportRequest = false;
+  let requestId = '';
+  let eventId = '';
 
-  const [quantity, setQuantity] = useState<number>(data.quantity || 1);
+  if (notification) {
+    initialData = typeof notification.data === 'string' 
+      ? JSON.parse(notification.data) 
+      : (notification.data || {});
+    isItemRequest = initialData.kind === 'almc_item_decision';
+    isTransportRequest = initialData.kind === 'transport_decision';
+    requestId = notification.related_request;
+    eventId = notification.event;
+  } else if (request && type === 'item') {
+    isItemRequest = true;
+    requestId = request.id;
+    initialData = {
+      quantity: request.quantity,
+      item_name: request.expand?.item?.name
+    };
+  } else if (event && type === 'transport') {
+    isTransportRequest = true;
+    eventId = event.id;
+    initialData = {
+      destination: event.transporte_destino,
+      horario_levar: event.transporte_horario_levar,
+      horario_buscar: event.transporte_horario_buscar,
+      qtd_pessoas: event.transporte_qtd_pessoas,
+      event_title: event.title
+    };
+  }
+
+  const [quantity, setQuantity] = useState<number>(initialData.quantity || 1);
   const [transportData, setTransportData] = useState({
-    destino: data.destination || '',
-    horario_levar: data.horario_levar || '',
-    horario_buscar: data.horario_buscar || '',
-    qtd_pessoas: data.qtd_pessoas || 1
+    destino: initialData.destination || '',
+    horario_levar: initialData.horario_levar || '',
+    horario_buscar: initialData.horario_buscar || '',
+    qtd_pessoas: initialData.qtd_pessoas || 1
   });
-
-  const isItemRequest = data.kind === 'almc_item_decision';
-  const isTransportRequest = data.kind === 'transport_decision';
-
-  // Carregar dados iniciais se possível (opcional, mas bom para UX)
-  // Como não temos os dados originais completos na notificação, começamos limpo ou com defaults seguros
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,16 +62,14 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, onClose, 
 
     try {
       if (isItemRequest) {
-        const requestId = notification.related_request;
-        if (!requestId) throw new Error('ID da solicitação original não encontrado.');
+        if (!requestId) throw new Error('ID da solicitação não encontrado.');
 
         await pb.collection('agenda_cap53_almac_requests').update(requestId, {
           status: 'pending',
           quantity: quantity,
-          justification: null // Limpar justificativa de recusa anterior
+          justification: null
         });
       } else if (isTransportRequest) {
-        const eventId = notification.event;
         if (!eventId) throw new Error('ID do evento não encontrado.');
 
         await pb.collection('agenda_cap53_eventos').update(eventId, {
@@ -51,12 +77,15 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, onClose, 
           transporte_destino: transportData.destino,
           transporte_horario_levar: transportData.horario_levar,
           transporte_horario_buscar: transportData.horario_buscar,
-          transporte_qtd_pessoas: transportData.qtd_pessoas
+          transporte_qtd_pessoas: transportData.qtd_pessoas,
+          transporte_justification: null
         });
       }
 
-      // Marcar notificação de recusa como lida para limpar a lista
-      await pb.collection('agenda_cap53_notifications').update(notification.id, { read: true });
+      // Only mark notification as read if it exists
+      if (notification) {
+        await pb.collection('agenda_cap53_notifications').update(notification.id, { read: true });
+      }
       
       onSuccess();
       onClose();
@@ -84,8 +113,8 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, onClose, 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="p-3 bg-blue-50 text-blue-700 rounded-lg text-sm mb-4">
             <p>Você está reabrindo uma solicitação recusada.</p>
-            {data.item_name && <p className="font-bold mt-1">Item: {data.item_name}</p>}
-            {data.event_title && <p className="text-xs mt-1 opacity-80">Evento: {data.event_title}</p>}
+            {initialData.item_name && <p className="font-bold mt-1">Item: {initialData.item_name}</p>}
+            {initialData.event_title && <p className="text-xs mt-1 opacity-80">Evento: {initialData.event_title}</p>}
           </div>
 
           {isItemRequest && (

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { notificationService } from '../lib/notifications';
 import EventChatModal from './EventChatModal';
+import ReRequestModal from './ReRequestModal';
 import CustomSelect from './CustomSelect';
 import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
@@ -32,6 +33,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const [showRequestForm, setShowRequestForm] = React.useState(false);
   const [requestRoles, setRequestRoles] = React.useState<Record<string, string>>({});
   const [messageCount, setMessageCount] = React.useState(0);
+  const [reRequestTarget, setReRequestTarget] = React.useState<{type: 'item' | 'transport', data: any} | null>(null);
 
   const getRoleLabel = (role: string) => {
     return INVOLVEMENT_LEVELS.find(l => l.value === (role || 'PARTICIPANTE').toUpperCase())?.label || 'PARTICIPANTE';
@@ -767,6 +769,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                         <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${getStatusStyle(req.status)}`}>
                                                             {getStatusLabel(req.status)}
                                                         </span>
+                                                        {req.status === 'rejected' && event.user === user?.id && (
+                                                            <button
+                                                                onClick={() => setReRequestTarget({ type: 'item', data: req })}
+                                                                className="ml-2 p-1 text-primary hover:bg-primary/10 rounded-lg transition-colors group/btn relative"
+                                                                title="Solicitar Novamente"
+                                                            >
+                                                                <span className="material-symbols-outlined text-lg">restart_alt</span>
+                                                                <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 text-[10px] text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                                                    Solicitar Novamente
+                                                                </span>
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-3">
                                                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{resourceConfig.label}</span>
@@ -815,17 +829,31 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Suporte de Transporte</h3>
-                            {event.transporte_suporte && (
-                                <span className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase ${
-                                    event.transporte_status === 'confirmed' ? 'bg-green-50 text-green-600 border-green-100' : 
-                                    event.transporte_status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
-                                    'bg-yellow-50 text-yellow-600 border-yellow-100'
-                                }`}>
-                                    {event.transporte_status === 'confirmed' ? 'Confirmado' : 
-                                     event.transporte_status === 'rejected' ? 'Recusado' : 
-                                     'Pendente'}
-                                </span>
-                            )}
+                            <div className="flex items-center gap-2">
+                                {event.transporte_suporte && (
+                                    <span className={`px-3 py-1 rounded-full text-[10px] font-black border uppercase ${
+                                        event.transporte_status === 'confirmed' ? 'bg-green-50 text-green-600 border-green-100' : 
+                                        event.transporte_status === 'rejected' ? 'bg-red-50 text-red-600 border-red-100' :
+                                        'bg-yellow-50 text-yellow-600 border-yellow-100'
+                                    }`}>
+                                        {event.transporte_status === 'confirmed' ? 'Confirmado' : 
+                                         event.transporte_status === 'rejected' ? 'Recusado' : 
+                                         'Pendente'}
+                                    </span>
+                                )}
+                                {event.transporte_suporte && event.transporte_status === 'rejected' && event.user === user?.id && (
+                                    <button
+                                        onClick={() => setReRequestTarget({ type: 'transport', data: event })}
+                                        className="p-1.5 text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors group/btn relative"
+                                        title="Solicitar Novamente"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">restart_alt</span>
+                                        <span className="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                            Solicitar Novamente
+                                        </span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {event.transporte_suporte ? (
@@ -1178,6 +1206,28 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     user={user} 
                     isAccepted={participantStatus[user?.id] === 'accepted'}
                     onClose={() => setIsChatOpen(false)} 
+                />
+            )}
+
+            {reRequestTarget && (
+                <ReRequestModal
+                    type={reRequestTarget.type}
+                    request={reRequestTarget.type === 'item' ? reRequestTarget.data : undefined}
+                    event={reRequestTarget.type === 'transport' ? reRequestTarget.data : undefined}
+                    onClose={() => setReRequestTarget(null)}
+                    onSuccess={() => {
+                        refreshEvent();
+                        if (reRequestTarget.type === 'item') {
+                            setLoadingRequests(true);
+                            pb.collection('agenda_cap53_almac_requests').getFullList({
+                                filter: `event = "${event.id}"`,
+                                expand: 'item'
+                            })
+                            .then(setRequests)
+                            .catch(console.error)
+                            .finally(() => setLoadingRequests(false));
+                        }
+                    }}
                 />
             )}
         </div>

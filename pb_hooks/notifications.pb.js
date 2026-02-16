@@ -74,75 +74,152 @@ function handleAfterChange(e) {
     if (collectionName === 'agenda_cap53_almac_requests') {
         try {
             const eventId = e.record.getString('event');
-            const event = $app.dao().findRecordById("agenda_cap53_eventos", eventId);
+            let event = null;
+            let eventTitle = 'Evento';
+            let eventCreatorId = null;
+
+            // Try to fetch event details safely
+            if (eventId) {
+                try {
+                    event = $app.dao().findRecordById("agenda_cap53_eventos", eventId);
+                    eventTitle = event.getString('title') || 'Evento';
+                    eventCreatorId = event.getString('user');
+                } catch (evtErr) {
+                    $app.logger().warn(`[HOOK WARN] Could not fetch event ${eventId}: ${evtErr.message}`);
+                }
+            }
             
             // 1. Create notifications for Approvers (if new request)
-            createMissingNotificationsForRequest($app, e.record, event, (msg) => $app.logger().info(`[HOOK] ${msg}`));
+            if (event) {
+                createMissingNotificationsForRequest($app, e.record, event, (msg) => $app.logger().info(`[HOOK] ${msg}`));
+            }
 
             // 2. Notify Requester/Creator on Decision (Status Change)
             const status = e.record.getString('status');
             if (status === 'approved' || status === 'rejected') {
                 const requestId = e.record.id;
                 
-                // Check if notification already exists for this decision
+                // CRITICAL FIX: Re-fetch the request record to ensure we have all fields (created_by, event, item)
+                // e.record in hooks might not have unchanged fields depending on the operation context
+                let fullRequest = e.record;
+                try {
+                    fullRequest = $app.dao().findRecordById("agenda_cap53_almac_requests", requestId);
+                } catch (fetchErr) {
+                    $app.logger().warn(`[HOOK WARN] Failed to refetch request ${requestId}, using event record: ${fetchErr.message}`);
+                }
+
+                const requestUpdatedAt = fullRequest.getString('updated');
+                
+                // Check if notification already exists for this specific version of the request
                 let alreadyNotified = false;
+                
                 try {
                     const existing = $app.dao().findFirstRecordByFilter(
                         "agenda_cap53_notifications",
-                        `related_request = '${requestId}' && data.action = '${status}'`
+                        `related_request = '${requestId}' && data.action = '${status}'`,
+                        "-created"
                     );
-                    if (existing) alreadyNotified = true;
+
+                    if (existing) {
+                        let existingData = {};
+                        try {
+                            const rawData = existing.getString('data');
+                            if (rawData) existingData = JSON.parse(rawData);
+                        } catch (parseErr) {
+                            existingData = existing.get('data') || {};
+                        }
+                        
+                        // Strict check: only skip if generated for the exact same update timestamp
+                        // Allow 2 seconds margin for timestamp differences
+                        const existingTime = new Date(existing.created).getTime();
+                        const updateTime = new Date(requestUpdatedAt).getTime();
+                        // If notification was created AFTER the request update, it's likely the one we want
+                        if (existingData.request_updated_at === requestUpdatedAt) {
+                             alreadyNotified = true;
+                             $app.logger().info(`[HOOK DEBUG] Notification already exists for request ${requestId} update ${requestUpdatedAt}`);
+                        }
+                    }
                 } catch (_) {}
 
                 if (!alreadyNotified) {
-                    const itemId = e.record.getString('item');
-                    if (!itemId) return; // Skip if no item
+                    const itemId = fullRequest.getString('item');
+                    let itemName = 'Item';
+                    let sectorName = 'Setor Responsável';
                     
-                    const item = $app.dao().findRecordById("agenda_cap53_itens_servico", itemId);
-                    const itemName = item.getString('name');
-                    const quantity = e.record.getInt('quantity');
-                    const justification = e.record.getString('justification');
+                    if (itemId) {
+                        try {
+                            const item = $app.dao().findRecordById("agenda_cap53_itens_servico", itemId);
+                            itemName = item.getString('name');
+                            const itemCategory = (item.getString('category') || '').toUpperCase();
+                            sectorName = itemCategory === 'INFORMATICA' ? 'Informática' : 'Almoxarifado & Copa';
+                        } catch (itemErr) {
+                            $app.logger().warn(`[HOOK WARN] Could not fetch item details for ${itemId}: ${itemErr.message}`);
+                        }
+                    }
                     
-                    const eventTitle = event.getString('title') || 'Evento';
-                    const eventCreatorId = event.getString('user');
-                    const requesterId = e.record.getString('created_by');
+                    const quantity = fullRequest.getInt('quantity');
+                    const justification = fullRequest.getString('justification');
+                    
+                    // Retrieve IDs from the FULL record
+                    const requesterId = fullRequest.getString('created_by');
+                    const eventId = fullRequest.getString('event');
+                    
+                    // Fetch event details
+                    if (eventId) {
+                        try {
+                            event = $app.dao().findRecordById("agenda_cap53_eventos", eventId);
+                            eventTitle = event.getString('title');
+                            eventCreatorId = event.getString('user');
+                        } catch (evtErr) {
+                             $app.logger().warn(`[HOOK WARN] Could not fetch event ${eventId}: ${evtErr.message}`);
+                        }
+                    }
 
-                    // Determine who to notify: Requester and Event Creator
+                    // Determine who to notify
                     const usersToNotify = new Set();
                     if (requesterId) usersToNotify.add(requesterId);
                     if (eventCreatorId) usersToNotify.add(eventCreatorId);
 
+                    $app.logger().info(`[HOOK DEBUG] Processing notification for Request ${requestId}. Status: ${status}. Requester: ${requesterId}, Creator: ${eventCreatorId}, UsersToNotify: ${Array.from(usersToNotify).join(',')}`);
+
                     const notifications = $app.dao().findCollectionByNameOrId("agenda_cap53_notifications");
 
-                    usersToNotify.forEach(userId => {
-                        try {
-                            const record = new Record(notifications);
-                            record.set("user", userId);
-                            record.set("title", `Item ${status === 'approved' ? 'Aprovado' : 'Reprovado'}`);
-                            
-                            let message = `O pedido de "${itemName}" (Qtd: ${quantity}) para o evento "${eventTitle}" foi ${status === 'approved' ? 'aprovado' : 'reprovado'}.`;
-                            if (status === 'rejected' && justification) {
-                                message += ` Motivo: ${justification}`;
+                    if (usersToNotify.size > 0) {
+                        usersToNotify.forEach(userId => {
+                            if (!userId) return;
+                            try {
+                                const record = new Record(notifications);
+                                record.set("user", userId);
+                                record.set("title", `Item ${status === 'approved' ? 'Aprovado' : 'Reprovado'}`);
+                                
+                                let message = `O setor de ${sectorName} ${status === 'approved' ? 'aprovou' : 'reprovou'} o pedido de "${itemName}" (Qtd: ${quantity}) para o evento "${eventTitle}".`;
+                                if (status === 'rejected' && justification) {
+                                    message += ` Motivo: ${justification}`;
+                                }
+                                
+                                record.set("message", message);
+                                record.set("type", status === 'rejected' ? 'refusal' : 'system');
+                                record.set("read", false);
+                                record.set("event", eventId || '');
+                                record.set("related_request", requestId);
+                                record.set("data", {
+                                    kind: 'almc_item_decision',
+                                    action: status,
+                                    item_name: itemName,
+                                    event_title: eventTitle,
+                                    request_updated_at: requestUpdatedAt,
+                                    debug_ids: Array.from(usersToNotify)
+                                });
+                                
+                                $app.dao().saveRecord(record);
+                                $app.logger().info(`[HOOK SUCCESS] Notification sent to ${userId} regarding request ${requestId} (${status})`);
+                            } catch (err) {
+                                $app.logger().error(`[HOOK ERROR] Error notifying user ${userId}: ${err.message}`);
                             }
-                            
-                            record.set("message", message);
-                            record.set("type", status === 'rejected' ? 'refusal' : 'system');
-                            record.set("read", false);
-                            record.set("event", eventId);
-                            record.set("related_request", requestId);
-                            record.set("data", {
-                                kind: 'almc_item_decision',
-                                action: status,
-                                item_name: itemName,
-                                event_title: eventTitle
-                            });
-                            
-                            $app.dao().saveRecord(record);
-                            $app.logger().info(`[HOOK] Notification sent to ${userId} regarding request ${requestId} (${status})`);
-                        } catch (err) {
-                            $app.logger().error(`[HOOK] Error notifying user ${userId}: ${err.message}`);
-                        }
-                    });
+                        });
+                    } else {
+                        $app.logger().error(`[HOOK CRITICAL FAILURE] No users found to notify for request ${requestId}. requesterId=${requesterId}, eventCreatorId=${eventCreatorId}. EventID=${eventId}`);
+                    }
                 }
             }
         } catch (notifErr) {
@@ -166,7 +243,7 @@ function handleAfterChange(e) {
                 try {
                     const existing = $app.dao().findFirstRecordByFilter(
                         "agenda_cap53_notifications",
-                        `event = '${eventId}' && type = 'transport_request'`
+                        `event = '${eventId}' && type = 'transport_request' && read = false`
                     );
                     if (existing) alreadyNotified = true;
                 } catch (_) {}
@@ -372,7 +449,7 @@ $app.onBeforeServe().add((e) => {
                 record.set('event', eventId);
                 record.set('type', status === 'rejected' ? 'refusal' : 'acknowledgment');
                 record.set('title', status === 'rejected' ? 'Transporte Recusado' : 'Transporte Confirmado');
-                record.set('message', `A solicitação de transporte para o evento "${eventTitle}" ${status === 'rejected' ? 'foi recusada' : 'foi confirmada'}.\n\nJustificativa: ${justification}`);
+                record.set('message', `O setor de Transporte ${status === 'rejected' ? 'recusou' : 'confirmou'} a solicitação de apoio para o evento "${eventTitle}".\n\nJustificativa: ${justification}`);
                 record.set('data', { kind: 'transport_decision', action: status, justification: justification });
 
                 $app.dao().saveRecord(record);
@@ -380,6 +457,104 @@ $app.onBeforeServe().add((e) => {
 
             return c.json(200, { success: true });
         } catch (err) {
+            return c.json(500, { error: err.message });
+        }
+    }, $apis.requireRecordAuth());
+
+    // 3. Endpoint Genérico para Notificar Decisão de Item/Serviço (ALMC/DCA)
+    // Garante que a notificação seja enviada mesmo se o hook falhar ou tiver problemas de permissão/concorrência.
+    e.router.add('POST', '/api/notify_decision', (c) => {
+        const data = $apis.requestInfo(c).data;
+        const requestId = data.request_id;
+        const status = data.status; // 'approved' | 'rejected'
+        const justification = data.justification || '';
+
+        if (!requestId || !status) return c.json(400, { message: 'Missing request_id or status' });
+
+        try {
+            const app = $app;
+            const request = app.dao().findRecordById("agenda_cap53_almac_requests", requestId);
+            const eventId = request.getString('event');
+            
+            // Check duplicidade (idempotência básica)
+            const existing = app.dao().findFirstRecordByFilter(
+                "agenda_cap53_notifications",
+                `related_request = '${requestId}' && data.action = '${status}'`,
+                "-created"
+            );
+            
+            // Se já existe uma notificação recente (menos de 1 minuto), não cria outra
+            if (existing) {
+                 const diff = new Date().getTime() - new Date(existing.created).getTime();
+                 if (diff < 60000) {
+                     return c.json(200, { success: true, message: 'Notification already exists' });
+                 }
+            }
+
+            let eventTitle = 'Evento';
+            let eventCreatorId = null;
+            let itemName = 'Item';
+            let sectorName = 'Setor Responsável';
+
+            // Fetch Event
+            if (eventId) {
+                try {
+                    const event = app.dao().findRecordById("agenda_cap53_eventos", eventId);
+                    eventTitle = event.getString('title');
+                    eventCreatorId = event.getString('user');
+                } catch (e) {
+                    app.logger().warn(`[API] Event not found: ${eventId}`);
+                }
+            }
+
+            // Fetch Item Details
+            const itemId = request.getString('item');
+            if (itemId) {
+                try {
+                    const item = app.dao().findRecordById("agenda_cap53_itens_servico", itemId);
+                    itemName = item.getString('name');
+                    const cat = (item.getString('category') || '').toUpperCase();
+                    sectorName = cat === 'INFORMATICA' ? 'Informática' : 'Almoxarifado & Copa';
+                } catch (e) {
+                    app.logger().warn(`[API] Item not found: ${itemId}`);
+                }
+            }
+
+            // Create Notification
+            if (eventCreatorId) {
+                const notifications = app.dao().findCollectionByNameOrId("agenda_cap53_notifications");
+                const record = new Record(notifications);
+                
+                record.set("user", eventCreatorId);
+                record.set("title", `Item ${status === 'approved' ? 'Aprovado' : 'Reprovado'}`);
+                
+                let message = `O setor de ${sectorName} ${status === 'approved' ? 'aprovou' : 'reprovou'} o pedido de "${itemName}" (Qtd: ${request.getInt('quantity')}) para o evento "${eventTitle}".`;
+                if (status === 'rejected' && justification) {
+                    message += ` Motivo: ${justification}`;
+                }
+                
+                record.set("message", message);
+                record.set("type", status === 'rejected' ? 'refusal' : 'system');
+                record.set("read", false);
+                record.set("event", eventId || '');
+                record.set("related_request", requestId);
+                record.set("data", {
+                    kind: 'almc_item_decision',
+                    action: status,
+                    item_name: itemName,
+                    event_title: eventTitle,
+                    via_api: true
+                });
+
+                app.dao().saveRecord(record);
+                app.logger().info(`[API] Notification sent via endpoint to ${eventCreatorId}`);
+                return c.json(200, { success: true, notified_user: eventCreatorId });
+            } else {
+                return c.json(404, { message: 'Event creator not found' });
+            }
+
+        } catch (err) {
+            $app.logger().error(`[API ERROR] /api/notify_decision: ${err.message}`);
             return c.json(500, { error: err.message });
         }
     }, $apis.requireRecordAuth());
