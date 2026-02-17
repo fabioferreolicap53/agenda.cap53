@@ -49,6 +49,59 @@ const Notifications: React.FC = () => {
     }
   }, [notifications, filter]);
 
+  const getNotificationStatus = (n: any) => {
+    const data = getData(n);
+    const title = n.title?.toLowerCase() || '';
+    const type = n.type;
+
+    // Explicit Rejection
+    if (
+      type === 'refusal' || 
+      data.action === 'rejected' || 
+      n.invite_status === 'rejected' || 
+      title.includes('recusada') || 
+      title.includes('rejeitada') ||
+      title.includes('recusado')
+    ) {
+      return 'rejected';
+    }
+
+    // Explicit Approval
+    if (
+      data.action === 'approved' || 
+      data.action === 'accepted' || 
+      n.invite_status === 'accepted' || 
+      title.includes('aprovada') || 
+      title.includes('aprovado') ||
+      title.includes('aceita') || 
+      title.includes('aceito')
+    ) {
+      return 'approved';
+    }
+
+    return 'neutral';
+  };
+
+  const getStatusContainerStyles = (n: any) => {
+    const status = getNotificationStatus(n);
+    
+    if (status === 'approved') {
+        return n.read 
+            ? 'bg-emerald-50/30 border-emerald-100 hover:border-emerald-200' 
+            : 'bg-emerald-50 border-emerald-200 shadow-sm shadow-emerald-50';
+    } 
+    
+    if (status === 'rejected') {
+        return n.read 
+            ? 'bg-red-50/30 border-red-100 hover:border-red-200' 
+            : 'bg-red-50 border-red-200 shadow-sm shadow-red-50';
+    }
+
+    return n.read 
+        ? 'bg-white border-transparent hover:border-slate-200' 
+        : 'bg-white border-slate-200 shadow-sm';
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'event_invite': return 'calendar_add_on';
@@ -241,11 +294,7 @@ const Notifications: React.FC = () => {
           filteredNotifications.map((notification) => (
             <div
               key={notification.id}
-              className={`group relative flex gap-4 p-5 rounded-xl border transition-all duration-200 ${
-                notification.read 
-                  ? 'bg-white border-transparent hover:border-slate-200' 
-                  : 'bg-white border-slate-200 shadow-sm'
-              }`}
+              className={`group relative flex gap-4 p-5 rounded-xl border transition-all duration-200 ${getStatusContainerStyles(notification)}`}
             >
               {!notification.read && (
                 <div className="absolute top-5 right-5 size-2 bg-primary rounded-full ring-4 ring-primary/10"></div>
