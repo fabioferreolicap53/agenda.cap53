@@ -87,7 +87,7 @@ const CreateEvent: React.FC = () => {
   const [title, setTitle] = useState('');
   const [originalTitle, setOriginalTitle] = useState(''); // To track title changes
   const [type, setType] = useState('');
-  const [involvementLevel, setInvolvementLevel] = useState('PARTICIPANTE');
+  const [involvementLevel, setInvolvementLevel] = useState('');
   const [locationState, setLocationState] = useState<LocationState>({ mode: 'fixed', fixedId: '', freeText: '' });
   const [observacoes, setObservacoes] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -1391,7 +1391,7 @@ const CreateEvent: React.FC = () => {
                   <CustomSelect
                     value={involvementLevel}
                     onChange={setInvolvementLevel}
-                    placeholder="Selecione o nível..."
+                    placeholder="Selecione o nível de envolvimento..."
                     required
                     className="h-14"
                     options={INVOLVEMENT_LEVELS}
