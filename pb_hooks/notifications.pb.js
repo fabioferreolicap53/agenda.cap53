@@ -1,28 +1,147 @@
+/// <reference path="../pb_data/types.d.ts" />
+
 onRecordAfterUpdateRequest((e) => {
     const collectionName = e.record.collection().name;
     
-    // Configuração para cada coleção
+    // ==================================================================================
+    // 1. LÓGICA PARA EVENTOS (Transporte Integrado na Coleção de Eventos)
+    // ==================================================================================
+    if (collectionName === 'agenda_cap53_eventos') {
+        // Obtém status BRUTO
+        const rawStatus = e.record.getString('transporte_status');
+        
+        // Normalização agressiva: converte para string, minúsculas e remove espaços das pontas
+        const status = rawStatus ? rawStatus.toString().toLowerCase().trim() : '';
+        
+        // Log de debug DETALHADO para diagnóstico (aparecerá nos logs do PocketBase)
+        try {
+            $app.logger().info(`[TRANSPORT_HOOK_DEBUG] Evento: ${e.record.id} | Raw: '${rawStatus}' | Clean: '${status}'`);
+        } catch(ignore){}
+        
+        // Definição clara do tipo de decisão
+        let isConfirmed = false;
+        let isRejected = false;
+
+        // Verificação flexível para garantir que 'confirmed' seja detectado
+        if (status === 'confirmed' || status === 'approved' || status.includes('confirm')) {
+            isConfirmed = true;
+        } else if (status === 'rejected' || status === 'recusado' || status.includes('reject') || status.includes('recusa')) {
+            isRejected = true;
+        } else {
+            // Se não for nem confirmado nem recusado (ex: pending), encerra.
+            // Loga se for algo estranho que não seja vazio ou pending
+            if (status && status !== 'pending') {
+                $app.logger().warn(`[TRANSPORT_HOOK_WARN] Status ignorado/desconhecido: '${status}'`);
+            }
+            return;
+        }
+
+        const creatorId = e.record.getString('user');
+        if (!creatorId) {
+            $app.logger().error(`[TRANSPORT_HOOK_ERROR] Evento ${e.record.id} sem criador (user) definido.`);
+            return;
+        }
+
+        try {
+            const notificationsCol = $app.dao().findCollectionByNameOrId("agenda_cap53_notifications");
+            const notification = new Record(notificationsCol);
+            
+            const eventTitle = e.record.getString('title');
+            const justification = e.record.getString('transporte_justification');
+            
+            let title = '';
+            let message = '';
+            let icon = '';
+            let color = '';
+            let actionType = '';
+            
+            if (isConfirmed) {
+                title = 'Transporte Confirmado';
+                message = `Sua solicitação de transporte para o evento "${eventTitle}" foi confirmada!`;
+                icon = 'check_circle';
+                color = 'success';
+                actionType = 'confirmed';
+                
+                try { $app.logger().info(`[TRANSPORT_HOOK_ACTION] Gerando notificação de ACEITE para evento ${e.record.id}`); } catch(i){}
+            } else {
+                title = 'Transporte Recusado';
+                message = `Sua solicitação de transporte para o evento "${eventTitle}" foi recusada.`;
+                if (justification) message += ` Motivo: ${justification}`;
+                icon = 'cancel';
+                color = 'error';
+                actionType = 'rejected';
+                
+                try { $app.logger().info(`[TRANSPORT_HOOK_ACTION] Gerando notificação de RECUSA para evento ${e.record.id}`); } catch(i){}
+            }
+
+            notification.set("user", creatorId);
+            notification.set("title", title);
+            notification.set("message", message);
+            notification.set("type", "transport_decision");
+            notification.set("event", e.record.id);
+            notification.set("read", false);
+            // Salva o status limpo
+            notification.set("invite_status", isConfirmed ? 'confirmed' : 'rejected');
+
+            // Payload duplicado (data e meta) para garantir compatibilidade
+            const payloadData = {
+                action: actionType,
+                kind: 'transport_decision',
+                justification: justification,
+                event_title: eventTitle,
+                status: isConfirmed ? 'confirmed' : 'rejected',
+                collection: 'agenda_cap53_eventos',
+                icon: icon,
+                color: color
+            };
+
+            // Tenta setar data (JSON) e meta (String) para garantir compatibilidade
+            // Nota: O campo 'data' no PB pode ser JSON ou text dependendo da versão/schema.
+            // O código original usava ambos.
+            notification.set("data", payloadData); 
+            notification.set("meta", JSON.stringify(payloadData));
+
+            $app.dao().saveRecord(notification);
+            
+        } catch (err) {
+            $app.logger().error(`[HOOK EVENTOS ERROR] Falha ao criar notificação: ${err}`);
+        }
+        return; // Encerra aqui para eventos
+    }
+
+    // ==================================================================================
+    // 2. LÓGICA PARA REQUESTS (Almoxarifado, DCA, Transporte Legacy)
+    // ==================================================================================
     let config = null;
     if (collectionName === 'agenda_cap53_almac_requests') {
         config = { decisionType: 'request_decision', role: 'ALMC', label: 'Almoxarifado/Copa' };
     } else if (collectionName === 'agenda_cap53_dca_requests') {
         config = { decisionType: 'request_decision', role: 'DCA', label: 'Informática' };
     } else if (collectionName === 'agenda_cap53_transporte_requests') {
+        // Apenas processa requests legados se NÃO for evento (já tratado acima)
         config = { decisionType: 'transport_decision', role: 'TRA', label: 'Transporte' };
     }
 
     if (!config) return;
 
     try {
-        const record = $app.dao().findRecordById(collectionName, e.record.id);
-        const status = record.getString("status");
+        // Tenta buscar o registro atualizado
+        let record;
+        try {
+            record = $app.dao().findRecordById(collectionName, e.record.id);
+        } catch(findErr) {
+            record = e.record; // Fallback
+        }
+        
+        const rawStatus = record.getString("status");
+        // Normalização
+        const status = rawStatus ? rawStatus.toString().toLowerCase().trim() : '';
 
-        if (status === "approved" || status === "rejected") {
-            // 1. Tenta pegar o ID do criador direto na solicitação
+        // Aceita 'confirmed' aqui também por segurança
+        if (status === "approved" || status === "rejected" || status === "confirmed") {
             let creatorId = record.getString("created_by");
             if (!creatorId) creatorId = record.getString("user");
             
-            // 2. Fallback: busca no EVENTO relacionado
             if (!creatorId) {
                 const eventId = record.getString("event");
                 if (eventId) {
@@ -31,9 +150,7 @@ onRecordAfterUpdateRequest((e) => {
                         if (eventRecord) {
                             creatorId = eventRecord.getString("user");
                         }
-                    } catch (evErr) {
-                        // Silencioso em produção
-                    }
+                    } catch (evErr) {}
                 }
             }
 
@@ -42,36 +159,39 @@ onRecordAfterUpdateRequest((e) => {
                     const notificationsCol = $app.dao().findCollectionByNameOrId("agenda_cap53_notifications");
                     const notification = new Record(notificationsCol);
                     
-                    const action = status === 'approved' ? 'Aprovada' : 'Rejeitada';
-                    const icon = status === 'approved' ? 'check_circle' : 'cancel';
-                    const color = status === 'approved' ? 'success' : 'error';
+                    const isApproved = (status === 'approved' || status === 'confirmed');
+                    const action = isApproved ? 'Aprovada' : 'Rejeitada';
+                    const icon = isApproved ? 'check_circle' : 'cancel';
+                    const color = isApproved ? 'success' : 'error';
                     
-                    // Tenta obter a quantidade (quantity ou passengers)
-                    // Se não existir, retorna 0 (valor default)
                     let quantity = record.getInt("quantity");
                     if (quantity === 0) {
-                        // Tenta ler passengers apenas se quantity for 0, caso exista na coleção
-                        try {
-                            quantity = record.getInt("passengers");
-                        } catch (errPass) {
-                            // Ignora erro se o campo não existir
-                        }
+                        try { quantity = record.getInt("passengers"); } catch (errPass) {}
                     }
 
-                    // Monta a mensagem
-                    let message = `Sua solicitação para ${config.label}`;
-                    
-                    if (quantity > 0) {
-                        message += ` (Qtd: ${quantity})`;
+                    // Tenta buscar nome do item
+                    let itemName = "";
+                    try {
+                        const itemId = record.getString("item");
+                        if (itemId) {
+                            const itemRecord = $app.dao().findRecordById("agenda_cap53_itens", itemId);
+                            if (itemRecord) itemName = itemRecord.getString("name");
+                        }
+                    } catch (iErr) {}
+
+                    let message = `Sua solicitação `;
+                    if (itemName) {
+                        message += `de ${itemName}`;
+                    } else {
+                        message += `para ${config.label}`;
                     }
-                    
-                    message += ` foi ${status === 'approved' ? 'aprovada' : 'rejeitada'}.`;
+
+                    if (quantity > 0) message += ` (Qtd: ${quantity})`;
+                    message += ` foi ${isApproved ? 'aprovada' : 'rejeitada'}.`;
                     
                     if (status === 'rejected') {
                         const justification = record.getString("justification");
-                        if (justification) {
-                            message += ` Motivo: ${justification}`;
-                        }
+                        if (justification) message += ` Motivo: ${justification}`;
                     }
 
                     notification.set("user", creatorId);
@@ -82,42 +202,50 @@ onRecordAfterUpdateRequest((e) => {
                     notification.set("related_request", record.id);
                     
                     const eventId = record.getString("event");
-                    if (eventId) notification.set("related_event", eventId);
+                    if (eventId) {
+                        notification.set("related_event", eventId);
+                        notification.set("event", eventId);
+                    }
 
-                    notification.set("meta", JSON.stringify({
+                    const payloadData = {
                         status: status,
                         collection: collectionName,
                         icon: icon,
-                        color: color
-                    }));
+                        color: color,
+                        justification: record.getString("justification"),
+                        action: isApproved ? 'approved' : 'rejected',
+                        item_name: itemName,
+                        quantity: quantity
+                    };
+
+                    notification.set("data", payloadData);
+                    notification.set("meta", JSON.stringify(payloadData));
 
                     $app.dao().saveRecord(notification);
-                } catch (err) {
-                    console.log(`[HOOK ERROR] Failed to create notification: ${err}`);
-                }
+                } catch (err) {}
             }
         }
     } catch (err) {
-        console.log(`[HOOK CRITICAL] ${err}`);
+        $app.logger().error(`[HOOK CRITICAL REQUESTS] ${err}`);
     }
 
-}, "agenda_cap53_almac_requests", "agenda_cap53_dca_requests", "agenda_cap53_transporte_requests");
+}, "agenda_cap53_almac_requests", "agenda_cap53_dca_requests", "agenda_cap53_transporte_requests", "agenda_cap53_eventos");
 
+// Hook de limpeza ao deletar eventos
 onRecordBeforeDeleteRequest((e) => {
     const eventId = e.record.id;
-    
+    if (!eventId) return;
+
     try {
-        // Delete all notifications related to this event
         const notifications = $app.dao().findRecordsByFilter(
-            "agenda_cap53_notifications", 
+            "agenda_cap53_notifications",
             `event = '${eventId}' || related_event = '${eventId}'`
         );
 
         for (const notification of notifications) {
-            $app.dao().deleteRecord(notification);
+            try { $app.dao().deleteRecord(notification); } catch (delErr) {}
         }
     } catch (err) {
-        // Log error but allow event deletion to proceed
-        console.log(`[HOOK ERROR] Failed to delete notifications for event ${eventId}: ${err}`);
+        // Ignora erros de delete
     }
 }, "agenda_cap53_eventos");

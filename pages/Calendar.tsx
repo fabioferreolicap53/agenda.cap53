@@ -75,6 +75,7 @@ const Calendar: React.FC = () => {
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [initialChatOpen, setInitialChatOpen] = useState(false);
+  const [initialTab, setInitialTab] = useState<'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests'>('details');
   const todayRef = useRef<HTMLDivElement>(null);
 
   // Function to scroll to today on mobile
@@ -86,17 +87,30 @@ const Calendar: React.FC = () => {
     }, 100);
   };
 
-  // Handle openChat from URL
+  // Handle openChat or eventId from URL
   useEffect(() => {
-    const eventId = searchParams.get('openChat');
-    if (eventId && events.length > 0) {
-      const event = events.find(e => e.id === eventId);
+    const chatEventId = searchParams.get('openChat');
+    const viewEventId = searchParams.get('eventId');
+    const tabParam = searchParams.get('tab');
+    const targetEventId = chatEventId || viewEventId;
+
+    if (targetEventId && events.length > 0) {
+      const event = events.find(e => e.id === targetEventId);
       if (event) {
         setSelectedEvent(event);
-        setInitialChatOpen(true);
+        setInitialChatOpen(!!chatEventId);
+        
+        if (tabParam && ['details', 'dashboard', 'transport', 'resources', 'professionals', 'requests'].includes(tabParam)) {
+          setInitialTab(tabParam as any);
+        } else {
+          setInitialTab('details');
+        }
+
         // Clean up the URL
         const newParams = new URLSearchParams(searchParams);
-        newParams.delete('openChat');
+        if (chatEventId) newParams.delete('openChat');
+        if (viewEventId) newParams.delete('eventId');
+        if (tabParam) newParams.delete('tab');
         setSearchParams(newParams, { replace: true });
       }
     }
@@ -187,26 +201,17 @@ const Calendar: React.FC = () => {
 
       const res = await pb.collection('agenda_cap53_eventos').getFullList({
         filter,
-        expand: 'user,location,participants',
+        expand: 'user,location,participants,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item',
         fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,expand',
         requestKey: null
       });
 
-      // Also fetch all requests for these events to determine accurate status in cards
-      const requests = await pb.collection('agenda_cap53_almac_requests').getFullList({
-        filter: res.length > 0 ? res.map(e => `event = "${e.id}"`).join(' || ') : 'id = "none"',
-        expand: 'item',
-        fields: 'id,event,status,expand.item.category',
-        requestKey: null
-      });
-
-      // Map requests to events
+      // Map requests to events directly from expand
       const eventsWithRequests = res.map(event => ({
         ...event,
-        almac_requests: requests.filter(r => r.event === event.id)
+        almac_requests: event.expand?.agenda_cap53_almac_requests_via_event || []
       }));
 
-      console.log('Eventos carregados:', eventsWithRequests.length);
       setEvents(eventsWithRequests);
     } catch (error) {
       console.error('Error fetching events:', error);
@@ -796,11 +801,13 @@ const Calendar: React.FC = () => {
           onClose={() => {
             setSelectedEvent(null);
             setInitialChatOpen(false);
+            setInitialTab('details');
           }}
           onCancel={handleCancelEvent}
           onDelete={handleDeleteEvent}
           user={user}
           initialChatOpen={initialChatOpen}
+          initialTab={initialTab}
         />
       )}
     </div>
@@ -809,8 +816,6 @@ const Calendar: React.FC = () => {
 };
 
 const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: number, height: number }> = ({ event: propEvent, visible, x, y, height }) => {
-  const [requests, setRequests] = React.useState<any[]>([]);
-  const [loadingRequests, setLoadingRequests] = React.useState(false);
   const tooltipRef = React.useRef<HTMLDivElement>(null);
   const [position, setPosition] = React.useState({ top: 0, left: 0 });
   const [isRendered, setIsRendered] = React.useState(false);
@@ -833,22 +838,6 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
       return () => clearTimeout(timer);
     }
   }, [visible, propEvent]);
-
-  // Fetch requests for the event
-  React.useEffect(() => {
-    if (visible && event?.id) {
-      setLoadingRequests(true);
-      pb.collection('agenda_cap53_almac_requests').getFullList({
-        filter: `event = "${event.id}"`,
-        expand: 'item'
-      })
-      .then(setRequests)
-      .catch(console.error)
-      .finally(() => setLoadingRequests(false));
-    } else if (!visible) {
-      setRequests([]);
-    }
-  }, [visible, event?.id]);
 
   React.useLayoutEffect(() => {
     if (isRendered && tooltipRef.current && event) {
@@ -891,7 +880,7 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
         left: left + scrollX 
       });
     }
-  }, [isRendered, x, y, height, requests, event]);
+  }, [isRendered, x, y, height, event]);
 
   if (!isRendered || !event) return null;
 
@@ -901,12 +890,12 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
 
   // Helper to determine status for Almc/Copa/Inf
   const getRequestStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
-    // Priority 1: Check actual requests (real-time data)
-    const categoryRequests = requests.filter(r => r.expand?.item?.category === category);
+    // Priority 1: Check actual requests (real-time data passed from parent)
+    const categoryRequests = event.almac_requests?.filter((r: any) => r.expand?.item?.category === category) || [];
     
     if (categoryRequests.length > 0) {
-      const allConfirmed = categoryRequests.every(r => r.status === 'approved');
-      const anyRejected = categoryRequests.some(r => r.status === 'rejected');
+      const allConfirmed = categoryRequests.every((r: any) => r.status === 'approved');
+      const anyRejected = categoryRequests.some((r: any) => r.status === 'rejected');
 
       if (anyRejected) return 'rejected';
       if (allConfirmed) return 'confirmed';
@@ -1104,28 +1093,42 @@ const CalendarEventCard: React.FC<{
   const isCancelled = event.status === 'cancelled';
   
   const getCategoryStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
-    const categoryRequests = event.almac_requests?.filter((r: any) => r.expand?.item?.category === category) || [];
+    // Priority 1: Check actual requests (real-time data)
+    const categoryRequests = event.almac_requests?.filter((r: any) => {
+        let cat = r.expand?.item?.category;
+        // Normalize categories
+        if (cat === 'ALMC') cat = 'ALMOXARIFADO';
+        if (cat === 'INFO') cat = 'INFORMATICA';
+        return cat === category;
+    }) || [];
+    
     if (categoryRequests.length > 0) {
-      const allApproved = categoryRequests.every((r: any) => r.status === 'approved');
+      const allConfirmed = categoryRequests.every((r: any) => r.status === 'approved');
       const anyRejected = categoryRequests.some((r: any) => r.status === 'rejected');
+
       if (anyRejected) return 'rejected';
-      if (allApproved) return 'confirmed';
+      if (allConfirmed) return 'confirmed';
       return 'pending';
     }
+
+    // Priority 2: Fallback to event summary fields (static data from fetchEvents)
     const items = category === 'ALMOXARIFADO' ? (event.almoxarifado_items || []) :
                   category === 'COPA' ? (event.copa_items || []) :
                   (event.informatica_items || []);
+                  
+    if (items.length === 0) return null;
+
     const confirmed = category === 'ALMOXARIFADO' ? (event.almoxarifado_confirmed_items || []) :
                       category === 'COPA' ? (event.copa_confirmed_items || []) :
                       (event.informatica_confirmed_items || []);
-    if (items.length === 0) return null;
+
     return (confirmed.length === items.length && items.length > 0) ? 'confirmed' : 'pending';
   };
 
-  const getStatusStyle = (status: string | null) => {
-    if (status === 'confirmed') return 'bg-green-50 border-green-200 text-green-700';
-    if (status === 'rejected') return 'bg-red-50 border-red-200 text-red-700';
-    return 'bg-yellow-50 border-yellow-200 text-yellow-700';
+  const getStatusColor = (status: string | null) => {
+    if (status === 'confirmed') return 'text-green-600 bg-green-50 border-green-100';
+    if (status === 'rejected') return 'text-red-600 bg-red-50 border-red-100';
+    return 'text-yellow-600 bg-yellow-50 border-yellow-100';
   };
 
   const handleMouseEnter = (e: React.MouseEvent) => {
@@ -1138,6 +1141,10 @@ const CalendarEventCard: React.FC<{
     });
   };
 
+  const almcStatus = getCategoryStatus('ALMOXARIFADO');
+  const copaStatus = getCategoryStatus('COPA');
+  const infStatus = getCategoryStatus('INFORMATICA');
+
   return (
     <div
       onMouseEnter={handleMouseEnter}
@@ -1147,74 +1154,76 @@ const CalendarEventCard: React.FC<{
         setTooltipData(null);
         onSelect(event);
       }}
-      className={`w-full border-l-4 rounded-xl px-3 py-2 cursor-pointer transition-all duration-300 hover:translate-x-1 relative ${isCancelled
-        ? 'bg-white border-slate-200 opacity-60'
-        : 'bg-primary/[0.04] border-primary/50 hover:bg-primary/[0.1] hover:border-primary shadow-sm hover:shadow-md'
-        } ${detailed ? 'p-6' : ''}`}
+      className={`w-full border-l-[3px] rounded-lg px-2.5 py-2 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
+        ? 'bg-slate-50 border-slate-300 opacity-60'
+        : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'
+        } ${detailed ? 'p-5' : ''}`}
     >
-      <div className="flex items-center justify-between gap-3 overflow-hidden">
-        <p className={`text-[11px] font-black leading-tight truncate ${detailed ? 'text-xl' : ''} ${isCancelled ? 'text-text-secondary line-through' : 'text-primary'}`}>
-          {event.title}
-        </p>
-        {!detailed && <span className="text-[9px] font-black text-primary/50 whitespace-nowrap uppercase tracking-tighter">
-          {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-          {event.date_end && (
-            <span className="ml-1 opacity-60">
-              - {new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            </span>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className={`font-bold leading-snug truncate ${detailed ? 'text-lg text-slate-800' : 'text-[10px] md:text-[11px] text-slate-700'} ${isCancelled ? 'line-through decoration-slate-400' : ''}`}>
+            {event.title}
+          </p>
+          {!detailed && (
+             <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap bg-slate-50 px-1 rounded border border-slate-100">
+               {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+             </span>
           )}
-        </span>}
-      </div>
-
-      {detailed && (
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 mt-4 text-[12px] font-bold text-text-secondary/80">
-          <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-lg opacity-50">schedule</span>
-            <div className="flex items-center gap-1.5">
-              <span>{new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-              {event.date_end && (
-                <>
-                  <span className="text-[10px] opacity-40 uppercase tracking-tighter font-black mx-0.5">até</span>
-                  <span>{new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-lg opacity-50">location_on</span>
-            <span className="truncate max-w-[250px]">
-              {event.expand?.location?.name || event.custom_location || 'Local não definido'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-lg opacity-50">person</span>
-            {event.expand?.user?.name || 'Sistema'}
-          </div>
         </div>
-      )}
 
-      <div className="flex flex-wrap gap-1.5 mt-3">
-        {getCategoryStatus('ALMOXARIFADO') !== null && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('ALMOXARIFADO'))}`}>ALM</span>
+        {detailed && (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2 text-xs font-medium text-slate-500">
+             <div className="flex items-center gap-1.5">
+               <span className="material-symbols-outlined text-base">schedule</span>
+               <span>
+                 {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                 {event.date_end && ` - ${new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+               </span>
+             </div>
+             <div className="flex items-center gap-1.5">
+               <span className="material-symbols-outlined text-base">location_on</span>
+               <span>{event.expand?.location?.name || event.custom_location || 'Local não definido'}</span>
+             </div>
+          </div>
         )}
-        {getCategoryStatus('COPA') !== null && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('COPA'))}`}>COP</span>
-        )}
-        {getCategoryStatus('INFORMATICA') !== null && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${getStatusStyle(getCategoryStatus('INFORMATICA'))}`}>INF</span>
-        )}
-        {event.transporte_suporte && (
-          <span className={`text-[8px] font-black px-2 py-0.5 rounded-full border-2 uppercase tracking-wider ${
-            event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-700' :
-            (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-700' :
-            'bg-yellow-50 border-yellow-200 text-yellow-700'
-          }`}>TRA</span>
-        )}
-        {isCancelled && (
-          <span className="text-[8px] font-black px-2 py-0.5 rounded-full bg-red-50 border-2 border-red-200 text-red-700 uppercase tracking-wider">
-            CANCELADO
-          </span>
-        )}
+
+        {/* Status Indicators Row */}
+        <div className="flex items-center gap-1.5 mt-0.5 h-4">
+           {/* Transport */}
+           {event.transporte_suporte && (
+             <div className={`flex items-center justify-center size-4 rounded border ${
+                event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
+                (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
+                'bg-yellow-50 border-yellow-200 text-yellow-600'
+             }`} title="Transporte">
+               <span className="material-symbols-outlined text-[10px]">directions_car</span>
+             </div>
+           )}
+
+           {/* Resources */}
+           {almcStatus && (
+             <div className={`flex items-center justify-center size-4 rounded border ${getStatusColor(almcStatus)}`} title="Almoxarifado">
+               <span className="material-symbols-outlined text-[10px]">inventory_2</span>
+             </div>
+           )}
+           {copaStatus && (
+             <div className={`flex items-center justify-center size-4 rounded border ${getStatusColor(copaStatus)}`} title="Copa">
+               <span className="material-symbols-outlined text-[10px]">local_cafe</span>
+             </div>
+           )}
+           {infStatus && (
+             <div className={`flex items-center justify-center size-4 rounded border ${getStatusColor(infStatus)}`} title="Informática">
+               <span className="material-symbols-outlined text-[10px]">laptop_mac</span>
+             </div>
+           )}
+
+           {/* Cancelled Label */}
+           {isCancelled && (
+             <span className="text-[8px] font-black text-red-500 uppercase tracking-wider bg-red-50 px-1.5 rounded border border-red-100">
+               Cancelado
+             </span>
+           )}
+        </div>
       </div>
     </div>
   );

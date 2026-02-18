@@ -19,7 +19,7 @@ export const useNotifications = () => {
         pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
           filter: `user = "${user.id}"`,
           sort: '-created',
-          expand: 'event,related_request,related_request.item,related_request.created_by,event.user',
+          expand: 'event,related_event,related_request,related_request.item,related_request.created_by,event.user,event.agenda_cap53_almac_requests_via_event,related_event.agenda_cap53_almac_requests_via_event',
           $autoCancel: false
         }).catch(err => {
           console.error('Error fetching notifications list:', err);
@@ -108,7 +108,17 @@ export const useNotifications = () => {
   useEffect(() => {
     fetchNotifications();
 
-    if (!user?.id) return;
+    // Fallback: Polling a cada 10 segundos para garantir atualização mesmo se o Realtime (502) falhar
+    const intervalId = setInterval(() => {
+        if (document.visibilityState === 'visible') { // Só atualiza se a aba estiver visível para economizar recurso
+            fetchNotifications();
+        }
+    }, 10000);
+
+    if (!user?.id) {
+        clearInterval(intervalId);
+        return;
+    }
 
     const subscribe = async () => {
       const unsubs: (() => void)[] = [];
@@ -145,6 +155,7 @@ export const useNotifications = () => {
     subscribe().then(unsub => unsubscribe = unsub);
 
     return () => {
+      clearInterval(intervalId); // Limpa o polling
       if (unsubscribe) unsubscribe();
     };
   }, [user?.id, user?.role, fetchNotifications]);

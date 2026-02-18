@@ -3,10 +3,11 @@ const PocketBase = require('pocketbase/cjs');
 
 async function getCollectionInfo() {
   const pb = new PocketBase('https://centraldedados.duckdns.org');
+  await pb.admins.authWithPassword('admin@cap53.com', 'password123');
   
   try {
     // We can try to get the collection by name
-    const collection = await pb.collections.getOne('agenda_cap53_eventos');
+    const collection = await pb.collections.getOne('agenda_cap53_notifications');
     console.log('Collection Schema:');
     console.log(JSON.stringify(collection.schema, null, 2));
     console.log('API Rules:');

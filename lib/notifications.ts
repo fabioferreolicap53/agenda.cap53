@@ -35,6 +35,7 @@ export interface NotificationRecord {
   related_request?: string;
   invite_status?: 'pending' | 'accepted' | 'rejected';
   data?: any;
+  meta?: any;
   acknowledged: boolean;
   created: string;
   updated: string;
@@ -103,7 +104,7 @@ export const notificationService = {
       console.log(`✅ Notificação criada com sucesso! ID: ${notification.id} (tempo: ${endTime - startTime}ms)`);
       console.log('📊 Notificação completa:', notification);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ ERRO ao criar notificação:', error.message);
       console.error('📄 Tipo do erro:', error.constructor.name);
       console.error('📋 Detalhes do erro:', error.data || error);
@@ -176,4 +177,36 @@ export const notificationService = {
     
     return successful;
   }
+};
+
+/**
+ * Checks if a notification can be deleted based on business rules.
+ * Rule: Request notifications linked to an event cannot be deleted before the event starts.
+ */
+export const isNotificationDeletable = (notification: NotificationRecord): { canDelete: boolean; reason?: string } => {
+  const isRequest = 
+    notification.type === 'service_request' ||
+    notification.type === 'almc_item_request' ||
+    notification.type === 'transport_request' ||
+    notification.data?.kind === 'almc_item_request' ||
+    notification.data?.kind === 'service_request' ||
+    notification.data?.kind === 'transport_request';
+
+  if (isRequest) {
+    // Check expand.event first, then try to see if event is an object (in case of virtual notifications mixed in)
+    const event = notification.expand?.event || (typeof notification.event === 'object' ? notification.event : null);
+    
+    if (event && event.date_start) {
+      const eventDate = new Date(event.date_start);
+      const now = new Date();
+      if (eventDate > now) {
+        return { 
+          canDelete: false, 
+          reason: 'Não é possível excluir notificações de solicitações vinculadas a eventos futuros.' 
+        };
+      }
+    }
+  }
+  
+  return { canDelete: true };
 };

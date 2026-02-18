@@ -23,11 +23,30 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
   let eventId = '';
 
   if (notification) {
-    initialData = typeof notification.data === 'string' 
-      ? JSON.parse(notification.data) 
-      : (notification.data || {});
-    isItemRequest = initialData.kind === 'almc_item_decision' || type === 'item';
-    isTransportRequest = initialData.kind === 'transport_decision' || type === 'transport';
+    // Robust data parsing matching Notifications.tsx logic
+    if (notification.data && Object.keys(notification.data).length > 0) {
+        initialData = typeof notification.data === 'string' ? JSON.parse(notification.data) : notification.data;
+    } else if (notification.meta) {
+        try {
+            initialData = typeof notification.meta === 'string' ? JSON.parse(notification.meta) : notification.meta;
+        } catch (e) {
+            initialData = {};
+        }
+    }
+
+    // Robust type detection
+    isItemRequest = 
+        initialData.kind === 'almc_item_decision' || 
+        notification.type === 'request_decision' || 
+        notification.type === 'almc_item_request' || 
+        type === 'item';
+
+    isTransportRequest = 
+        initialData.kind === 'transport_decision' || 
+        notification.type === 'transport_decision' || 
+        notification.type === 'transport_request' || 
+        type === 'transport';
+
     requestId = notification.related_request || '';
     eventId = notification.event || '';
   } else if (request && type === 'item') {

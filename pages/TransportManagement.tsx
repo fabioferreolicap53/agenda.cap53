@@ -17,97 +17,76 @@ const TransportManagement: React.FC = () => {
     const [actionMessage, setActionMessage] = useState<string | null>(null);
 
     const handleTransportDecision = async (eventId: string, status: 'confirmed' | 'rejected') => {
+        let justification = '';
+        
+        if (status === 'rejected') {
+            const reason = prompt('Por favor, informe o motivo da recusa:');
+            if (reason === null) return; // Cancelou
+            if (!reason.trim()) {
+                alert('A justificativa é obrigatória para recusas.');
+                return;
+            }
+            justification = reason.trim();
+        }
+
+        // Capturar dados do evento antes de atualizar para garantir que temos o ID do usuário
+        // Tenta pegar da lista local primeiro para evitar query extra
+        const eventInList = transportRequests.find(e => e.id === eventId);
+        let targetUserId = eventInList?.user;
+        const eventTitle = eventInList?.title || 'Evento';
+
+        // Garantir que targetUserId é uma string (ID), caso venha expandido como objeto
+        if (typeof targetUserId === 'object' && targetUserId?.id) {
+            targetUserId = targetUserId.id;
+        }
+
+        // Se não tiver na lista ou user vazio, busca no banco
+        if (!targetUserId) {
+            try {
+                const evt = await pb.collection('agenda_cap53_eventos').getOne(eventId, { 
+                    fields: 'user,title' 
+                });
+                targetUserId = evt.user;
+                // Garantir extração correta se o retorno do banco vier expandido
+                if (typeof targetUserId === 'object' && targetUserId?.id) {
+                    targetUserId = targetUserId.id;
+                }
+            } catch (fetchErr) {
+                console.error("Erro ao buscar dados do evento para notificação:", fetchErr);
+            }
+        }
+
+        if (!targetUserId) {
+            alert('ERRO CRÍTICO: Não foi possível identificar o usuário criador do evento para enviar a notificação. A operação será abortada.');
+            return;
+        }
+
         try {
-            console.log('Processing transport decision:', { eventId, status });
+            console.log('Processing transport decision:', { eventId, status, targetUserId, justification });
             
-            // Tentativa 1: Atualização direta via Collection (mais robusto se o endpoint falhar)
+            // Atualização do status do evento
             try {
                 await pb.collection('agenda_cap53_eventos').update(eventId, {
                     transporte_status: status,
-                    transporte_justification: 'Ação realizada pelo setor de transporte.'
+                    transporte_justification: status === 'rejected' ? justification : ''
                 });
-                console.log('Direct collection update successful');
-            } catch (directErr: any) {
-                console.warn('Direct update failed, trying custom API...', directErr);
-                
-                // Tentativa 2: API customizada (fallback)
-                await pb.send('/api/transport_decision', {
-                    method: 'POST',
-                    body: JSON.stringify({ 
-                        event_id: eventId, 
-                        status: status,
-                        justification: 'Ação realizada pelo setor de transporte.'
-                    })
-                });
+                console.log('Evento atualizado com sucesso.');
+            } catch (updateErr: any) {
+                console.error("Erro ao atualizar evento (possível erro de hook):", updateErr);
+                // Mesmo que dê erro no update (ex: hook falhando), tentamos enviar a notificação se o status for 400/500
+                // mas alertamos o usuário
+                alert(`Aviso: O status do evento foi enviado, mas o servidor retornou um erro: ${updateErr.message}. Tentaremos enviar a notificação mesmo assim.`);
             }
             
-            // Enviar notificação para o criador do evento em caso de recusa
-            if (status === 'rejected') {
-                try {
-                    // Buscar o evento fresco para garantir dados atualizados e corretos do usuário
-                    const freshEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId, {
-                        expand: 'user'
-                    });
-                    
-                    // Lógica robusta para extrair o ID do usuário
-                    let targetUserId = freshEvent.user;
-                    
-                    // Se user vier vazio ou como objeto, tentar extrair do expand ou do próprio objeto
-                    if (!targetUserId && freshEvent.expand?.user?.id) {
-                        targetUserId = freshEvent.expand.user.id;
-                    } else if (targetUserId && typeof targetUserId === 'object' && (targetUserId as any).id) {
-                        targetUserId = (targetUserId as any).id;
-                    }
-
-                    console.log('Tentando enviar notificação de recusa para:', targetUserId);
-                    
-                    if (targetUserId && typeof targetUserId === 'string') {
-                        // Tentar criar via coleção diretamente
-                        try {
-                            await pb.collection('agenda_cap53_notifications').create({
-                                user: targetUserId,
-                                title: 'Transporte Recusado',
-                                message: `Sua solicitação de transporte para o evento "${freshEvent.title}" foi recusada.`,
-                                type: 'transport_decision',
-                                event: eventId,
-                                read: false,
-                                invite_status: 'rejected',
-                                data: {
-                                    action: 'rejected',
-                                    kind: 'transport_decision',
-                                    justification: 'Ação realizada pelo setor de transporte.',
-                                    event_title: freshEvent.title
-                                }
-                            });
-                            console.log('Notificação de recusa enviada com sucesso para:', targetUserId);
-                            // Alertar sucesso para confirmação visual
-                            alert(`Notificação de recusa enviada com sucesso para o usuário!`);
-                        } catch (directCreateErr: any) {
-                            console.warn('Erro ao criar notificação diretamente, tentando via API customizada...', directCreateErr);
-                            
-                            if (directCreateErr.status === 403) {
-                                alert(`ERRO DE PERMISSÃO (403): O PocketBase bloqueou a criação da notificação. \n\nDetalhes: O usuário atual (Role: ${pb.authStore.model?.role}) tentou criar um registro para outro usuário (${targetUserId}).\n\nVerifique se a 'Create Rule' permite '@request.auth.id != ""' e se a 'View Rule' inclui '|| @request.auth.role = "TRA"'.`);
-                            } else {
-                                alert(`Erro ao criar notificação: ${directCreateErr.message}`);
-                            }
-                            throw directCreateErr;
-                        }
-                    } else {
-                        console.warn('Não foi possível identificar o usuário para notificar a recusa. ID inválido ou nulo:', targetUserId);
-                        alert(`ERRO: Não foi possível identificar o ID do criador do evento. User data: ${JSON.stringify(targetUserId)}`);
-                    }
-                } catch (notifErr: any) {
-                    console.error('CRITICAL: Falha no fluxo de notificação de recusa:', notifErr);
-                    // Alertar erro crítico do bloco externo (ex: getOne falhou)
-                    alert(`FALHA CRÍTICA NO ENVIO DA NOTIFICAÇÃO: ${notifErr.message || notifErr}`);
-                }
-            }
+            // Feedback visual de sucesso (Notificação agora é gerada pelo Hook no servidor)
+            const actionText = status === 'rejected' ? 'recusada' : 'confirmada';
+            alert(`Decisão registrada com sucesso!\n\nA solicitação foi ${actionText}. O solicitante será notificado automaticamente pelo sistema.`);
             
             fetchTransportRequests();
         } catch (err: any) {
             console.error(`Error processing transport ${status}:`, err);
             const errorMsg = err.data?.message || err.message || 'Erro desconhecido';
-            alert(`Erro ao ${status === 'confirmed' ? 'confirmar' : 'recusar'}: ${errorMsg}\n\nVerifique se você tem permissão de acesso ao setor de transporte.`);
+            alert(`Erro ao atualizar evento: ${errorMsg}`);
         }
     };
 
@@ -165,12 +144,21 @@ const TransportManagement: React.FC = () => {
     }, [fetchTransportRequests]);
 
     useEffect(() => {
+        if (!loading && highlightEventId && transportRequests.length > 0) {
+            const event = transportRequests.find(e => e.id === highlightEventId);
+            if (event && event.transporte_status !== 'pending' && transportSubTab !== 'history') {
+                setTransportSubTab('history');
+            }
+        }
+    }, [loading, highlightEventId, transportRequests, transportSubTab]);
+
+    useEffect(() => {
         if (!loading && highlightEventId && scrollRef.current[highlightEventId]) {
             setTimeout(() => {
                 scrollRef.current[highlightEventId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 500);
         }
-    }, [loading, highlightEventId]);
+    }, [loading, highlightEventId, transportSubTab]);
 
     const filteredTransportRequests = useMemo(() => {
         return transportRequests.filter(event => {

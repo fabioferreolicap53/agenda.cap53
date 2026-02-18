@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { pb } from '../lib/pocketbase';
+import { isNotificationDeletable } from '../lib/notifications';
 import CustomSelect from '../components/CustomSelect';
 
 const INVOLVEMENT_LEVELS = [
@@ -366,6 +367,16 @@ const Requests: React.FC = () => {
     };
 
     const handleDeleteNotification = async (notificationId: string) => {
+        const notification = [...notifications, ...historyNotifications].find(n => n.id === notificationId);
+        
+        if (notification) {
+            const { canDelete, reason } = isNotificationDeletable(notification);
+            if (!canDelete) {
+                alert(reason || 'Não é possível excluir esta notificação.');
+                return;
+            }
+        }
+
         if (!confirm('Deseja excluir esta notificação do seu histórico?')) return;
         try {
             await pb.collection('agenda_cap53_notifications').delete(notificationId);
@@ -381,37 +392,22 @@ const Requests: React.FC = () => {
     const handleClearAllHistory = async () => {
         if (!user) return;
         
-        const count = filteredHistoryNotifications.length;
-        if (count === 0) {
-            setActionMessage('O histórico já está vazio.');
-            setTimeout(() => setActionMessage(null), 3000);
-            return;
-        }
-
-        if (!confirm(`Deseja realmente limpar todas as ${count} notificações do seu histórico? Esta ação não pode ser desfeita.`)) return;
+        if (!confirm('Deseja realmente limpar todas as notificações do seu histórico?')) return;
         
         setHistoryLoading(true);
         try {
-            // Buscamos todas as lidas para garantir que limpamos tudo do banco
-            const allHistory = await pb.collection('agenda_cap53_notifications').getFullList({
-                filter: `user = "${user.id}" && read = true`,
-                fields: 'id'
-            });
+            // Use the safe backend endpoint
+            const result = await pb.send('/api/notifications/clear_safe?read_only=true', { method: 'POST' });
 
-            if (allHistory.length === 0) {
-                setActionMessage('O histórico já está vazio.');
-                setTimeout(() => setActionMessage(null), 3000);
-                return;
+            if (result.skipped > 0) {
+                alert(`Histórico limpo parcialmente. ${result.skipped} notificações não foram excluídas pois estão vinculadas a eventos futuros.`);
+            } else {
+                setActionMessage('Todo o histórico foi limpo.');
+                setTimeout(() => setActionMessage(null), 5000);
             }
-
-            // Excluir em lotes para evitar sobrecarga
-            await Promise.all(allHistory.map(n => pb.collection('agenda_cap53_notifications').delete(n.id)));
-
-            setActionMessage('Todo o histórico foi limpo.');
-            setTimeout(() => setActionMessage(null), 5000);
-            setHistoryNotifications([]);
-            setHistoryHasMore(false);
-            setHistoryPage(1);
+            
+            // Recarregar histórico
+            fetchHistoryNotifications(1, false);
         } catch (error) {
             console.error('Error clearing history:', error);
             alert('Erro ao limpar o histórico.');

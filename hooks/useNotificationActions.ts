@@ -1,5 +1,5 @@
 import { pb } from '../lib/pocketbase';
-import { NotificationRecord } from '../lib/notifications';
+import { NotificationRecord, isNotificationDeletable } from '../lib/notifications';
 import { useAuth } from '../components/AuthContext';
 
 export const useNotificationActions = (
@@ -11,15 +11,46 @@ export const useNotificationActions = (
   const { user } = useAuth();
 
   const markAsRead = async (id: string) => {
-    // Skip virtual notifications
-    if (id.startsWith('req_') || id.startsWith('tra_')) return;
+    console.log('markAsRead called for id:', id);
+    
+    // 1. Optimistic Update (Immediate Feedback)
+    setNotifications(prev => {
+        const newNotifs = prev.map(n => n.id === id ? { ...n, read: true } : n);
+        console.log('Optimistic update applied. Found notification?', prev.some(n => n.id === id));
+        return newNotifs;
+    });
+    
+    // Only decrease unread count if it was actually unread
+    const notification = notifications.find(n => n.id === id);
+    if (notification) {
+        if (!notification.read) {
+            setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+    } else {
+        console.warn('Notification not found in current list during markAsRead:', id);
+        // Force unread count update anyway just in case
+        setUnreadCount(prev => Math.max(0, prev - 1));
+    }
+
+    // 2. Backend/Persistence Update
+    if (id.startsWith('req_') || id.startsWith('tra_')) {
+        console.log('Virtual notification, skipping backend update');
+        // For virtual notifications, we could persist to localStorage if needed
+        // For now, local state update is enough for the session
+        return;
+    }
 
     try {
+      console.log('Sending update to PocketBase for:', id);
       await pb.collection('agenda_cap53_notifications').update(id, { read: true });
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      console.log('PocketBase update success');
     } catch (error) {
       console.error('Error marking notification as read:', error);
+      // Revert on error (optional, but good practice)
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: false } : n));
+      if (notification && !notification.read) {
+          setUnreadCount(prev => prev + 1);
+      }
     }
   };
 
@@ -40,6 +71,19 @@ export const useNotificationActions = (
   };
 
   const deleteNotification = async (id: string) => {
+    console.log('Tentando excluir notificação:', id);
+    const notification = notifications.find(n => n.id === id);
+    
+    if (notification) {
+        const { canDelete, reason } = isNotificationDeletable(notification);
+        if (!canDelete) {
+            alert(reason || 'Não é possível excluir esta notificação.');
+            return;
+        }
+    } else {
+        console.warn('Notificação não encontrada na lista local:', id);
+    }
+
     if (id.startsWith('req_') || id.startsWith('tra_')) {
         // Persist virtual notification deletion
         try {
@@ -59,31 +103,53 @@ export const useNotificationActions = (
 
     try {
       await pb.collection('agenda_cap53_notifications').delete(id);
+      console.log('Notificação excluída com sucesso:', id);
       setNotifications(prev => prev.filter(n => n.id !== id));
       const wasUnread = notifications.find(n => n.id === id)?.read === false;
       if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting notification:', error);
+      // Se o erro for 404, significa que já foi deletada, então removemos da lista local
+      if (error.status === 404) {
+          setNotifications(prev => prev.filter(n => n.id !== id));
+      } else {
+          alert(`Erro ao excluir notificação: ${error.message || 'Erro desconhecido'}`);
+      }
     }
   };
 
   const clearHistory = async () => {
     if (!user?.id) return;
     try {
-      const history = notifications.filter(n => n.read && !n.id.startsWith('req_') && !n.id.startsWith('tra_'));
-      await Promise.all(history.map(n => pb.collection('agenda_cap53_notifications').delete(n.id)));
-      setNotifications(prev => prev.filter(n => !n.read || n.id.startsWith('req_') || n.id.startsWith('tra_')));
+      // Use the safe backend endpoint that respects future event rules
+      const result = await pb.send('/api/notifications/clear_safe?read_only=true', { method: 'POST' });
+      
+      if (result.skipped > 0) {
+        alert(`Histórico limpo parcialmente. ${result.skipped} notificações foram mantidas pois estão vinculadas a eventos futuros.`);
+      } else {
+        // Optional: show success toast/message
+      }
+
+      // Refresh local state
+      await refreshNotifications();
     } catch (error) {
       console.error('Error clearing history:', error);
+      alert('Erro ao limpar histórico.');
     }
   };
 
   const clearAllNotifications = async () => {
     try {
-        await pb.send('/api/notifications/clear_all', { method: 'POST' });
+        const result = await pb.send('/api/notifications/clear_safe?all=true', { method: 'POST' });
+        
         // Refresh to get back virtual notifications but clear real ones
         await refreshNotifications();
-        alert('Todas as notificações foram removidas.');
+        
+        if (result.skipped > 0) {
+            alert(`Notificações limpas parcialmente. ${result.skipped} notificações foram mantidas pois estão vinculadas a eventos futuros.`);
+        } else {
+            alert('Todas as notificações foram removidas.');
+        }
     } catch (error: any) {
         console.error('Error clearing all notifications:', error);
         alert('Erro ao limpar notificações: ' + (error.message || 'Erro desconhecido'));

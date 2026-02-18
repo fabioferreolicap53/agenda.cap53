@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
+import { pb } from '../lib/pocketbase';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ReRequestModal from '../components/ReRequestModal';
@@ -30,8 +31,23 @@ const Notifications: React.FC = () => {
   const [rejectingNotification, setRejectingNotification] = useState<any | null>(null);
 
   const getData = (n: any) => {
-    if (!n.data) return {};
-    return typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
+    let result = {};
+    // Prioridade 1: Campo 'data' já parseado ou objeto
+    if (n.data && Object.keys(n.data).length > 0) {
+        result = typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
+    }
+    // Prioridade 2: Campo 'meta' (JSON stringificado)
+    else if (n.meta) {
+        try {
+            result = typeof n.meta === 'string' ? JSON.parse(n.meta) : n.meta;
+        } catch (e) {
+            console.error('Erro ao parsear meta:', e);
+            result = {};
+        }
+    }
+    
+    // Proteção contra null/undefined após parse
+    return result || {};
   };
 
   const getNotificationStatus = (n: any) => {
@@ -55,11 +71,16 @@ const Notifications: React.FC = () => {
     if (
       data.action === 'approved' || 
       data.action === 'accepted' || 
+      data.action === 'confirmed' ||
       n.invite_status === 'accepted' || 
+      n.invite_status === 'approved' ||
+      n.invite_status === 'confirmed' ||
       title.includes('aprovada') || 
       title.includes('aprovado') ||
       title.includes('aceita') || 
-      title.includes('aceito')
+      title.includes('aceito') ||
+      title.includes('confirmada') ||
+      title.includes('confirmado')
     ) {
       return 'approved';
     }
@@ -269,7 +290,99 @@ const Notifications: React.FC = () => {
     const eventData = notification.expand?.event;
     const eventDate = eventData?.date_start ? new Date(eventData.date_start) : new Date();
     const dateStr = eventDate.toISOString().split('T')[0];
-    navigate(`/calendar?date=${dateStr}&view=agenda&openChat=${notification.event}`);
+    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}`);
+  };
+
+  const getNotificationMessage = (n: any) => {
+    const data = getData(n);
+    let msg = n.message || '';
+
+    // Remove a quantidade da mensagem original para evitar duplicação com a tag
+    msg = msg.replace(/\s*\(Qtd:\s*\d+\)/i, '');
+
+    // 1. Tenta pegar do payload (novo padrão)
+    if (data?.item_name) {
+       const action = (data.action === 'approved' || data.status === 'approved') ? 'aprovada' : 'rejeitada';
+       return `Sua solicitação de ${data.item_name} foi ${action}.`;
+    }
+
+    // 2. Tenta pegar do expand (fix retroativo)
+    const itemName = n.expand?.related_request?.expand?.item?.name;
+    
+    if (itemName) {
+        let action = 'processada';
+        if (msg.toLowerCase().includes('rejeitada')) action = 'rejeitada';
+        if (msg.toLowerCase().includes('aprovada') || msg.toLowerCase().includes('confirmada')) action = 'aprovada';
+        
+        return `Sua solicitação de ${itemName} foi ${action}.`;
+    }
+
+    // 3. Fallback: retorna mensagem original limpa
+    return msg.split(' Motivo: ')[0];
+  };
+
+  const onFixNotifications = async () => {
+    if (!confirm('Isso irá processar as notificações no seu navegador para corrigir os nomes. Pode levar alguns instantes. Continuar?')) return;
+    
+    // Mostra loading visualmente (opcional, ou usa o state global)
+    // setLoading(true); // Se quiser bloquear a UI
+    
+    let count = 0;
+    let errors = 0;
+
+    try {
+        // 1. Busca as últimas 200 notificações que podem precisar de correção
+        const result = await pb.collection('agenda_cap53_notifications').getList(1, 200, {
+            sort: '-created',
+            filter: 'type = "request_decision" || type = "almc_item_request"',
+            expand: 'related_request,related_request.item'
+        });
+
+        for (const n of result.items) {
+             const data = getData(n);
+             
+             // Se já tem item_name, pula
+             if (data.item_name) continue;
+
+             // Tenta encontrar o nome do item via expand
+             let itemName = n.expand?.related_request?.expand?.item?.name;
+             let quantity = n.expand?.related_request?.quantity;
+
+             // Se não achou no expand, tenta buscar a request individualmente (fallback)
+             if (!itemName && n.related_request) {
+                 try {
+                     const req = await pb.collection('agenda_cap53_almac_requests').getOne(n.related_request, { expand: 'item' });
+                     itemName = req.expand?.item?.name;
+                     quantity = req.quantity;
+                 } catch (e) {
+                     console.log('Skipping ' + n.id + ' - request access failed');
+                 }
+             }
+
+             if (itemName) {
+                 // Atualiza o registro
+                 const newData = { ...data, item_name: itemName, quantity: quantity !== undefined ? quantity : data.quantity };
+                 
+                 try {
+                     await pb.collection('agenda_cap53_notifications').update(n.id, {
+                         data: newData,
+                         meta: JSON.stringify(newData) // mantém compatibilidade
+                     });
+                     count++;
+                 } catch (e) {
+                     console.error('Failed to update notification ' + n.id, e);
+                     errors++;
+                 }
+             }
+        }
+
+        alert(`Concluído! ${count} notificações foram corrigidas e salvas permanentemente. ${errors > 0 ? `(${errors} falhas de permissão)` : ''}`);
+        window.location.reload();
+
+    } catch (e: any) {
+        console.error(e);
+        alert('Erro ao executar correção local: ' + (e.message || e));
+    }
   };
 
   if (loading) {
@@ -308,6 +421,14 @@ const Notifications: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">delete_forever</span>
               </button>
             )}
+            
+            <button
+                onClick={onFixNotifications}
+                className="p-2 text-amber-400 hover:text-amber-600 hover:bg-amber-50 rounded-full transition-all"
+                title="Reparar Nomes de Itens (Fix Retroativo)"
+              >
+                <span className="material-symbols-outlined text-[20px]">build</span>
+            </button>
           </div>
         </div>
 
@@ -375,10 +496,27 @@ const Notifications: React.FC = () => {
             <p className="text-slate-500 text-sm">Nenhuma notificação encontrada.</p>
           </div>
         ) : (
-          filteredNotifications.map((notification) => (
+          filteredNotifications.map((notification, index) => {
+             // Check indentation for subsequent identical requests
+             let isIndented = false;
+             let isGhost = false;
+
+             if (index > 0) {
+                 const prev = filteredNotifications[index - 1];
+                 
+                 // Same event/request and same type
+                 if (notification.type === prev.type && 
+                     (notification.event === prev.event || 
+                      (notification.expand?.related_request?.id && notification.expand?.related_request?.id === prev.expand?.related_request?.id))) {
+                     isIndented = true;
+                     isGhost = true;
+                 }
+             }
+
+             return (
             <div
               key={notification.id}
-              className={`group relative flex gap-5 p-5 rounded-xl transition-all duration-200 ${getStatusContainerStyles(notification)}`}
+              className={`group relative flex gap-5 p-5 rounded-xl transition-all duration-200 ${getStatusContainerStyles(notification)} ${isIndented ? 'ml-8 border-l-4 border-l-slate-300' : ''} ${isGhost ? 'opacity-40 hover:opacity-100 hover:bg-white hover:shadow-sm transition-all duration-500 grayscale hover:grayscale-0' : ''}`}
             >
               {!notification.read && (
                 <div className="absolute top-5 right-5 size-2 bg-blue-500 rounded-full ring-4 ring-blue-50/50"></div>
@@ -401,7 +539,7 @@ const Notifications: React.FC = () => {
                 </div>
                 
                 <p className={`text-[14px] leading-relaxed mb-4 ${notification.read ? 'text-slate-400' : 'text-slate-500'}`}>
-                  {notification.message}
+                  {getNotificationMessage(notification)}
                 </p>
 
                 {/* Metadata Tags */}
@@ -424,10 +562,28 @@ const Notifications: React.FC = () => {
 
                 {/* Justification/Observation */}
                 {getData(notification).justification && (
-                   <div className="mt-2 p-2 bg-yellow-50 text-yellow-800 text-xs rounded-md border border-yellow-100 flex items-start gap-1">
-                      <span className="material-symbols-outlined text-[14px] mt-0.5">sticky_note_2</span>
-                      <span>
-                        <strong className="font-semibold">Observação:</strong> {getData(notification).justification}
+                   <div className={`mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 ${
+                       (notification.type === 'refusal' || 
+                        (notification.title?.toLowerCase() || '').includes('recusad') || 
+                        (notification.title?.toLowerCase() || '').includes('rejeitad') ||
+                        getData(notification).action === 'rejected')
+                       ? 'bg-red-50 text-red-900 border-red-100 ring-1 ring-red-200/50'
+                       : 'bg-amber-50 text-amber-900 border-amber-100 ring-1 ring-amber-200/50'
+                   }`}>
+                      <span className="material-symbols-outlined text-[16px] mt-px">
+                        {(notification.type === 'refusal' || 
+                          (notification.title?.toLowerCase() || '').includes('recusad') || 
+                          (notification.title?.toLowerCase() || '').includes('rejeitad') ||
+                          getData(notification).action === 'rejected') ? 'report' : 'sticky_note_2'}
+                      </span>
+                      <span className="leading-relaxed">
+                        <strong className="font-bold block mb-0.5 uppercase tracking-wide text-[10px] opacity-80">
+                            {(notification.type === 'refusal' || 
+                              (notification.title?.toLowerCase() || '').includes('recusad') || 
+                              (notification.title?.toLowerCase() || '').includes('rejeitad') ||
+                              getData(notification).action === 'rejected') ? 'Motivo da Recusa' : 'Observação'}
+                        </strong>
+                        {getData(notification).justification}
                       </span>
                    </div>
                 )}
@@ -435,11 +591,23 @@ const Notifications: React.FC = () => {
                 {/* Actions Area */}
                 <div className="mt-3 flex items-center gap-3">
                    {/* Link para Gestão de Transporte (apenas para solicitações de transporte) */}
-                   {notification.type === 'transport_request' && (
+                   {(notification.type === 'transport_request' || notification.type === 'transport_decision') && (
                       <button
                         onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/transporte?eventId=${notification.event}`);
+                            // Check role to determine navigation target
+                            // TRA (Transport Sector) goes to management page
+                            // Others (Creator/Admin/CE) go to event details modal in Calendar
+                            const isTransportSector = user?.role === 'TRA';
+
+                            if (isTransportSector) {
+                                navigate(`/transporte?eventId=${notification.event}`);
+                            } else {
+                                const eventData = notification.expand?.event;
+                                const eventDate = eventData?.date_start ? new Date(eventData.date_start) : new Date();
+                                const dateStr = eventDate.toISOString().split('T')[0];
+                                navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=transport`);
+                            }
                         }}
                         className="px-3 py-1.5 bg-cyan-50 text-cyan-700 border border-cyan-100 text-xs font-bold rounded-lg hover:bg-cyan-100 transition-all flex items-center gap-1.5"
                       >
@@ -474,22 +642,62 @@ const Notifications: React.FC = () => {
                   {(
                     latestGroupedIds.has(notification.id) && (
                         (notification.type === 'refusal' && (getData(notification).kind === 'almc_item_decision' || getData(notification).kind === 'transport_decision')) ||
-                        (notification.type === 'request_decision' && (notification.title?.toLowerCase() || '').includes('rejeitada')) ||
-                        (notification.type === 'transport_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitad') || (notification.title?.toLowerCase() || '').includes('recusad')))
+                        (notification.type === 'request_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitada') || getData(notification).action === 'rejected')) ||
+                        (notification.type === 'transport_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitad') || (notification.title?.toLowerCase() || '').includes('recusad') || getData(notification).action === 'rejected'))
                     )
                   ) && (
                     // Check if the underlying request/event is still rejected before showing the button
                     (() => {
                         const relatedReq = notification.expand?.related_request;
-                        const relatedEvent = notification.expand?.event;
+                        // Tenta pegar o evento de 'event' ou 'related_event'
+                        const relatedEvent = notification.expand?.event || notification.expand?.related_event;
                         
                         let isApproved = false;
                         let isPending = false;
 
                         // Item Request Logic
-                        if (relatedReq) {
-                             isApproved = relatedReq.status === 'approved';
-                             isPending = relatedReq.status === 'pending';
+                        if (relatedReq || (notification.related_request && relatedEvent)) {
+                             // 1. Try to get the MOST UP-TO-DATE status from the event's reverse requests list
+                             // The direct expansion 'relatedReq' might be stale depending on fetch order
+                             const reverseRequests = relatedEvent?.expand?.['agenda_cap53_almac_requests_via_event'] || [];
+                             
+                             // Try to match specific request ID first
+                             const match = notification.related_request 
+                                ? reverseRequests.find((r: any) => r.id === notification.related_request)
+                                : null;
+
+                             if (match) {
+                                 if (match.status === 'approved') isApproved = true;
+                                 if (match.status === 'pending') isPending = true;
+                             } else if (relatedReq) {
+                                 // Fallback to direct expansion
+                                 if (relatedReq.status === 'approved') isApproved = true;
+                                 if (relatedReq.status === 'pending') isPending = true;
+                             }
+
+                             // 2. Check for ANY pending request for the SAME item (to avoid duplicates)
+                             if (!isApproved && !isPending) {
+                                  // Determine Item ID
+                                  let currentItemId = null;
+                                  
+                                  if (match) {
+                                      currentItemId = typeof match.item === 'object' ? match.item.id : match.item;
+                                  } else if (relatedReq) {
+                                      currentItemId = typeof relatedReq.item === 'object' ? relatedReq.item.id : relatedReq.item;
+                                  }
+
+                                  if (currentItemId && Array.isArray(reverseRequests)) {
+                                      const sameItemPending = reverseRequests.some((r: any) => {
+                                          const rItemId = typeof r.item === 'object' ? r.item.id : r.item;
+                                          const status = (r.status || '').toLowerCase();
+                                          return rItemId === currentItemId && status === 'pending';
+                                      });
+
+                                      if (sameItemPending) {
+                                          isPending = true;
+                                      }
+                                  }
+                             }
                         } 
                         // Transport Request Logic
                         else if (relatedEvent) {
@@ -498,29 +706,24 @@ const Notifications: React.FC = () => {
                         }
                         
                         if (isApproved) {
-                             return (
-                                <span className="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-medium rounded-lg border border-emerald-100 flex items-center gap-1 cursor-default">
-                                    <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                                    Aprovado
-                                </span>
-                             );
+                             return null;
                         }
 
                         if (isPending) {
                              return (
-                                <span className="px-3 py-1.5 bg-amber-50 text-amber-600 text-xs font-medium rounded-lg border border-amber-100 flex items-center gap-1 cursor-default" title="Você já solicitou novamente este item">
-                                    <span className="material-symbols-outlined text-[14px]">update</span>
-                                    Re-solicitado
-                                </span>
+                                <div className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default" title="Esta solicitação já encontra-se em análise no setor responsável">
+                                    <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
+                                    Já solicitado novamente. Aguardando resposta do setor responsável.
+                                </div>
                              );
                         }
 
                         return (
                             <button
                               onClick={() => setReRequestNotification(notification)}
-                              className="px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-medium rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1"
+                              className="px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1.5"
                             >
-                              <span className="material-symbols-outlined text-[14px]">refresh</span>
+                              <span className="material-symbols-outlined text-[16px]">refresh</span>
                               Solicitar Novamente
                             </button>
                         );
@@ -529,26 +732,56 @@ const Notifications: React.FC = () => {
 
                   {/* Status Badge */}
                    {notification.invite_status && notification.invite_status !== 'pending' && (
-                      <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${
-                        notification.invite_status === 'accepted' ? 'text-emerald-600 bg-emerald-50' : 'text-red-600 bg-red-50'
+                      <span className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1.5 ${
+                        (notification.invite_status === 'accepted' || notification.invite_status === 'confirmed' || notification.invite_status === 'approved') 
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                        : 'bg-red-50 text-red-700 border-red-100'
                       }`}>
-                         {notification.invite_status === 'accepted' ? 'Aceito' : 'Recusado'}
+                         <span className="material-symbols-outlined text-[16px]">
+                            {(notification.invite_status === 'accepted' || notification.invite_status === 'confirmed' || notification.invite_status === 'approved') ? 'check_circle' : 'cancel'}
+                         </span>
+                         {(notification.invite_status === 'accepted' || notification.invite_status === 'confirmed' || notification.invite_status === 'approved') 
+                         ? (notification.invite_status === 'confirmed' ? 'Confirmado' : 'Aceito')
+                         : 'Recusado'}
                       </span>
                    )}
                 </div>
 
                 {/* Hover Actions */}
-                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50 opacity-0 group-hover:opacity-100 transition-opacity relative z-20">
                   {!notification.read && (
-                    <button onClick={() => markAsRead(notification.id)} className="text-[10px] font-semibold text-primary hover:text-primary-dark">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Clicou em Marcar como lida:', notification.id);
+                        markAsRead(notification.id);
+                      }} 
+                      className="text-[10px] font-semibold text-primary hover:text-primary-dark cursor-pointer"
+                    >
                       Marcar como lida
                     </button>
                   )}
-                  <button onClick={() => deleteNotification(notification.id)} className="text-[10px] font-semibold text-slate-400 hover:text-red-500">
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Botão Remover clicado para:', notification.id);
+                      deleteNotification(notification.id);
+                    }} 
+                    className="text-[10px] font-semibold text-slate-400 hover:text-red-500 cursor-pointer"
+                  >
                     Remover
                   </button>
                   {notification.event && (
-                    <button onClick={() => handleViewEvent(notification)} className="text-[10px] font-semibold text-slate-400 hover:text-slate-700">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleViewEvent(notification);
+                      }} 
+                      className="text-[10px] font-semibold text-slate-400 hover:text-slate-700 cursor-pointer"
+                    >
                       Ver Evento
                     </button>
                   )}
@@ -556,7 +789,8 @@ const Notifications: React.FC = () => {
 
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
 
