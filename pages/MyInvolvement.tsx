@@ -563,106 +563,89 @@ const MyInvolvement: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {filteredEvents.map((event) => (
+                  {filteredEvents.map((event) => {
+                    const statusColor = (event.requestStatus === 'pending' || event.participationStatus === 'pending') ? 'amber' :
+                                      (event.requestStatus === 'rejected' || event.participationStatus === 'rejected') ? 'red' :
+                                      (event.userRole || '').toUpperCase() === 'ORGANIZADOR' ? 'blue' : 
+                                      (event.userRole || '').toUpperCase() === 'COORGANIZADOR' ? 'green' : 'indigo';
+                    
+                    return (
                     <div 
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className="group bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-500 cursor-pointer overflow-hidden flex flex-col"
+                      className={`group relative bg-white rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col`}
                     >
-                      <div className="px-6 py-4 flex items-center justify-between border-b border-slate-50">
-                        <div className="flex items-center gap-3">
-                          <div className={`size-10 rounded-xl flex items-center justify-center ${
-                            (event.requestStatus === 'pending' || event.participationStatus === 'pending') ? 'bg-amber-50 text-amber-600' :
-                            (event.requestStatus === 'rejected' || event.participationStatus === 'rejected') ? 'bg-red-50 text-red-600' :
-                            (event.userRole || '').toUpperCase() === 'ORGANIZADOR' ? 'bg-blue-50 text-blue-600' : 
-                            (event.userRole || '').toUpperCase() === 'COORGANIZADOR' ? 'bg-green-50 text-green-600' : 'bg-indigo-50 text-indigo-600'
-                          }`}>
-                            <span className="material-symbols-outlined text-xl">{getRoleIcon(event)}</span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Status</span>
-                            {getStatusBadge(event)}
-                          </div>
-                        </div>
-                        <span className="material-symbols-outlined text-slate-200 group-hover:text-primary transition-colors">arrow_forward_ios</span>
-                      </div>
-
-                      <div className="p-6 space-y-4 flex-1">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {getRoleBadge(event)}
-                            {(event.nature || event.category) && (
-                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-600">
-                                {event.nature || event.category}
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="text-xl font-black text-slate-900 leading-tight line-clamp-2 group-hover:text-primary transition-colors">
-                            {event.title}
-                          </h3>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                              <span className="material-symbols-outlined text-lg">calendar_today</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">Data</span>
-                              <span className="text-xs font-black text-slate-700">{format(getSafeDate(event.date_start), 'dd MMM yyyy', { locale: ptBR })}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                              <span className="material-symbols-outlined text-lg">schedule</span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[10px] font-bold text-slate-400 uppercase">Horário</span>
-                              <div className="flex items-center gap-1 text-xs font-black text-slate-700">
-                                <span>{format(getSafeDate(event.date_start), 'HH:mm')}</span>
-                                {event.date_end && (
-                                  <>
-                                    <span className="text-[9px] text-slate-300 font-black uppercase tracking-tighter">até</span>
-                                    <span>{format(getSafeDate(event.date_end), 'HH:mm')}</span>
-                                  </>
+                      <div className={`absolute top-0 left-0 w-1.5 h-full bg-${statusColor}-500 opacity-80`} />
+                      
+                      <div className="p-5 flex flex-col h-full gap-4">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-3">
+                           <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {getRoleBadge(event)}
+                                {(event.nature || event.category) && (
+                                  <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-slate-50 text-slate-500 border border-slate-100">
+                                    {event.nature || event.category}
+                                  </span>
                                 )}
                               </div>
-                            </div>
-                          </div>
+                              <h3 className="text-lg font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-primary transition-colors mt-1">
+                                {event.title}
+                              </h3>
+                           </div>
+                           <div className="shrink-0">
+                              {getStatusBadge(event)}
+                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3 pt-2">
-                          <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 shrink-0">
-                            <span className="material-symbols-outlined text-lg">location_on</span>
-                          </div>
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase">Localização</span>
-                            <span className="text-xs font-black text-slate-700 truncate">
-                              {event.expand?.location?.name || event.custom_location || 'Local não definido'}
-                            </span>
-                          </div>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenEventInCalendar(event);
-                            }}
-                            className="text-[11px] font-bold text-slate-400 hover:text-primary transition-colors flex items-center gap-1 shrink-0 ml-auto bg-slate-50 px-2 py-1 rounded-lg hover:bg-primary/5"
-                            title="Ver no Calendário"
-                          >
-                            <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-                            Abrir
-                          </button>
+                        {/* Divider */}
+                        <div className="h-px w-full bg-slate-50" />
+
+                        {/* Meta Info Grid */}
+                        <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
+                            <div className="flex items-center gap-2 text-slate-600">
+                                <span className="material-symbols-outlined text-base text-slate-400">calendar_today</span>
+                                <span className="font-bold">{format(getSafeDate(event.date_start), 'dd MMM yyyy', { locale: ptBR })}</span>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 text-slate-600">
+                                <span className="material-symbols-outlined text-base text-slate-400">schedule</span>
+                                <div className="flex items-center gap-1 font-bold">
+                                  <span>{format(getSafeDate(event.date_start), 'HH:mm')}</span>
+                                  {event.date_end && (
+                                    <>
+                                      <span className="text-[9px] text-slate-300 font-black uppercase">até</span>
+                                      <span>{format(getSafeDate(event.date_end), 'HH:mm')}</span>
+                                    </>
+                                  )}
+                                </div>
+                            </div>
+
+                            <div className="col-span-2 flex items-center gap-2 text-slate-600">
+                                <span className="material-symbols-outlined text-base text-slate-400">location_on</span>
+                                <span className="font-bold truncate max-w-[200px]" title={event.expand?.location?.name || event.custom_location || 'Local não definido'}>
+                                  {event.expand?.location?.name || event.custom_location || 'Local não definido'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Footer Action */}
+                        <div className="mt-auto pt-2 flex justify-end">
+                            <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenEventInCalendar(event);
+                                }}
+                                className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-primary transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-50"
+                            >
+                                <span className="material-symbols-outlined text-sm">calendar_month</span>
+                                Ver no Calendário
+                            </button>
                         </div>
                       </div>
-
-                      <div className={`h-1.5 w-full ${
-                        (event.requestStatus === 'pending' || event.participationStatus === 'pending') ? 'bg-amber-500' :
-                        (event.requestStatus === 'rejected' || event.participationStatus === 'rejected') ? 'bg-red-500' :
-                        (event.userRole || '').toUpperCase() === 'ORGANIZADOR' ? 'bg-blue-500' : 
-                        (event.userRole || '').toUpperCase() === 'COORGANIZADOR' ? 'bg-green-500' : 'bg-indigo-500'
-                      }`} />
                     </div>
-                  ))}
+                  );
+                  })}
                 </div>
               )}
             </div>

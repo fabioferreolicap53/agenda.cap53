@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
+import { notificationService } from '../lib/notifications';
 import EventChatModal from './EventChatModal';
 import ReRequestModal from './ReRequestModal';
 import CustomSelect from './CustomSelect';

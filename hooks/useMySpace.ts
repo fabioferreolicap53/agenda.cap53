@@ -144,8 +144,29 @@ export const useMySpace = () => {
           userRole: r.role || 'PARTICIPANTE'
         }));
 
-      // Combine and sort
-      const allEvents = [...createdWithMeta, ...participationEvents, ...requestEvents]
+      // Combine and deduplicate
+      const uniqueEventsMap = new Map<string, MySpaceEvent>();
+
+      // 1. Add Created events (Highest priority)
+      createdWithMeta.forEach(e => uniqueEventsMap.set(e.id, e));
+
+      // 2. Add Participation events
+      // Only add if not already present (e.g. if I created it, I'm already there)
+      participationEvents.forEach(e => {
+        if (!uniqueEventsMap.has(e.id)) {
+          uniqueEventsMap.set(e.id, e);
+        }
+      });
+
+      // 3. Add Request events
+      // Only add if not already present (e.g. if I'm already a participant, don't show request)
+      requestEvents.forEach(e => {
+        if (!uniqueEventsMap.has(e.id)) {
+          uniqueEventsMap.set(e.id, e);
+        }
+      });
+
+      const allEvents = Array.from(uniqueEventsMap.values())
         .sort((a, b) => new Date(b.date_start).getTime() - new Date(a.date_start).getTime());
 
       setEvents(allEvents);
