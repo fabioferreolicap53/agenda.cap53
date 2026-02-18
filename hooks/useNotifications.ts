@@ -19,7 +19,7 @@ export const useNotifications = () => {
         pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
           filter: `user = "${user.id}"`,
           sort: '-created',
-          expand: 'event,related_event,related_request,related_request.item,related_request.created_by,event.user,event.agenda_cap53_almac_requests_via_event,related_event.agenda_cap53_almac_requests_via_event',
+          expand: 'event,related_event,related_request,related_request.item,related_request.created_by,event.user',
           $autoCancel: false
         }).catch(err => {
           console.error('Error fetching notifications list:', err);

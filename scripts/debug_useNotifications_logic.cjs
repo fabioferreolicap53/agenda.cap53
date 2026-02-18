@@ -13,7 +13,7 @@ async function debugUseNotificationsLogic() {
       const notifResult = await pb.collection('agenda_cap53_notifications').getList(1, 50, {
         filter: `user = "${userId}"`,
         sort: '-created',
-        expand: 'event,related_request,related_request.item'
+        expand: 'event,related_event,related_request,related_request.item,related_request.created_by,event.user'
       });
       console.log(`   ✅ Notificações encontradas: ${notifResult.totalItems}`);
       
