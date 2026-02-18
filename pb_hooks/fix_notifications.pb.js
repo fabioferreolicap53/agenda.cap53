@@ -71,10 +71,14 @@ const fixNotifications = () => {
     }
 };
 
-// Run on startup automatically
-onAfterBootstrap((e) => {
-    fixNotifications();
-});
+// Run on startup automatically - DISABLED TO PREVENT CRASH
+// onAfterBootstrap((e) => {
+//    try {
+//        fixNotifications();
+//    } catch (err) {
+//        $app.logger().error("Failed to run fixNotifications on bootstrap: " + err);
+//    }
+// });
 
 // API endpoint for manual trigger
 routerAdd("POST", "/api/fix-notifications", (c) => {
