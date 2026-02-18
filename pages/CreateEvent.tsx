@@ -1396,7 +1396,7 @@ const CreateEvent: React.FC = () => {
                   <CustomSelect
                     value={involvementLevel}
                     onChange={setInvolvementLevel}
-                    placeholder="Selecionar nível de envolvimento"
+                    placeholder="Selecione o nível de envolvimento..."
                     required
                     className="h-14"
                     options={INVOLVEMENT_LEVELS}
