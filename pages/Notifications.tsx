@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { useNotifications } from '../hooks/useNotifications';
@@ -104,85 +104,56 @@ const Notifications: React.FC = () => {
     }
   }, [notifications, filter]);
 
-  const latestGroupedIds = useMemo(() => {
-    const groups: Record<string, any[]> = {};
+  const groupedNotifications = useMemo(() => {
+    const groups: Map<string, typeof notifications> = new Map();
+    const singles: typeof notifications = [];
 
-    notifications.forEach(n => {
-        const data = getData(n);
-        const title = n.title?.toLowerCase() || '';
+    filteredNotifications.forEach(n => {
+        let key = null;
         
-        // 1. Refusals (User side)
-        const isRefusal = (
-            (n.type === 'refusal' && (data.kind === 'almc_item_decision' || data.kind === 'transport_decision')) ||
-            (n.type === 'request_decision' && title.includes('rejeitada')) ||
-            (n.type === 'transport_decision' && (title.includes('rejeitad') || title.includes('recusad')))
-        );
-
-        // 2. Requests (Sector side - ALMC/TRA/DCA)
-        const isRequest = (
-            n.type === 'almc_item_request' || 
-            n.type === 'transport_request'
-        );
-
-        // 3. Approvals (User side) - Add to group so they become the latest
-        const isApproval = (
-             (data.action === 'approved' || data.action === 'accepted' || n.invite_status === 'accepted') &&
-             (n.type === 'request_decision' || n.type === 'transport_decision' || title.includes('aprovada') || title.includes('aceita'))
-        );
-
-        if (isRefusal || isRequest || isApproval) {
-            // Group by related request or event
-            // Item requests use related_request, Transport requests use event
-            const key = n.related_request || n.event;
-            
-            // Only group if we have a key
-            if (key) {
-                if (!groups[key]) groups[key] = [];
-                groups[key].push(n);
-            }
+        // 1. Agrupa por related_request (Item específico)
+        if (n.related_request) {
+            key = n.related_request;
+        } 
+        // 2. Agrupa Transportes do mesmo evento
+        else if ((n.type === 'transport_request' || n.type === 'transport_decision' || (n.type === 'history_log' && getData(n).icon === 'local_shipping')) && n.event) {
+            key = `transport_${n.event}`;
+        }
+        
+        if (key) {
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)?.push(n);
+        } else {
+            singles.push(n);
         }
     });
 
-    const latestIds = new Set<string>();
-    Object.values(groups).forEach(group => {
-        // Sort descending by created date
-        group.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-        if (group.length > 0) {
-            latestIds.add(group[0].id);
-        }
+    const result: Array<{ id: string, items: typeof notifications, latest: Date }> = [];
+
+    groups.forEach((items, key) => {
+        // Ordena por data (mais recente primeiro)
+        items.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+        result.push({
+            id: key,
+            items: items,
+            latest: new Date(items[0].created)
+        });
     });
 
-    return latestIds;
-  }, [notifications]);
+    singles.forEach(n => {
+        result.push({
+            id: n.id,
+            items: [n],
+            latest: new Date(n.created)
+        });
+    });
+
+    // Ordena grupos pela notificação mais recente
+    return result.sort((a, b) => b.latest.getTime() - a.latest.getTime());
+  }, [filteredNotifications]);
 
   const getStatusContainerStyles = (n: any) => {
     const status = getNotificationStatus(n);
-    const data = getData(n);
-    const title = n.title?.toLowerCase() || '';
-    
-    // Check if it's an old notification (part of a group but not the latest)
-    const isRefusal = (
-        (n.type === 'refusal' && (data.kind === 'almc_item_decision' || data.kind === 'transport_decision')) ||
-        (n.type === 'request_decision' && title.includes('rejeitada')) ||
-        (n.type === 'transport_decision' && (title.includes('rejeitad') || title.includes('recusad')))
-    );
-    
-    const isRequest = (
-        n.type === 'almc_item_request' || 
-        n.type === 'transport_request'
-    );
-
-    const isApproval = (
-         (data.action === 'approved' || data.action === 'accepted' || n.invite_status === 'accepted') &&
-         (n.type === 'request_decision' || n.type === 'transport_decision' || title.includes('aprovada') || title.includes('aceita'))
-    );
-
-    const isOldNotification = (isRefusal || isRequest || isApproval) && !latestGroupedIds.has(n.id);
-
-    // Old Notifications: Minimalist "Ghost" State
-    if (isOldNotification) {
-        return 'bg-slate-50/40 border border-slate-100 opacity-40 hover:opacity-100 hover:bg-white hover:shadow-sm transition-all duration-500 grayscale hover:grayscale-0';
-    }
     
     // Base styles for modern cards
     const baseStyles = 'bg-white transition-all duration-300 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]';
@@ -217,6 +188,7 @@ const Notifications: React.FC = () => {
       case 'refusal': return 'cancel';
       case 'acknowledgment': return 'check_circle';
       case 'system': return 'info';
+      case 'history_log': return getData(n).icon || 'history';
       default: return 'notifications';
     }
   };
@@ -237,6 +209,7 @@ const Notifications: React.FC = () => {
       case 'refusal': return 'text-rose-600 bg-rose-50';
       case 'acknowledgment': return 'text-emerald-600 bg-emerald-50';
       case 'system': return 'text-slate-600 bg-slate-100';
+      case 'history_log': return 'text-slate-400 bg-slate-50';
       default: return 'text-slate-600 bg-slate-50';
     }
   };
@@ -290,6 +263,32 @@ const Notifications: React.FC = () => {
     const eventData = notification.expand?.event;
     const eventDate = eventData?.date_start ? new Date(eventData.date_start) : new Date();
     const dateStr = eventDate.toISOString().split('T')[0];
+
+    // Lógica de redirecionamento específica por tipo
+    const data = getData(notification);
+    
+    // 1. Almoxarifado/Copa -> Aba 'resources'
+    if (
+        notification.type === 'almc_item_request' || 
+        data.kind === 'almc_item_decision' || 
+        notification.title?.toLowerCase().includes('almoxarifado') ||
+        notification.title?.toLowerCase().includes('copa')
+    ) {
+        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=resources`);
+        return;
+    }
+
+    // 2. Transporte -> Aba 'transport' (já existia lógica similar no botão específico, mas bom generalizar)
+    if (
+        notification.type === 'transport_request' || 
+        notification.type === 'transport_decision' || 
+        data.kind === 'transport_decision'
+    ) {
+        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=transport`);
+        return;
+    }
+
+    // Default: Visão geral
     navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}`);
   };
 
@@ -300,9 +299,23 @@ const Notifications: React.FC = () => {
     // Remove a quantidade da mensagem original para evitar duplicação com a tag
     msg = msg.replace(/\s*\(Qtd:\s*\d+\)/i, '');
 
-    // 1. Tenta pegar do payload (novo padrão)
+    // 1. Tratamento explícito para pendentes (Notificações Virtuais)
+    if (n.invite_status === 'pending' || data.status === 'pending') {
+        if (data.item_name) {
+            return `Aguardando aprovação de ${data.item_name} para o evento "${data.event_title || 'Evento'}"`;
+        }
+        return msg;
+    }
+
+    // 2. Tenta pegar do payload (novo padrão)
     if (data?.item_name) {
-       const action = (data.action === 'approved' || data.status === 'approved') ? 'aprovada' : 'rejeitada';
+       let action = 'processada';
+       if (data.action === 'approved' || data.status === 'approved' || data.status === 'confirmed') {
+           action = 'aprovada';
+       } else if (data.action === 'rejected' || data.status === 'rejected') {
+           action = 'rejeitada';
+       }
+       
        return `Sua solicitação de ${data.item_name} foi ${action}.`;
     }
 
@@ -321,11 +334,8 @@ const Notifications: React.FC = () => {
     return msg.split(' Motivo: ')[0];
   };
 
-  const onFixNotifications = async () => {
-    if (!confirm('Isso irá processar as notificações no seu navegador para corrigir os nomes. Pode levar alguns instantes. Continuar?')) return;
-    
-    // Mostra loading visualmente (opcional, ou usa o state global)
-    // setLoading(true); // Se quiser bloquear a UI
+  const onFixNotifications = async (silent = false) => {
+    if (!silent && !confirm('Isso irá processar as notificações no seu navegador para corrigir os nomes. Pode levar alguns instantes. Continuar?')) return;
     
     let count = 0;
     let errors = 0;
@@ -355,7 +365,7 @@ const Notifications: React.FC = () => {
                      itemName = req.expand?.item?.name;
                      quantity = req.quantity;
                  } catch (e) {
-                     console.log('Skipping ' + n.id + ' - request access failed');
+                     if (!silent) console.log('Skipping ' + n.id + ' - request access failed');
                  }
              }
 
@@ -376,14 +386,42 @@ const Notifications: React.FC = () => {
              }
         }
 
-        alert(`Concluído! ${count} notificações foram corrigidas e salvas permanentemente. ${errors > 0 ? `(${errors} falhas de permissão)` : ''}`);
-        window.location.reload();
+        if (!silent) {
+            alert(`Concluído! ${count} notificações foram corrigidas e salvas permanentemente. ${errors > 0 ? `(${errors} falhas de permissão)` : ''}`);
+            window.location.reload();
+        } else if (count > 0) {
+            console.log(`Auto-repaired ${count} notifications.`);
+            refresh(); // Refresh list to show names
+        }
 
     } catch (e: any) {
         console.error(e);
-        alert('Erro ao executar correção local: ' + (e.message || e));
+        if (!silent) alert('Erro ao executar correção local: ' + (e.message || e));
     }
   };
+
+  // Auto-repair effect
+  useEffect(() => {
+    if (loading) return;
+    
+    const needsRepair = notifications.some(n => {
+        const data = getData(n);
+        if (n.type !== 'request_decision' && n.type !== 'almc_item_request') return false;
+        // If missing item_name and has related request, it implies it needs repair
+        // But check if we already have the info in expand to avoid unnecessary calls if expand works but data is missing
+        // Actually, we want to persist it in data so getNotificationMessage works simply.
+        return !data.item_name && n.related_request;
+    });
+
+    if (needsRepair) {
+        // Debounce or just run? Run once per load/change
+        // Use a timeout to avoid immediate overlap with render
+        const timer = setTimeout(() => {
+            onFixNotifications(true);
+        }, 1000);
+        return () => clearTimeout(timer);
+    }
+  }, [notifications, loading]);
 
   if (loading) {
     return (
@@ -486,8 +524,8 @@ const Notifications: React.FC = () => {
       </div>
 
       {/* Lista */}
-      <div className="space-y-4">
-        {filteredNotifications.length === 0 ? (
+      <div className="space-y-8">
+        {groupedNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-center">
             <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-4">
               <span className="material-symbols-outlined text-slate-300 text-3xl">notifications_off</span>
@@ -496,33 +534,31 @@ const Notifications: React.FC = () => {
             <p className="text-slate-500 text-sm">Nenhuma notificação encontrada.</p>
           </div>
         ) : (
-          filteredNotifications.map((notification, index) => {
-             // Check indentation for subsequent identical requests
-             let isIndented = false;
-             let isGhost = false;
-
-             if (index > 0) {
-                 const prev = filteredNotifications[index - 1];
-                 
-                 // Same event/request and same type
-                 if (notification.type === prev.type && 
-                     (notification.event === prev.event || 
-                      (notification.expand?.related_request?.id && notification.expand?.related_request?.id === prev.expand?.related_request?.id))) {
-                     isIndented = true;
-                     isGhost = true;
-                 }
-             }
-
-             return (
-            <div
-              key={notification.id}
-              className={`group relative flex gap-5 p-5 rounded-xl transition-all duration-200 ${getStatusContainerStyles(notification)} ${isIndented ? 'ml-8 border-l-4 border-l-slate-300' : ''} ${isGhost ? 'opacity-40 hover:opacity-100 hover:bg-white hover:shadow-sm transition-all duration-500 grayscale hover:grayscale-0' : ''}`}
-            >
+          groupedNotifications.map((group) => (
+            <div key={group.id} className="relative group-container">
+                {/* Connecting Line for Groups */}
+                {group.items.length > 1 && (
+                    <div className="absolute left-[43px] top-10 bottom-10 w-0.5 bg-slate-200 z-0"></div>
+                )}
+                
+                <div className="space-y-1">
+                    {group.items.map((notification, index) => {
+                         const isLatest = index === 0;
+                         const isOld = !isLatest;
+                         
+                         return (
+                            <div
+                              key={notification.id}
+                              className={`group relative flex gap-5 p-5 rounded-xl transition-all duration-200 z-10 
+                                ${getStatusContainerStyles(notification)} 
+                                ${isOld ? 'scale-[0.98] opacity-80 hover:opacity-100 hover:scale-100' : ''}
+                              `}
+                            >
               {!notification.read && (
                 <div className="absolute top-5 right-5 size-2 bg-blue-500 rounded-full ring-4 ring-blue-50/50"></div>
               )}
 
-              <div className={`flex-shrink-0 size-12 rounded-2xl flex items-center justify-center mt-0.5 ${getIconStyles(notification)}`}>
+              <div className={`flex-shrink-0 size-12 rounded-2xl flex items-center justify-center mt-0.5 ${getIconStyles(notification)} z-10 relative bg-white`}>
                 <span className="material-symbols-outlined text-[24px]">
                   {getIcon(notification)}
                 </span>
@@ -630,7 +666,7 @@ const Notifications: React.FC = () => {
                    {/* Decision Buttons */}
                    {notification.invite_status === 'pending' && 
                     // For sector requests, only show actions if it's the latest notification in the chain
-                    !((notification.type === 'almc_item_request' || notification.type === 'transport_request') && !latestGroupedIds.has(notification.id)) && (
+                    !((notification.type === 'almc_item_request' || notification.type === 'transport_request') && !isLatest) && (
                     <div className="flex items-center gap-2">
                       <button
                         disabled={processingId === notification.id}
@@ -651,7 +687,7 @@ const Notifications: React.FC = () => {
 
                   {/* Re-request Button */}
                   {(
-                    latestGroupedIds.has(notification.id) && (
+                    isLatest && (
                         (notification.type === 'refusal' && (getData(notification).kind === 'almc_item_decision' || getData(notification).kind === 'transport_decision')) ||
                         (notification.type === 'request_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitada') || getData(notification).action === 'rejected')) ||
                         (notification.type === 'transport_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitad') || (notification.title?.toLowerCase() || '').includes('recusad') || getData(notification).action === 'rejected'))
@@ -679,9 +715,9 @@ const Notifications: React.FC = () => {
                             
                             // Se não está pendente, mostra apenas status histórico
                             return (
-                                <div className="px-3 py-1.5 bg-slate-50 text-slate-400 border border-slate-100 text-xs font-medium rounded-lg flex items-center gap-1.5 cursor-default" title="Esta recusa já foi tratada com uma nova solicitação">
-                                    <span className="material-symbols-outlined text-[16px]">history</span>
-                                    Re-solicitado
+                                <div className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default" title="Solicitação enviada novamente e em análise">
+                                    <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
+                                    Re-solicitado: Em análise no setor responsável
                                 </div>
                             );
                         }
@@ -786,47 +822,49 @@ const Notifications: React.FC = () => {
                   {!notification.read && (
                     <button 
                       onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        console.log('Clicou em Marcar como lida:', notification.id);
-                        markAsRead(notification.id);
-                      }} 
+                          e.stopPropagation();
+                          markAsRead(notification.id);
+                      }}
                       className="text-[10px] font-semibold text-primary hover:text-primary-dark cursor-pointer"
                     >
                       Marcar como lida
                     </button>
                   )}
+                  
                   <button 
                     onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('Botão Remover clicado para:', notification.id);
-                      deleteNotification(notification.id);
-                    }} 
+                        e.stopPropagation();
+                        deleteNotification(notification.id);
+                    }}
                     className="text-[10px] font-semibold text-slate-400 hover:text-red-500 cursor-pointer"
                   >
                     Remover
                   </button>
+
                   {notification.event && (
-                    <button 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleViewEvent(notification);
-                      }} 
-                      className="text-[10px] font-semibold text-slate-400 hover:text-slate-700 cursor-pointer"
-                    >
-                      Ver Evento
-                    </button>
+                     <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewEvent(notification);
+                        }}
+                        className="text-[10px] font-semibold text-slate-400 hover:text-slate-700 cursor-pointer"
+                     >
+                        Ver Evento
+                     </button>
                   )}
                 </div>
+
 
               </div>
             </div>
             );
           })
-        )}
+         }
+        </div>
       </div>
+    ))
+  )}
+</div>
 
       {reRequestNotification && (
         <ReRequestModal

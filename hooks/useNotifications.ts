@@ -44,6 +44,75 @@ export const useNotifications = () => {
       // Map pending requests to virtual notifications if they don't exist in notifications list
       const existingRequestIds = new Set(notifResult.items.map(n => n.related_request));
       
+      // Geração de Histórico Sintético (Chain of Events)
+      // Cria notificações de "Origem" (ex: "Solicitação Enviada") para itens que já têm decisão,
+      // permitindo a visualização em cadeia.
+      const historyNotifications: any[] = [];
+      const processedHistory = new Set<string>();
+
+      notifResult.items.forEach(n => {
+          // 1. Histórico para Itens (Almoxarifado/DCA)
+          if (n.related_request && n.expand?.related_request && !processedHistory.has(n.related_request)) {
+              const req = n.expand.related_request;
+              // Verifica se já existe uma notificação de "request" explícita (raro no modelo atual, mas possível)
+              // Se não existir, cria a sintética baseada na data de criação do request
+              historyNotifications.push({
+                  id: `hist_${req.id}`,
+                  collectionId: 'virtual_history',
+                  collectionName: 'virtual_history',
+                  created: req.created,
+                  updated: req.created,
+                  user: user.id,
+                  title: 'Solicitação Enviada',
+                  message: `Solicitação de ${req.expand?.item?.name || 'Item'} enviada para análise.`,
+                  type: 'history_log',
+                  read: true, // Histórico nasce lido
+                  related_request: req.id,
+                  event: n.event,
+                  expand: {
+                    event: n.expand?.event,
+                    related_request: req
+                  },
+                  data: {
+                      icon: 'send',
+                      is_history: true
+                  }
+              });
+              processedHistory.add(n.related_request);
+          }
+
+          // 2. Histórico para Transporte
+          if ((n.type === 'transport_decision' || n.type === 'transport_request') && n.event && n.expand?.event && !processedHistory.has(`trans_${n.event}`)) {
+               const evt = n.expand.event;
+               // Evita duplicar se já estamos processando um transport_request real
+               // Mas se for decision, queremos ver o "Solicitado" antes.
+               // Se n.type for transport_request, ele JÁ É o solicitado.
+               if (n.type === 'transport_decision') {
+                   // Verifica se tem um request real na lista
+                   const hasRealRequest = notifResult.items.some(other => other.type === 'transport_request' && other.event === n.event);
+                   
+                   if (!hasRealRequest) {
+                       historyNotifications.push({
+                          id: `hist_trans_${n.event}`,
+                          collectionId: 'virtual_history',
+                          collectionName: 'virtual_history',
+                          created: evt.created, // Proxy: data do evento
+                          updated: evt.created,
+                          user: user.id,
+                          title: 'Transporte Solicitado',
+                          message: `Solicitação de transporte iniciada com o evento.`,
+                          type: 'history_log',
+                          read: true,
+                          event: n.event,
+                          expand: { event: evt },
+                          data: { icon: 'local_shipping', is_history: true }
+                       });
+                       processedHistory.add(`trans_${n.event}`);
+                   }
+               }
+          }
+      });
+
       let ignored: string[] = [];
       try {
           ignored = JSON.parse(localStorage.getItem('ignored_notifications') || '[]');
@@ -60,8 +129,8 @@ export const useNotifications = () => {
           created: req.created,
           updated: req.updated,
           user: user.id,
-          title: 'Solicitação Pendente',
-          message: `Solicitação de ${req.expand?.item?.name || 'Item'} para o evento "${req.expand?.event?.title || 'Evento'}"`,
+          title: req.expand?.item?.name ? `Solicitação: ${req.expand.item.name}` : 'Solicitação em Análise',
+          message: `Aguardando aprovação para o evento "${req.expand?.event?.title || 'Evento'}"`,
           type: 'almc_item_request' as const,
           read: false,
           event: req.event,
@@ -79,7 +148,8 @@ export const useNotifications = () => {
 
       const allNotifications = [
         ...notifResult.items,
-        ...almcNotifications
+        ...almcNotifications,
+        ...historyNotifications
       ].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
 
       setNotifications(allNotifications);

@@ -28,9 +28,13 @@ const fixNotifications = () => {
 
                 let item;
                 try {
-                    item = $app.dao().findRecordById("agenda_cap53_itens", itemId);
+                    item = $app.dao().findRecordById("agenda_cap53_itens_servico", itemId);
                 } catch (e) {
-                    continue; 
+                    try {
+                        item = $app.dao().findRecordById("agenda_cap53_itens", itemId);
+                    } catch (e2) {
+                        continue;
+                    }
                 }
 
                 const itemName = item.getString("name");

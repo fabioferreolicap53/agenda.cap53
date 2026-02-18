@@ -174,8 +174,15 @@ onRecordAfterUpdateRequest((e) => {
                     try {
                         const itemId = record.getString("item");
                         if (itemId) {
-                            const itemRecord = $app.dao().findRecordById("agenda_cap53_itens", itemId);
-                            if (itemRecord) itemName = itemRecord.getString("name");
+                            // Tenta buscar na coleção de itens (nome corrigido para itens_servico)
+                            try {
+                                const itemRecord = $app.dao().findRecordById("agenda_cap53_itens_servico", itemId);
+                                if (itemRecord) itemName = itemRecord.getString("name");
+                            } catch (err1) {
+                                // Fallback para nome antigo se existir
+                                const itemRecord = $app.dao().findRecordById("agenda_cap53_itens", itemId);
+                                if (itemRecord) itemName = itemRecord.getString("name");
+                            }
                         }
                     } catch (iErr) {}
 
@@ -195,7 +202,17 @@ onRecordAfterUpdateRequest((e) => {
                     }
 
                     notification.set("user", creatorId);
-                    notification.set("title", `Solicitação ${config.label} ${action}`);
+                    
+                    let title = "";
+                    if (itemName) {
+                        // Ex: "Microfone: Aprovada"
+                        title = `${itemName}: ${action}`;
+                    } else {
+                        // Ex: "Solicitação Almoxarifado Aprovada"
+                        title = `Solicitação ${config.label} ${action}`;
+                    }
+                    
+                    notification.set("title", title);
                     notification.set("message", message);
                     notification.set("type", config.decisionType);
                     notification.set("read", false);

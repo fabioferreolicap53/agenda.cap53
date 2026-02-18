@@ -1,0 +1,9 @@
+[33mcommit 2affe5d67e70e4d4b97c4af6cb7a905b71297e79[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m
+Author: Fabio <fabioferreoli.cap53@gmail.com>
+Date:   Wed Feb 18 10:05:52 2026 -0300
+
+    057
+
+ hooks/useNotifications.ts                | 2 [32m+[m[31m-[m
+ scripts/debug_useNotifications_logic.cjs | 2 [32m+[m[31m-[m
+ 2 files changed, 2 insertions(+), 2 deletions(-)

@@ -15,6 +15,24 @@ const TransportManagement: React.FC = () => {
     const [transportSearch, setTransportSearch] = useState('');
     const [transportFilterStatus, setTransportFilterStatus] = useState<'all' | 'confirmed' | 'rejected'>('all');
     const [actionMessage, setActionMessage] = useState<string | null>(null);
+    const [rerequestIds, setRerequestIds] = useState<Set<string>>(new Set());
+
+    const fetchRerequestNotifications = useCallback(async () => {
+        try {
+            const res = await pb.collection('agenda_cap53_notifications').getList(1, 100, {
+                filter: `read = false && data.is_rerequest = true`,
+                fields: 'event,data'
+            });
+            
+            const ids = new Set<string>();
+            res.items.forEach(n => {
+                if (n.event) ids.add(n.event);
+            });
+            setRerequestIds(ids);
+        } catch (e) {
+            console.error("Erro ao buscar re-solicitações:", e);
+        }
+    }, []);
 
     const handleTransportDecision = async (eventId: string, status: 'confirmed' | 'rejected') => {
         let justification = '';
@@ -109,6 +127,7 @@ const TransportManagement: React.FC = () => {
 
     useEffect(() => {
         fetchTransportRequests();
+        fetchRerequestNotifications();
 
         let unsubscribe: (() => void) | undefined;
 
@@ -269,10 +288,16 @@ const TransportManagement: React.FC = () => {
                             <div 
                                 key={event.id} 
                                 ref={el => { if (el) scrollRef.current[event.id] = el; }}
-                                className={`group bg-white rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col md:flex-row items-stretch ${
+                                className={`group bg-white relative rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col md:flex-row items-stretch ${
                                     transportSubTab === 'history' ? 'opacity-90' : ''
                                 } ${highlightEventId === event.id ? 'ring-2 ring-primary ring-offset-2 border-primary shadow-xl shadow-primary/10' : 'border-slate-100'}`}
                             >
+                                {rerequestIds.has(event.id) && (
+                                    <div className="absolute top-3 right-4 md:right-6 px-2 py-0.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm z-20 animate-pulse">
+                                        <span className="material-symbols-outlined text-[12px]">history</span>
+                                        Re-solicitação
+                                    </div>
+                                )}
                                 {/* Status Indicator (Vertical Bar) */}
                                 <div className={`w-1.5 shrink-0 ${
                                     event.transporte_status === 'confirmed' ? 'bg-green-500' :

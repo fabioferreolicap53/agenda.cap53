@@ -736,7 +736,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         {/* Organizer Section */}
                         {event.expand?.user && (
                             <div className="space-y-3">
-                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2">Organizador</h3>
+                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2">Nível de Envolvimento</h3>
                                 {renderParticipantRow(event.expand.user)}
                             </div>
                         )}

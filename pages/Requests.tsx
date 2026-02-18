@@ -785,13 +785,29 @@ const Requests: React.FC = () => {
                                     </div>
                                     
                                     <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {group.requests.map((req: any) => (
+                                        {group.requests.map((req: any) => {
+                                            // Verificar se é uma re-solicitação cruzando com notificações pendentes
+                                            // Isso é necessário pois o status 'pending' na solicitação é igual para novos e re-solicitados
+                                            const linkedNotification = notifications.find(n => 
+                                                (n.related_request === req.id || n.expand?.related_request?.id === req.id) && 
+                                                n.data?.is_rerequest === true &&
+                                                !n.read
+                                            );
+                                            const isRerequest = !!linkedNotification;
+
+                                            return (
                                             <div key={req.id} className={`group relative p-4 rounded-2xl border transition-all duration-300 ${
                                                 req.status === 'pending' ? 'bg-white border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300' :
                                                 req.status === 'approved' ? 'bg-slate-50/50 border-slate-200 opacity-90' :
                                                 'bg-slate-50/30 border-slate-100 opacity-60'
                                             }`}>
-                                                <div className="flex justify-between items-start mb-3">
+                                                {isRerequest && (
+                                                    <div className="absolute -top-2.5 left-4 px-2 py-0.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm z-10">
+                                                        <span className="material-symbols-outlined text-[12px]">history</span>
+                                                        Re-solicitação
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between items-start mb-3 mt-1">
                                                     <span className="font-bold text-sm text-slate-800 tracking-tight">{req.expand?.item?.name || 'Item Desconhecido'}</span>
                                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border ${
                                                         req.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
@@ -847,7 +863,8 @@ const Requests: React.FC = () => {
                                                     </div>
                                                 )}
                                             </div>
-                                        ))}
+                                        );
+                                        })}
                                     </div>
                                 </div>
                             ))}
@@ -916,6 +933,7 @@ const Requests: React.FC = () => {
                                             const isChatRoomCreated = notification.type === 'chat_room_created';
                                             const isParticipationRequest = notification.type === 'event_participation_request';
                                             const isTransportRequest = notification.data?.kind === 'transport_request' || notification.data?.kind === 'transport' || notification.data?.kind === 'transport_decision';
+                                            const isRerequest = notification.data?.is_rerequest;
 
                                             const isInviteRefusal = isRefusal && notification.data?.kind === 'event_invite_response';
                                             const isAlmcRefusal = isRefusal && !isInviteRefusal;
@@ -1015,6 +1033,12 @@ const Requests: React.FC = () => {
                                                         {/* Main Content */}
                                                         <div className="flex-1 flex flex-col gap-2">
                                                             <div>
+                                                                {isRerequest && (
+                                                                    <span className="mb-1 inline-flex items-center gap-1 bg-purple-100 px-2 py-0.5 rounded text-[9px] font-bold text-purple-700 uppercase tracking-wider animate-pulse">
+                                                                        <span className="material-symbols-outlined text-[12px]">history</span>
+                                                                        Re-solicitação
+                                                                    </span>
+                                                                )}
                                                                 <div className="flex items-center gap-2 mb-1">
                                                                     <h3 className="font-bold text-slate-800 text-sm leading-tight group-hover:text-primary transition-colors">
                                                                         {isAlmcItemRequest && itemName ? itemName : (event?.title || notification.title)}
