@@ -560,6 +560,17 @@ const Notifications: React.FC = () => {
                   )}
                 </div>
 
+                {/* Re-request Indicator (Sector View) */}
+                {getData(notification).is_rerequest && (
+                   <div className="mt-2 mb-2 px-3 py-2 bg-purple-50 text-purple-800 border border-purple-100 rounded-lg text-xs flex items-center gap-2 animate-in fade-in slide-in-from-left-2">
+                      <span className="material-symbols-outlined text-[18px]">history</span>
+                      <div className="flex flex-col">
+                        <span className="font-bold">Re-solicitação</span>
+                        <span>O usuário solicitou novamente após uma recusa anterior.</span>
+                      </div>
+                   </div>
+                )}
+
                 {/* Justification/Observation */}
                 {getData(notification).justification && (
                    <div className={`mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 ${
@@ -649,14 +660,37 @@ const Notifications: React.FC = () => {
                     // Check if the underlying request/event is still rejected before showing the button
                     (() => {
                         const relatedReq = notification.expand?.related_request;
-                        // Tenta pegar o evento de 'event' ou 'related_event'
                         const relatedEvent = notification.expand?.event || notification.expand?.related_event;
+
+                        // 0. Quick check from notification data (Priority)
+                        if (getData(notification).re_requested) {
+                            const isCurrentlyPending = 
+                                (relatedReq?.status === 'pending') || 
+                                (relatedEvent?.transporte_status === 'pending');
+
+                            if (isCurrentlyPending) {
+                                return (
+                                    <div className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default animate-in fade-in" title="Esta solicitação já encontra-se em análise no setor responsável">
+                                        <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
+                                        Re-solicitação em análise
+                                    </div>
+                                );
+                            }
+                            
+                            // Se não está pendente, mostra apenas status histórico
+                            return (
+                                <div className="px-3 py-1.5 bg-slate-50 text-slate-400 border border-slate-100 text-xs font-medium rounded-lg flex items-center gap-1.5 cursor-default" title="Esta recusa já foi tratada com uma nova solicitação">
+                                    <span className="material-symbols-outlined text-[16px]">history</span>
+                                    Re-solicitado
+                                </div>
+                            );
+                        }
                         
                         let isApproved = false;
                         let isPending = false;
 
                         // Item Request Logic
-                        if (relatedReq || (notification.related_request && relatedEvent)) {
+                        if (!isPending && (relatedReq || (notification.related_request && relatedEvent))) {
                              // 1. Try to get the MOST UP-TO-DATE status from the event's reverse requests list
                              // The direct expansion 'relatedReq' might be stale depending on fetch order
                              const reverseRequests = relatedEvent?.expand?.['agenda_cap53_almac_requests_via_event'] || [];

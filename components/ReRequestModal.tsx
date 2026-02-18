@@ -139,7 +139,9 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
                          quantity: quantity,
                          item_name: itemName,
                          event_title: eventTitle,
-                         justification: observation
+                         justification: observation,
+                         is_rerequest: true,
+                         previous_refusal_id: notification?.id
                      }
                  })
              ));
@@ -186,11 +188,12 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
                         horario_levar: transportData.horario_levar,
                         horario_buscar: transportData.horario_buscar,
                         qtd_pessoas: transportData.qtd_pessoas,
-                        justification: observation
+                        justification: observation,
+                        is_rerequest: true,
+                        previous_refusal_id: notification?.id
                     }
                 })
             ));
-
         } catch (notifyError) {
             console.error('Error notifying transport sector:', notifyError);
         }
@@ -198,7 +201,16 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
 
       // Only mark notification as read if it exists
       if (notification) {
-        await pb.collection('agenda_cap53_notifications').update(notification.id, { read: true });
+        const newData = {
+            ...initialData,
+            re_requested: true,
+            re_request_date: new Date().toISOString()
+        };
+        await pb.collection('agenda_cap53_notifications').update(notification.id, { 
+            read: true,
+            data: newData,
+            meta: JSON.stringify(newData)
+        });
       }
       
       onSuccess();
