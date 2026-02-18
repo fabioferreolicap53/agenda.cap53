@@ -410,11 +410,25 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     refreshEvent();
                 }
             });
+
+            // Subscribe to almac requests updates
+            const unsubRequests = await pb.collection('agenda_cap53_almac_requests').subscribe('*', (data) => {
+                if (data.record.event === event.id) {
+                    pb.collection('agenda_cap53_almac_requests').getFullList({
+                        filter: `event = "${event.id}"`,
+                        expand: 'item'
+                    })
+                    .then(setRequests)
+                    .catch(console.error);
+                }
+            });
+
             // We should ideally track this unsubscribe as well, but for simplicity we'll add it to the existing cleanup
             const originalCleanup = unsubscribeEvent;
             unsubscribeEvent = () => {
                 if (originalCleanup) originalCleanup();
                 unsubNotifs();
+                unsubRequests();
             };
 
             // Subscribe to messages

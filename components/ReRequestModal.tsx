@@ -66,14 +66,73 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
       if (isItemRequest) {
         if (!requestId) throw new Error('ID da solicitação não encontrado.');
 
+        // 1. Update status
         await pb.collection('agenda_cap53_almac_requests').update(requestId, {
           status: 'pending',
           quantity: quantity,
           justification: observation || null
         });
+
+        // 2. Notify Responsible Sector
+        try {
+            // Get item category to determine target role
+            let category = request?.expand?.item?.category || 
+                           notification?.expand?.related_request?.expand?.item?.category;
+            
+            let itemName = request?.expand?.item?.name || 
+                           notification?.expand?.related_request?.expand?.item?.name || 
+                           initialData.item_name || 'Item';
+
+            let eventTitle = request?.expand?.event?.title || 
+                             notification?.expand?.related_request?.expand?.event?.title || 
+                             initialData.event_title || 'Evento';
+
+            // If category is missing, fetch it
+             let targetEventId = request?.event || notification?.event;
+             
+             if (!category || !targetEventId) {
+                 const reqData = await pb.collection('agenda_cap53_almac_requests').getOne(requestId, { expand: 'item,event' });
+                 category = reqData.expand?.item?.category;
+                 itemName = reqData.expand?.item?.name || itemName;
+                 eventTitle = reqData.expand?.event?.title || eventTitle;
+                 targetEventId = reqData.event;
+             }
+
+             const targetRole = (category === 'INFORMATICA') ? 'DCA' : 'ALMC';
+             
+             // Find users with this role
+             const targetUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
+                 filter: `role = "${targetRole}" || role = "ADMIN"`
+             });
+
+             // Send notifications
+             await Promise.all(targetUsers.map(u => 
+                 pb.collection('agenda_cap53_notifications').create({
+                     user: u.id,
+                     title: 'Solicitação Reaberta',
+                     message: `${pb.authStore.model?.name || 'Um usuário'} solicitou novamente ${itemName} para o evento "${eventTitle}".`,
+                     type: 'almc_item_request',
+                     related_request: requestId,
+                     event: targetEventId,
+                     read: false,
+                     invite_status: 'pending',
+                     data: { 
+                         quantity: quantity,
+                         item_name: itemName,
+                         event_title: eventTitle,
+                         justification: observation
+                     }
+                 })
+             ));
+
+        } catch (notifyError) {
+            console.error('Error notifying sector:', notifyError);
+        }
+
       } else if (isTransportRequest) {
         if (!eventId) throw new Error('ID do evento não encontrado.');
 
+        // 1. Update status
         await pb.collection('agenda_cap53_eventos').update(eventId, {
           transporte_status: 'pending',
           transporte_destino: transportData.destino,
@@ -82,6 +141,40 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
           transporte_qtd_pessoas: transportData.qtd_pessoas,
           transporte_justification: observation || null
         });
+
+        // 2. Notify Transport Sector
+        try {
+            const eventTitle = event?.title || notification?.expand?.event?.title || initialData.event_title || 'Evento';
+
+            // Find users with TRA role
+            const targetUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
+                filter: `role = "TRA" || role = "ADMIN"`
+            });
+
+            // Send notifications
+            await Promise.all(targetUsers.map(u => 
+                pb.collection('agenda_cap53_notifications').create({
+                    user: u.id,
+                    title: 'Transporte Reaberto',
+                    message: `${pb.authStore.model?.name || 'Um usuário'} solicitou novamente transporte para o evento "${eventTitle}".`,
+                    type: 'transport_request',
+                    event: eventId,
+                    read: false,
+                    invite_status: 'pending',
+                    data: { 
+                        destino: transportData.destino,
+                        event_title: eventTitle,
+                        horario_levar: transportData.horario_levar,
+                        horario_buscar: transportData.horario_buscar,
+                        qtd_pessoas: transportData.qtd_pessoas,
+                        justification: observation
+                    }
+                })
+            ));
+
+        } catch (notifyError) {
+            console.error('Error notifying transport sector:', notifyError);
+        }
       }
 
       // Only mark notification as read if it exists

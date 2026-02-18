@@ -102,3 +102,22 @@ onRecordAfterUpdateRequest((e) => {
     }
 
 }, "agenda_cap53_almac_requests", "agenda_cap53_dca_requests", "agenda_cap53_transporte_requests");
+
+onRecordBeforeDeleteRequest((e) => {
+    const eventId = e.record.id;
+    
+    try {
+        // Delete all notifications related to this event
+        const notifications = $app.dao().findRecordsByFilter(
+            "agenda_cap53_notifications", 
+            `event = '${eventId}' || related_event = '${eventId}'`
+        );
+
+        for (const notification of notifications) {
+            $app.dao().deleteRecord(notification);
+        }
+    } catch (err) {
+        // Log error but allow event deletion to proceed
+        console.log(`[HOOK ERROR] Failed to delete notifications for event ${eventId}: ${err}`);
+    }
+}, "agenda_cap53_eventos");

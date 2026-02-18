@@ -40,7 +40,22 @@ export const useNotificationActions = (
   };
 
   const deleteNotification = async (id: string) => {
-    if (id.startsWith('req_') || id.startsWith('tra_')) return;
+    if (id.startsWith('req_') || id.startsWith('tra_')) {
+        // Persist virtual notification deletion
+        try {
+            const ignored = JSON.parse(localStorage.getItem('ignored_notifications') || '[]');
+            if (!ignored.includes(id)) {
+                ignored.push(id);
+                localStorage.setItem('ignored_notifications', JSON.stringify(ignored));
+            }
+            setNotifications(prev => prev.filter(n => n.id !== id));
+            const wasUnread = notifications.find(n => n.id === id)?.read === false;
+            if (wasUnread) setUnreadCount(prev => Math.max(0, prev - 1));
+        } catch (e) {
+            console.error('Error saving ignored notifications:', e);
+        }
+        return;
+    }
 
     try {
       await pb.collection('agenda_cap53_notifications').delete(id);
@@ -79,42 +94,11 @@ export const useNotificationActions = (
     if (!user?.id) return;
 
     try {
-      const updatePayload: any = { 
-        read: true,
-        invite_status: action === 'approved' ? 'accepted' : action 
-      };
-      
-      // Update local state first for responsiveness
-      if (!notification.id.startsWith('req_') && !notification.id.startsWith('tra_')) {
-        await pb.collection('agenda_cap53_notifications').update(notification.id, updatePayload);
-      } else {
-        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
-      }
-
-      // Sync with related notifications
-      try {
-        if (notification.related_request && !notification.id.startsWith('req_')) {
-          const others = await pb.collection('agenda_cap53_notifications').getFullList({
-            filter: `related_request = "${notification.related_request}" && id != "${notification.id}" && invite_status = "pending"`
-          });
-          await Promise.all(others.map(n => 
-            pb.collection('agenda_cap53_notifications').update(n.id, { invite_status: updatePayload.invite_status })
-          ));
-        } else if (notification.type === 'transport_request' && notification.event && !notification.id.startsWith('tra_')) {
-          const others = await pb.collection('agenda_cap53_notifications').getFullList({
-            filter: `event = "${notification.event}" && type = "transport_request" && id != "${notification.id}" && invite_status = "pending"`
-          });
-          await Promise.all(others.map(n => 
-            pb.collection('agenda_cap53_notifications').update(n.id, { invite_status: updatePayload.invite_status })
-          ));
-        }
-      } catch (err) {
-        console.error('Error syncing related notifications:', err);
-      }
-
       // 1. Event Invitation Logic
       if (notification.type === 'event_invite') {
-        const eventId = notification.event;
+        const rawEvent = notification.event;
+        const eventId = typeof rawEvent === 'object' ? (rawEvent as any)?.id : rawEvent;
+
         if (eventId) {
           const existing = await pb.collection('agenda_cap53_participantes').getFullList({
             filter: `event = "${eventId}" && user = "${user.id}"`
@@ -154,7 +138,9 @@ export const useNotificationActions = (
 
       // 2. Participation Request Logic
       if (notification.type === 'event_participation_request') {
-        const eventId = notification.event;
+        const rawEvent = notification.event;
+        const eventId = typeof rawEvent === 'object' ? (rawEvent as any)?.id : rawEvent;
+
         const requesterId = notification.data?.requester_id || notification.expand?.related_request?.user;
         
         if (eventId && requesterId) {
@@ -182,7 +168,17 @@ export const useNotificationActions = (
 
       // 3. ALMC/DCA Request Logic
       if (notification.type === 'almc_item_request') {
-        const requestId = notification.related_request;
+        const rawRequest = notification.related_request;
+        const requestId = typeof rawRequest === 'object' ? (rawRequest as any)?.id : rawRequest;
+        
+        console.log('[DEBUG] Processing ALMC Request Decision:', {
+            notificationId: notification.id,
+            action,
+            requestId,
+            rawRequestType: typeof rawRequest,
+            rawRequestValue: rawRequest
+        });
+
         if (requestId) {
           const status = action === 'approved' || action === 'accepted' ? 'approved' : 'rejected';
           
@@ -191,19 +187,71 @@ export const useNotificationActions = (
               // Ensure justification is always sent, even if empty string, to clear previous values or set new ones
               payload.justification = justification || '';
               
+              console.log('[DEBUG] Sending update to agenda_cap53_almac_requests:', {
+                  id: requestId,
+                  payload
+              });
+
               // Perform the update
-              await pb.collection('agenda_cap53_almac_requests').update(requestId, payload, { requestKey: null });
+              const result = await pb.collection('agenda_cap53_almac_requests').update(requestId, payload, { requestKey: null });
               
-          } catch (updateError) {
-              console.error('Error updating ALMC request:', updateError);
+              console.log('[DEBUG] Update successful:', result);
+
+              // Notify Requester
+               try {
+                   const requesterId = (typeof rawRequest === 'object' ? (rawRequest as any)?.created_by : notification.expand?.related_request?.created_by) || 
+                                     notification.data?.requester_id || 
+                                     (notification.expand as any)?.created_by?.id;
+                   
+                   if (requesterId && requesterId !== user.id) {
+                       const itemName = (typeof rawRequest === 'object' && (rawRequest as any).expand?.item?.name) || 
+                                      notification.expand?.related_request?.expand?.item?.name || 
+                                      (notification.expand as any)?.item?.name ||
+                                      notification.data?.item_name || 'Item';
+                       const eventTitle = (typeof rawRequest === 'object' && (rawRequest as any).expand?.event?.title) || 
+                                        notification.expand?.related_request?.expand?.event?.title || 
+                                        (notification.expand as any)?.event?.title ||
+                                        notification.data?.event_title || 'Evento';
+
+                       await pb.collection('agenda_cap53_notifications').create({
+                          user: requesterId,
+                          title: `Solicitação ${status === 'approved' ? 'Aprovada' : 'Recusada'}`,
+                          message: `Sua solicitação de ${itemName} para o evento "${eventTitle}" foi ${status === 'approved' ? 'aprovada' : 'recusada'}.`,
+                          type: status === 'approved' ? 'request_decision' : 'refusal',
+                          event: notification.event,
+                          related_request: requestId,
+                          read: false,
+                          data: { 
+                              kind: 'almc_item_decision', 
+                              action: status, 
+                              justification: payload.justification 
+                          }
+                      });
+                      console.log('[DEBUG] Notification sent to requester:', requesterId);
+                  }
+              } catch (notifyError) {
+                  console.error('[DEBUG] Error notifying requester:', notifyError);
+                  // Don't throw, as the update was successful
+              }
+
+          } catch (updateError: any) {
+              console.error('[DEBUG] Error updating ALMC request:', updateError);
+              console.error('[DEBUG] Error details:', updateError.data);
               throw updateError;
           }
+        } else {
+            console.error('[DEBUG] Request ID not found in notification:', notification);
+            // If we can't find the request ID, we can't update it. 
+            // Should we stop here? Yes, to avoid marking notification as resolved without resolving request.
+            throw new Error('Request ID not found in notification');
         }
       }
 
       // 4. Transport Request Logic
       if (notification.type === 'transport_request') {
-        const eventId = notification.event;
+        const rawEvent = notification.event;
+        const eventId = typeof rawEvent === 'object' ? (rawEvent as any)?.id : rawEvent;
+
         if (eventId) {
           // Transporte usa 'confirmed' ao invés de 'approved'
           const status = action === 'approved' || action === 'accepted' ? 'confirmed' : 'rejected';
@@ -218,7 +266,9 @@ export const useNotificationActions = (
 
       // 5. Service Request Logic (Generic)
       if (notification.type === 'service_request') {
-        const eventId = notification.event;
+        const rawEvent = notification.event;
+        const eventId = typeof rawEvent === 'object' ? (rawEvent as any)?.id : rawEvent;
+
         const requesterId = notification.data?.requester_id || notification.expand?.event?.user;
         
         if (eventId && requesterId) {
@@ -237,6 +287,40 @@ export const useNotificationActions = (
             });
           }
         }
+      }
+
+      // AFTER business logic success, update the notification status
+      const updatePayload: any = { 
+        read: true,
+        invite_status: action === 'approved' ? 'accepted' : action 
+      };
+      
+      // Update local state first for responsiveness
+      if (!notification.id.startsWith('req_') && !notification.id.startsWith('tra_')) {
+        await pb.collection('agenda_cap53_notifications').update(notification.id, updatePayload);
+      } else {
+        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+      }
+
+      // Sync with related notifications
+      try {
+        if (notification.related_request && !notification.id.startsWith('req_')) {
+          const others = await pb.collection('agenda_cap53_notifications').getFullList({
+            filter: `related_request = "${notification.related_request}" && id != "${notification.id}" && invite_status = "pending"`
+          });
+          await Promise.all(others.map(n => 
+            pb.collection('agenda_cap53_notifications').update(n.id, { invite_status: updatePayload.invite_status })
+          ));
+        } else if (notification.type === 'transport_request' && notification.event && !notification.id.startsWith('tra_')) {
+          const others = await pb.collection('agenda_cap53_notifications').getFullList({
+            filter: `event = "${notification.event}" && type = "transport_request" && id != "${notification.id}" && invite_status = "pending"`
+          });
+          await Promise.all(others.map(n => 
+            pb.collection('agenda_cap53_notifications').update(n.id, { invite_status: updatePayload.invite_status })
+          ));
+        }
+      } catch (err) {
+        console.error('Error syncing related notifications:', err);
       }
 
       // Add a small delay to allow backend hooks/endpoints to process before refreshing

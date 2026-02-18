@@ -19,7 +19,8 @@ export const useNotifications = () => {
         pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
           filter: `user = "${user.id}"`,
           sort: '-created',
-          expand: 'event,related_request,related_request.item,related_request.created_by,event.user'
+          expand: 'event,related_request,related_request.item,related_request.created_by,event.user',
+          $autoCancel: false
         }).catch(err => {
           console.error('Error fetching notifications list:', err);
           return { items: [], totalItems: 0 };
@@ -37,24 +38,21 @@ export const useNotifications = () => {
               console.error('Error fetching almac requests:', err);
               return { items: [], totalItems: 0 };
             })
-          : Promise.resolve({ items: [], totalItems: 0 }),
-        (user.role === 'TRA' || user.role === 'ADMIN')
-          ? pb.collection('agenda_cap53_eventos').getList(1, 50, { 
-              filter: 'transporte_suporte = true && transporte_status = "pending"', 
-              expand: 'user',
-              $autoCancel: false
-            }).catch(err => {
-              console.error('Error fetching transport requests:', err);
-              return { items: [], totalItems: 0 };
-            })
           : Promise.resolve({ items: [], totalItems: 0 })
       ]);
 
       // Map pending requests to virtual notifications if they don't exist in notifications list
       const existingRequestIds = new Set(notifResult.items.map(n => n.related_request));
       
+      let ignored: string[] = [];
+      try {
+          ignored = JSON.parse(localStorage.getItem('ignored_notifications') || '[]');
+      } catch (e) {
+          console.error('Error reading ignored notifications:', e);
+      }
+
       const almcNotifications = (almcResult?.items || [])
-        .filter(req => !existingRequestIds.has(req.id))
+        .filter(req => !existingRequestIds.has(req.id) && !ignored.includes(`req_${req.id}`))
         .map(req => ({
           id: `req_${req.id}`,
           collectionId: 'virtual',
@@ -79,38 +77,9 @@ export const useNotifications = () => {
           expand: req.expand
         }));
 
-      const traNotifications = (traResult?.items || [])
-        .filter(evt => !existingRequestIds.has(evt.id)) // Assuming event ID is used as request ID for transport
-        .map(evt => ({
-          id: `tra_${evt.id}`,
-          collectionId: 'virtual',
-          collectionName: 'virtual',
-          created: evt.created,
-          updated: evt.updated,
-          user: user.id,
-          title: 'Transporte Pendente',
-          message: `Solicitação de transporte para o evento "${evt.title}"`,
-          type: 'transport_request' as const,
-          read: false,
-          event: evt.id,
-          related_request: evt.id,
-          invite_status: 'pending' as const,
-          data: { 
-            destino: evt.transporte_destino,
-            event_title: evt.title,
-            horario_levar: evt.transporte_horario_levar,
-            horario_buscar: evt.transporte_horario_buscar,
-            qtd_pessoas: evt.transporte_qtd_pessoas,
-            justification: evt.transporte_justification
-          },
-          acknowledged: false,
-          expand: { event: evt }
-        }));
-
       const allNotifications = [
         ...notifResult.items,
-        ...almcNotifications,
-        ...traNotifications
+        ...almcNotifications
       ].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
 
       setNotifications(allNotifications);
@@ -118,8 +87,7 @@ export const useNotifications = () => {
       // The badge count is the sum of unread system notifications + pending administrative requests
       const systemUnread = notifResult.items.filter(n => !n.read).length;
       const almcCount = almcResult?.items?.length || 0;
-      const traCount = traResult?.items?.length || 0;
-      setUnreadCount(systemUnread + almcCount + traCount);
+      setUnreadCount(systemUnread + almcCount);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {

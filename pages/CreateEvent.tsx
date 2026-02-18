@@ -87,7 +87,7 @@ const CreateEvent: React.FC = () => {
   const [title, setTitle] = useState('');
   const [originalTitle, setOriginalTitle] = useState(''); // To track title changes
   const [type, setType] = useState('');
-  const [involvementLevel, setInvolvementLevel] = useState('PARTICIPANTE');
+  const [involvementLevel, setInvolvementLevel] = useState('');
   const [locationState, setLocationState] = useState<LocationState>({ mode: 'fixed', fixedId: '', freeText: '' });
   const [observacoes, setObservacoes] = useState('');
   const [dateStart, setDateStart] = useState('');
@@ -217,6 +217,11 @@ const CreateEvent: React.FC = () => {
 
     if (isDurationInvalid) {
       alert('A duração do evento não pode exceder 23 horas e 59 minutos.');
+      return;
+    }
+
+    if (!involvementLevel) {
+      alert('Por favor, selecione o nível de envolvimento.');
       return;
     }
 
@@ -1391,7 +1396,7 @@ const CreateEvent: React.FC = () => {
                   <CustomSelect
                     value={involvementLevel}
                     onChange={setInvolvementLevel}
-                    placeholder="Selecione o nível..."
+                    placeholder="Selecionar nível de envolvimento"
                     required
                     className="h-14"
                     options={INVOLVEMENT_LEVELS}
@@ -1619,7 +1624,7 @@ const CreateEvent: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Nível de Envolvimento:</span>
                                   <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                    {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label}
+                                    {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label || 'Selecione'}
                                   </span>
                                 </div>
                                 <div className="grid grid-cols-3 gap-1.5">

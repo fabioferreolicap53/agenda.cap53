@@ -5,6 +5,7 @@ import { ptBR } from 'date-fns/locale';
 import { useMySpace, MySpaceEvent } from '../hooks/useMySpace';
 import { useAuth } from '../components/AuthContext';
 import EventDetailsModal from '../components/EventDetailsModal';
+import { deleteEventWithCleanup } from '../lib/eventUtils';
 import { pb } from '../lib/pocketbase';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -55,11 +56,9 @@ const MyInvolvement: React.FC = () => {
     if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"?`)) return;
 
     try {
-        // Delete the event directly. 
-        // The server-side hook (onRecordBeforeDeleteRequest) in pb_hooks/notifications.pb.js
-        // handles the cleanup of all related records (requests, participants, chat, etc.)
-        // and sends notifications to involved users.
-        await pb.collection('agenda_cap53_eventos').delete(event.id);
+        // Use client-side cleanup utility to delete notifications first,
+        // then delete the event. This provides redundancy to the server-side hook.
+        await deleteEventWithCleanup(event.id);
         
         alert('Evento excluído com sucesso.');
         setSelectedEvent(null);

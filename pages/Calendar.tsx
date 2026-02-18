@@ -8,6 +8,8 @@ import { notificationService } from '../lib/notifications';
 import EventDetailsModal from '../components/EventDetailsModal';
 import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
+import { deleteEventWithCleanup } from '../lib/eventUtils';
+
 const Calendar: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -248,11 +250,9 @@ const Calendar: React.FC = () => {
     if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"?`)) return;
 
     try {
-        // Delete the event directly. 
-        // The server-side hook (onRecordBeforeDeleteRequest) in pb_hooks/notifications.pb.js
-        // handles the cleanup of all related records (requests, participants, chat, etc.)
-        // and sends notifications to involved users.
-        await pb.collection('agenda_cap53_eventos').delete(event.id);
+        // Use client-side cleanup utility to delete notifications first,
+        // then delete the event. This provides redundancy to the server-side hook.
+        await deleteEventWithCleanup(event.id);
 
         alert('Evento excluído com sucesso.');
         setSelectedEvent(null);
