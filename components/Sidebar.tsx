@@ -204,9 +204,10 @@ const Sidebar: React.FC = () => {
                     className="size-10 rounded-full bg-cover bg-center ring-2 ring-primary/5 hover:ring-primary/40 transition-all"
                     style={{ backgroundImage: `url(${user?.avatar ? user.avatar : 'https://picsum.photos/100/100'})` }}
                   ></div>
-                  <div className={`absolute -bottom-0.5 -right-0.5 size-3.5 border-2 border-white rounded-full ${user?.status === 'Online' ? 'bg-green-500' :
+                  <div className={`absolute -bottom-0.5 -right-0.5 size-3.5 border-2 border-white rounded-full ${
+                    user?.status === 'Online' ? 'bg-green-500' :
                     user?.status === 'Ausente' ? 'bg-amber-500' :
-                      user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-primary/20'
+                    user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300'
                       }`}></div>
 
                   {/* Status Selector Dropdown */}
@@ -241,11 +242,51 @@ const Sidebar: React.FC = () => {
                             >
                               <span className={`size-2 rounded-full ${s === 'Online' ? 'bg-green-500' :
                                 s === 'Ausente' ? 'bg-amber-500' :
-                                  s === 'Ocupado' ? 'bg-red-500' : 'bg-primary/20'
+                                  s === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300'
                                 }`}></span>
                               {s}
                             </button>
                           ))}
+                          <div className="h-px bg-slate-100 my-1"></div>
+                          <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await updateStatus('Ocupado', '🧠 Foco');
+                                } catch (err) { console.error(err); }
+                                setShowStatusMenu(false);
+                              }}
+                              className="w-full px-3 py-1.5 text-[10px] font-bold text-left hover:bg-primary/[0.02] flex items-center gap-2 transition-colors uppercase"
+                            >
+                              <span className="size-2 rounded-full bg-purple-500"></span>
+                              🧠 Foco
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await updateStatus('Ocupado', '📅 Em Reunião');
+                                } catch (err) { console.error(err); }
+                                setShowStatusMenu(false);
+                              }}
+                              className="w-full px-3 py-1.5 text-[10px] font-bold text-left hover:bg-primary/[0.02] flex items-center gap-2 transition-colors uppercase"
+                            >
+                              <span className="size-2 rounded-full bg-red-500"></span>
+                              📅 Reunião
+                            </button>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await updateStatus('Ausente', '🍽️ Almoço');
+                                } catch (err) { console.error(err); }
+                                setShowStatusMenu(false);
+                              }}
+                              className="w-full px-3 py-1.5 text-[10px] font-bold text-left hover:bg-primary/[0.02] flex items-center gap-2 transition-colors uppercase"
+                            >
+                              <span className="size-2 rounded-full bg-amber-500"></span>
+                              🍽️ Almoço
+                            </button>
                         </div>
                       </div>
                     </>

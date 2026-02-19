@@ -231,6 +231,26 @@ const TeamManagement: React.FC = () => {
         return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=random&color=fff&size=200`;
     };
 
+    const formatLastSeen = (dateStr?: string) => {
+        if (!dateStr) return 'Offline';
+        try {
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMins / 60);
+            const diffDays = Math.floor(diffHours / 24);
+    
+            if (diffMins < 1) return 'Visto agora';
+            if (diffMins < 60) return `Visto há ${diffMins}m`;
+            if (diffHours < 24) return `Visto há ${diffHours}h`;
+            if (diffDays < 7) return `Visto há ${diffDays}d`;
+            return `Visto em ${date.toLocaleDateString()}`;
+        } catch (e) {
+            return 'Offline';
+        }
+    };
+
     const toggleUserSelection = (userId: string) => {
         setSelectedUsers(prev => 
             prev.includes(userId) 
@@ -384,7 +404,10 @@ const TeamManagement: React.FC = () => {
                                                         userData.status === 'Ocupado' ? 'bg-red-50 text-red-600 border-red-100' :
                                                         'bg-slate-50 text-slate-400 border-slate-100'
                                                     }`}>
-                                                        {userData.status || 'Offline'}
+                                                        {userData.context_status || (userData.status === 'Online' ? 'Online' :
+                                                         userData.status === 'Ausente' ? 'Ausente' :
+                                                         userData.status === 'Ocupado' ? 'Ocupado' :
+                                                         formatLastSeen(userData.last_active))}
                                                     </span>
                                                 </div>
                                             </div>

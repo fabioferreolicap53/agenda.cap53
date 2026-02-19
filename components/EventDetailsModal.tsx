@@ -664,7 +664,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         { id: 'professionals', label: 'Participantes', icon: 'group' },
                         { id: 'resources', label: 'Recursos', icon: 'inventory_2' },
                         { id: 'transport', label: 'Transporte', icon: 'directions_car' },
-                        { id: 'dashboard', label: 'Dashboard', icon: 'monitoring' },
+                        { id: 'dashboard', label: 'Painel', icon: 'monitoring' },
                         ...(event.user === user?.id ? [{ id: 'requests', label: 'Solicitações', icon: 'person_add' }] : [])
                     ].map(tab => (
                         <button

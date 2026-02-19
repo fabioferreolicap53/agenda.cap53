@@ -134,7 +134,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
             case 'Online': return 'bg-green-500';
             case 'Ausente': return 'bg-amber-500';
             case 'Ocupado': return 'bg-red-500';
-            default: return 'bg-gray-400';
+            default: return 'bg-slate-300';
         }
     };
 
@@ -236,9 +236,9 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                                                 <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase ${u.status === 'Online' ? 'bg-green-100 text-green-700' :
                                                     u.status === 'Ausente' ? 'bg-amber-100 text-amber-700' :
                                                         u.status === 'Ocupado' ? 'bg-red-100 text-red-700' :
-                                                            'bg-primary/5 text-text-secondary'
+                                                            'bg-slate-100 text-slate-500'
                                                     }`}>
-                                                    {u.status || 'Offline'}
+                                                    {u.context_status || u.status || 'Offline'}
                                                 </span>
                                             </div>
                                             <p className="text-[10px] text-text-secondary truncate font-medium">

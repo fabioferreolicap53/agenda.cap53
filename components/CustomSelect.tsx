@@ -15,6 +15,7 @@ interface CustomSelectProps {
   disabled?: boolean;
   startIcon?: string;
   multiSelect?: boolean;
+  searchable?: boolean;
 }
 
 const CustomSelect: React.FC<CustomSelectProps> = ({
@@ -26,10 +27,13 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   className = '',
   disabled = false,
   startIcon,
-  multiSelect = false
+  multiSelect = false,
+  searchable = false
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isSelected = (optionValue: string) => {
     if (multiSelect && Array.isArray(value)) {
@@ -51,6 +55,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const selectedOption = options.find(opt => opt.value === value);
     return selectedOption ? selectedOption.label : placeholder;
   };
+
+  useEffect(() => {
+    if (isOpen && searchable && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+    if (!isOpen) {
+        setSearchTerm('');
+    }
+  }, [isOpen, searchable]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,6 +88,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       setIsOpen(false);
     }
   };
+
+  const filteredOptions = options.filter(option => 
+    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleSelect = (optionValue: string) => {
     if (multiSelect && Array.isArray(value)) {
@@ -146,8 +163,26 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
       {isOpen && (
         <div className="absolute top-full left-0 w-full min-w-[240px] mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ring-1 ring-black/5">
+          {searchable && (
+             <div className="p-2 border-b border-gray-100 sticky top-0 bg-white z-10">
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                     <span className="material-symbols-outlined text-gray-400 text-lg">search</span>
+                  </span>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    className="w-full py-2 pl-10 pr-4 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
+                    placeholder="Buscar..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onClick={(e) => e.stopPropagation()} 
+                  />
+                </div>
+             </div>
+          )}
           <div className="max-h-[280px] overflow-y-auto custom-scrollbar p-2 space-y-1">
-            {options.map((option) => (
+            {filteredOptions.map((option) => (
               <div
                 key={option.value}
                 onClick={() => handleSelect(option.value)}
@@ -172,9 +207,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 )}
               </div>
             ))}
-            {options.length === 0 && (
+            {filteredOptions.length === 0 && (
               <div className="px-4 py-3 text-sm text-gray-400 text-center italic">
-                Nenhuma opção disponível
+                Nenhuma opção encontrada
               </div>
             )}
           </div>

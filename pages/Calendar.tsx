@@ -10,6 +10,7 @@ import CustomSelect from '../components/CustomSelect';
 import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
 import { deleteEventWithCleanup } from '../lib/eventUtils';
+import { notifyEventStatusChange } from '../lib/notificationUtils';
 
 const Calendar: React.FC = () => {
   const { user } = useAuth();
@@ -411,22 +412,20 @@ const Calendar: React.FC = () => {
     if (reason === null) return;
 
     try {
+      // 1. Atualizar status
       await pb.collection('agenda_cap53_eventos').update(eventId, {
         status: 'cancelled',
         cancel_reason: reason
       });
 
-      // Notify participants
-      if (participants && participants.length > 0) {
-        await Promise.all(participants.map(pId =>
-          pb.collection('agenda_cap53_notifications').create({
-            user: pId,
-            title: 'Evento Cancelado',
-            message: `O evento "${title}" foi cancelado. Motivo: ${reason}`,
-            type: 'cancellation',
-            read: false
-          })
-        ));
+      // 2. Buscar evento atualizado e notificar todos os envolvidos
+      try {
+        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+        if (user) {
+            await notifyEventStatusChange(updatedEvent, 'cancelled', reason, user.id);
+        }
+      } catch (notifErr) {
+        console.error('Erro ao enviar notificações de cancelamento:', notifErr);
       }
 
       alert('Evento cancelado com sucesso.');
@@ -443,7 +442,7 @@ const Calendar: React.FC = () => {
     try {
         // Use client-side cleanup utility to delete notifications first,
         // then delete the event. This provides redundancy to the server-side hook.
-        await deleteEventWithCleanup(event.id);
+        await deleteEventWithCleanup(event.id, user?.id);
 
         alert('Evento excluído com sucesso.');
         setSelectedEvent(null);
@@ -548,6 +547,7 @@ const Calendar: React.FC = () => {
                       onChange={setFilterUser}
                       options={userOptions}
                       multiSelect={true}
+                      searchable={true}
                       placeholder="Usuário"
                       startIcon="person"
                       className="w-full h-full"

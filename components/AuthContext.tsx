@@ -10,6 +10,8 @@ interface User {
     role: UserRole;
     avatar?: string;
     status?: 'Online' | 'Ausente' | 'Ocupado' | 'Offline';
+    context_status?: string;
+    last_active?: string;
     phone?: string;
     sector?: string;
     observations?: string;
@@ -29,7 +31,7 @@ interface AuthContextType {
     logout: () => void;
     updateProfile: (data: Partial<User>) => Promise<void>;
     updateAvatar: (file: File) => Promise<void>;
-    updateStatus: (status: User['status']) => Promise<void>;
+    updateStatus: (status: User['status'], contextStatus?: string) => Promise<void>;
     setRole: (role: UserRole) => Promise<void>;
     requestPasswordReset: (email: string) => Promise<void>;
     confirmPasswordReset: (token: string, password: string) => Promise<void>;
@@ -111,6 +113,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     // Local override for dev role switching
     const [devRoleOverride, setDevRoleOverride] = useState<UserRole | null>(null);
+    
+    const lastActiveUpdateRef = React.useRef<number>(Date.now());
+    const idleTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    // Auto-Away and Activity Tracking
+    useEffect(() => {
+        if (!user) return;
+
+        const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+        const ACTIVITY_THROTTLE = 60 * 1000; // 1 minute throttle for DB updates
+
+        const handleActivity = () => {
+            const now = Date.now();
+            
+            // 1. Reset Idle Timer logic
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+            
+            // If user is currently Online, set a timer to switch to Ausente
+            if (user.status === 'Online') {
+                idleTimerRef.current = setTimeout(() => {
+                    console.log('User idle for 10min, setting to Ausente');
+                    updateStatus('Ausente');
+                }, IDLE_TIMEOUT);
+            }
+
+            // 2. Return from Auto-Away
+            // If user was Away and interacts, set back to Online
+            if (user.status === 'Ausente') {
+                 updateStatus('Online');
+            }
+
+            // 3. Update last_active in DB (Throttled)
+            if (now - lastActiveUpdateRef.current > ACTIVITY_THROTTLE) {
+                lastActiveUpdateRef.current = now;
+                if (pb.authStore.model) {
+                    pb.collection(pb.authStore.model.collectionName).update(user.id, {
+                        last_active: new Date().toISOString()
+                    }).catch(err => console.error('Failed to update last_active:', err));
+                }
+            }
+        };
+
+        // Initial setup
+        if (user.status === 'Online') {
+             if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+             idleTimerRef.current = setTimeout(() => {
+                updateStatus('Ausente');
+            }, IDLE_TIMEOUT);
+        }
+
+        const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+        events.forEach(event => window.addEventListener(event, handleActivity));
+
+        return () => {
+            if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+            events.forEach(event => window.removeEventListener(event, handleActivity));
+        };
+    }, [user?.id, user?.status]);
+
+    // Handle window close / disconnect
+    useEffect(() => {
+        const handleUnload = () => {
+            if (user?.id && user?.status !== 'Offline') {
+                // Best effort to set offline
+                updateStatus('Offline');
+            }
+        };
+        
+        window.addEventListener('beforeunload', handleUnload);
+        return () => window.removeEventListener('beforeunload', handleUnload);
+    }, [user?.id, user?.status]);
 
     useEffect(() => {
         console.log('AuthContext: Initializing sync...', { 
@@ -143,6 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         role: devRoleOverride || (model.role as UserRole),
                         avatar: model.avatar ? pb.files.getUrl(model, model.avatar) : undefined,
                         status: model.status,
+                        last_active: model.last_active,
                         phone: model.phone,
                         sector: model.sector,
                         observations: model.observations,
@@ -175,6 +249,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const login = async (email: string, password: string) => {
         try {
             await pb.collection('agenda_cap53_usuarios').authWithPassword(email, password);
+            // Update status to Online on login
+            if (pb.authStore.model) {
+                await pb.collection('agenda_cap53_usuarios').update(pb.authStore.model.id, {
+                    status: 'Online',
+                    last_active: new Date().toISOString()
+                });
+            }
         } catch (error: any) {
             console.error('Login error:', error);
             throw new Error(translateError(error));
@@ -242,8 +323,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const logout = () => {
+    const logout = async () => {
+        if (pb.authStore.model) {
+            try {
+                await pb.collection('agenda_cap53_usuarios').update(pb.authStore.model.id, {
+                    status: 'Offline',
+                    last_active: new Date().toISOString()
+                });
+            } catch (e) {
+                console.error('Error setting offline status on logout', e);
+            }
+        }
         pb.authStore.clear();
+        setUser(null);
     };
 
     const updateProfile = async (data: Partial<User>) => {
@@ -283,8 +375,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const updateStatus = async (status: User['status']) => {
-        await updateProfile({ status });
+    const updateStatus = async (status: User['status'], contextStatus?: string) => {
+        // Se contextStatus for passado, usa ele. Caso contrário, limpa o status de contexto.
+        const updateData: any = { status };
+        if (contextStatus !== undefined) {
+            updateData.context_status = contextStatus;
+        } else {
+            updateData.context_status = '';
+        }
+        await updateProfile(updateData);
     };
 
     const setRole = async (role: UserRole) => {

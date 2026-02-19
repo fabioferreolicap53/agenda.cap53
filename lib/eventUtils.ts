@@ -1,13 +1,32 @@
 import { pb } from './pocketbase';
+import { notifyEventStatusChange } from './notificationUtils';
 
 /**
  * Deletes an event and all its associated notifications.
  * This function performs a client-side cleanup as a fallback for the server-side hook.
  * 
  * @param eventId The ID of the event to delete.
+ * @param actorId The ID of the user performing the deletion (optional, defaults to current auth user).
  */
-export const deleteEventWithCleanup = async (eventId: string) => {
+export const deleteEventWithCleanup = async (eventId: string, actorId?: string) => {
     console.log(`[Event Cleanup] Starting deletion for event: ${eventId}`);
+
+    // 0. Notify involved parties (Before deletion)
+    try {
+        const currentUserId = actorId || pb.authStore.model?.id;
+        if (currentUserId) {
+            const event = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+            if (event) {
+                // Notifica exclusão
+                await notifyEventStatusChange(event, 'deleted', '', currentUserId);
+            }
+        } else {
+            console.warn('[Event Cleanup] No actor ID found, skipping deletion notification.');
+        }
+    } catch (e) {
+        console.warn('[Event Cleanup] Failed to send deletion notifications:', e);
+        // Continue with deletion even if notification fails
+    }
 
     // 1. Delete associated notifications (Client-side fallback)
     try {

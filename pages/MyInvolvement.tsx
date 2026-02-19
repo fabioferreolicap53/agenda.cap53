@@ -6,6 +6,7 @@ import { useMySpace, MySpaceEvent } from '../hooks/useMySpace';
 import { useAuth } from '../components/AuthContext';
 import EventDetailsModal from '../components/EventDetailsModal';
 import { deleteEventWithCleanup } from '../lib/eventUtils';
+import { notifyEventStatusChange } from '../lib/notificationUtils';
 import { pb } from '../lib/pocketbase';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -28,21 +29,21 @@ const MyInvolvement: React.FC = () => {
     if (reason === null) return;
 
     try {
+      // 1. Atualizar status
       await pb.collection('agenda_cap53_eventos').update(eventId, {
         status: 'cancelled',
         cancel_reason: reason
       });
 
-      if (participants && participants.length > 0) {
-        await Promise.all(participants.map(pId =>
-          pb.collection('agenda_cap53_notifications').create({
-            user: pId,
-            title: 'Evento Cancelado',
-            message: `O evento "${title}" foi cancelado. Motivo: ${reason}`,
-            type: 'cancellation',
-            read: false
-          })
-        ));
+      // 2. Buscar evento atualizado e notificar todos os envolvidos
+      // (Participantes, Organizadores, Setores com solicitações aprovadas)
+      try {
+        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+        if (user) {
+          await notifyEventStatusChange(updatedEvent, 'cancelled', reason, user.id);
+        }
+      } catch (notifErr) {
+        console.error('Erro ao enviar notificações de cancelamento:', notifErr);
       }
 
       alert('Evento cancelado com sucesso.');
@@ -59,7 +60,7 @@ const MyInvolvement: React.FC = () => {
     try {
         // Use client-side cleanup utility to delete notifications first,
         // then delete the event. This provides redundancy to the server-side hook.
-        await deleteEventWithCleanup(event.id);
+        await deleteEventWithCleanup(event.id, user?.id);
         
         alert('Evento excluído com sucesso.');
         setSelectedEvent(null);
