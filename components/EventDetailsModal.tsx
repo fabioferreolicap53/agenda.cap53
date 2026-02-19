@@ -131,6 +131,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
               
               if (!currentParticipants.includes(request.user)) {
                   const updatedParticipants = [...currentParticipants, request.user];
+                  // Update local event status map (for immediate UI update if still relying on it partially)
                   const updatedStatus = { ...currentStatus, [request.user]: 'accepted' };
                   const updatedRoles = { ...currentRoles, [request.user]: selectedRole };
                   
@@ -141,13 +142,31 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                       participants_roles: updatedRoles
                   });
 
-                  // Also create a participant status record
-                  await pb.collection('agenda_cap53_participantes').create({
-                      event: event.id,
-                      user: request.user,
-                      status: 'accepted', // Auto-accept since they requested it
-                      role: selectedRole
+                  // Check if participant record exists before creating
+                  const existingParticipant = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
+                      filter: `event = "${event.id}" && user = "${request.user}"`,
+                      requestKey: null
                   });
+
+                  if (existingParticipant.items.length > 0) {
+                      await pb.collection('agenda_cap53_participantes').update(existingParticipant.items[0].id, {
+                          status: 'accepted',
+                          role: selectedRole
+                      });
+                  } else {
+                      await pb.collection('agenda_cap53_participantes').create({
+                          event: event.id,
+                          user: request.user,
+                          status: 'accepted', // Auto-accept since they requested it
+                          role: selectedRole
+                      });
+                  }
+                  
+                  // Force update local state map
+                  setParticipantStatus(prev => ({
+                      ...prev,
+                      [request.user]: 'accepted'
+                  }));
               }
           }
 
@@ -170,7 +189,35 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
               }
           });
 
-          // 4. Refresh data
+          // 4. Update the Creator's Notification
+          try {
+              // Find the notification that prompted this action
+              // We look for notifications of type 'event_participation_request' for this event
+              // where the requester matches the user we are approving/rejecting
+              // The user.id here is the current user (the creator responding)
+              const notifications = await pb.collection('agenda_cap53_notifications').getFullList({
+                  filter: `event = "${event.id}" && type = "event_participation_request" && user = "${user.id}"`,
+                  requestKey: null
+              });
+
+              // We need to check 'data' to find the matching requester_id
+              const targetNotification = notifications.find(n => {
+                  const data = n.data || {};
+                  // The data field stores requester_id as string
+                  return data.requester_id === request.user;
+              });
+
+              if (targetNotification) {
+                   await pb.collection('agenda_cap53_notifications').update(targetNotification.id, {
+                       invite_status: action === 'approve' ? 'accepted' : 'rejected',
+                       read: true
+                   });
+              }
+          } catch (notifErr) {
+              console.warn('Error syncing creator notification:', notifErr);
+          }
+
+          // 5. Refresh data
           fetchParticipationRequests();
           // Refresh event to show new participant
           const freshEvent = await pb.collection('agenda_cap53_eventos').getOne(event.id, {
@@ -241,7 +288,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   // Cancellation restricted to the creator only
   const canCancel = !isCancelled && (event.user === user?.id);
   // Ensure ALMC cannot edit even if they created the event (though they shouldn't be able to create)
-  const canEdit = !isCancelled && user?.role !== 'ALMC' && (user?.role === 'ADMIN' || user?.role === 'CE' || event.user === user?.id);
+  // CE role also restricted to edit only their own events
+  const canEdit = !isCancelled && user?.role !== 'ALMC' && (user?.role === 'ADMIN' || event.user === user?.id);
   const startDate = new Date(event.date_start || event.date);
   const endDate = new Date(event.date_end);
 
@@ -313,8 +361,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         });
         
         // Merge logic: Start with legacy JSON map as base, then overwrite with relational data
+        // Prioritize the participants collection data as it is the new source of truth
         const statusMap: Record<string, string> = { ...(freshEvent.participants_status || {}) };
         
+        // Also make sure to check if current user is in participants list but has no record in participants collection
+        // This handles migration or edge cases where they were added via legacy methods
+        const participants = freshEvent.participants || [];
+        participants.forEach((pId: string) => {
+             if (!statusMap[pId]) statusMap[pId] = 'pending';
+        });
+
         participantsRes.forEach(p => {
             statusMap[p.user] = p.status;
         });
@@ -335,19 +391,19 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     if (!event?.id || !user?.id) return;
 
     try {
-      // Find the participant record for the current user in this event
-      const participantsRes = await pb.collection('agenda_cap53_participantes').getFullList({
+      // 1. Source of Truth: Update or Create Participant Record
+      // This is the critical operation. If it fails, the whole process fails.
+      const participantsRes = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
         filter: `event = "${event.id}" && user = "${user.id}"`,
         requestKey: null
       });
 
-      if (participantsRes.length > 0) {
-        const participantRecord = participantsRes[0];
+      if (participantsRes.items.length > 0) {
+        const participantRecord = participantsRes.items[0];
         await pb.collection('agenda_cap53_participantes').update(participantRecord.id, {
           status: status
         });
       } else {
-        // If no record exists yet, create it
         await pb.collection('agenda_cap53_participantes').create({
           event: event.id,
           user: user.id,
@@ -355,34 +411,46 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         });
       }
       
-      // Sync with event record's JSON status field for performance in calendar view
-      const currentStatus = event.participants_status || {};
-      const updatedStatus = { ...currentStatus, [user.id]: status };
-      await pb.collection('agenda_cap53_eventos').update(event.id, {
-        participants_status: updatedStatus
-      });
-      
-      // Also update the notification if it exists
-      const notifications = await pb.collection('agenda_cap53_notifications').getFullList({
-        filter: `event = "${event.id}" && user = "${user.id}" && type = "event_invite"`,
-        requestKey: null
-      });
-      
-      if (notifications.length > 0) {
-        await Promise.all(notifications.map(n => 
-          pb.collection('agenda_cap53_notifications').update(n.id, {
-            invite_status: status,
-            read: true
-          })
-        ));
+      // 2. Update Notifications (Secondary Operation)
+      // We attempt to update notifications, but if it fails (e.g. not found), we don't block the user.
+      try {
+        const notifications = await pb.collection('agenda_cap53_notifications').getFullList({
+          filter: `event = "${event.id}" && user = "${user.id}" && type = "event_invite"`,
+          requestKey: null
+        });
+        
+        if (notifications.length > 0) {
+          await Promise.all(notifications.map(n => 
+            pb.collection('agenda_cap53_notifications').update(n.id, {
+              invite_status: status,
+              read: true
+            }).catch(e => console.warn('Failed to update individual notification:', e))
+          ));
+        }
+      } catch (notifErr) {
+        console.warn('Error fetching/updating notifications:', notifErr);
       }
 
+      // 3. Sync with event record's JSON status field (Optimization)
+      // This might fail if the user is not the creator/admin due to API rules.
+      // We catch and ignore the error to prevent blocking the user flow.
+      try {
+        const currentStatus = event.participants_status || {};
+        const updatedStatus = { ...currentStatus, [user.id]: status };
+        await pb.collection('agenda_cap53_eventos').update(event.id, {
+          participants_status: updatedStatus
+        });
+      } catch (eventUpdateErr) {
+        console.warn('Could not update event participants_status (likely permission issue, ignored):', eventUpdateErr);
+      }
+      
       // Refresh event data to update UI
       await refreshEvent();
       alert(status === 'accepted' ? 'Convite aceito!' : 'Convite recusado.');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error responding to invitation:', err);
-      alert('Erro ao processar resposta.');
+      const msg = err.data?.message || err.message || 'Erro desconhecido';
+      alert(`Erro ao processar resposta: ${msg}`);
     }
   };
 

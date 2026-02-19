@@ -73,7 +73,7 @@ const MyInvolvement: React.FC = () => {
   const handleOpenEventInCalendar = (event: any) => {
     const eventDate = new Date(event.date_start);
     const dateStr = eventDate.toISOString().split('T')[0];
-    navigate(`/calendar?date=${dateStr}&view=agenda&openChat=${event.id}`);
+    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=details`);
   };
 
   const filteredEvents = useMemo(() => {

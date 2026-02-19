@@ -460,13 +460,7 @@ const Notifications: React.FC = () => {
               </button>
             )}
             
-            <button
-                onClick={onFixNotifications}
-                className="p-2 text-amber-400 hover:text-amber-600 hover:bg-amber-50 rounded-full transition-all"
-                title="Reparar Nomes de Itens (Fix Retroativo)"
-              >
-                <span className="material-symbols-outlined text-[20px]">build</span>
-            </button>
+            {/* Button removed as requested */}
           </div>
         </div>
 
@@ -549,9 +543,13 @@ const Notifications: React.FC = () => {
                          return (
                             <div
                               key={notification.id}
+                              onClick={() => {
+                                if (notification.event) handleViewEvent(notification);
+                              }}
                               className={`group relative flex gap-5 p-5 rounded-xl transition-all duration-200 z-10 
                                 ${getStatusContainerStyles(notification)} 
                                 ${isOld ? 'scale-[0.98] opacity-80 hover:opacity-100 hover:scale-100' : ''}
+                                ${notification.event ? 'cursor-pointer hover:bg-slate-50/50' : ''}
                               `}
                             >
               {!notification.read && (
@@ -670,14 +668,20 @@ const Notifications: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button
                         disabled={processingId === notification.id}
-                        onClick={() => onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'approved' : 'accepted')}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'approved' : 'accepted');
+                        }}
                         className="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
                       >
                          {(notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'Aprovar' : 'Aceitar'}
                       </button>
                       <button
                         disabled={processingId === notification.id}
-                        onClick={() => onHandleAction(notification, 'rejected')}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onHandleAction(notification, 'rejected');
+                        }}
                         className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-all disabled:opacity-50"
                       >
                         Recusar
@@ -790,7 +794,10 @@ const Notifications: React.FC = () => {
 
                         return (
                             <button
-                              onClick={() => setReRequestNotification(notification)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReRequestNotification(notification);
+                              }}
                               className="px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1.5"
                             >
                               <span className="material-symbols-outlined text-[16px]">refresh</span>
