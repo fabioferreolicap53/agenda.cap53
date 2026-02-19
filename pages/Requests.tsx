@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { pb } from '../lib/pocketbase';
 import { isNotificationDeletable } from '../lib/notifications';
@@ -14,6 +14,7 @@ const INVOLVEMENT_LEVELS = [
 const Requests: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [actionMessage, setActionMessage] = React.useState<string | null>(null);
     const [notifications, setNotifications] = React.useState<any[]>([]);
     const [historyNotifications, setHistoryNotifications] = React.useState<any[]>([]);
@@ -25,6 +26,12 @@ const Requests: React.FC = () => {
     const [loading, setLoading] = React.useState(true);
     const [activeTab, setActiveTab] = React.useState<'notifications' | 'almac'>('notifications');
     const [notificationsTab, setNotificationsTab] = React.useState<'pending' | 'history'>('pending');
+    const [searchTerm, setSearchTerm] = React.useState('');
+
+    React.useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        setSearchTerm(params.get('search') || '');
+    }, [location.search]);
 
     const fetchPendingNotifications = React.useCallback(async () => {
         if (!user) return;
@@ -682,17 +689,30 @@ const Requests: React.FC = () => {
     };
 
     // Group requests by Event
-    const requestsByEvent = almacRequests.reduce((acc, req) => {
-        const eventId = req.event;
-        if (!acc[eventId]) {
-            acc[eventId] = {
-                event: req.expand?.event,
-                requests: []
-            };
+    const requestsByEvent = React.useMemo(() => {
+        let filtered = almacRequests;
+        if (searchTerm) {
+            const lowerSearch = searchTerm.toLowerCase();
+            filtered = almacRequests.filter(req => {
+                const titleMatch = (req.expand?.event?.title || '').toLowerCase().includes(lowerSearch);
+                const itemMatch = (req.expand?.item?.name || '').toLowerCase().includes(lowerSearch);
+                const requesterMatch = (req.expand?.created_by?.name || '').toLowerCase().includes(lowerSearch);
+                return titleMatch || itemMatch || requesterMatch;
+            });
         }
-        acc[eventId].requests.push(req);
-        return acc;
-    }, {} as Record<string, any>);
+
+        return filtered.reduce((acc, req) => {
+            const eventId = req.event;
+            if (!acc[eventId]) {
+                acc[eventId] = {
+                    event: req.expand?.event,
+                    requests: []
+                };
+            }
+            acc[eventId].requests.push(req);
+            return acc;
+        }, {} as Record<string, any>);
+    }, [almacRequests, searchTerm]);
 
     const canSeeAlmac = user?.role === 'ALMC' || user?.role === 'DCA' || user?.role === 'ADMIN';
 
@@ -703,16 +723,40 @@ const Requests: React.FC = () => {
         if (canSeeAlmac) {
             list = list.filter(n => n && n.data?.kind !== 'almc_item_request');
         }
+        
+        // Filter by search term
+        if (searchTerm) {
+            const lowerSearch = searchTerm.toLowerCase();
+            list = list.filter(n => {
+                const titleMatch = (n.title || '').toLowerCase().includes(lowerSearch);
+                const msgMatch = (n.message || '').toLowerCase().includes(lowerSearch);
+                const eventTitleMatch = (n.expand?.event?.title || '').toLowerCase().includes(lowerSearch);
+                return titleMatch || msgMatch || eventTitleMatch;
+            });
+        }
+
         return list.filter(n => n && n.id); // Garantir que não existam itens nulos ou inválidos
-    }, [notifications, canSeeAlmac]);
+    }, [notifications, canSeeAlmac, searchTerm]);
 
     const filteredHistoryNotifications = React.useMemo(() => {
         let list = historyNotifications;
         if (canSeeAlmac) {
             list = list.filter(n => n && n.data?.kind !== 'almc_item_request');
         }
+
+        // Filter by search term
+        if (searchTerm) {
+            const lowerSearch = searchTerm.toLowerCase();
+            list = list.filter(n => {
+                const titleMatch = (n.title || '').toLowerCase().includes(lowerSearch);
+                const msgMatch = (n.message || '').toLowerCase().includes(lowerSearch);
+                const eventTitleMatch = (n.expand?.event?.title || '').toLowerCase().includes(lowerSearch);
+                return titleMatch || msgMatch || eventTitleMatch;
+            });
+        }
+
         return list.filter(n => n && n.id); // Garantir que não existam itens nulos ou inválidos
-    }, [historyNotifications, canSeeAlmac]);
+    }, [historyNotifications, canSeeAlmac, searchTerm]);
 
     return (
         <div className="flex flex-col gap-4 md:gap-6 max-w-[1300px] mx-auto w-full px-4 md:px-0">

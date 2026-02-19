@@ -7,6 +7,29 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, setSidebarOpen } = useAuth();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchTerm(params.get('search') || '');
+  }, [location.search]);
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+
+    const params = new URLSearchParams(location.search);
+    if (value) {
+      params.set('search', value);
+    } else {
+      params.delete('search');
+    }
+
+    navigate({
+      pathname: location.pathname,
+      search: params.toString()
+    }, { replace: true });
+  };
 
   const getTitle = () => {
     const searchParams = new URLSearchParams(location.search);
@@ -101,6 +124,8 @@ const Header: React.FC = () => {
             <span className="material-symbols-outlined text-text-secondary text-[20px]">search</span>
             <input
               type="text"
+              value={searchTerm}
+              onChange={handleSearch}
               placeholder={location.pathname === '/meu-envolvimento' ? "Buscar evento..." : "Buscar..."}
               className="bg-transparent border-none outline-none text-sm ml-2 w-full text-text-main placeholder-gray-400 focus:ring-0"
             />

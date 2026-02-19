@@ -67,6 +67,10 @@ export const useMySpace = () => {
     sentInvitesPending: 0,
     sentInvitesAccepted: 0,
     sentInvitesRejected: 0,
+    // Solicitações Recebidas (de outros para seus eventos)
+    receivedRequestsPending: 0,
+    receivedRequestsAccepted: 0,
+    receivedRequestsRejected: 0,
     // Totais
     totalCreated: 0,
     totalParticipated: 0,
@@ -122,11 +126,22 @@ export const useMySpace = () => {
       });
 
       let sentInvites: any[] = [];
+      let receivedRequests: any[] = [];
+      
       if (managedEventIds.size > 0) {
         const filter = Array.from(managedEventIds).map(id => `event = "${id}"`).join(' || ');
-        sentInvites = await pb.collection('agenda_cap53_participantes').getFullList({
-          filter: `(${filter}) && user != "${user.id}"`
-        });
+        
+        const [invitesResult, requestsResult] = await Promise.all([
+          pb.collection('agenda_cap53_participantes').getFullList({
+            filter: `(${filter}) && user != "${user.id}"`
+          }),
+          pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
+            filter: `(${filter}) && user != "${user.id}"`
+          })
+        ]);
+        
+        sentInvites = invitesResult;
+        receivedRequests = requestsResult;
       }
 
       // 3. Fetch requests (Solicitations sent)
@@ -189,6 +204,10 @@ export const useMySpace = () => {
         sentInvitesPending: 0,
         sentInvitesAccepted: 0,
         sentInvitesRejected: 0,
+        // Recebidos (Solicitações de outros)
+        receivedRequestsPending: 0,
+        receivedRequestsAccepted: 0,
+        receivedRequestsRejected: 0,
         confirmed: 0
       };
 
@@ -197,6 +216,13 @@ export const useMySpace = () => {
         if (p.status === 'pending') breakdown.sentInvitesPending++;
         else if (p.status === 'accepted') breakdown.sentInvitesAccepted++;
         else if (p.status === 'rejected') breakdown.sentInvitesRejected++;
+      });
+
+      // Count received requests (for my created events)
+      receivedRequests.forEach(r => {
+        if (r.status === 'pending') breakdown.receivedRequestsPending++;
+        else if (r.status === 'approved' || r.status === 'accepted') breakdown.receivedRequestsAccepted++;
+        else if (r.status === 'rejected') breakdown.receivedRequestsRejected++;
       });
 
       allEvents.forEach(e => {
@@ -262,6 +288,9 @@ export const useMySpace = () => {
         sentInvitesPending: breakdown.sentInvitesPending,
         sentInvitesAccepted: breakdown.sentInvitesAccepted,
         sentInvitesRejected: breakdown.sentInvitesRejected,
+        receivedRequestsPending: breakdown.receivedRequestsPending,
+        receivedRequestsAccepted: breakdown.receivedRequestsAccepted,
+        receivedRequestsRejected: breakdown.receivedRequestsRejected,
         totalParticipated: breakdown.confirmed,
         confirmedEvents: breakdown.confirmed
       };

@@ -17,7 +17,14 @@ const AlmacManagement: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState<'inventory' | 'history'>('inventory');
+    const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        setSearchTerm(params.get('search') || '');
+    }, [location.search]);
+
     const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ALMOXARIFADO' | 'COPA'>('ALL');
 
     const filteredItems = items.filter(item => {
@@ -25,6 +32,17 @@ const AlmacManagement: React.FC = () => {
                             item.category.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = categoryFilter === 'ALL' || item.category.toUpperCase() === categoryFilter;
         return matchesSearch && matchesCategory;
+    });
+
+    const filteredHistory = history.filter(req => {
+        const lowerSearch = searchTerm.toLowerCase();
+        const eventTitle = (req.expand?.event?.title || '').toLowerCase();
+        const requesterName = (req.expand?.created_by?.name || '').toLowerCase();
+        const itemName = (req.expand?.item?.name || '').toLowerCase();
+        
+        return eventTitle.includes(lowerSearch) || 
+               requesterName.includes(lowerSearch) ||
+               itemName.includes(lowerSearch);
     });
 
     const availableItemsCount = items.filter(i => i.is_available === true || String(i.is_available) === 'true').length;
@@ -583,7 +601,7 @@ const AlmacManagement: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2 text-slate-400 bg-slate-50/50 px-4 py-2 rounded-2xl border border-slate-100">
                             <span className="material-symbols-outlined text-lg">history</span>
-                            <span className="text-xs font-bold uppercase tracking-widest">{history.length} Registros</span>
+                            <span className="text-xs font-bold uppercase tracking-widest">{filteredHistory.length} Registros</span>
                         </div>
                     </div>
 
@@ -631,20 +649,20 @@ const AlmacManagement: React.FC = () => {
                                                 </div>
                                             </td>
                                         </tr>
-                                    ) : history.length === 0 ? (
+                                    ) : filteredHistory.length === 0 ? (
                                         <tr>
                                             <td colSpan={5} className="px-6 py-32 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
                                                         <span className="material-symbols-outlined text-3xl text-slate-200">history_toggle_off</span>
                                                     </div>
-                                                    <p className="text-slate-900 font-black text-sm">Sem histórico recente</p>
-                                                    <p className="text-slate-400 font-medium text-xs max-w-xs mx-auto text-balance">As solicitações de almoxarifado e copa aparecerão aqui assim que forem processadas.</p>
+                                                    <p className="text-slate-900 font-black text-sm">Nenhum registro encontrado</p>
+                                                    <p className="text-slate-400 font-medium text-xs max-w-xs mx-auto text-balance">Não encontramos solicitações com os termos pesquisados.</p>
                                                 </div>
                                             </td>
                                         </tr>
                                     ) : (
-                                        history.map((req) => (
+                                        filteredHistory.map((req) => (
                                             <tr key={req.id} className="hover:bg-slate-50/50 transition-colors group text-sm">
                                                 <td className="px-6 py-5">
                                                     <div className="flex flex-col">

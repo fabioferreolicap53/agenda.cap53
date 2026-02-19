@@ -13,6 +13,10 @@ const TransportManagement: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [transportSubTab, setTransportSubTab] = useState<'pending' | 'history'>('pending');
     const [transportSearch, setTransportSearch] = useState('');
+
+    useEffect(() => {
+        setTransportSearch(searchParams.get('search') || '');
+    }, [searchParams]);
     const [transportFilterStatus, setTransportFilterStatus] = useState<'all' | 'confirmed' | 'rejected'>('all');
     const [actionMessage, setActionMessage] = useState<string | null>(null);
     const [rerequestIds, setRerequestIds] = useState<Set<string>>(new Set());

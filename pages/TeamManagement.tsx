@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth, SECTORS } from '../components/AuthContext';
 import CustomSelect from '../components/CustomSelect';
+import AvatarUploadModal from '../components/AvatarUploadModal';
 
 const TeamManagement: React.FC = () => {
     const { user: currentUser, updateProfile } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingBio, setEditingBio] = useState(false);
     const [editingSector, setEditingSector] = useState(false);
     const [editingDetails, setEditingDetails] = useState(false);
+    const [showAvatarModal, setShowAvatarModal] = useState(false);
 
     const [tempBio, setTempBio] = useState('');
     const [tempSector, setTempSector] = useState('');
@@ -24,6 +27,12 @@ const TeamManagement: React.FC = () => {
     const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [focusedField, setFocusedField] = useState<string | null>(null);
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        setSearchTerm(params.get('search') || '');
+    }, [location.search]);
 
     const handleFieldFocus = (field: string) => setFocusedField(field);
     const handleFieldBlur = () => setFocusedField(null);
@@ -212,9 +221,14 @@ const TeamManagement: React.FC = () => {
 
     const getAvatarUrl = (user: any) => {
         if (user?.avatar) {
+            // Se o avatar já for uma URL completa (vindo do AuthContext), retorna ela
+            if (user.avatar.startsWith('http')) {
+                return user.avatar;
+            }
+            // Caso contrário, gera a URL usando o PocketBase (vindo da lista de usuários)
             return pb.files.getUrl(user, user.avatar);
         }
-        return `https://picsum.photos/seed/${user?.email || user?.id}/200`;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=random&color=fff&size=200`;
     };
 
     const toggleUserSelection = (userId: string) => {
@@ -269,6 +283,17 @@ const TeamManagement: React.FC = () => {
                             // Don't filter out current user
                             if (u.id === currentUser?.id) return true;
                             
+                            // Filter by search term
+                            if (searchTerm) {
+                                const lowerSearch = searchTerm.toLowerCase();
+                                const nameMatch = (u.name || '').toLowerCase().includes(lowerSearch);
+                                const emailMatch = (u.email || '').toLowerCase().includes(lowerSearch);
+                                const sectorMatch = (u.sector || '').toLowerCase().includes(lowerSearch);
+                                const roleMatch = (u.role || '').toLowerCase().includes(lowerSearch);
+                                
+                                if (!nameMatch && !emailMatch && !sectorMatch && !roleMatch) return false;
+                            }
+
                             // Filter by role
                             if (u.role && restrictedRoles.includes(u.role)) return false;
                             
@@ -282,7 +307,9 @@ const TeamManagement: React.FC = () => {
 
                         return filteredUsers.map((u, idx) => {
                             const isMe = u.id === currentUser?.id;
-                            const userData = isMe ? { ...u, ...currentUser } : u;
+                            // Ensure we use the most up-to-date current user data if it's me
+                            // But also respect the list data which might have other fields
+                            const userData = isMe && currentUser ? { ...u, ...currentUser } : u;
 
                             return (
                                 <div key={userData.id || idx} className={`bg-white rounded-3xl transition-all duration-300 group relative flex flex-col ${isMe && editingSector ? 'z-[100]' : 'overflow-hidden'} ${isMe
@@ -334,9 +361,18 @@ const TeamManagement: React.FC = () => {
                                         <div className="absolute -bottom-8 md:-bottom-10 left-4 md:left-6 z-20 transition-transform duration-500 group-hover:scale-105">
                                             <div className="relative flex flex-col items-center">
                                                 <div
-                                                    className="size-16 md:size-20 rounded-2xl bg-contain bg-center bg-no-repeat bg-slate-100 border-[4px] md:border-[5px] border-white shadow-xl shadow-black/5 ring-1 ring-black/5"
-                                                    style={{ backgroundImage: `url(${getAvatarUrl(userData)})` }}
-                                                ></div>
+                                                    className={`size-16 md:size-20 rounded-2xl bg-cover bg-center bg-no-repeat bg-slate-100 border-[4px] md:border-[5px] border-white shadow-xl shadow-black/5 ring-1 ring-black/5 ${isMe ? 'cursor-pointer group/avatar' : ''}`}
+                                                    style={{ backgroundImage: `url('${getAvatarUrl(userData)}')` }}
+                                                    onClick={() => isMe && setShowAvatarModal(true)}
+                                                >
+                                                    {isMe && (
+                                                        <div className="absolute inset-0 bg-black/0 group-hover/avatar:bg-black/20 flex items-center justify-center transition-all rounded-xl">
+                                                            <span className="material-symbols-outlined text-white opacity-0 group-hover/avatar:opacity-100 transform scale-75 group-hover/avatar:scale-100 transition-all duration-300 text-2xl drop-shadow-lg">
+                                                                photo_camera
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                                 <div className={`absolute -bottom-0.5 -right-0.5 size-4 md:size-5 border-[2px] md:border-[3px] border-white rounded-full ${getStatusColor(userData.status)} shadow-lg ring-1 ring-black/5 flex items-center justify-center`}>
                                                 </div>
                                                 
@@ -613,6 +649,8 @@ const TeamManagement: React.FC = () => {
                     </button>
                 </div>
             )}
+
+            <AvatarUploadModal isOpen={showAvatarModal} onClose={() => setShowAvatarModal(false)} />
         </div>
     );
 };

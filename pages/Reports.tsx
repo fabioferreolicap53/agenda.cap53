@@ -1,9 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
 import { useReports } from '../hooks/useReports';
 
 const Reports: React.FC = () => {
+  const location = useLocation();
   const { loading, stats, filters, setFilters, occupancyHistory, eventsBySector, locationDetails, natures, refresh } = useReports();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get('search') || '';
+    if (search !== filters.search) {
+      setFilters(prev => ({ ...prev, search }));
+    }
+  }, [location.search]);
 
   if (loading && !stats.totalEvents) {
     return (

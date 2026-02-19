@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
-import { useAuth } from '../components/AuthContext';
+import { useAuth, SECTORS } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
 
 import EventDetailsModal from '../components/EventDetailsModal';
+import CustomSelect from '../components/CustomSelect';
 import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
 import { deleteEventWithCleanup } from '../lib/eventUtils';
@@ -14,21 +15,206 @@ const Calendar: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const searchTerm = (searchParams.get('search') || '').toLowerCase();
   
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [users, setUsers] = useState<any[]>([]);
+
+  // Filters state with lazy initialization from localStorage to prevent race conditions
+  // Helper to get storage keys based on current user
+  const getStorageKey = (key: string) => user?.id ? `${key}_${user.id}` : key;
+
+  const [filterUser, setFilterUser] = useState<string[]>(['Todos']);
+  const [filterRoles, setFilterRoles] = useState<string[]>(['Todos']);
+  const [filterSectors, setFilterSectors] = useState<string[]>(['Todos']);
+  const [persistFilters, setPersistFilters] = useState(false);
+  const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
+
+  // Initialize filters when user is available
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const savedPersist = localStorage.getItem(getStorageKey('calendar_persist_filters')) === 'true';
+    setPersistFilters(savedPersist);
+
+    if (savedPersist) {
+        try {
+            const savedUser = localStorage.getItem(getStorageKey('calendar_filter_user'));
+            if (savedUser) setFilterUser(JSON.parse(savedUser));
+            
+            const savedRoles = localStorage.getItem(getStorageKey('calendar_filter_roles'));
+            if (savedRoles) setFilterRoles(JSON.parse(savedRoles));
+
+            const savedSectors = localStorage.getItem(getStorageKey('calendar_filter_sectors'));
+            if (savedSectors) setFilterSectors(JSON.parse(savedSectors));
+        } catch (e) {
+            console.error('Error loading saved filters', e);
+        }
+    }
+    setIsFiltersLoaded(true);
+  }, [user?.id]);
+
+  // Load users
+   useEffect(() => {
+       pb.collection('agenda_cap53_usuarios').getFullList({ sort: 'name', fields: 'id,name,sector' })
+           .then(setUsers)
+           .catch(console.error);
+   }, []);
+
+  // Save filters persistence
+  useEffect(() => {
+      if (!user?.id || !isFiltersLoaded) return;
+
+      const keys = {
+          persist: getStorageKey('calendar_persist_filters'),
+          user: getStorageKey('calendar_filter_user'),
+          roles: getStorageKey('calendar_filter_roles'),
+          sectors: getStorageKey('calendar_filter_sectors')
+      };
+
+      if (persistFilters) {
+          localStorage.setItem(keys.persist, 'true');
+          localStorage.setItem(keys.user, JSON.stringify(filterUser));
+          localStorage.setItem(keys.roles, JSON.stringify(filterRoles));
+          localStorage.setItem(keys.sectors, JSON.stringify(filterSectors));
+      } else {
+          localStorage.removeItem(keys.persist);
+          localStorage.removeItem(keys.user);
+          localStorage.removeItem(keys.roles);
+          localStorage.removeItem(keys.sectors);
+      }
+  }, [filterUser, filterRoles, filterSectors, persistFilters, user?.id, isFiltersLoaded]);
+
+  const userOptions = useMemo(() => [
+      { value: 'Todos', label: 'Todos os usuários' },
+      { value: 'me', label: `Eu (${user?.name || '...'})` },
+      ...users.filter(u => u.id !== user?.id).map(u => ({ value: u.id, label: u.name }))
+  ], [users, user]);
+
+  const roleOptions = [
+      { value: 'Todos', label: 'Todos os papéis' },
+      { value: 'CRIADOR', label: 'Criador' },
+      ...INVOLVEMENT_LEVELS.map(l => ({ value: l.value, label: l.label }))
+  ];
+
+  const sectorOptions = [
+      { value: 'Todos', label: 'Todos os setores' },
+      ...SECTORS.map(s => ({ value: s, label: s }))
+  ];
+
+  const filteredEvents = useMemo(() => {
+    let result = events;
+
+    // Text Search
+    if (searchTerm) {
+        const lower = searchTerm.toLowerCase();
+        result = result.filter(e => 
+          (e.title || '').toLowerCase().includes(lower) ||
+          (e.description || '').toLowerCase().includes(lower) ||
+          (e.location || '').toLowerCase().includes(lower) ||
+          (e.nature || '').toLowerCase().includes(lower) ||
+          (e.category || '').toLowerCase().includes(lower)
+        );
+    }
+
+    // Sector Filter
+    if (!filterSectors.includes('Todos') && filterSectors.length > 0) {
+        result = result.filter(e => {
+            // Check creator's sector
+            const creatorSector = e.expand?.user?.sector;
+            if (creatorSector && filterSectors.includes(creatorSector)) return true;
+            
+            return false;
+        });
+    }
+
+    // User & Role Filter
+    if ((!filterUser.includes('Todos') && filterUser.length > 0) || (!filterRoles.includes('Todos') && filterRoles.length > 0)) {
+        result = result.filter(e => {
+            // Case 1: Filter by specific users
+            if (!filterUser.includes('Todos') && filterUser.length > 0) {
+                // Resolve 'me' to actual ID
+                const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
+                
+                return targetUserIds.some(targetId => {
+                    const userRoles: string[] = [];
+                    
+                    // Check creator
+                    if (e.user === targetId) userRoles.push('CRIADOR');
+                    
+                    // Check explicit roles
+                    if (e.participants_roles && e.participants_roles[targetId]) {
+                        userRoles.push(e.participants_roles[targetId]);
+                    }
+                    
+                    // Check participant without explicit role
+                    if (e.participants && e.participants.includes(targetId)) {
+                        const hasExplicitRole = e.participants_roles && e.participants_roles[targetId];
+                        if (!hasExplicitRole && e.user !== targetId) {
+                            userRoles.push('PARTICIPANTE');
+                        }
+                    }
+                    
+                    if (userRoles.length === 0) return false;
+                    
+                    if (filterRoles.includes('Todos') || filterRoles.length === 0) return true;
+                    
+                    return userRoles.some(r => filterRoles.includes(r));
+                });
+            }
+            
+            // Case 2: Filter by roles only (User is 'Todos')
+            if (filterRoles.length > 0 && !filterRoles.includes('Todos')) {
+                // Check if ANYONE in the event has one of the selected roles
+                // 1. Check Creator
+                if (filterRoles.includes('CRIADOR')) return true; // Creator always exists
+                
+                // 2. Check Participants Roles
+                if (e.participants_roles) {
+                    const rolesInEvent = Object.values(e.participants_roles);
+                    if (rolesInEvent.some((r: any) => filterRoles.includes(r))) return true;
+                }
+                
+                // 3. Check generic 'PARTICIPANTE'
+                if (filterRoles.includes('PARTICIPANTE')) {
+                    // If there are participants
+                    if (e.participants && e.participants.length > 0) {
+                        // And if we are looking for generic participants, we assume anyone in participants list 
+                        // who is NOT the creator effectively acts as a participant.
+                        // However, to be strict, we should check if they have a specific role assigned.
+                        // If logic above assigns 'PARTICIPANTE' when no explicit role, we replicate that check:
+                        const hasGenericParticipant = e.participants.some((pId: string) => {
+                            const explicitRole = e.participants_roles && e.participants_roles[pId];
+                            return !explicitRole && pId !== e.user;
+                        });
+                        if (hasGenericParticipant) return true;
+                    }
+                }
+                
+                // If we are looking for specific roles like ORGANIZADOR/COORGANIZADOR and they weren't found in step 2
+                return false;
+            }
+            
+            return true;
+        });
+    }
+
+    return result;
+  }, [events, searchTerm, filterUser, filterRoles, filterSectors, user]);
+
   // Group events by date for efficient lookup
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, any[]> = {};
-    events.forEach(event => {
+    filteredEvents.forEach(event => {
       const date = new Date(event.date_start || event.date);
       const key = date.toDateString();
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(event);
     });
     return grouped;
-  }, [events]);
+  }, [filteredEvents]);
   
   // Initialize state from URL or defaults
   const [currentDate, setCurrentDate] = useState(() => {
@@ -309,64 +495,120 @@ const Calendar: React.FC = () => {
     <div className="flex flex-col min-h-screen w-full">
       {/* Filters Bar - Fixed Top of Page */}
       <div className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-border-light shadow-sm w-full">
-        <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-3">
-          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                const today = new Date();
-                const isAlreadyToday = currentDate.toDateString() === today.toDateString();
-                setCurrentDate(today);
-                updateURL(viewType, today, true);
-                if (isAlreadyToday) {
-                  scrollToToday();
-                }
-              }}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-xl transition-all duration-300 active:scale-95"
-            >
-              <span className="material-symbols-outlined text-[18px]">today</span>
-              Hoje
-            </button>
+        <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-2">
+          <div className="flex flex-col xl:flex-row items-center gap-2 xl:gap-4">
+            
+            {/* Navigation Group */}
+            <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-start">
+                <button
+                  onClick={() => {
+                    const today = new Date();
+                    const isAlreadyToday = currentDate.toDateString() === today.toDateString();
+                    setCurrentDate(today);
+                    updateURL(viewType, today, true);
+                    if (isAlreadyToday) {
+                      scrollToToday();
+                    }
+                  }}
+                  className="h-[38px] flex items-center gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
+                >
+                  <span className="material-symbols-outlined text-[16px]">today</span>
+                  Hoje
+                </button>
 
-            <div className="flex items-center bg-slate-100/50 rounded-xl p-1 border border-border-light">
-              <button
-                onClick={() => handleNavigate('prev')}
-                className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
-              >
-                <span className="material-symbols-outlined text-[20px]">chevron_left</span>
-              </button>
-              <span className="px-4 text-[11px] md:text-xs font-black text-text-main min-w-[140px] md:min-w-[180px] text-center uppercase tracking-widest">
-                {viewType === 'day'
-                  ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
-                  : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
-              </span>
-              <button
-                onClick={() => handleNavigate('next')}
-                className="size-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
-              >
-                <span className="material-symbols-outlined text-[20px]">chevron_right</span>
-              </button>
+                <div className="h-[38px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light">
+                  <button
+                    onClick={() => handleNavigate('prev')}
+                    className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                  </button>
+                  <span className="h-full flex items-center justify-center px-2 text-[10px] md:text-[11px] font-black text-text-main min-w-[110px] md:min-w-[140px] text-center uppercase tracking-widest truncate">
+                    {viewType === 'day'
+                      ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
+                      : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button
+                    onClick={() => handleNavigate('next')}
+                    className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                  </button>
+                </div>
             </div>
-          </div>
 
-          <div className="flex bg-slate-100/50 p-1 rounded-xl border border-border-light">
-            {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
-              <button
-                key={view}
-                onClick={() => updateURL(view, currentDate)}
-                className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 ${
-                  viewType === view 
-                    ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
-                    : 'text-text-secondary hover:text-text-main'
-                }`}
-              >
-                {view === 'day' ? 'Dia' : view === 'week' ? 'Semana' : view === 'month' ? 'Mês' : 'Agenda'}
-              </button>
-            ))}
+            {/* Separator (Desktop) */}
+            <div className="hidden xl:block w-px h-6 bg-slate-200"></div>
+
+            {/* Filters Group */}
+            <div className="flex flex-col md:flex-row items-center gap-2 w-full xl:flex-1 z-[101] relative min-w-0">
+                <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
+                  <CustomSelect
+                      value={filterUser}
+                      onChange={setFilterUser}
+                      options={userOptions}
+                      multiSelect={true}
+                      placeholder="Usuário"
+                      startIcon="person"
+                      className="w-full h-full"
+                  />
+                </div>
+                <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
+                  <CustomSelect
+                      value={filterSectors}
+                      onChange={setFilterSectors}
+                      options={sectorOptions}
+                      multiSelect={true}
+                      placeholder="Setor"
+                      startIcon="apartment"
+                      className="w-full h-full"
+                  />
+                </div>
+                <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
+                  <CustomSelect
+                      value={filterRoles}
+                      onChange={setFilterRoles}
+                      options={roleOptions}
+                      multiSelect={true}
+                      placeholder="Papel"
+                      startIcon="badge"
+                      className="w-full h-full"
+                  />
+                </div>
+                 <label className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none transition-all duration-300 px-3 rounded-lg border whitespace-nowrap h-[38px] flex-shrink-0 ${persistFilters ? 'bg-primary text-white border-primary shadow-sm hover:bg-primary/90' : 'bg-slate-50 text-slate-500 border-slate-200 hover:text-primary hover:border-primary/30'}`}>
+                    <input 
+                      type="checkbox" 
+                      checked={persistFilters} 
+                      onChange={(e) => setPersistFilters(e.target.checked)}
+                      className="hidden"
+                    />
+                    <span className="material-symbols-outlined text-[16px]">
+                        {persistFilters ? 'bookmark_added' : 'bookmark_border'}
+                    </span>
+                    {persistFilters ? 'Salvo' : 'Salvar'}
+                </label>
+            </div>
+
+            {/* View Type Group */}
+            <div className="h-[38px] flex bg-slate-100/50 p-0.5 rounded-lg border border-border-light flex-shrink-0 w-full md:w-auto justify-center">
+                {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
+                  <button
+                    key={view}
+                    onClick={() => updateURL(view, currentDate)}
+                    className={`h-full px-3 text-[9px] font-black uppercase tracking-widest rounded-md transition-all duration-300 ${
+                      viewType === view 
+                        ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
+                        : 'text-text-secondary hover:text-text-main'
+                    }`}
+                  >
+                    {view === 'day' ? 'Dia' : view === 'week' ? 'Sem' : view === 'month' ? 'Mês' : 'Age'}
+                  </button>
+                ))}
+            </div>
+
           </div>
         </div>
       </div>
-    </div>
 
       <div className="max-w-[1600px] mx-auto w-full p-2 md:p-4 lg:p-6">
         {/* Calendar Grid Container */}
@@ -396,7 +638,7 @@ const Calendar: React.FC = () => {
                       onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
                       className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
                         dateObj.type === 'current' 
-                          ? (isToday ? 'bg-primary/[0.02]' : 'bg-white hover:bg-slate-50/50') 
+                          ? (isToday ? 'bg-primary/[0.06] shadow-inner ring-1 ring-inset ring-primary/10' : 'bg-white hover:bg-slate-50/50') 
                           : 'bg-slate-50/30 text-text-secondary/40'
                       }`}
                     >
@@ -452,7 +694,7 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`bg-white rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'ring-2 ring-primary/20 border-primary/20' : ''}`}
+                    className={`rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-2 ring-primary/20 border-primary/20' : 'bg-white'}`}
                   >
                     <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
                       <div className="flex items-center gap-3">
@@ -555,7 +797,7 @@ const Calendar: React.FC = () => {
                       key={idx}
                       onDoubleClick={() => handleDayDoubleClick(date)}
                       className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 ${
-                        isToday ? 'bg-primary/[0.02]' : 'hover:bg-slate-50/30'
+                        isToday ? 'bg-primary/[0.06] shadow-inner' : 'hover:bg-slate-50/30'
                       }`}
                     >
                       <div className="flex flex-col gap-1.5 flex-1 group">
@@ -593,7 +835,7 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`bg-white rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'ring-2 ring-primary/20 border-primary/20' : ''}`}
+                    className={`rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-2 ring-primary/20 border-primary/20' : 'bg-white'}`}
                   >
                     <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
                       <div className="flex items-center gap-3">
@@ -642,7 +884,11 @@ const Calendar: React.FC = () => {
         {viewType === 'day' && (
           <div 
             onDoubleClick={() => handleDayDoubleClick(currentDate)}
-            className="flex-1 flex flex-col bg-white cursor-default relative"
+            className={`flex-1 flex flex-col cursor-default relative ${
+              currentDate.toDateString() === new Date().toDateString() 
+                ? 'bg-primary/[0.02]' 
+                : 'bg-white'
+            }`}
             title="Clique duplo para novo evento"
           >
             <div className="sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-100 px-4 md:px-8 py-3 shadow-sm">
@@ -755,7 +1001,11 @@ const Calendar: React.FC = () => {
                         <div 
                             key={dateStr} 
                             ref={isToday ? todayRef : null}
-                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ${isToday ? 'relative' : 'opacity-80 hover:opacity-100 transition-opacity'}`}
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 -mx-4 rounded-2xl transition-all ${
+                                isToday 
+                                    ? 'bg-primary/[0.03] border border-primary/10 relative shadow-sm' 
+                                    : 'opacity-80 hover:opacity-100 hover:bg-slate-50/50'
+                            }`}
                         >
                             <div className="flex md:flex-col items-center md:items-start gap-3 md:gap-0 md:w-32 shrink-0">
                                 <span className={`text-4xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>{String(date.getDate()).padStart(2, '0')}</span>

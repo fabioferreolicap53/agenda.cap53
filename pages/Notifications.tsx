@@ -26,7 +26,13 @@ const Notifications: React.FC = () => {
   } = useNotifications();
   
   const [filter, setFilter] = useState<FilterType>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchTerm(params.get('search') || '');
+  }, [location.search]);
   const [reRequestNotification, setReRequestNotification] = useState<any | null>(null);
   const [rejectingNotification, setRejectingNotification] = useState<any | null>(null);
 
@@ -89,20 +95,44 @@ const Notifications: React.FC = () => {
   };
 
   const filteredNotifications = useMemo(() => {
+    let list = notifications;
+
+    // Apply type filter
     switch (filter) {
       case 'unread':
-        return notifications.filter(n => !n.read);
+        list = list.filter(n => !n.read);
+        break;
       case 'actions':
-        return notifications.filter(n => {
+        list = list.filter(n => {
           const data = getData(n);
           return n.invite_status === 'pending' || 
           (n.type === 'refusal' && (data.kind === 'almc_item_decision' || data.kind === 'transport_decision')) ||
           (n.type === 'transport_decision' && (n.invite_status === 'rejected' || data.action === 'rejected'));
         });
-      default:
-        return notifications;
+        break;
     }
-  }, [notifications, filter]);
+
+    // Apply search filter
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      list = list.filter(n => {
+        const data = getData(n);
+        const title = (n.title || '').toLowerCase();
+        const message = (n.message || '').toLowerCase();
+        const itemName = (data.item_name || '').toLowerCase();
+        const eventTitle = (n.expand?.event?.title || '').toLowerCase();
+        const relatedItem = (n.expand?.related_request?.expand?.item?.name || '').toLowerCase();
+        
+        return title.includes(lowerSearch) || 
+               message.includes(lowerSearch) || 
+               itemName.includes(lowerSearch) || 
+               eventTitle.includes(lowerSearch) ||
+               relatedItem.includes(lowerSearch);
+      });
+    }
+
+    return list;
+  }, [notifications, filter, searchTerm]);
 
   const groupedNotifications = useMemo(() => {
     const groups: Map<string, typeof notifications> = new Map();

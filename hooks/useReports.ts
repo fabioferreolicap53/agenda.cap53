@@ -36,6 +36,7 @@ export interface ReportFilters {
   startDate: string;
   endDate: string;
   nature: string;
+  search: string;
 }
 
 export const useReports = () => {
@@ -44,7 +45,8 @@ export const useReports = () => {
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
     endDate: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
-    nature: 'all'
+    nature: 'all',
+    search: ''
   });
 
   const [stats, setStats] = useState<ReportStats>({
@@ -89,6 +91,10 @@ export const useReports = () => {
       if (filters.nature !== 'all') {
         if (filterString) filterString += ' && ';
         filterString += `nature = "${filters.nature}"`;
+      }
+      if (filters.search) {
+        if (filterString) filterString += ' && ';
+        filterString += `(title ~ "${filters.search}" || description ~ "${filters.search}" || nature ~ "${filters.search}")`;
       }
 
       // 2. Fetch data

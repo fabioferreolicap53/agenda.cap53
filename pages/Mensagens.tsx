@@ -23,6 +23,12 @@ const Chat: React.FC = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Sync with global search
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setSearchTerm(params.get('search') || '');
+  }, [location.search]);
+
   // Handle window resize for responsiveness
   useEffect(() => {
     const handleResize = () => {

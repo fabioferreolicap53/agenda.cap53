@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { format, isPast, isFuture, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useMySpace, MySpaceEvent } from '../hooks/useMySpace';
@@ -17,6 +17,7 @@ const COLORS = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6'
 const MyInvolvement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const { events, loading, stats, analytics, refresh } = useMySpace();
   const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected'>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
@@ -77,21 +78,44 @@ const MyInvolvement: React.FC = () => {
   };
 
   const filteredEvents = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const searchTerm = (params.get('search') || '').toLowerCase();
+    
+    let result = events;
+
     switch (activeTab) {
       case 'organizer': 
-        return events.filter(e => (e.userRole || '').toUpperCase() === 'ORGANIZADOR' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
+        result = events.filter(e => (e.userRole || '').toUpperCase() === 'ORGANIZADOR' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
+        break;
       case 'coorganizer': 
-        return events.filter(e => (e.userRole || '').toUpperCase() === 'COORGANIZADOR' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
+        result = events.filter(e => (e.userRole || '').toUpperCase() === 'COORGANIZADOR' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
+        break;
       case 'participant': 
-        return events.filter(e => (e.userRole || '').toUpperCase() === 'PARTICIPANTE' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
+        result = events.filter(e => (e.userRole || '').toUpperCase() === 'PARTICIPANTE' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
+        break;
       case 'pending': 
-        return events.filter(e => e.requestStatus === 'pending' || e.participationStatus === 'pending');
+        result = events.filter(e => e.requestStatus === 'pending' || e.participationStatus === 'pending');
+        break;
       case 'rejected': 
-        return events.filter(e => e.requestStatus === 'rejected' || e.participationStatus === 'rejected');
+        result = events.filter(e => e.requestStatus === 'rejected' || e.participationStatus === 'rejected');
+        break;
       default: 
-        return events;
+        result = events;
+        break;
     }
-  }, [events, activeTab]);
+
+    if (searchTerm) {
+      result = result.filter(e => 
+        (e.title || '').toLowerCase().includes(searchTerm) ||
+        (e.description || '').toLowerCase().includes(searchTerm) ||
+        (e.location || '').toLowerCase().includes(searchTerm) ||
+        (e.nature || '').toLowerCase().includes(searchTerm) ||
+        (e.category || '').toLowerCase().includes(searchTerm)
+      );
+    }
+    
+    return result;
+  }, [events, activeTab, location.search]);
 
   const getStatusBadge = (event: MySpaceEvent) => {
     if (event.participationStatus === 'pending') {
@@ -148,32 +172,39 @@ const MyInvolvement: React.FC = () => {
     const isRejected = event.requestStatus === 'rejected' || event.participationStatus === 'rejected';
 
     let roleText = 'Participante';
+    let roleIcon = 'person';
     let roleClass = 'bg-indigo-50 text-indigo-700 border-indigo-100';
 
     if (role === 'ORGANIZADOR') {
       roleText = 'Organizador';
+      roleIcon = 'assignment_ind';
       roleClass = 'bg-blue-50 text-blue-700 border-blue-100';
     } else if (role === 'COORGANIZADOR') {
       roleText = 'Coorganizador';
+      roleIcon = 'group_work';
       roleClass = 'bg-green-50 text-green-700 border-green-100';
     }
 
     if (isRejected) {
       roleClass = 'bg-slate-50 text-slate-400 border-slate-200 opacity-60';
+      roleIcon = 'person_off';
     }
 
+    const baseBadgeClass = "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wide transition-colors";
+
     return (
-      <div className="flex items-center gap-1.5">
-        <span className={`px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase ${roleClass}`}>
+      <>
+        <span className={`${baseBadgeClass} ${roleClass}`}>
+          <span className="material-symbols-outlined text-[14px]">{roleIcon}</span>
           {roleText}
         </span>
         {isCreator && (
-          <span className="px-2 py-0.5 rounded-md border border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-bold uppercase flex items-center gap-1">
-            <span className="material-symbols-outlined text-[12px]">edit_calendar</span>
+          <span className={`${baseBadgeClass} border-slate-200 bg-slate-50 text-slate-600`}>
+            <span className="material-symbols-outlined text-[14px]">edit_calendar</span>
             Criador
           </span>
         )}
-      </div>
+      </>
     );
   };
 
@@ -273,7 +304,7 @@ const MyInvolvement: React.FC = () => {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-8">
         <div className="space-y-4">
           <div className="flex items-center gap-2 px-1">
             <span className="material-symbols-outlined text-slate-400 text-xl">dashboard</span>
@@ -286,12 +317,12 @@ const MyInvolvement: React.FC = () => {
               { label: 'Coorganizador', value: stats.coorganizer, icon: 'group_work', color: 'text-green-600', bg: 'bg-green-50' },
               { label: 'Participante', value: stats.participant, icon: 'person', color: 'text-indigo-600', bg: 'bg-indigo-50' },
             ].map((stat, i) => (
-              <div key={i} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group text-center">
-                <div className={`size-10 mx-auto rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+              <div key={i} className="bg-white p-3 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group text-center flex flex-col justify-center items-center h-full">
+                <div className={`size-10 mx-auto rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
                   <span className="material-symbols-outlined text-xl">{stat.icon}</span>
                 </div>
                 <p className="text-2xl font-black text-slate-900 leading-none mb-1">{stat.value}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{stat.label}</p>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate w-full px-1" title={stat.label}>{stat.label}</p>
               </div>
             ))}
           </div>
@@ -355,6 +386,30 @@ const MyInvolvement: React.FC = () => {
               { label: 'Pendentes', value: stats.requestsPending, icon: 'send', color: 'text-blue-600', bg: 'bg-blue-50' },
               { label: 'Aceitas', value: stats.requestsAccepted, icon: 'task_alt', color: 'text-indigo-600', bg: 'bg-indigo-50' },
               { label: 'Recusadas', value: stats.requestsRejected, icon: 'cancel_schedule_send', color: 'text-slate-600', bg: 'bg-slate-50' },
+            ].map((stat, i) => (
+              <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className={`size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                    <span className="material-symbols-outlined text-xl">{stat.icon}</span>
+                  </div>
+                  <span className="text-sm font-bold text-slate-600">{stat.label}</span>
+                </div>
+                <span className="text-xl font-black text-slate-900">{stat.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 px-1">
+            <span className="material-symbols-outlined text-purple-400 text-xl">inbox_customize</span>
+            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Solicitações Recebidas</h2>
+          </div>
+          <div className="bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm space-y-2 h-full max-h-[260px] flex flex-col justify-center">
+            {[
+              { label: 'Pendentes', value: stats.receivedRequestsPending, icon: 'hourglass_top', color: 'text-purple-600', bg: 'bg-purple-50' },
+              { label: 'Aceitas', value: stats.receivedRequestsAccepted, icon: 'check_circle', color: 'text-green-600', bg: 'bg-green-50' },
+              { label: 'Recusadas', value: stats.receivedRequestsRejected, icon: 'cancel', color: 'text-red-600', bg: 'bg-red-50' },
             ].map((stat, i) => (
               <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
                 <div className="flex items-center gap-4">
@@ -520,7 +575,7 @@ const MyInvolvement: React.FC = () => {
         ) : (
           <>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 w-fit">
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-1 overflow-x-auto custom-scrollbar-hide">
                 {[
                   { id: 'all', label: 'Todos', icon: 'list' },
                   { id: 'organizer', label: 'Organizador', icon: 'assignment_ind' },
@@ -532,7 +587,7 @@ const MyInvolvement: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
+                    className={`flex-1 justify-center flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
                       activeTab === tab.id 
                         ? 'bg-white text-primary shadow-sm scale-105' 
                         : 'text-slate-500 hover:text-slate-700'
@@ -584,7 +639,8 @@ const MyInvolvement: React.FC = () => {
                               <div className="flex items-center gap-2 flex-wrap">
                                 {getRoleBadge(event)}
                                 {(event.nature || event.category) && (
-                                  <span className="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-slate-50 text-slate-500 border border-slate-100">
+                                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-wide transition-colors">
+                                    <span className="material-symbols-outlined text-[14px]">label</span>
                                     {event.nature || event.category}
                                   </span>
                                 )}

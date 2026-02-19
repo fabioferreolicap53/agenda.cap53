@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 
 const LocationManagement: React.FC = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const [locations, setLocations] = useState<any[]>([]);
     const [eventTypes, setEventTypes] = useState<any[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
     const [newName, setNewName] = useState('');
     const [newConflictControl, setNewConflictControl] = useState(false);
     const [newIsAvailable, setNewIsAvailable] = useState(true);
@@ -17,6 +20,19 @@ const LocationManagement: React.FC = () => {
     const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
     const [editTypeName, setEditTypeName] = useState('');
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        setSearchTerm(params.get('search') || '');
+    }, [location.search]);
+
+    const filteredLocations = useMemo(() => {
+        if (!searchTerm) return locations;
+        const lowerSearch = searchTerm.toLowerCase();
+        return locations.filter(loc => 
+            loc.name.toLowerCase().includes(lowerSearch)
+        );
+    }, [locations, searchTerm]);
 
     // Inscrever para atualizações em tempo real
     useEffect(() => {
@@ -518,17 +534,19 @@ const LocationManagement: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border-light">
-                            {locations.length === 0 && !loading && (
+                            {filteredLocations.length === 0 && !loading && (
                                 <tr>
                                     <td colSpan={4} className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center gap-3 opacity-40">
                                             <span className="material-symbols-outlined text-5xl">location_off</span>
-                                            <p className="text-sm font-bold italic">Nenhum local cadastrado até o momento.</p>
+                                            <p className="text-sm font-bold italic">
+                                                {searchTerm ? 'Nenhum local encontrado para sua busca.' : 'Nenhum local cadastrado até o momento.'}
+                                            </p>
                                         </div>
                                     </td>
                                 </tr>
                             )}
-                            {locations.map(loc => {
+                            {filteredLocations.map(loc => {
                                 // Lógica robusta: is_available é true se não for explicitamente falso (booleano ou string 'false')
                                 const isAvailable = !!loc.is_available && String(loc.is_available) !== 'false';
                                 const isConflictActive = !!loc.conflict_control && String(loc.conflict_control) !== 'false';

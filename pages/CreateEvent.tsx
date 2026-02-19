@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
@@ -129,6 +129,12 @@ const CreateEvent: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [creatorId, setCreatorId] = useState<string | null>(null);
+
+  // Sync with global search
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    setParticipantSearch(params.get('search') || '');
+  }, [location.search]);
 
   // Memoized user list filtering and sorting
   const sortedFilteredUsers = useMemo(() => {

@@ -76,7 +76,15 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [isRightSidebarOpen, setIsRightSidebarOpen] = React.useState(false);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = React.useState(() => {
+    const saved = localStorage.getItem('right_sidebar_open');
+    return saved ? saved === 'true' : false;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('right_sidebar_open', String(isRightSidebarOpen));
+  }, [isRightSidebarOpen]);
+
   const isAuthPage = location.pathname === '/login' || 
                     location.pathname.startsWith('/verify-email') || 
                     location.pathname.startsWith('/reset-password');

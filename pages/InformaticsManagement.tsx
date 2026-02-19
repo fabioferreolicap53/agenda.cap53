@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 const InformaticsManagement: React.FC = () => {
     const { user, loading: authLoading } = useAuth();
@@ -15,7 +15,13 @@ const InformaticsManagement: React.FC = () => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState<'inventory' | 'history'>('inventory');
+    const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        setSearchTerm(params.get('search') || '');
+    }, [location.search]);
 
     const filteredItems = items.filter(item => 
         item.name.toLowerCase().includes(searchTerm.toLowerCase())

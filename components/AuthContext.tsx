@@ -28,6 +28,7 @@ interface AuthContextType {
     register: (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => Promise<{ needsVerification: boolean }>;
     logout: () => void;
     updateProfile: (data: Partial<User>) => Promise<void>;
+    updateAvatar: (file: File) => Promise<void>;
     updateStatus: (status: User['status']) => Promise<void>;
     setRole: (role: UserRole) => Promise<void>;
     requestPasswordReset: (email: string) => Promise<void>;
@@ -263,6 +264,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const updateAvatar = async (file: File) => {
+        if (!user || !pb.authStore.model) return;
+        
+        const collectionName = pb.authStore.model.collectionName;
+        console.log('Updating avatar for user ID:', user.id, 'in collection:', collectionName);
+
+        try {
+            const formData = new FormData();
+            formData.append('avatar', file);
+
+            await pb.collection(collectionName).update(user.id, formData);
+            // Refresh auth store to ensure local model is updated and onChange fires
+            await pb.collection(collectionName).authRefresh();
+        } catch (error) {
+            console.error('Avatar update error details:', error);
+            throw error;
+        }
+    };
+
     const updateStatus = async (status: User['status']) => {
         await updateProfile({ status });
     };
@@ -311,6 +331,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             register, 
             logout, 
             updateProfile, 
+            updateAvatar,
             updateStatus, 
             setRole, 
             requestPasswordReset, 

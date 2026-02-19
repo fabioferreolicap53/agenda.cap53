@@ -41,7 +41,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   const getLabel = () => {
     if (multiSelect && Array.isArray(value)) {
       if (value.length === 0) return placeholder;
-      if (value.includes('Todos')) return 'Todos os Setores';
+      if (value.includes('Todos')) {
+        const todosOption = options.find(opt => opt.value === 'Todos');
+        return todosOption ? todosOption.label : 'Todos';
+      }
       if (value.length === 1) return options.find(opt => opt.value === value[0])?.label || placeholder;
       return `${value.length} Selecionados`;
     }
@@ -95,7 +98,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   };
 
   return (
-    <div className={`relative ${className} ${isOpen ? 'z-[100]' : 'z-20'}`} ref={containerRef}>
+    <div className={`relative ${className} ${isOpen ? 'z-[500]' : 'z-20'}`} ref={containerRef}>
       <div
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
