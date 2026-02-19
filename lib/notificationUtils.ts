@@ -1,7 +1,7 @@
 import { pb } from './pocketbase';
 import { notificationService } from './notifications';
 
-interface EventData {
+export interface EventData {
     id: string;
     title: string;
     participants?: string[];
@@ -10,6 +10,7 @@ interface EventData {
     almoxarifado_confirmed_items?: any;
     copa_confirmed_items?: any;
     informatica_confirmed_items?: any;
+    [key: string]: any; // Allow other properties from RecordModel
 }
 
 /**
@@ -65,9 +66,24 @@ export const notifyEventStatusChange = async (
         if (hasDcaRequest) sectorRoles.add('DCA');
 
         // Transporte (TRA)
-        // Baseado no status do transporte no próprio evento
+        // 1. Baseado no status do transporte no próprio evento
         if (event.transporte_status === 'confirmed') {
             sectorRoles.add('TRA');
+        } else {
+            // 2. Baseado na coleção de requisições de transporte (verificando status APPROVED)
+            // Nota: O campo de relacionamento chama-se 'evento' e o status é 'APPROVED' (uppercase)
+            try {
+                const transportRequests = await pb.collection('agenda_cap53_transport_requests').getList(1, 1, {
+                    filter: `evento = "${event.id}" && status = "APPROVED"`,
+                    fields: 'id'
+                });
+                
+                if (transportRequests.totalItems > 0) {
+                    sectorRoles.add('TRA');
+                }
+            } catch (tErr) {
+                console.warn('[NotificationUtils] Erro ao verificar requests de transporte:', tErr);
+            }
         }
 
         console.log(`[NotificationUtils] Setores a notificar:`, Array.from(sectorRoles));

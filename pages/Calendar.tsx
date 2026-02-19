@@ -10,7 +10,7 @@ import CustomSelect from '../components/CustomSelect';
 import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
 import { deleteEventWithCleanup } from '../lib/eventUtils';
-import { notifyEventStatusChange } from '../lib/notificationUtils';
+import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
 
 const Calendar: React.FC = () => {
   const { user } = useAuth();
@@ -422,7 +422,7 @@ const Calendar: React.FC = () => {
       try {
         const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
         if (user) {
-            await notifyEventStatusChange(updatedEvent, 'cancelled', reason, user.id);
+            await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', reason, user.id);
         }
       } catch (notifErr) {
         console.error('Erro ao enviar notificações de cancelamento:', notifErr);

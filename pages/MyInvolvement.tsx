@@ -6,7 +6,7 @@ import { useMySpace, MySpaceEvent } from '../hooks/useMySpace';
 import { useAuth } from '../components/AuthContext';
 import EventDetailsModal from '../components/EventDetailsModal';
 import { deleteEventWithCleanup } from '../lib/eventUtils';
-import { notifyEventStatusChange } from '../lib/notificationUtils';
+import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
 import { pb } from '../lib/pocketbase';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -40,7 +40,7 @@ const MyInvolvement: React.FC = () => {
       try {
         const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
         if (user) {
-          await notifyEventStatusChange(updatedEvent, 'cancelled', reason, user.id);
+          await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', reason, user.id);
         }
       } catch (notifErr) {
         console.error('Erro ao enviar notificações de cancelamento:', notifErr);

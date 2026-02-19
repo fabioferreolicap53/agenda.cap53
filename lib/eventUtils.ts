@@ -1,5 +1,5 @@
 import { pb } from './pocketbase';
-import { notifyEventStatusChange } from './notificationUtils';
+import { notifyEventStatusChange, EventData } from './notificationUtils';
 
 /**
  * Deletes an event and all its associated notifications.
@@ -18,7 +18,7 @@ export const deleteEventWithCleanup = async (eventId: string, actorId?: string) 
             const event = await pb.collection('agenda_cap53_eventos').getOne(eventId);
             if (event) {
                 // Notifica exclusão
-                await notifyEventStatusChange(event, 'deleted', '', currentUserId);
+                await notifyEventStatusChange(event as unknown as EventData, 'deleted', '', currentUserId);
             }
         } else {
             console.warn('[Event Cleanup] No actor ID found, skipping deletion notification.');
