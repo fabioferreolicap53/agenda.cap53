@@ -933,11 +933,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                                     <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/5 rounded-md">
                                                                         QTD: {req.quantity}
                                                                     </span>
-                                                                    {req.justification && (
-                                                                        <span className="text-[10px] text-slate-400 italic truncate max-w-[200px]" title={req.justification}>
-                                                                            "{req.justification}"
-                                                                        </span>
-                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -953,6 +948,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                                     <span className="material-symbols-outlined text-lg">restart_alt</span>
                                                                 </button>
                                                             )}
+                                                            
+                                                            {/* 
+                                                                [REMOVIDO] A resposta do usuário criador do evento ao setor responsável 
+                                                                foi removida desta visualização conforme solicitação. 
+                                                                Agora ela é exibida apenas nas notificações.
+                                                            */}
 
                                                             {/* ALMC Availability Toggle */}
                                                             {user?.role === 'ALMC' && req.expand?.item && (
@@ -1084,14 +1085,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 </span>
                                             </div>
 
-                                            {event.transporte_status === 'rejected' && event.transporte_justification && (
-                                                <div className="p-4 rounded-2xl bg-red-50/50 border border-red-100">
-                                                    <span className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-1 block">Justificativa da Recusa</span>
-                                                    <span className="text-xs font-bold text-red-700 leading-relaxed">
-                                                        {event.transporte_justification}
-                                                    </span>
-                                                </div>
-                                            )}
+                                            {/* Justificativa de transporte removida conforme solicitação */}
                                         </div>
                                     </div>
                                 </div>

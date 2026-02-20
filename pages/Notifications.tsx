@@ -56,6 +56,77 @@ const Notifications: React.FC = () => {
     return result || {};
   };
 
+  const getRefusalJustification = (n: any) => {
+    const data = getData(n);
+    const title = (n.title || '').toLowerCase();
+    
+    // Flags de controle
+    const isRerequest = data.is_rerequest === true || title.includes('reaberta') || title.includes('solicitar novamente');
+    
+    // ==================================================================================
+    // 1. CASO ESPECÍFICO: Notificação de "Solicitação Reaberta" (Visão do Setor)
+    // ==================================================================================
+    // O setor recebe isso quando o usuário pede de novo.
+    // A justificativa aqui é a "Resposta do Usuário".
+    if (isRerequest) {
+        // Prioridade 1: Payload da notificação (o que o usuário digitou no momento)
+        if (data.justification) return data.justification;
+        if (data.justificativa) return data.justificativa;
+        
+        // Prioridade 2: Estado atual do request (se estiver pendente)
+        let req = n.expand?.related_request;
+        if (Array.isArray(req)) req = req[0];
+        if (req && req.status === 'pending' && req.justification) return req.justification;
+    }
+
+    // ==================================================================================
+    // 2. CASO ESPECÍFICO: Notificação de Recusa que foi RESPONDIDA (Visão do Usuário)
+    // ==================================================================================
+    // O usuário foi recusado, mas clicou em "Solicitar Novamente".
+    // A notificação original de recusa deve mostrar o que ele respondeu (feedback loop).
+    
+    // Checamos se o request relacionado está PENDENTE (significa que foi reaberto)
+    let req = n.expand?.related_request;
+    if (Array.isArray(req)) req = req[0];
+    
+    if (req && req.status === 'pending' && req.justification) {
+        // Se está pendente e tem justificativa, é a resposta do usuário
+        return req.justification;
+    }
+
+    // ==================================================================================
+    // 3. CASO PADRÃO: Notificação de Recusa (Visão do Usuário)
+    // ==================================================================================
+    // Se não foi reaberta (ou se foi recusada novamente e esta é a notificação nova),
+    // mostramos a justificativa da recusa (do setor).
+    
+    if (data.justification) return data.justification;
+    if (data.justificativa) return data.justificativa;
+    if (data.reason) return data.reason;
+    if (data.motivo) return data.motivo;
+
+    // Busca profunda no Request (se estiver recusado, assume que a justificativa lá é a da recusa)
+    if (req && req.status === 'rejected' && req.justification) {
+        return req.justification;
+    }
+
+    // Busca profunda em Evento (Transporte)
+    let evt = n.expand?.event || n.expand?.related_event;
+    if (Array.isArray(evt)) evt = evt[0];
+    
+    if (evt && evt.transporte_justification) {
+        return evt.transporte_justification;
+    }
+
+    // Fallback: Extração de string
+    if (n.message && n.message.includes('Motivo:')) {
+        const parts = n.message.split('Motivo:');
+        if (parts.length > 1) return parts[1].trim();
+    }
+    
+    return null;
+  };
+
   const getEventCreator = (n: any) => {
       // 1. Direct event expansion
       if (n.expand?.event?.expand?.user?.name) {
@@ -108,6 +179,33 @@ const Notifications: React.FC = () => {
     }
 
     return 'neutral';
+  };
+
+  const isNotificationRefusal = (n: any) => {
+    const data = getData(n);
+    const title = (n.title || '').toLowerCase();
+    
+    // 1. Verificações explícitas na notificação
+    if (n.type === 'refusal' || 
+        data.action === 'rejected' || 
+        n.invite_status === 'rejected' ||
+        title.includes('recusa') || 
+        title.includes('rejeita')) {
+        return true;
+    }
+
+    // 2. Verificação profunda nos objetos relacionados
+    // Check Related Request
+    let req = n.expand?.related_request;
+    if (Array.isArray(req)) req = req[0];
+    if (req && req.status === 'rejected') return true;
+
+    // Check Event (Transport)
+    let evt = n.expand?.event || n.expand?.related_event;
+    if (Array.isArray(evt)) evt = evt[0];
+    if (evt && evt.transporte_status === 'rejected') return true;
+
+    return false;
   };
 
   const filteredNotifications = useMemo(() => {
@@ -688,62 +786,68 @@ const Notifications: React.FC = () => {
                 )}
 
                 {/* Justification/Observation */}
-                {getData(notification).justification && (
+                {getRefusalJustification(notification) && (
                    <div className={`mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 ${
-                       (notification.type === 'refusal' || 
-                        (notification.title?.toLowerCase() || '').includes('recusad') || 
-                        (notification.title?.toLowerCase() || '').includes('rejeitad') ||
-                        getData(notification).action === 'rejected')
+                       isNotificationRefusal(notification)
                        ? 'bg-red-50 text-red-900 border-red-100 ring-1 ring-red-200/50'
                        : 'bg-amber-50 text-amber-900 border-amber-100 ring-1 ring-amber-200/50'
                    }`}>
                       <span className="material-symbols-outlined text-[16px] mt-px">
-                        {(notification.type === 'refusal' || 
-                          (notification.title?.toLowerCase() || '').includes('recusad') || 
-                          (notification.title?.toLowerCase() || '').includes('rejeitad') ||
-                          getData(notification).action === 'rejected') ? 'report' : 'sticky_note_2'}
+                        {isNotificationRefusal(notification) ? 'report' : 'sticky_note_2'}
                       </span>
                       <span className="leading-relaxed">
                         <strong className="font-bold block mb-0.5 uppercase tracking-wide text-[10px] opacity-80">
-                            {(notification.type === 'refusal' || 
-                              (notification.title?.toLowerCase() || '').includes('recusad') || 
-                              (notification.title?.toLowerCase() || '').includes('rejeitad') ||
-                              getData(notification).action === 'rejected') ? 'Motivo da Recusa' : 'Observação'}
+                            {isNotificationRefusal(notification) ? 'Motivo da Recusa' : 'Observação'}
                         </strong>
-                        {getData(notification).justification}
+                        {getRefusalJustification(notification)}
                       </span>
                    </div>
                 )}
 
                 {/* Re-request Justification (User's Response) */}
                 {(() => {
-                    // Check if this is a rejection that has been reopened
-                    const isRejection = notification.type === 'refusal' || 
-                                      (notification.title?.toLowerCase() || '').includes('recusad') || 
-                                      (notification.title?.toLowerCase() || '').includes('rejeitad') ||
-                                      getData(notification).action === 'rejected';
+                    // Check if this is a rejection notification
+                    const isRejection = isNotificationRefusal(notification);
                     
                     if (!isRejection) return null;
 
-                    // Check if it's marked as re-requested or currently pending
-                    const data = getData(notification);
-                    const isReRequested = data.re_requested || 
-                                        notification.expand?.related_request?.status === 'pending' || 
-                                        notification.expand?.event?.transporte_status === 'pending';
+                    // Get the related request data
+                    let relatedReq = notification.expand?.related_request;
+                    if (Array.isArray(relatedReq)) relatedReq = relatedReq[0];
 
-                    if (!isReRequested) return null;
+                    let eventData = notification.expand?.event || notification.expand?.related_event;
+                    if (Array.isArray(eventData)) eventData = eventData[0];
 
-                    // Try to find the new justification
+                    // Determine if there is a user response (justification)
                     let userJustification = null;
-                    
-                    if (notification.related_request) {
-                        userJustification = notification.expand?.related_request?.justification;
-                    } else {
-                        // Transport fallback (since transport requests are on the event)
-                        userJustification = notification.expand?.event?.transporte_justification;
+                    let isReRequested = false;
+
+                    // 1. Check Item Request
+                    if (relatedReq) {
+                        userJustification = relatedReq.justification;
+                        isReRequested = relatedReq.status === 'pending';
+                    } 
+                    // 2. Check Transport Request
+                    else if (eventData) {
+                        userJustification = eventData.transporte_justification;
+                        isReRequested = eventData.transporte_status === 'pending';
                     }
 
-                    if (userJustification) {
+                    // Validation Logic:
+                    // We want to show the user's response (justification) if:
+                    // 1. The request is currently marked as PENDING (it's a live re-request)
+                    // 2. The notification metadata says it was re-requested (historical context)
+                    // 3. The current justification is DIFFERENT from the refusal reason (updates that might not be pending anymore)
+                    
+                    const refusalReason = getRefusalJustification(notification);
+                    const markedAsReRequested = getData(notification).re_requested;
+                    
+                    // Allow showing even if same text, IF it is explicitly a re-request state
+                    const shouldShow = (isReRequested || markedAsReRequested) 
+                                     ? !!userJustification // If re-requested, just need text existence
+                                     : (userJustification && userJustification !== refusalReason); // Else, must be new text
+
+                    if (shouldShow) {
                         return (
                            <div className="mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 bg-blue-50 text-blue-900 border-blue-100 ring-1 ring-blue-200/50">
                               <span className="material-symbols-outlined text-[16px] mt-px">reply</span>

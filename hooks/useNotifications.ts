@@ -19,7 +19,7 @@ export const useNotifications = () => {
         pb.collection('agenda_cap53_notifications').getList<NotificationRecord>(1, 50, {
           filter: `user = "${user.id}"`,
           sort: '-created',
-          expand: 'event,related_event,related_request,related_request.item,related_request.created_by,event.user',
+          expand: 'event,related_event,related_request,related_request.item,related_request.created_by,related_request.event,event.user',
           $autoCancel: false
         }).catch(err => {
           console.error('Error fetching notifications list:', err);
@@ -38,11 +38,28 @@ export const useNotifications = () => {
               console.error('Error fetching almac requests:', err);
               return { items: [], totalItems: 0 };
             })
-          : Promise.resolve({ items: [], totalItems: 0 })
+          : pb.collection('agenda_cap53_almac_requests').getList(1, 50, {
+              filter: `created_by = "${user.id}" && status = "pending"`,
+              expand: 'event,item,created_by,event.user',
+              $autoCancel: false
+            }).catch(err => {
+              console.error('Error fetching user requests:', err);
+              return { items: [], totalItems: 0 };
+            }),
+        // Fetch pending transport requests (events) for the user
+        pb.collection('agenda_cap53_eventos').getList(1, 50, {
+          filter: `user = "${user.id}" && transporte_status = "pending"`,
+          expand: 'user',
+          $autoCancel: false
+        }).catch(err => {
+          console.error('Error fetching transport requests:', err);
+          return { items: [], totalItems: 0 };
+        })
       ]);
 
       // Map pending requests for easy access
       const pendingRequestsMap = new Map((almcResult?.items || []).map(r => [r.id, r]));
+      const pendingTransportMap = new Map((traResult?.items || []).map(e => [e.id, e]));
       const handledRequestIds = new Set<string>();
 
       // 1. Enrich existing notifications if they match a pending request
@@ -64,14 +81,59 @@ export const useNotifications = () => {
               const req = pendingRequestsMap.get(n.related_request)!;
               handledRequestIds.add(n.related_request);
               
-              // Force actionable state for pending requests
+              // Check if it's a refusal notification
+              const isRefusal = n.type === 'refusal' || 
+                              (n.title && (n.title.toLowerCase().includes('recusad') || n.title.toLowerCase().includes('rejeitad') || n.title.toLowerCase().includes('reaberta')));
+
+              if (isRefusal) {
+                  // If it's a refusal, we want to keep it as a refusal visually so we can show the "Your Response" block,
+                  // but we MUST update the related_request data to access the new justification.
+                  finalNotif = {
+                      ...n,
+                      expand: {
+                          ...n.expand,
+                          related_request: req,
+                      }
+                  };
+              } else {
+                  // For other notifications (like old pending ones), force the current pending state
+                  // to ensure actionable buttons appear if applicable.
+                  finalNotif = {
+                      ...n,
+                      type: 'almc_item_request', // Ensure type matches for buttons logic
+                      invite_status: 'pending',   // Ensure status matches for buttons logic
+                      expand: {
+                          ...n.expand,
+                          related_request: req, // Ensure we have the latest request data
+                      }
+                  };
+              }
+          }
+          // Also update related_request data for non-pending requests if available in expand
+          // This is crucial for retrieving the justification from the request object
+          else if (n.expand?.related_request) {
+               // Ensure we are using the most up-to-date request object from the notification expand
+               finalNotif = {
+                   ...n,
+                   expand: {
+                       ...n.expand,
+                       related_request: n.expand.related_request
+                   }
+               };
+          }
+
+          // ENRICHMENT FOR TRANSPORT REQUESTS
+          // Checks if the event associated with this notification has a pending transport status
+          // This allows us to show the user's re-request justification
+          if (n.event && pendingTransportMap.has(n.event)) {
+              const evt = pendingTransportMap.get(n.event)!;
+              
               finalNotif = {
-                  ...n,
-                  type: 'almc_item_request', // Ensure type matches for buttons logic
-                  invite_status: 'pending',   // Ensure status matches for buttons logic
+                  ...finalNotif,
                   expand: {
-                      ...n.expand,
-                      related_request: req, // Ensure we have the latest request data
+                      ...finalNotif.expand,
+                      event: evt, // Inject updated event data (with pending status and justification)
+                      related_event: evt // Ensure fallback compatibility
                   }
               };
           }
