@@ -613,6 +613,7 @@ const Notifications: React.FC = () => {
                 <div className="space-y-1">
                     {group.items.map((notification, index) => {
                          const isLatest = index === 0;
+                         const isPenultimate = index === 1; // Efeito ghost na penúltima
                          const isOld = !isLatest;
                          
                          const creatorName = getEventCreator(notification);
@@ -625,7 +626,9 @@ const Notifications: React.FC = () => {
                               }}
                               className={`group relative flex gap-3 md:gap-5 p-3 md:p-5 rounded-xl transition-all duration-200 z-10 
                                 ${getStatusContainerStyles(notification)} 
-                                ${isOld ? 'scale-[0.98] opacity-80 hover:opacity-100 hover:scale-100' : ''}
+                                ${isPenultimate ? 'opacity-60 grayscale-[0.3] scale-[0.98]' : ''}
+                                ${isOld && !isPenultimate ? 'opacity-40 scale-[0.95] hover:opacity-100 hover:scale-100' : ''}
+                                ${isLatest ? 'z-20' : 'z-10'}
                                 ${notification.event ? 'cursor-pointer hover:bg-slate-50/50' : ''}
                               `}
                             >

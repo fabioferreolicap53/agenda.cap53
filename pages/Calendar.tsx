@@ -299,6 +299,10 @@ const Calendar: React.FC = () => {
   const [initialTab, setInitialTab] = useState<'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests'>('details');
   const todayRef = useRef<HTMLDivElement>(null);
 
+  // Animation States
+  const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
+  const [animDirection, setAnimDirection] = useState<'next' | 'prev'>('next');
+
   // Function to scroll to today on mobile
   const scrollToToday = () => {
     setTimeout(() => {
@@ -512,16 +516,32 @@ const Calendar: React.FC = () => {
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate);
-    if (viewType === 'month' || viewType === 'agenda') {
-      newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
-    } else if (viewType === 'week') {
-      newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
-    } else {
-      newDate.setDate(currentDate.getDate() + (direction === 'next' ? 1 : -1));
-    }
-    setCurrentDate(newDate);
-    updateURL(viewType, newDate, true); // Replace for simple navigation
+    if (animStage !== 'idle') return; // Prevent spamming
+
+    setAnimDirection(direction);
+    setAnimStage('exiting');
+
+    setTimeout(() => {
+        const newDate = new Date(currentDate);
+        if (viewType === 'month' || viewType === 'agenda') {
+          newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
+        } else if (viewType === 'week') {
+          newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
+        } else {
+          newDate.setDate(currentDate.getDate() + (direction === 'next' ? 1 : -1));
+        }
+        setCurrentDate(newDate);
+        updateURL(viewType, newDate, true); // Replace for simple navigation
+        
+        setAnimStage('entering');
+        
+        // Small delay to allow 'entering' class (hidden/off-screen) to be applied
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                setAnimStage('idle');
+            });
+        });
+    }, 300); // Match CSS transition duration
   };
 
   const swipeHandlers = useSwipe({
@@ -674,7 +694,16 @@ const Calendar: React.FC = () => {
 
       <div className="max-w-[1600px] mx-auto w-full p-2 md:p-4 lg:p-6">
         {/* Calendar Grid Container */}
-        <div {...swipeHandlers} className="bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative">
+        <div 
+          {...swipeHandlers} 
+          className={`bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative transition-all duration-300 ease-in-out transform ${
+            animStage === 'exiting' 
+              ? (animDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
+              : animStage === 'entering'
+                ? (animDirection === 'next' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0')
+                : 'translate-x-0 opacity-100'
+          }`}
+        >
           {viewType === 'month' && (
             <div className="flex-1 flex flex-col">
               {/* Desktop Grid View */}
