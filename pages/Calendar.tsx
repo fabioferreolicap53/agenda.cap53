@@ -33,6 +33,16 @@ const Calendar: React.FC = () => {
   const [persistFilters, setPersistFilters] = useState(false);
   const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
 
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (!filterUser.includes('Todos')) count++;
+    if (!filterRoles.includes('Todos')) count++;
+    if (!filterSectors.includes('Todos')) count++;
+    return count;
+  }, [filterUser, filterRoles, filterSectors]);
+
   // Initialize filters when user is available
   useEffect(() => {
     if (!user?.id) return;
@@ -499,48 +509,69 @@ const Calendar: React.FC = () => {
             
             {/* Navigation Group */}
             <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-start">
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    const isAlreadyToday = currentDate.toDateString() === today.toDateString();
-                    setCurrentDate(today);
-                    updateURL(viewType, today, true);
-                    if (isAlreadyToday) {
-                      scrollToToday();
-                    }
-                  }}
-                  className="h-[38px] flex items-center gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
-                >
-                  <span className="material-symbols-outlined text-[16px]">today</span>
-                  Hoje
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const today = new Date();
+                      const isAlreadyToday = currentDate.toDateString() === today.toDateString();
+                      setCurrentDate(today);
+                      updateURL(viewType, today, true);
+                      if (isAlreadyToday) {
+                        scrollToToday();
+                      }
+                    }}
+                    className="h-[38px] flex items-center gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">today</span>
+                    <span className="hidden sm:inline">Hoje</span>
+                  </button>
 
-                <div className="h-[38px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light">
-                  <button
-                    onClick={() => handleNavigate('prev')}
-                    className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                  </button>
-                  <span className="h-full flex items-center justify-center px-2 text-[10px] md:text-[11px] font-black text-text-main min-w-[110px] md:min-w-[140px] text-center uppercase tracking-widest truncate">
-                    {viewType === 'day'
-                      ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
-                      : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
-                  </span>
-                  <button
-                    onClick={() => handleNavigate('next')}
-                    className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                  </button>
+                  <div className="h-[38px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light">
+                    <button
+                      onClick={() => handleNavigate('prev')}
+                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                    </button>
+                    <span className="h-full flex items-center justify-center px-2 text-[10px] md:text-[11px] font-black text-text-main min-w-[110px] md:min-w-[140px] text-center uppercase tracking-widest truncate">
+                      {viewType === 'day'
+                        ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
+                        : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+                    </span>
+                    <button
+                      onClick={() => handleNavigate('next')}
+                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                    </button>
+                  </div>
                 </div>
+
+                {/* Mobile Filter Toggle */}
+                <button
+                    onClick={() => setShowMobileFilters(!showMobileFilters)}
+                    className={`md:hidden size-[38px] flex items-center justify-center rounded-lg border transition-all duration-300 relative ${
+                        showMobileFilters || activeFiltersCount > 0
+                            ? 'bg-primary text-white border-primary shadow-sm' 
+                            : 'bg-white text-text-secondary border-gray-300 hover:border-primary/50'
+                    }`}
+                >
+                    <span className="material-symbols-outlined text-[20px]">
+                        {showMobileFilters ? 'filter_list_off' : 'filter_list'}
+                    </span>
+                    {activeFiltersCount > 0 && !showMobileFilters && (
+                        <span className="absolute -top-1 -right-1 size-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm animate-in zoom-in">
+                            {activeFiltersCount}
+                        </span>
+                    )}
+                </button>
             </div>
 
             {/* Separator (Desktop) */}
             <div className="hidden xl:block w-px h-6 bg-slate-200"></div>
 
             {/* Filters Group */}
-            <div className="flex flex-col md:flex-row items-center gap-2 w-full xl:flex-1 z-[101] relative min-w-0">
+            <div className={`${showMobileFilters ? 'flex animate-in slide-in-from-top-2 fade-in duration-300' : 'hidden'} md:flex flex-col md:flex-row items-center gap-2 w-full xl:flex-1 z-[101] relative min-w-0 transition-all`}>
                 <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
                   <CustomSelect
                       value={filterUser}
