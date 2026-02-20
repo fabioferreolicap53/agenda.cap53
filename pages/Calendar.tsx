@@ -509,7 +509,7 @@ const Calendar: React.FC = () => {
             
             {/* Navigation Group */}
             <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-start">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 md:flex-none">
                   <button
                     onClick={() => {
                       const today = new Date();
@@ -520,27 +520,27 @@ const Calendar: React.FC = () => {
                         scrollToToday();
                       }
                     }}
-                    className="h-[38px] flex items-center gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95"
+                    className="h-[38px] flex items-center gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95 shrink-0"
                   >
                     <span className="material-symbols-outlined text-[16px]">today</span>
                     <span className="hidden sm:inline">Hoje</span>
                   </button>
 
-                  <div className="h-[38px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light">
+                  <div className="h-[38px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light flex-1 md:flex-none justify-center">
                     <button
                       onClick={() => handleNavigate('prev')}
-                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300 shrink-0"
                     >
                       <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                     </button>
-                    <span className="h-full flex items-center justify-center px-2 text-[10px] md:text-[11px] font-black text-text-main min-w-[110px] md:min-w-[140px] text-center uppercase tracking-widest truncate">
+                    <span className="h-full flex items-center justify-center px-2 text-[10px] md:text-[11px] font-black text-text-main w-full md:w-auto md:min-w-[140px] text-center uppercase tracking-widest truncate">
                       {viewType === 'day'
                         ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
                         : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
                     </span>
                     <button
                       onClick={() => handleNavigate('next')}
-                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300"
+                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300 shrink-0"
                     >
                       <span className="material-symbols-outlined text-[18px]">chevron_right</span>
                     </button>
@@ -714,7 +714,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Mobile List View */}
-            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-4">
+            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-3">
               {getDatesForMonth(currentDate).filter(d => d.type === 'current').map((dateObj, idx) => {
                 const date = dateObj.date;
                 const dateKey = date.toDateString();
@@ -725,20 +725,20 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-2 ring-primary/20 border-primary/20' : 'bg-white'}`}
+                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-1 ring-primary/20 border-primary/20' : 'bg-white'}`}
                   >
-                    <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-2xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                    <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
                               {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
                             </span>
                             {dayEvents.length > 0 && (
-                              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200/50">
+                              <div className="flex items-center gap-1 px-1 py-0.5 rounded bg-slate-50 border border-slate-200/50">
                                 <span className="material-symbols-outlined text-[10px] text-text-secondary/50">event</span>
                                 <span className="text-[9px] font-black text-text-secondary">
                                   {dayEvents.length}
@@ -746,17 +746,17 @@ const Calendar: React.FC = () => {
                               </div>
                             )}
                           </div>
-                          {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit">Hoje</span>}
+                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-px rounded-full uppercase tracking-widest mt-0.5 w-fit">Hoje</span>}
                         </div>
                       </div>
                       <button 
                         onClick={() => updateURL('day', date)}
-                        className="size-8 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
+                        className="size-7 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
                       >
-                        <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                        <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                       </button>
                     </div>
-                    <div className="p-3 flex flex-col gap-2">
+                    <div className="p-2 flex flex-col gap-1.5">
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -856,7 +856,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Mobile Week List View */}
-            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-4">
+            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-3">
               {getDatesForWeek(currentDate).map((date, idx) => {
                 const dateKey = date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
@@ -866,28 +866,28 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`rounded-2xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-2 ring-primary/20 border-primary/20' : 'bg-white'}`}
+                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-1 ring-primary/20 border-primary/20' : 'bg-white'}`}
                   >
-                    <div className={`px-4 py-3 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
-                      <div className="flex items-center gap-3">
-                        <span className={`text-2xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                    <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                          <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
                             {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
                           </span>
-                          {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit">Hoje</span>}
+                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-px rounded-full uppercase tracking-widest mt-0.5 w-fit">Hoje</span>}
                         </div>
                       </div>
                       <button 
                         onClick={() => updateURL('day', date)}
-                        className="size-8 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
+                        className="size-7 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
                       >
-                        <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                        <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                       </button>
                     </div>
-                    <div className="p-3 flex flex-col gap-2">
+                    <div className="p-2 flex flex-col gap-1.5">
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -900,8 +900,8 @@ const Calendar: React.FC = () => {
                           />
                         ))
                       ) : (
-                        <div className="py-4 flex items-center justify-center text-center">
-                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem eventos</span>
+                        <div className="py-2 flex items-center justify-center text-center">
+                          <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Sem eventos</span>
                         </div>
                       )}
                     </div>
@@ -922,29 +922,29 @@ const Calendar: React.FC = () => {
             }`}
             title="Clique duplo para novo evento"
           >
-            <div className="sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-100 px-4 md:px-8 py-3 shadow-sm">
+          <div className="hidden md:block sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-100 px-3 md:px-8 py-1.5 md:py-3 shadow-sm">
               <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-2xl md:text-3xl font-black text-primary tracking-tight">
+                <div className="flex flex-col md:gap-1">
+                  <div className="flex items-center gap-1.5 md:gap-3">
+                    <h2 className="text-lg md:text-3xl font-black text-primary tracking-tight">
                       {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
                     </h2>
                     {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 shadow-sm">
-                        <span className="material-symbols-outlined text-lg text-primary/60">event_available</span>
-                        <span className="text-xs font-black text-primary">
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded-lg md:rounded-xl bg-primary/5 border border-primary/10 shadow-sm">
+                        <span className="material-symbols-outlined text-xs md:text-lg text-primary/60">event_available</span>
+                        <span className="text-[9px] md:text-xs font-black text-primary">
                           {(eventsByDate[currentDate.toDateString()] || []).length}
-                          <span className="ml-1 opacity-60 text-[10px] uppercase tracking-wider hidden sm:inline">Eventos</span>
+                          <span className="ml-1 opacity-60 text-[8px] md:text-[10px] uppercase tracking-wider hidden sm:inline">Eventos</span>
                         </span>
                       </div>
                     )}
                   </div>
-                  <p className="text-sm font-bold text-text-secondary uppercase tracking-[0.2em]">
+                  <p className="text-[9px] md:text-sm font-bold text-text-secondary uppercase tracking-[0.15em] md:tracking-[0.2em]">
                     {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
                   </p>
                 </div>
                 {currentDate.toDateString() === new Date().toDateString() && (
-                  <span className="px-4 py-1.5 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20">
+                  <span className="px-1.5 py-0.5 md:px-4 md:py-1.5 bg-primary text-white text-[7px] md:text-[10px] font-black uppercase tracking-widest rounded-full shadow-md md:shadow-lg shadow-primary/20 shrink-0">
                     Hoje
                   </span>
                 )}
@@ -966,16 +966,107 @@ const Calendar: React.FC = () => {
                       </div>
                     );
                   }
-                  return dayEvents.map(event => (
+                return dayEvents.map(event => (
                     <div key={event.id} className="hover:translate-x-1 transition-transform duration-300">
-                      <CalendarEventCard
-                        event={event}
-                        user={user}
-                        onCancel={handleCancelEvent}
-                        detailed
-                        setTooltipData={setTooltipData}
-                        onSelect={setSelectedEvent}
-                      />
+                      {/* Desktop View */}
+                      <div className="hidden md:block">
+                        <CalendarEventCard
+                          event={event}
+                          user={user}
+                          onCancel={handleCancelEvent}
+                          detailed
+                          setTooltipData={setTooltipData}
+                          onSelect={setSelectedEvent}
+                        />
+                      </div>
+
+                      {/* Mobile View - Optimized Layout */}
+                      <div 
+                        className="md:hidden bg-white rounded-xl border border-slate-100 shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform"
+                        onClick={() => setSelectedEvent(event)}
+                      >
+                        {/* Time Column */}
+                        <div className="flex flex-col items-center justify-center px-2 border-r border-slate-50 min-w-[60px]">
+                          <span className="text-sm font-black text-primary">
+                            {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          {event.date_end && (
+                            <span className="text-[10px] font-medium text-text-secondary/60">
+                              {new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Content Column */}
+                        <div className="flex-1 flex flex-col justify-center gap-1 overflow-hidden">
+                          <h4 className={`text-sm font-bold truncate leading-tight ${event.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                            {event.title}
+                          </h4>
+                          
+                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                            {(event.expand?.location?.name || event.custom_location) && (
+                              <div className="flex items-center gap-1 truncate">
+                                <span className="material-symbols-outlined text-[14px] text-slate-400">location_on</span>
+                                <span className="truncate max-w-[120px]">
+                                  {event.expand?.location?.name || event.custom_location}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Status Badges Row */}
+                          <div className="flex items-center gap-1.5 mt-1">
+                             {/* Transport */}
+                             {event.transporte_suporte && (
+                               <div className={`flex items-center justify-center size-5 rounded border ${
+                                  event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
+                                  (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
+                                  'bg-yellow-50 border-yellow-200 text-yellow-600'
+                               }`} title="Transporte">
+                                 <span className="material-symbols-outlined text-[12px]">directions_car</span>
+                               </div>
+                             )}
+
+                             {/* Resources - Using helper logic inline since we are in map */}
+                             {(() => {
+                               const getStatus = (cat: string) => {
+                                  const items = cat === 'ALMOXARIFADO' ? (event.almoxarifado_items || []) :
+                                                cat === 'COPA' ? (event.copa_items || []) :
+                                                (event.informatica_items || []);
+                                  if (items.length === 0) return null;
+                                  const confirmed = cat === 'ALMOXARIFADO' ? (event.almoxarifado_confirmed_items || []) :
+                                                    cat === 'COPA' ? (event.copa_confirmed_items || []) :
+                                                    (event.informatica_confirmed_items || []);
+                                  return (confirmed.length === items.length) ? 'confirmed' : 'pending';
+                               };
+
+                               const almc = getStatus('ALMOXARIFADO');
+                               const copa = getStatus('COPA');
+                               const inf = getStatus('INFORMATICA');
+
+                               return (
+                                 <>
+                                   {almc && (
+                                     <div className={`flex items-center justify-center size-5 rounded border ${almc === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}>
+                                       <span className="material-symbols-outlined text-[12px]">inventory_2</span>
+                                     </div>
+                                   )}
+                                   {copa && (
+                                     <div className={`flex items-center justify-center size-5 rounded border ${copa === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}>
+                                       <span className="material-symbols-outlined text-[12px]">local_cafe</span>
+                                     </div>
+                                   )}
+                                   {inf && (
+                                     <div className={`flex items-center justify-center size-5 rounded border ${inf === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}>
+                                       <span className="material-symbols-outlined text-[12px]">laptop_mac</span>
+                                     </div>
+                                   )}
+                                 </>
+                               );
+                             })()}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ));
                 })()}
@@ -986,14 +1077,14 @@ const Calendar: React.FC = () => {
 
         {viewType === 'agenda' && (
           <div className="flex-1 flex flex-col bg-white relative">
-            <div className="sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-50 px-4 md:px-8 py-3 shadow-sm">
-              <div className="max-w-5xl mx-auto w-full flex items-center gap-4">
-                <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <span className="material-symbols-outlined text-2xl">view_agenda</span>
+            <div className="hidden md:block sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-50 px-3 md:px-8 py-1.5 md:py-3 shadow-sm">
+              <div className="max-w-5xl mx-auto w-full flex items-center gap-2 md:gap-4">
+                <div className="size-7 md:size-12 rounded-lg md:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                  <span className="material-symbols-outlined text-sm md:text-2xl">view_agenda</span>
                 </div>
                 <div>
-                  <h3 className="text-2xl font-black text-text-main">Agenda do Mês</h3>
-                  <p className="text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
+                  <h3 className="text-sm md:text-2xl font-black text-text-main leading-tight">Agenda do Mês</h3>
+                  <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
                 </div>
               </div>
             </div>
