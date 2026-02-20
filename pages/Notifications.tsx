@@ -715,6 +715,50 @@ const Notifications: React.FC = () => {
                    </div>
                 )}
 
+                {/* Re-request Justification (User's Response) */}
+                {(() => {
+                    // Check if this is a rejection that has been reopened
+                    const isRejection = notification.type === 'refusal' || 
+                                      (notification.title?.toLowerCase() || '').includes('recusad') || 
+                                      (notification.title?.toLowerCase() || '').includes('rejeitad') ||
+                                      getData(notification).action === 'rejected';
+                    
+                    if (!isRejection) return null;
+
+                    // Check if it's marked as re-requested or currently pending
+                    const data = getData(notification);
+                    const isReRequested = data.re_requested || 
+                                        notification.expand?.related_request?.status === 'pending' || 
+                                        notification.expand?.event?.transporte_status === 'pending';
+
+                    if (!isReRequested) return null;
+
+                    // Try to find the new justification
+                    let userJustification = null;
+                    
+                    if (notification.related_request) {
+                        userJustification = notification.expand?.related_request?.justification;
+                    } else {
+                        // Transport fallback (since transport requests are on the event)
+                        userJustification = notification.expand?.event?.transporte_justification;
+                    }
+
+                    if (userJustification) {
+                        return (
+                           <div className="mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 bg-blue-50 text-blue-900 border-blue-100 ring-1 ring-blue-200/50">
+                              <span className="material-symbols-outlined text-[16px] mt-px">reply</span>
+                              <span className="leading-relaxed">
+                                <strong className="font-bold block mb-0.5 uppercase tracking-wide text-[10px] opacity-80">
+                                    Sua Resposta (Solicitação Reaberta)
+                                </strong>
+                                {userJustification}
+                              </span>
+                           </div>
+                        );
+                    }
+                    return null;
+                })()}
+
                 {/* Actions Area */}
                 <div className="mt-3 flex items-center gap-3">
                    {/* Link para Gestão de Transporte (apenas para solicitações de transporte) */}
