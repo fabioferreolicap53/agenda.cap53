@@ -266,14 +266,14 @@ const TeamManagement: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col gap-3 md:gap-4 max-w-[1500px] mx-auto w-full p-3 md:p-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-1">
+        <div className="flex flex-col gap-2 md:gap-4 max-w-[1500px] mx-auto w-full p-2 md:p-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3 mb-1">
                 <div className="w-full md:w-72 md:ml-auto">
                     <CustomSelect
                         value={selectedSectors}
                         onChange={setSelectedSectors}
                         startIcon="filter_list"
-                        className="h-11 md:h-12"
+                        className="h-10 md:h-12 text-xs md:text-sm"
                         multiSelect={true}
                         options={[
                             { value: 'Todos', label: 'Todos os Setores' },
@@ -288,7 +288,7 @@ const TeamManagement: React.FC = () => {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
                     {(() => {
                         // Reorder: Current User first, then the rest
                         const sortedUsers = [...users].sort((a, b) => {
@@ -332,19 +332,19 @@ const TeamManagement: React.FC = () => {
                             const userData = isMe && currentUser ? { ...u, ...currentUser } : u;
 
                             return (
-                                <div key={userData.id || idx} className={`bg-white rounded-3xl transition-all duration-300 group relative flex flex-col ${isMe && editingSector ? 'z-[100]' : 'overflow-hidden'} ${isMe
+                                <div key={userData.id || idx} className={`bg-white rounded-2xl md:rounded-3xl transition-all duration-300 group relative flex flex-col ${isMe && editingSector ? 'z-[100]' : 'overflow-hidden'} ${isMe
                                     ? 'ring-1 ring-primary/30 border-primary/10 shadow-xl shadow-primary/5 bg-gradient-to-b from-white to-primary/5'
                                     : 'border border-gray-100 hover:border-primary/20 hover:shadow-xl hover:shadow-gray-200/50'
                                     }`}>
                                     {/* Header / Avatar Area */}
                                     <div className="relative">
-                                        <div className="h-20 md:h-24 relative overflow-hidden rounded-t-3xl">
+                                        <div className="h-14 md:h-24 relative overflow-hidden rounded-t-2xl md:rounded-t-3xl">
                                             <div className={`absolute inset-0 opacity-10 ${isMe ? 'bg-primary' : 'bg-slate-500'}`}>
                                                 <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(0,0,0,0.05) 1px, transparent 0)', backgroundSize: '12px 12px' }}></div>
                                             </div>
                                             
                                             {/* Status and Selection Toggle */}
-                                            <div className="absolute top-2.5 right-2.5 md:top-3 md:right-3 z-10 flex items-center gap-2">
+                                            <div className="absolute top-2 right-2 md:top-3 md:right-3 z-10 flex items-center gap-2">
                                                 {!isMe && (
                                                     <div className="flex items-center gap-2">
                                                         {unreadCounts[userData.id] > 0 && (
@@ -378,10 +378,10 @@ const TeamManagement: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="absolute -bottom-8 md:-bottom-10 left-4 md:left-6 z-20 transition-transform duration-500 group-hover:scale-105">
+                                        <div className="absolute -bottom-6 left-3 md:-bottom-10 md:left-6 z-20 transition-transform duration-500 group-hover:scale-105">
                                             <div className="relative flex flex-col items-center">
                                                 <div
-                                                    className={`size-16 md:size-20 rounded-2xl bg-cover bg-center bg-no-repeat bg-slate-100 border-[4px] md:border-[5px] border-white shadow-xl shadow-black/5 ring-1 ring-black/5 ${isMe ? 'cursor-pointer group/avatar' : ''}`}
+                                                    className={`size-12 md:size-20 rounded-xl md:rounded-2xl bg-cover bg-center bg-no-repeat bg-slate-100 border-[3px] md:border-[5px] border-white shadow-xl shadow-black/5 ring-1 ring-black/5 ${isMe ? 'cursor-pointer group/avatar' : ''}`}
                                                     style={{ backgroundImage: `url('${getAvatarUrl(userData)}')` }}
                                                     onClick={() => isMe && setShowAvatarModal(true)}
                                                 >
@@ -393,7 +393,8 @@ const TeamManagement: React.FC = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                <div className={`absolute -bottom-0.5 -right-0.5 size-4 md:size-5 border-[2px] md:border-[3px] border-white rounded-full ${getStatusColor(userData.status)} shadow-lg ring-1 ring-black/5 flex items-center justify-center`}>
+                                                
+                                                <div className={`absolute -bottom-0.5 -right-0.5 size-3 md:size-5 border-[2px] md:border-[3px] border-white rounded-full ${getStatusColor(userData.status)} shadow-lg ring-1 ring-black/5 flex items-center justify-center`}>
                                                 </div>
                                                 
                                                 {/* User Status Badge */}
@@ -414,9 +415,9 @@ const TeamManagement: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="pt-10 md:pt-12 p-4 md:p-6 flex flex-col gap-4 md:gap-5 flex-1">
+                                    <div className="pt-7 md:pt-12 p-2.5 md:p-6 flex flex-col gap-1.5 md:gap-5 flex-1">
                                         {/* Identity Section */}
-                                        <div className="flex flex-col gap-1 md:gap-1.5">
+                                        <div className="flex flex-col gap-0.5 md:gap-1.5">
                                             <div className="flex items-center justify-between gap-3">
                                                 {isMe && editingDetails ? (
                                                     <div className="relative flex-1 group/input">
@@ -427,13 +428,13 @@ const TeamManagement: React.FC = () => {
                                                             onChange={(e) => setTempName(e.target.value)}
                                                             onFocus={() => handleFieldFocus('name')}
                                                             onBlur={handleFieldBlur}
-                                                            className={`text-base md:text-lg font-black text-text-main border-b-2 outline-none bg-transparent w-full pb-1 transition-all ${focusedField === 'name' ? 'border-primary' : 'border-gray-100'}`}
+                                                            className={`text-sm md:text-lg font-black text-text-main border-b-2 outline-none bg-transparent w-full pb-1 transition-all ${focusedField === 'name' ? 'border-primary' : 'border-gray-100'}`}
                                                             placeholder="Seu Nome"
                                                         />
                                                         <div className={`absolute bottom-0 left-0 h-0.5 bg-primary transition-all duration-300 ${focusedField === 'name' ? 'w-full' : 'w-0'}`}></div>
                                                     </div>
                                                 ) : (
-                                                    <h3 className="text-base md:text-lg font-black text-text-main group-hover:text-primary transition-colors truncate tracking-tight">
+                                                    <h3 className="text-sm md:text-lg font-black text-text-main group-hover:text-primary transition-colors truncate tracking-tight">
                                                         {userData.name || 'Sem Nome'}
                                                     </h3>
                                                 )}
@@ -459,9 +460,9 @@ const TeamManagement: React.FC = () => {
                                             </div>
 
                                             <div className="flex flex-wrap items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1">
-                                                <div className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-0.5 md:py-1 rounded-lg bg-primary/5 border border-primary/10">
-                                                    <span className="material-symbols-outlined text-[12px] md:text-[14px] text-primary">badge</span>
-                                                    <span className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-wider">
+                                                <div className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-lg bg-primary/5 border border-primary/10">
+                                                    <span className="material-symbols-outlined text-[10px] md:text-[14px] text-primary">badge</span>
+                                                    <span className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-wider">
                                                         {userData.role}
                                                     </span>
                                                 </div>
@@ -470,15 +471,15 @@ const TeamManagement: React.FC = () => {
                                                     <div className="relative">
                                                         <button
                                                             onClick={() => setEditingSector(!editingSector)}
-                                                            className={`flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-0.5 md:py-1 rounded-lg border transition-all text-[9px] md:text-[10px] font-bold uppercase tracking-wide group/sectbtn ${
+                                                            className={`flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-lg border transition-all text-[8px] md:text-[10px] font-bold uppercase tracking-wide group/sectbtn ${
                                                                 editingSector 
                                                                     ? 'bg-primary text-white border-primary shadow-md shadow-primary/20' 
                                                                     : 'bg-slate-50 text-slate-500 border-slate-200 hover:border-primary/30 hover:text-primary'
                                                             }`}
                                                         >
-                                                            <span className="material-symbols-outlined text-[12px] md:text-[14px]">work</span>
+                                                            <span className="material-symbols-outlined text-[10px] md:text-[14px]">work</span>
                                                             {userData.sector || 'Definir Setor'}
-                                                            <span className={`material-symbols-outlined text-[12px] md:text-[14px] transition-transform duration-300 ${editingSector ? 'rotate-180' : ''}`}>expand_more</span>
+                                                            <span className={`material-symbols-outlined text-[10px] md:text-[14px] transition-transform duration-300 ${editingSector ? 'rotate-180' : ''}`}>expand_more</span>
                                                         </button>
                                                         
                                                         {editingSector && (
@@ -500,9 +501,9 @@ const TeamManagement: React.FC = () => {
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <div className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-0.5 md:py-1 rounded-lg bg-slate-50 border border-slate-100">
-                                                        <span className="material-symbols-outlined text-[12px] md:text-[14px] text-slate-400">work</span>
-                                                        <span className="text-[9px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[100px] md:max-w-[120px]">
+                                                    <div className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2.5 py-0.5 md:py-1 rounded-lg bg-slate-50 border border-slate-100">
+                                                        <span className="material-symbols-outlined text-[10px] md:text-[14px] text-slate-400">work</span>
+                                                        <span className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase tracking-wide truncate max-w-[100px] md:max-w-[120px]">
                                                             {userData.sector || 'Não informado'}
                                                         </span>
                                                     </div>
@@ -512,22 +513,22 @@ const TeamManagement: React.FC = () => {
 
                                         {/* Contact Section */}
                                         <div className="flex flex-col gap-2 md:gap-3 pt-1 md:pt-2">
-                                            <div className="flex items-center gap-3 md:gap-4 group/contact">
-                                                <div className="size-8 md:size-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-colors group-hover/contact:bg-primary/5 group-hover/contact:text-primary">
-                                                    <span className="material-symbols-outlined text-[16px] md:text-[18px]">mail</span>
+                                            <div className="flex items-center gap-2 md:gap-4 group/contact">
+                                                <div className="size-7 md:size-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-colors group-hover/contact:bg-primary/5 group-hover/contact:text-primary">
+                                                    <span className="material-symbols-outlined text-[14px] md:text-[18px]">mail</span>
                                                 </div>
                                                 <div className="flex flex-col flex-1 min-w-0">
-                                                    <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">E-mail Corporativo</span>
-                                                    <span className="text-[11px] md:text-xs font-bold text-slate-600 truncate">{userData.email}</span>
+                                                    <span className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">E-mail Corporativo</span>
+                                                    <span className="text-[10px] md:text-xs font-bold text-slate-600 truncate">{userData.email}</span>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-3 md:gap-4 group/contact">
-                                                <div className="size-8 md:size-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-colors group-hover/contact:bg-primary/5 group-hover/contact:text-primary">
-                                                    <span className="material-symbols-outlined text-[16px] md:text-[18px]">call</span>
+                                            <div className="flex items-center gap-2 md:gap-4 group/contact">
+                                                <div className="size-7 md:size-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 transition-colors group-hover/contact:bg-primary/5 group-hover/contact:text-primary">
+                                                    <span className="material-symbols-outlined text-[14px] md:text-[18px]">call</span>
                                                 </div>
                                                 <div className="flex flex-col flex-1 min-w-0">
-                                                    <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone / WhatsApp</span>
+                                                    <span className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Telefone / WhatsApp</span>
                                                     <div className="flex items-center justify-between gap-2">
                                                         {isMe && editingDetails ? (
                                                             <input
@@ -536,10 +537,10 @@ const TeamManagement: React.FC = () => {
                                                                 onChange={(e) => setTempPhone(e.target.value)}
                                                                 onFocus={() => handleFieldFocus('phone')}
                                                                 onBlur={handleFieldBlur}
-                                                                className={`text-[11px] md:text-xs font-bold text-text-main border-b outline-none bg-transparent w-full py-0.5 transition-all ${focusedField === 'phone' ? 'border-primary' : 'border-gray-100'}`}
+                                                                className={`text-[10px] md:text-xs font-bold text-text-main border-b outline-none bg-transparent w-full py-0.5 transition-all ${focusedField === 'phone' ? 'border-primary' : 'border-gray-100'}`}
                                                             />
                                                         ) : (
-                                                            <span className="text-[11px] md:text-xs font-bold text-slate-600">{userData.phone || 'Não informado'}</span>
+                                                            <span className="text-[10px] md:text-xs font-bold text-slate-600">{userData.phone || 'Não informado'}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -547,11 +548,11 @@ const TeamManagement: React.FC = () => {
                                         </div>
 
                                         {/* Bio/Observations Section */}
-                                        <div className="mt-1 md:mt-2 flex flex-col gap-2 md:gap-3 bg-slate-50/50 rounded-2xl p-3 md:p-4 border border-slate-100/50 group-hover:bg-white group-hover:border-primary/10 transition-all duration-500">
+                                        <div className="mt-0.5 md:mt-2 flex flex-col gap-2 md:gap-3 bg-slate-50/50 rounded-xl md:rounded-2xl p-2.5 md:p-4 border border-slate-100/50 group-hover:bg-white group-hover:border-primary/10 transition-all duration-500">
                                             <div className="flex justify-between items-center">
                                                 <div className="flex items-center gap-1.5 md:gap-2">
-                                                    <span className="material-symbols-outlined text-[14px] md:text-[16px] text-primary">info</span>
-                                                    <span className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Informações Adicionais</span>
+                                                    <span className="material-symbols-outlined text-[12px] md:text-[16px] text-primary">info</span>
+                                                    <span className="text-[7px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest">Informações Adicionais</span>
                                                 </div>
                                                 {isMe && (
                                                     <button
@@ -573,7 +574,7 @@ const TeamManagement: React.FC = () => {
                                                         onChange={(e) => setTempBio(e.target.value)}
                                                         onFocus={() => handleFieldFocus('bio')}
                                                         onBlur={handleFieldBlur}
-                                                        className={`text-[10px] md:text-[11px] font-medium text-slate-600 leading-relaxed bg-white border rounded-xl p-2 md:p-3 outline-none min-h-[80px] md:min-h-[100px] transition-all resize-none ${focusedField === 'bio' ? 'border-primary ring-4 ring-primary/5' : 'border-gray-100'}`}
+                                                        className={`text-[9px] md:text-[11px] font-medium text-slate-600 leading-relaxed bg-white border rounded-xl p-2 md:p-3 outline-none min-h-[80px] md:min-h-[100px] transition-all resize-none ${focusedField === 'bio' ? 'border-primary ring-4 ring-primary/5' : 'border-gray-100'}`}
                                                         placeholder="Escreva um pouco sobre suas responsabilidades..."
                                                     />
                                                     <button
@@ -595,7 +596,7 @@ const TeamManagement: React.FC = () => {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <p className="text-[10px] md:text-[11px] font-medium text-slate-500 leading-relaxed italic line-clamp-3 md:line-clamp-4">
+                                                <p className="text-[9px] md:text-[11px] font-medium text-slate-500 leading-relaxed italic line-clamp-3 md:line-clamp-4">
                                                     {userData.observations ? `"${userData.observations}"` : 'Nenhuma informação adicional fornecida pelo profissional.'}
                                                 </p>
                                             )}
@@ -606,7 +607,7 @@ const TeamManagement: React.FC = () => {
                                             <div className="mt-auto pt-1 md:pt-2">
                                                 <button 
                                                     onClick={() => navigate(`/chat?userId=${userData.id}`)}
-                                                    className="w-full flex items-center justify-center gap-2 py-2 md:py-2.5 bg-primary/5 text-primary hover:bg-primary hover:text-white rounded-xl transition-all duration-300 group/btn"
+                                                    className="w-full flex items-center justify-center gap-2 py-1.5 md:py-2.5 bg-primary/5 text-primary hover:bg-primary hover:text-white rounded-xl transition-all duration-300 group/btn"
                                                 >
                                                     <span className="material-symbols-outlined text-[16px] md:text-[18px]">chat</span>
                                                     <span className="text-[9px] md:text-[10px] font-black uppercase tracking-wider">Conversar</span>
@@ -633,9 +634,9 @@ const TeamManagement: React.FC = () => {
                             : sortedUsers.filter(u => selectedSectors.includes(u.sector) || (u.id === currentUser?.id && selectedSectors.includes(currentUser?.sector)));
 
                         return filteredUsers.length === 0 && (
-                            <div className="col-span-full py-20 flex flex-col items-center justify-center text-text-secondary/40">
-                                <span className="material-symbols-outlined text-6xl mb-2">person_off</span>
-                                <p className="text-lg font-bold">Nenhum membro encontrado neste setor.</p>
+                            <div className="col-span-full py-10 md:py-20 flex flex-col items-center justify-center text-text-secondary/40">
+                                <span className="material-symbols-outlined text-4xl md:text-6xl mb-2">person_off</span>
+                                <p className="text-sm md:text-lg font-bold">Nenhum membro encontrado neste setor.</p>
                             </div>
                         );
                     })()}
@@ -644,31 +645,31 @@ const TeamManagement: React.FC = () => {
 
             {/* Selection FAB */}
             {selectedUsers.length > 0 && (
-                <div className="fixed bottom-6 right-4 md:bottom-8 md:right-8 z-[100] animate-in zoom-in slide-in-from-bottom-10 duration-500">
+                <div className="fixed bottom-4 right-3 md:bottom-8 md:right-8 z-[100] animate-in zoom-in slide-in-from-bottom-10 duration-500">
                     <button
                         onClick={handleCreateEventWithSelected}
-                        className="group flex items-center gap-2.5 md:gap-3 bg-primary text-white px-4 md:px-6 py-3 md:py-4 rounded-2xl shadow-2xl shadow-primary/30 hover:bg-primary-hover hover:scale-105 active:scale-95 transition-all"
+                        className="group flex items-center gap-2 md:gap-3 bg-primary text-white px-3 md:px-6 py-2.5 md:py-4 rounded-2xl shadow-2xl shadow-primary/30 hover:bg-primary-hover hover:scale-105 active:scale-95 transition-all"
                     >
-                        <div className="flex -space-x-1.5 md:-space-x-2">
+                        <div className="flex -space-x-1 md:-space-x-2">
                             {selectedUsers.slice(0, 3).map((id, i) => {
                                 const user = users.find(u => u.id === id);
                                 return (
-                                    <div key={id} className="size-5 md:size-6 rounded-lg border-2 border-primary bg-white overflow-hidden shadow-lg">
+                                    <div key={id} className="size-4.5 md:size-6 rounded-lg border-2 border-primary bg-white overflow-hidden shadow-lg">
                                         <img src={getAvatarUrl(user)} alt="" className="w-full h-full object-cover" />
                                     </div>
                                 );
                             })}
                             {selectedUsers.length > 3 && (
-                                <div className="size-5 md:size-6 rounded-lg border-2 border-primary bg-white flex items-center justify-center text-[8px] md:text-[10px] font-black text-primary">
+                                <div className="size-4.5 md:size-6 rounded-lg border-2 border-primary bg-white flex items-center justify-center text-[7px] md:text-[10px] font-black text-primary">
                                     +{selectedUsers.length - 3}
                                 </div>
                             )}
                         </div>
                         <div className="flex flex-col items-start">
-                            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest leading-none">Agendar com Equipe</span>
+                            <span className="text-[7.5px] md:text-[10px] font-black uppercase tracking-widest leading-none">Agendar</span>
                             <span className="text-[9px] md:text-[11px] font-bold opacity-80">{selectedUsers.length} {selectedUsers.length === 1 ? 'membro' : 'membros'}</span>
                         </div>
-                        <span className="material-symbols-outlined text-[18px] md:text-[24px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        <span className="material-symbols-outlined text-[16px] md:text-[24px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
                     </button>
                 </div>
             )}

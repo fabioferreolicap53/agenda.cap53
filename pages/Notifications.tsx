@@ -467,10 +467,41 @@ const Notifications: React.FC = () => {
     <div className="max-w-3xl mx-auto pb-20 px-4 md:px-0 font-sans">
       
       {/* Header Minimalista */}
-      <div className="flex flex-col gap-6 mb-8 pt-6">
+      <div className="flex flex-col gap-2 md:gap-6 mb-4 md:mb-8 pt-2 md:pt-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800 tracking-tight">Notificações</h1>
+          <h1 className="text-2xl font-bold text-slate-800 tracking-tight hidden md:block">Notificações</h1>
           
+          {/* Mobile Tabs */}
+          <div className="flex md:hidden items-center gap-4">
+             <button
+              onClick={() => setFilter('all')}
+              className={`pb-1 text-sm font-bold transition-all relative ${
+                filter === 'all' ? 'text-slate-900' : 'text-slate-400'
+              }`}
+            >
+              Todas
+              {filter === 'all' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
+            </button>
+            <button
+              onClick={() => setFilter('unread')}
+              className={`pb-1 text-sm font-bold transition-all relative ${
+                filter === 'unread' ? 'text-slate-900' : 'text-slate-400'
+              }`}
+            >
+              Não lidas
+              {filter === 'unread' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
+            </button>
+            <button
+              onClick={() => setFilter('actions')}
+              className={`pb-1 text-sm font-bold transition-all relative ${
+                filter === 'actions' ? 'text-slate-900' : 'text-slate-400'
+              }`}
+            >
+              Pendentes
+              {filter === 'actions' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
+            </button>
+          </div>
+
           <div className="flex items-center gap-2">
             <button
               onClick={refresh}
@@ -489,14 +520,12 @@ const Notifications: React.FC = () => {
                 <span className="material-symbols-outlined text-[20px]">delete_forever</span>
               </button>
             )}
-            
-            {/* Button removed as requested */}
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-1">
-          {/* Tabs Clean */}
-          <div className="flex items-center gap-6">
+          {/* Tabs Clean - Desktop Only */}
+          <div className="hidden md:flex items-center gap-6">
             <button
               onClick={() => setFilter('all')}
               className={`pb-3 text-sm font-medium transition-all relative ${
@@ -527,7 +556,7 @@ const Notifications: React.FC = () => {
           </div>
 
           {/* Ações Secundárias */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
              <button
               onClick={markAllAsRead}
               className="text-xs font-medium text-slate-500 hover:text-primary transition-colors flex items-center gap-1"
@@ -535,7 +564,7 @@ const Notifications: React.FC = () => {
               <span className="material-symbols-outlined text-[16px]">done_all</span>
               Marcar lidas
             </button>
-            <div className="h-3 w-px bg-slate-200"></div>
+            <div className="hidden md:block h-3 w-px bg-slate-200"></div>
             <button
               onClick={onClearHistory}
               className="text-xs font-medium text-slate-500 hover:text-red-500 transition-colors flex items-center gap-1"
@@ -576,33 +605,33 @@ const Notifications: React.FC = () => {
                               onClick={() => {
                                 if (notification.event) handleViewEvent(notification);
                               }}
-                              className={`group relative flex gap-5 p-5 rounded-xl transition-all duration-200 z-10 
+                              className={`group relative flex gap-3 md:gap-5 p-3 md:p-5 rounded-xl transition-all duration-200 z-10 
                                 ${getStatusContainerStyles(notification)} 
                                 ${isOld ? 'scale-[0.98] opacity-80 hover:opacity-100 hover:scale-100' : ''}
                                 ${notification.event ? 'cursor-pointer hover:bg-slate-50/50' : ''}
                               `}
                             >
               {!notification.read && (
-                <div className="absolute top-5 right-5 size-2 bg-blue-500 rounded-full ring-4 ring-blue-50/50"></div>
+                <div className="absolute top-3 md:top-5 right-3 md:right-5 size-2 bg-blue-500 rounded-full ring-4 ring-blue-50/50"></div>
               )}
 
-              <div className={`flex-shrink-0 size-12 rounded-2xl flex items-center justify-center mt-0.5 ${getIconStyles(notification)} z-10 relative bg-white`}>
-                <span className="material-symbols-outlined text-[24px]">
+              <div className={`flex-shrink-0 size-9 md:size-12 rounded-2xl flex items-center justify-center mt-0.5 ${getIconStyles(notification)} z-10 relative bg-white`}>
+                <span className="material-symbols-outlined text-[18px] md:text-[24px]">
                   {getIcon(notification)}
                 </span>
               </div>
 
-              <div className="flex-1 min-w-0 pt-1">
-                <div className="flex items-center justify-between gap-2 mb-1.5 pr-6">
-                  <h4 className={`text-[15px] font-semibold tracking-tight ${notification.read ? 'text-slate-600' : 'text-slate-900'}`}>
+              <div className="flex-1 min-w-0 pt-0 md:pt-1">
+                <div className="flex items-center justify-between gap-2 mb-1 pr-4 md:pr-6">
+                  <h4 className={`text-[13px] md:text-[15px] font-semibold tracking-tight ${notification.read ? 'text-slate-600' : 'text-slate-900'}`}>
                     {notification.title}
                   </h4>
-                  <span className="text-[11px] text-slate-400 whitespace-nowrap font-medium">
+                  <span className="text-[10px] md:text-[11px] text-slate-400 whitespace-nowrap font-medium">
                     {formatDistanceToNow(new Date(notification.created), { addSuffix: true, locale: ptBR })}
                   </span>
                 </div>
                 
-                <p className={`text-[14px] leading-relaxed mb-4 ${notification.read ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`text-[12px] md:text-[14px] leading-relaxed mb-3 md:mb-4 ${notification.read ? 'text-slate-400' : 'text-slate-500'}`}>
                   {getNotificationMessage(notification)}
                 </p>
 

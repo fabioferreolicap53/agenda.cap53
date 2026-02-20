@@ -342,18 +342,18 @@ const Chat: React.FC = () => {
     <div className="flex h-[calc(100vh-120px)] lg:h-[calc(100vh-160px)] border-none lg:border lg:border-border-light rounded-none lg:rounded-xl overflow-hidden bg-white shadow-none lg:shadow-sm">
       {/* Chat Sidebar */}
       <div className={`${isMobile && showChatMobile ? 'hidden' : 'flex'} w-full lg:w-80 border-r border-border-light flex-col bg-white`}>
-        <div className="p-4 border-b border-border-light bg-white/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="p-2 md:p-4 border-b border-border-light bg-white/50 backdrop-blur-sm sticky top-0 z-10">
              <div className="relative group">
-                <span className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-primary material-symbols-outlined text-[20px] transition-colors">search</span>
+                <span className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-primary material-symbols-outlined text-[18px] md:text-[20px] transition-colors">search</span>
                 <input 
-                    className="w-full h-11 pl-10 pr-4 rounded-xl bg-slate-50 border-none text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all placeholder:text-gray-400" 
+                    className="w-full h-9 md:h-11 pl-9 md:pl-10 pr-4 rounded-xl bg-slate-50 border-none text-xs md:text-sm focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all placeholder:text-gray-400" 
                     placeholder="Buscar conversa..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
              </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-3 space-y-1 bg-white">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2">
             {loadingUsers ? (
                 <div className="flex flex-col items-center justify-center h-40 gap-3">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary/30"></div>

@@ -613,25 +613,25 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-md animate-in fade-in duration-300">
-        <div className="bg-white rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-slate-100">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 md:p-4 bg-slate-900/20 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-slate-100">
             {/* Header - Refined Minimalist */}
-            <div className="px-4 sm:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6 flex flex-col gap-4 sm:gap-6">
-                <div className="flex justify-between items-start">
+            <div className="px-4 md:px-8 pt-4 md:pt-8 pb-2 md:pb-6 flex flex-col gap-3 md:gap-6 shrink-0">
+                <div className="flex justify-between items-start gap-3">
                     <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2">
-                            <span className="px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                        <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2 flex-wrap">
+                            <span className="px-1.5 md:px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                 {event.nature || event.type || 'Evento'}
                             </span>
                             {isCancelled && (
-                                <span className="px-2 py-0.5 rounded-full bg-red-50 border border-red-100 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-red-500">
+                                <span className="px-1.5 md:px-2 py-0.5 rounded-full bg-red-50 border border-red-100 text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-red-500">
                                     Cancelado
                                 </span>
                             )}
                         </div>
-                        <h2 className="text-xl sm:text-3xl font-bold text-slate-900 leading-tight tracking-tight truncate">{event.title}</h2>
+                        <h2 className="text-base md:text-3xl font-bold text-slate-900 leading-tight tracking-tight line-clamp-2">{event.title}</h2>
                     </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         {!isCancelled && (
                             event.user === user?.id || 
                             participantStatus[user?.id] === 'accepted' || 
@@ -639,11 +639,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         ) && (
                             <button 
                                 onClick={() => setIsChatOpen(true)}
-                                className="flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-200 border border-primary/10 group relative"
+                                className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-200 border border-primary/10 group relative"
                                 title="Discussões para Alinhamento"
                             >
                                 <span className="material-symbols-outlined text-base sm:text-lg group-hover:scale-110 transition-transform">forum</span>
-                                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider hidden md:inline">Discussões</span>
+                                <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider hidden sm:inline">Discussões</span>
                                 {messageCount > 0 && (
                                     <span className="absolute -top-1.5 -right-1.5 flex h-4 sm:h-5 min-w-[16px] sm:min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[8px] sm:text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
                                         {messageCount > 99 ? '99+' : messageCount}
@@ -651,14 +651,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 )}
                             </button>
                         )}
-                        <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-slate-50 rounded-full transition-colors">
+                        <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-slate-50 rounded-full transition-colors bg-slate-50 sm:bg-transparent">
                             <span className="material-symbols-outlined text-slate-400 text-lg sm:text-xl">close</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-0.5 p-0.5 bg-slate-50 rounded-xl sm:rounded-2xl border border-slate-100">
+                <div className="flex gap-1 p-1 bg-slate-50 rounded-xl sm:rounded-2xl border border-slate-100 overflow-x-auto custom-scrollbar-hide">
                     {[
                         { id: 'details', label: 'Detalhes', icon: 'info' },
                         { id: 'professionals', label: 'Participantes', icon: 'group' },
@@ -670,43 +670,44 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`flex flex-1 flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 px-0.5 sm:px-2 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-[7px] xs:text-[8px] sm:text-[10px] font-black uppercase tracking-tighter transition-all duration-300 min-w-0 ${
+                            className={`flex flex-1 items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-lg sm:rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-tight transition-all duration-300 whitespace-nowrap ${
                                 activeTab === tab.id 
-                                ? 'bg-white text-primary shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-100' 
+                                ? 'bg-white text-primary shadow-sm border border-slate-100' 
                                 : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
                             }`}
                         >
-                            <span className="material-symbols-outlined text-sm sm:text-lg shrink-0">{tab.icon}</span>
-                            <span className="truncate w-full text-center">{tab.label}</span>
+                            <span className="material-symbols-outlined text-sm md:text-lg shrink-0">{tab.icon}</span>
+                            <span className="hidden sm:inline">{tab.label}</span>
+                            <span className="sm:hidden">{tab.label.slice(0, 3).toUpperCase()}</span>
                         </button>
                     ))}
                 </div>
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto px-8 pb-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-4 md:pb-8 custom-scrollbar">
                 {activeTab === 'details' && (
-                    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                    <div className="space-y-3 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Summary Grid */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-5 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Início e Término</span>
-                                <div className="flex items-center gap-2 text-slate-900 font-bold">
-                                    <span className="material-symbols-outlined text-slate-400 text-lg">event</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                            <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
+                                <span className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Início e Término</span>
+                                <div className="flex items-center gap-2 text-slate-900 font-bold text-xs md:text-base">
+                                    <span className="material-symbols-outlined text-slate-400 text-base md:text-lg">event</span>
                                     {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                     <span className="w-1 h-1 rounded-full bg-slate-300" />
                                     <div className="flex items-center gap-1">
                                         <span>{startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                                         {event.date_end && !isNaN(endDate.getTime()) && (
                                             <>
-                                                <span className="text-slate-300 font-black text-[9px] uppercase tracking-widest mx-1">até</span>
+                                                <span className="text-slate-300 font-black text-[8px] md:text-[9px] uppercase tracking-widest mx-1">até</span>
                                                 <span>{endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                                             </>
                                         )}
                                     </div>
                                 </div>
                             </div>
-                            <div className="p-5 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
+                            <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Localização</span>
                                 <div className="flex items-center gap-2 text-slate-900 font-bold">
                                     <span className="material-symbols-outlined text-slate-400 text-lg">location_on</span>
@@ -725,15 +726,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                         {/* Participation Management */}
                         {user && event.user !== user.id && !['TRA', 'ALMC', 'DCA', 'CE'].includes(user.role) && (
-                            <div className="p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-4">
-                                <div className="flex items-center justify-between">
+                            <div className="p-4 md:p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-4">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
                                     <div className="flex items-center gap-3">
-                                        <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                                        <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                                             <span className="material-symbols-outlined">person_add</span>
                                         </div>
                                         <div>
                                             <h4 className="text-sm font-bold text-slate-900">Participação no Evento</h4>
-                                            <p className="text-[11px] text-slate-500 font-medium">
+                                            <p className="text-[11px] text-slate-500 font-medium leading-tight">
                                                 {participantStatus[user.id] === 'accepted' ? 'Você faz parte deste evento.' : 
                                                  participantStatus[user.id] === 'rejected' ? 'Seu convite foi recusado.' :
                                                  hasRequestedParticipation ? 'Solicitação enviada para o criador.' : 
@@ -743,31 +744,36 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     </div>
 
                                     {/* Action Buttons based on status */}
-                                    {!participantStatus[user.id] && !hasRequestedParticipation && !showRequestForm && (
-                                        <button 
-                                            onClick={() => setShowRequestForm(true)}
-                                            className="px-5 py-2.5 rounded-xl bg-primary text-white text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all"
-                                        >
-                                            Solicitar Participação
-                                        </button>
-                                    )}
+                                    <div className="flex justify-end w-full md:w-auto">
+                                        {!participantStatus[user.id] && !hasRequestedParticipation && !showRequestForm && (
+                                            <button 
+                                                onClick={() => setShowRequestForm(true)}
+                                                className="w-full md:w-auto px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-base md:hidden">send</span>
+                                                Solicitar Participação
+                                            </button>
+                                        )}
 
-                                    {participantStatus[user.id] === 'pending' && (
-                                        <div className="flex gap-2">
-                                            <button 
-                                                onClick={() => handleInvitationResponse('rejected')}
-                                                className="px-4 py-2 rounded-xl bg-white border border-red-100 text-red-600 text-[11px] font-bold uppercase tracking-wider hover:bg-red-50 transition-all"
-                                            >
-                                                Recusar
-                                            </button>
-                                            <button 
-                                                onClick={() => handleInvitationResponse('accepted')}
-                                                className="px-4 py-2 rounded-xl bg-primary text-white text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all"
-                                            >
-                                                Aceitar Convite
-                                            </button>
-                                        </div>
-                                    )}
+                                        {participantStatus[user.id] === 'pending' && (
+                                            <div className="flex gap-2 w-full md:w-auto">
+                                                <button 
+                                                    onClick={() => handleInvitationResponse('rejected')}
+                                                    className="flex-1 md:flex-none px-3 py-2 md:px-4 md:py-2 rounded-xl bg-white border border-red-100 text-red-600 text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-red-50 transition-all flex items-center justify-center gap-1"
+                                                >
+                                                    <span className="material-symbols-outlined text-base md:hidden">close</span>
+                                                    Recusar
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleInvitationResponse('accepted')}
+                                                    className="flex-1 md:flex-none px-3 py-2 md:px-4 md:py-2 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-1"
+                                                >
+                                                    <span className="material-symbols-outlined text-base md:hidden">check</span>
+                                                    Aceitar
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
 
                                 {showRequestForm && (

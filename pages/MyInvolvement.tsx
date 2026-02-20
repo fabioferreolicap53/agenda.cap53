@@ -227,220 +227,196 @@ const MyInvolvement: React.FC = () => {
   const safeAnalytics = analytics || { byType: [], byNature: [], byTime: [], byResources: [] };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-7xl mx-auto p-3 md:p-8 space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 md:gap-6">
         {/* Quick Stats Group - Filling the space with professional metrics */}
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="group bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-[150px] transition-all hover:border-indigo-100 hover:shadow-md">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 group-hover:text-indigo-400 transition-colors">Total de Eventos</span>
-            <div className="flex items-end gap-2">
-              <span className="text-2xl font-black text-slate-900 leading-none">{events.length}</span>
-              <span className="text-[10px] font-bold text-slate-400 mb-0.5">atividades</span>
+        <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-1.5 md:gap-4">
+          <div className="group bg-white px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] transition-all hover:border-indigo-100 hover:shadow-md">
+            <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5 md:mb-1 group-hover:text-indigo-400 transition-colors truncate">Total Eventos</span>
+            <div className="flex items-end gap-1.5 md:gap-2">
+              <span className="text-lg md:text-2xl font-black text-slate-900 leading-none">{events.length}</span>
+              <span className="text-[8px] md:text-[10px] font-bold text-slate-400 mb-0.5 truncate">atividades</span>
             </div>
           </div>
 
-          <div className="group bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-[150px] transition-all hover:border-blue-100 hover:shadow-md">
-            <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] mb-1">Como Criador</span>
-            <div className="flex items-end gap-2">
-              <span className="text-2xl font-black text-blue-600 leading-none">{stats.totalCreated}</span>
-              <span className="text-[10px] font-bold text-slate-400 mb-0.5">eventos</span>
+          <div className="group bg-white px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] transition-all hover:border-blue-100 hover:shadow-md">
+            <span className="text-[8px] md:text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] mb-0.5 md:mb-1 truncate">Como Criador</span>
+            <div className="flex items-end gap-1.5 md:gap-2">
+              <span className="text-lg md:text-2xl font-black text-blue-600 leading-none">{stats.totalCreated}</span>
+              <span className="text-[8px] md:text-[10px] font-bold text-slate-400 mb-0.5 truncate">eventos</span>
             </div>
           </div>
 
           {stats.invitesPending > 0 && (
-            <div className="group bg-amber-50/50 px-5 py-3 rounded-2xl border border-amber-200 shadow-sm flex flex-col min-w-[150px] animate-in fade-in zoom-in duration-500 hover:bg-amber-50 transition-all">
-              <span className="text-[10px] font-black text-amber-600 uppercase tracking-[0.15em] mb-1">Convites Pendentes</span>
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-black text-amber-700 leading-none">{stats.invitesPending}</span>
-                <span className="material-symbols-outlined text-amber-500 text-sm mb-1 animate-pulse">notification_important</span>
+            <div className="group bg-amber-50/50 px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-amber-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] animate-in fade-in zoom-in duration-500 hover:bg-amber-50 transition-all">
+              <span className="text-[8px] md:text-[10px] font-black text-amber-600 uppercase tracking-[0.15em] mb-0.5 md:mb-1 truncate">Convites Pend.</span>
+              <div className="flex items-end gap-1.5 md:gap-2">
+                <span className="text-lg md:text-2xl font-black text-amber-700 leading-none">{stats.invitesPending}</span>
+                <span className="material-symbols-outlined text-amber-500 text-xs md:text-sm mb-0.5 md:mb-1 animate-pulse">notification_important</span>
               </div>
             </div>
           )}
           
           {stats.requestsPending > 0 && (
-            <div className="group bg-blue-50/50 px-5 py-3 rounded-2xl border border-blue-200 shadow-sm flex flex-col min-w-[150px] animate-in fade-in zoom-in duration-500 hover:bg-blue-50 transition-all">
-              <span className="text-[10px] font-black text-blue-600 uppercase tracking-[0.15em] mb-1">Solicitações Ativas</span>
-              <div className="flex items-end gap-2">
-                <span className="text-2xl font-black text-blue-700 leading-none">{stats.requestsPending}</span>
-                <span className="material-symbols-outlined text-blue-400 text-sm mb-1">outbound</span>
+            <div className="group bg-blue-50/50 px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-blue-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] animate-in fade-in zoom-in duration-500 hover:bg-blue-50 transition-all">
+              <span className="text-[8px] md:text-[10px] font-black text-blue-600 uppercase tracking-[0.15em] mb-0.5 md:mb-1 truncate">Solic. Ativas</span>
+              <div className="flex items-end gap-1.5 md:gap-2">
+                <span className="text-lg md:text-2xl font-black text-blue-700 leading-none">{stats.requestsPending}</span>
+                <span className="material-symbols-outlined text-blue-400 text-xs md:text-sm mb-0.5 md:mb-1">outbound</span>
               </div>
             </div>
           )}
         </div>
 
         {/* Premium Action Controls */}
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm self-end lg:self-auto">
+        <div className="flex items-center gap-1.5 md:gap-3 bg-white p-1 md:p-2 rounded-xl md:rounded-2xl border border-slate-200 shadow-sm self-stretch md:self-end lg:self-auto justify-between md:justify-start">
           <button 
             onClick={() => navigate('/create-event')}
-            className="hidden sm:flex items-center gap-2 px-6 py-2.5 rounded-xl transition-all font-black text-[11px] uppercase tracking-wider bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:-translate-y-0.5 active:scale-95"
+            className="flex items-center justify-center flex-1 sm:flex-none gap-1.5 md:gap-2 px-2 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl transition-all font-black text-[9px] md:text-[11px] uppercase tracking-wider bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:-translate-y-0.5 active:scale-95"
           >
-            <span className="material-symbols-outlined text-sm font-bold">add</span>
-            Nova Atividade
+            <span className="material-symbols-outlined text-xs md:text-sm font-bold">add</span>
+            <span className="sm:hidden">Novo</span>
+            <span className="hidden sm:inline">Nova Atividade</span>
           </button>
 
           <div className="hidden sm:block w-px h-8 bg-slate-100 mx-1" />
 
           <button 
             onClick={() => setShowAnalytics(!showAnalytics)}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl transition-all font-black text-[11px] uppercase tracking-wider ${
+            className={`flex items-center justify-center flex-1 sm:flex-none gap-1.5 md:gap-2 px-2 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl transition-all font-black text-[9px] md:text-[11px] uppercase tracking-wider ${
               showAnalytics 
                 ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' 
                 : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
             }`}
           >
-            <span className="material-symbols-outlined text-sm">{showAnalytics ? 'view_list' : 'analytics'}</span>
-            {showAnalytics ? 'Ver Lista' : 'Visão Analítica'}
+            <span className="material-symbols-outlined text-xs md:text-sm">{showAnalytics ? 'view_list' : 'analytics'}</span>
+            <span className="sm:hidden">{showAnalytics ? 'Lista' : 'Análise'}</span>
+            <span className="hidden sm:inline">{showAnalytics ? 'Ver Lista' : 'Visão Analítica'}</span>
           </button>
           
-          <div className="w-px h-8 bg-slate-200 mx-1" />
+          <div className="hidden sm:block w-px h-8 bg-slate-200 mx-1" />
           
           <button 
             onClick={() => refresh()}
-            className="group size-11 flex items-center justify-center bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600 shadow-sm"
+            className="group size-9 md:size-11 flex items-center justify-center bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600 shadow-sm shrink-0"
             title="Sincronizar dados"
           >
-            <span className="material-symbols-outlined transition-transform duration-1000 group-hover:rotate-180">refresh</span>
+            <span className="material-symbols-outlined text-[18px] md:text-[24px] transition-transform duration-1000 group-hover:rotate-180">refresh</span>
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-8">
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-10 md:gap-8">
+        <div className="space-y-2 md:space-y-4">
           <div className="flex items-center gap-2 px-1">
-            <span className="material-symbols-outlined text-slate-400 text-xl">dashboard</span>
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Visão Geral</h2>
+            <span className="material-symbols-outlined text-slate-400 text-lg md:text-xl">dashboard</span>
+            <h2 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-widest">Visão Geral</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-2 md:gap-4">
             {[
-              { label: 'Criados', value: stats.totalCreated, icon: 'edit_calendar', color: 'text-slate-600', bg: 'bg-slate-50' },
-              { label: 'Organizador', value: stats.organizer, icon: 'assignment_ind', color: 'text-blue-600', bg: 'bg-blue-50' },
-              { label: 'Coorganizador', value: stats.coorganizer, icon: 'group_work', color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Participante', value: stats.participant, icon: 'person', color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { id: 'all', label: 'Criados', value: stats.totalCreated, icon: 'edit_calendar', color: 'text-slate-600', bg: 'bg-slate-50' },
+              { id: 'organizer', label: 'Organizador', icon: 'assignment_ind', color: 'text-blue-600', bg: 'bg-blue-50', value: stats.organizer },
+              { id: 'coorganizer', label: 'Coorganizador', icon: 'group_work', color: 'text-green-600', bg: 'bg-green-50', value: stats.coorganizer },
+              { id: 'participant', label: 'Participante', icon: 'person', color: 'text-indigo-600', bg: 'bg-indigo-50', value: stats.participant },
             ].map((stat, i) => (
-              <div key={i} className="bg-white p-3 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group text-center flex flex-col justify-center items-center h-full">
-                <div className={`size-10 mx-auto rounded-2xl ${stat.bg} ${stat.color} flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}>
-                  <span className="material-symbols-outlined text-xl">{stat.icon}</span>
+              <div 
+                key={i} 
+                onClick={() => setActiveTab(stat.id as any)}
+                className={`bg-white p-2 md:p-3 rounded-xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group text-center flex flex-col justify-center items-center h-20 md:h-full cursor-pointer`}
+              >
+                <div className={`hidden md:flex size-8 md:size-10 mx-auto rounded-xl md:rounded-2xl ${stat.bg} ${stat.color} items-center justify-center mb-1.5 md:mb-2 group-hover:scale-110 transition-transform`}>
+                  <span className="material-symbols-outlined text-lg md:text-xl">{stat.icon}</span>
                 </div>
-                <p className="text-2xl font-black text-slate-900 leading-none mb-1">{stat.value}</p>
+                <div className="flex items-center gap-1.5 md:block">
+                  <span className={`md:hidden material-symbols-outlined text-base ${stat.color}`}>{stat.icon}</span>
+                  <p className="text-lg md:text-2xl font-black text-slate-900 leading-none mb-0 md:mb-1">{stat.value}</p>
+                </div>
                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate w-full px-1" title={stat.label}>{stat.label}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="material-symbols-outlined text-amber-400 text-xl">mail</span>
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Convites Enviados</h2>
-          </div>
-          <div className="bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm space-y-2 h-full max-h-[260px] flex flex-col justify-center">
-            {[
+        {[
+          { 
+            title: 'Convites Enviados', 
+            icon: 'mail', 
+            iconColor: 'text-amber-400',
+            data: [
               { label: 'Pendentes', value: stats.sentInvitesPending, icon: 'mail', color: 'text-amber-600', bg: 'bg-amber-50' },
               { label: 'Aceitos', value: stats.sentInvitesAccepted, icon: 'mark_email_read', color: 'text-green-600', bg: 'bg-green-50' },
               { label: 'Recusados', value: stats.sentInvitesRejected, icon: 'mail_lock', color: 'text-red-600', bg: 'bg-red-50' },
-            ].map((stat, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                    <span className="material-symbols-outlined text-xl">{stat.icon}</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-600">{stat.label}</span>
-                </div>
-                <span className="text-xl font-black text-slate-900">{stat.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="material-symbols-outlined text-amber-400 text-xl">inbox</span>
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Convites Recebidos</h2>
-          </div>
-          <div className="bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm space-y-2 h-full max-h-[260px] flex flex-col justify-center">
-            {[
+            ]
+          },
+          { 
+            title: 'Convites Recebidos', 
+            icon: 'inbox', 
+            iconColor: 'text-amber-400',
+            data: [
               { label: 'Pendentes', value: stats.invitesPending, icon: 'mail', color: 'text-amber-600', bg: 'bg-amber-50' },
               { label: 'Aceitos', value: stats.invitesAccepted, icon: 'mark_email_read', color: 'text-green-600', bg: 'bg-green-50' },
               { label: 'Recusados', value: stats.invitesRejected, icon: 'mail_lock', color: 'text-red-600', bg: 'bg-red-50' },
-            ].map((stat, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                    <span className="material-symbols-outlined text-xl">{stat.icon}</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-600">{stat.label}</span>
-                </div>
-                <span className="text-xl font-black text-slate-900">{stat.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="material-symbols-outlined text-blue-400 text-xl">send</span>
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Solicitações Enviadas</h2>
-          </div>
-          <div className="bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm space-y-2 h-full max-h-[260px] flex flex-col justify-center">
-            {[
+            ]
+          },
+          { 
+            title: 'Solicitações Enviadas', 
+            icon: 'send', 
+            iconColor: 'text-blue-400',
+            data: [
               { label: 'Pendentes', value: stats.requestsPending, icon: 'send', color: 'text-blue-600', bg: 'bg-blue-50' },
               { label: 'Aceitas', value: stats.requestsAccepted, icon: 'task_alt', color: 'text-indigo-600', bg: 'bg-indigo-50' },
               { label: 'Recusadas', value: stats.requestsRejected, icon: 'cancel_schedule_send', color: 'text-slate-600', bg: 'bg-slate-50' },
-            ].map((stat, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                    <span className="material-symbols-outlined text-xl">{stat.icon}</span>
-                  </div>
-                  <span className="text-sm font-bold text-slate-600">{stat.label}</span>
-                </div>
-                <span className="text-xl font-black text-slate-900">{stat.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="material-symbols-outlined text-purple-400 text-xl">inbox_customize</span>
-            <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Solicitações Recebidas</h2>
-          </div>
-          <div className="bg-white p-2 rounded-[2rem] border border-slate-100 shadow-sm space-y-2 h-full max-h-[260px] flex flex-col justify-center">
-            {[
+            ]
+          },
+          { 
+            title: 'Solicitações Recebidas', 
+            icon: 'inbox_customize', 
+            iconColor: 'text-purple-400',
+            data: [
               { label: 'Pendentes', value: stats.receivedRequestsPending, icon: 'hourglass_top', color: 'text-purple-600', bg: 'bg-purple-50' },
               { label: 'Aceitas', value: stats.receivedRequestsAccepted, icon: 'check_circle', color: 'text-green-600', bg: 'bg-green-50' },
               { label: 'Recusadas', value: stats.receivedRequestsRejected, icon: 'cancel', color: 'text-red-600', bg: 'bg-red-50' },
-            ].map((stat, i) => (
-              <div key={i} className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className={`size-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                    <span className="material-symbols-outlined text-xl">{stat.icon}</span>
+            ]
+          }
+        ].map((section, idx) => (
+          <div key={idx} className="space-y-1.5 md:space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <span className={`material-symbols-outlined text-base md:text-xl ${section.iconColor}`}>{section.icon}</span>
+              <h2 className="text-[10px] md:text-sm font-black text-slate-900 uppercase tracking-widest">{section.title}</h2>
+            </div>
+            <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-[2rem] border border-slate-100 shadow-sm flex flex-row md:flex-col gap-1.5 md:gap-1.5 h-auto md:h-full md:max-h-[260px] md:justify-center overflow-x-auto md:overflow-visible custom-scrollbar-hide snap-x snap-mandatory">
+              {section.data.map((stat, i) => (
+                <div key={i} className="flex-1 min-w-[85px] md:min-w-0 flex flex-col md:flex-row items-center md:justify-between p-1.5 md:p-3 rounded-lg md:rounded-2xl bg-slate-50/50 md:bg-transparent md:hover:bg-slate-50 transition-colors border md:border-none border-slate-100 snap-center">
+                  <div className="flex flex-col md:flex-row items-center gap-1 md:gap-4 w-full md:w-auto">
+                    <div className={`size-5 md:size-10 rounded-lg md:rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
+                      <span className="material-symbols-outlined text-sm md:text-xl">{stat.icon}</span>
+                    </div>
+                    <span className="text-[9px] md:text-sm font-bold text-slate-500 text-center md:text-left leading-none md:leading-tight truncate w-full md:w-auto mt-1 md:mt-0">{stat.label}</span>
                   </div>
-                  <span className="text-sm font-bold text-slate-600">{stat.label}</span>
+                  <span className="text-sm md:text-xl font-black text-slate-900 mt-0.5 md:mt-0">{stat.value}</span>
                 </div>
-                <span className="text-xl font-black text-slate-900">{stat.value}</span>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        ))}
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {showAnalytics ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in zoom-in-95 duration-500">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 animate-in zoom-in-95 duration-500">
             {safeAnalytics.byType.length > 0 ? (
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+              <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 md:space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black text-slate-900">Distribuição por Tipo</h3>
-                    <p className="text-xs text-slate-500 font-medium">Categorização dos seus eventos confirmados</p>
+                    <h3 className="text-base md:text-lg font-black text-slate-900">Distribuição por Tipo</h3>
+                    <p className="text-[10px] md:text-xs text-slate-500 font-medium">Categorização dos seus eventos confirmados</p>
                   </div>
-                  <div className="size-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined">category</span>
+                  <div className="size-8 md:size-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-lg md:text-2xl">category</span>
                   </div>
                 </div>
-                <div className="h-[300px] w-full">
+                <div className="h-[250px] md:h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -448,7 +424,7 @@ const MyInvolvement: React.FC = () => {
                         cx="50%"
                         cy="50%"
                         innerRadius={60}
-                        outerRadius={100}
+                        outerRadius={80}
                         paddingAngle={5}
                         dataKey="value"
                       >
@@ -472,17 +448,17 @@ const MyInvolvement: React.FC = () => {
             )}
 
             {safeAnalytics.byTime.length > 0 ? (
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+              <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 md:space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black text-slate-900">Histórico Temporal</h3>
-                    <p className="text-xs text-slate-500 font-medium">Frequência de eventos nos últimos meses</p>
+                    <h3 className="text-base md:text-lg font-black text-slate-900">Histórico Temporal</h3>
+                    <p className="text-[10px] md:text-xs text-slate-500 font-medium">Frequência de eventos nos últimos meses</p>
                   </div>
-                  <div className="size-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined">timeline</span>
+                  <div className="size-8 md:size-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-lg md:text-2xl">timeline</span>
                   </div>
                 </div>
-                <div className="h-[300px] w-full">
+                <div className="h-[250px] md:h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={safeAnalytics.byTime}>
                       <defs>
@@ -529,17 +505,17 @@ const MyInvolvement: React.FC = () => {
             {/* Removido o gráfico de Natureza conforme solicitado, pois já está definido no cabeçalho */}
 
             {safeAnalytics.byResources.length > 0 ? (
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
+              <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 md:space-y-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black text-slate-900">Recursos & Logística</h3>
-                    <p className="text-xs text-slate-500 font-medium">Itens mais solicitados nos seus eventos</p>
+                    <h3 className="text-base md:text-lg font-black text-slate-900">Recursos & Logística</h3>
+                    <p className="text-[10px] md:text-xs text-slate-500 font-medium">Itens mais solicitados nos seus eventos</p>
                   </div>
-                  <div className="size-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined">inventory_2</span>
+                  <div className="size-8 md:size-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-lg md:text-2xl">inventory_2</span>
                   </div>
                 </div>
-                <div className="h-[300px] w-full">
+                <div className="h-[250px] md:h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={safeAnalytics.byResources}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -575,8 +551,8 @@ const MyInvolvement: React.FC = () => {
           </div>
         ) : (
           <>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200 flex-1 overflow-x-auto custom-scrollbar-hide">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
+              <div className="flex items-center gap-1 md:gap-1.5 bg-slate-100 p-1 rounded-xl md:rounded-2xl border border-slate-200 flex-1 overflow-x-auto custom-scrollbar-hide">
                 {[
                   { id: 'all', label: 'Todos', icon: 'list' },
                   { id: 'organizer', label: 'Organizador', icon: 'assignment_ind' },
@@ -588,37 +564,37 @@ const MyInvolvement: React.FC = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 justify-center flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black transition-all ${
+                    className={`flex-1 justify-center flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all whitespace-nowrap ${
                       activeTab === tab.id 
-                        ? 'bg-white text-primary shadow-sm scale-105' 
+                        ? 'bg-white text-primary shadow-sm scale-100 md:scale-105' 
                         : 'text-slate-500 hover:text-slate-700'
                     }`}
                   >
-                    <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="material-symbols-outlined text-[14px] md:text-[18px]">{tab.icon}</span>
+                    <span className="inline">{tab.label}</span>
                   </button>
                 ))}
               </div>
 
-              <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                <span className="size-2 rounded-full bg-primary animate-pulse" />
+              <div className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-white rounded-full border border-slate-100 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest self-start md:self-auto shadow-sm md:shadow-none">
+                <span className="size-1.5 md:size-2 rounded-full bg-primary animate-pulse" />
                 {filteredEvents.length} Eventos
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
               {filteredEvents.length === 0 ? (
-                <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm py-20 flex flex-col items-center justify-center text-center space-y-6">
-                  <div className="size-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
-                    <span className="material-symbols-outlined text-5xl">event_busy</span>
+                <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm py-12 md:py-20 flex flex-col items-center justify-center text-center space-y-4 md:space-y-6">
+                  <div className="size-16 md:size-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+                    <span className="material-symbols-outlined text-3xl md:text-5xl">event_busy</span>
                   </div>
-                  <div className="space-y-2">
-                    <h3 className="text-xl font-black text-slate-900">Nenhum evento por aqui</h3>
-                    <p className="text-slate-500 max-w-xs mx-auto font-medium">Você não possui compromissos nesta categoria no momento.</p>
+                  <div className="space-y-1 md:space-y-2 px-4">
+                    <h3 className="text-lg md:text-xl font-black text-slate-900">Nenhum evento por aqui</h3>
+                    <p className="text-sm md:text-base text-slate-500 max-w-xs mx-auto font-medium">Você não possui compromissos nesta categoria no momento.</p>
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
                   {filteredEvents.map((event) => {
                     const statusColor = (event.requestStatus === 'pending' || event.participationStatus === 'pending') ? 'amber' :
                                       (event.requestStatus === 'rejected' || event.participationStatus === 'rejected') ? 'red' :
@@ -629,28 +605,28 @@ const MyInvolvement: React.FC = () => {
                     <div 
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`group relative bg-white rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col`}
+                      className={`group relative bg-white rounded-xl md:rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col`}
                     >
-                      <div className={`absolute top-0 left-0 w-1.5 h-full bg-${statusColor}-500 opacity-80`} />
+                      <div className={`absolute top-0 left-0 w-1 md:w-1.5 h-full bg-${statusColor}-500 opacity-80`} />
                       
-                      <div className="p-5 flex flex-col h-full gap-4">
+                      <div className="p-2 md:p-5 flex flex-col h-full gap-1.5 md:gap-4">
                         {/* Header */}
-                        <div className="flex items-start justify-between gap-3">
-                           <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-start justify-between gap-2 md:gap-3">
+                           <div className="flex flex-col gap-0.5 md:gap-1 w-full min-w-0">
+                              <div className="flex items-center gap-1 md:gap-2 flex-wrap">
                                 {getRoleBadge(event)}
                                 {(event.nature || event.category) && (
-                                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-[10px] font-black uppercase tracking-wide transition-colors">
-                                    <span className="material-symbols-outlined text-[14px]">label</span>
+                                  <span className="flex items-center gap-1 px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-md md:rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-[8px] md:text-[10px] font-black uppercase tracking-wide transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]">
+                                    <span className="material-symbols-outlined text-[10px] md:text-[14px]">label</span>
                                     {event.nature || event.category}
                                   </span>
                                 )}
                               </div>
-                              <h3 className="text-lg font-black text-slate-900 leading-snug line-clamp-2 group-hover:text-primary transition-colors mt-1">
+                              <h3 className="text-xs md:text-lg font-black text-slate-900 leading-tight line-clamp-2 group-hover:text-primary transition-colors mt-0.5 md:mt-1">
                                 {event.title}
                               </h3>
                            </div>
-                           <div className="shrink-0">
+                           <div className="shrink-0 scale-75 md:scale-100 origin-top-right -mt-1 -mr-1 md:mt-0 md:mr-0">
                               {getStatusBadge(event)}
                            </div>
                         </div>
@@ -659,43 +635,43 @@ const MyInvolvement: React.FC = () => {
                         <div className="h-px w-full bg-slate-50" />
 
                         {/* Meta Info Grid */}
-                        <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-xs">
-                            <div className="flex items-center gap-2 text-slate-600">
-                                <span className="material-symbols-outlined text-base text-slate-400">calendar_today</span>
-                                <span className="font-bold">{format(getSafeDate(event.date_start), 'dd MMM yyyy', { locale: ptBR })}</span>
+                        <div className="grid grid-cols-2 gap-y-1 md:gap-y-3 gap-x-2 text-[9px] md:text-xs">
+                            <div className="flex items-center gap-1 md:gap-2 text-slate-600">
+                                <span className="material-symbols-outlined text-[10px] md:text-base text-slate-400">calendar_today</span>
+                                <span className="font-bold truncate">{format(getSafeDate(event.date_start), 'dd MMM yyyy', { locale: ptBR })}</span>
                             </div>
                             
-                            <div className="flex items-center gap-2 text-slate-600">
-                                <span className="material-symbols-outlined text-base text-slate-400">schedule</span>
-                                <div className="flex items-center gap-1 font-bold">
+                            <div className="flex items-center gap-1 md:gap-2 text-slate-600">
+                                <span className="material-symbols-outlined text-[10px] md:text-base text-slate-400">schedule</span>
+                                <div className="flex items-center gap-0.5 md:gap-1 font-bold truncate">
                                   <span>{format(getSafeDate(event.date_start), 'HH:mm')}</span>
                                   {event.date_end && (
                                     <>
-                                      <span className="text-[9px] text-slate-300 font-black uppercase">até</span>
+                                      <span className="text-[7px] md:text-[9px] text-slate-300 font-black uppercase">até</span>
                                       <span>{format(getSafeDate(event.date_end), 'HH:mm')}</span>
                                     </>
                                   )}
                                 </div>
                             </div>
 
-                            <div className="col-span-2 flex items-center gap-2 text-slate-600">
-                                <span className="material-symbols-outlined text-base text-slate-400">location_on</span>
-                                <span className="font-bold truncate max-w-[200px]" title={event.expand?.location?.name || event.custom_location || 'Local não definido'}>
+                            <div className="col-span-2 flex items-center gap-1 md:gap-2 text-slate-600">
+                                <span className="material-symbols-outlined text-[10px] md:text-base text-slate-400">location_on</span>
+                                <span className="font-bold truncate w-full" title={event.expand?.location?.name || event.custom_location || 'Local não definido'}>
                                   {event.expand?.location?.name || event.custom_location || 'Local não definido'}
                                 </span>
                             </div>
                         </div>
 
                         {/* Footer Action */}
-                        <div className="mt-auto pt-2 flex justify-end">
+                        <div className="mt-auto pt-0.5 md:pt-2 flex justify-end">
                             <button 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleOpenEventInCalendar(event);
                                 }}
-                                className="text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-primary transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-slate-50"
+                                className="text-[8px] md:text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-primary transition-colors flex items-center gap-1 md:gap-1.5 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded-lg hover:bg-slate-50"
                             >
-                                <span className="material-symbols-outlined text-sm">calendar_month</span>
+                                <span className="material-symbols-outlined text-[10px] md:text-sm">calendar_month</span>
                                 Ver no Calendário
                             </button>
                         </div>
