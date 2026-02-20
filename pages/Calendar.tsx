@@ -11,6 +11,7 @@ import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
 import { deleteEventWithCleanup } from '../lib/eventUtils';
 import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
+import { useSwipe } from '../hooks/useSwipe';
 
 const Calendar: React.FC = () => {
   const { user } = useAuth();
@@ -523,6 +524,11 @@ const Calendar: React.FC = () => {
     updateURL(viewType, newDate, true); // Replace for simple navigation
   };
 
+  const swipeHandlers = useSwipe({
+    onSwipeLeft: () => handleNavigate('next'),
+    onSwipeRight: () => handleNavigate('prev')
+  });
+
   return (
     <div className="flex flex-col min-h-screen w-full">
       {/* Filters Bar - Fixed Top of Page */}
@@ -668,7 +674,7 @@ const Calendar: React.FC = () => {
 
       <div className="max-w-[1600px] mx-auto w-full p-2 md:p-4 lg:p-6">
         {/* Calendar Grid Container */}
-        <div className="bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative">
+        <div {...swipeHandlers} className="bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative">
           {viewType === 'month' && (
             <div className="flex-1 flex flex-col">
               {/* Desktop Grid View */}
@@ -1395,6 +1401,17 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
           <div className="size-8 rounded-full bg-primary/5 border border-primary/10 flex items-center justify-center text-primary font-black text-xs shadow-sm shrink-0">
             {creatorInitial}
           </div>
+        </div>
+
+        {/* Creator Info */}
+        <div className="flex items-center gap-2 px-1 pb-1">
+            <div className="flex items-center gap-1.5 text-[10px] text-text-secondary">
+                <span className="material-symbols-outlined text-[14px] text-primary/60">person</span>
+                <span>Criado por:</span>
+            </div>
+            <span className="text-[10px] font-bold text-text-main truncate">
+                {event.expand?.user?.name || 'Usuário Desconhecido'}
+            </span>
         </div>
 
         {/* Time and Date */}
