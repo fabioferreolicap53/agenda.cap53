@@ -101,10 +101,10 @@ const translateError = (error: any): string => {
     }
 
     if (status === 0 || message.includes('NetworkError') || message.includes('Failed to fetch')) {
-        return 'Erro de conexão. Verifique sua internet.';
+        return `Erro de conexão com o servidor (${status}). Verifique sua internet ou se o servidor está acessível. Detalhes: ${message}`;
     }
 
-    return 'Ocorreu um erro inesperado. Tente novamente mais tarde.';
+    return `Ocorreu um erro inesperado: ${message}`;
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

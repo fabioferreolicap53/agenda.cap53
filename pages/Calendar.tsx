@@ -34,6 +34,8 @@ const Calendar: React.FC = () => {
   const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const dayViewRef = useRef<HTMLDivElement>(null);
+  const agendaViewRef = useRef<HTMLDivElement>(null);
 
   const activeFiltersCount = useMemo(() => {
     let count = 0;
@@ -248,6 +250,27 @@ const Calendar: React.FC = () => {
      }
      return 'month';
     });
+
+  // Auto-scroll to day view content on mobile when switching to day view
+  useEffect(() => {
+    if (window.innerWidth < 768) {
+        if (viewType === 'day' && dayViewRef.current) {
+            setTimeout(() => {
+                dayViewRef.current?.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }, 100);
+        } else if (viewType === 'agenda' && agendaViewRef.current) {
+            setTimeout(() => {
+                agendaViewRef.current?.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start' 
+                });
+            }, 100);
+        }
+    }
+  }, [viewType, currentDate]);
   
     // Handle browser back/forward buttons
     useEffect(() => {
@@ -507,8 +530,9 @@ const Calendar: React.FC = () => {
         <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-2">
           <div className="flex flex-col xl:flex-row items-center gap-2 xl:gap-4">
             
-            {/* Navigation Group */}
-            <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-start">
+            <div className="flex flex-col md:flex-row items-center justify-between w-full md:gap-4 xl:contents">
+              {/* Navigation Group */}
+              <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-start xl:order-1">
                 <div className="flex items-center gap-2 flex-1 md:flex-none">
                   <button
                     onClick={() => {
@@ -565,13 +589,31 @@ const Calendar: React.FC = () => {
                         </span>
                     )}
                 </button>
+              </div>
+
+              {/* View Type Group */}
+              <div className="h-[38px] flex bg-slate-100/50 p-0.5 rounded-lg border border-border-light flex-shrink-0 w-full md:w-auto justify-center xl:order-4">
+                  {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
+                    <button
+                      key={view}
+                      onClick={() => updateURL(view, currentDate)}
+                      className={`h-full px-3 text-[9px] font-black uppercase tracking-widest rounded-md transition-all duration-300 ${
+                        viewType === view 
+                          ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
+                          : 'text-text-secondary hover:text-text-main'
+                      }`}
+                    >
+                      {view === 'day' ? 'Dia' : view === 'week' ? 'Sem' : view === 'month' ? 'Mês' : 'Age'}
+                    </button>
+                  ))}
+              </div>
             </div>
 
             {/* Separator (Desktop) */}
-            <div className="hidden xl:block w-px h-6 bg-slate-200"></div>
+            <div className="hidden xl:block w-px h-6 bg-slate-200 xl:order-2"></div>
 
             {/* Filters Group */}
-            <div className={`${showMobileFilters ? 'flex animate-in slide-in-from-top-2 fade-in duration-300' : 'hidden'} md:flex flex-col md:flex-row items-center gap-2 w-full xl:flex-1 z-[101] relative min-w-0 transition-all`}>
+            <div className={`${showMobileFilters ? 'flex animate-in slide-in-from-top-2 fade-in duration-300' : 'hidden'} md:flex flex-col md:flex-row items-center gap-2 w-full xl:flex-1 z-[101] relative min-w-0 transition-all xl:order-3`}>
                 <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
                   <CustomSelect
                       value={filterUser}
@@ -618,23 +660,6 @@ const Calendar: React.FC = () => {
                     </span>
                     {persistFilters ? 'Salvo' : 'Salvar'}
                 </label>
-            </div>
-
-            {/* View Type Group */}
-            <div className="h-[38px] flex bg-slate-100/50 p-0.5 rounded-lg border border-border-light flex-shrink-0 w-full md:w-auto justify-center">
-                {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
-                  <button
-                    key={view}
-                    onClick={() => updateURL(view, currentDate)}
-                    className={`h-full px-3 text-[9px] font-black uppercase tracking-widest rounded-md transition-all duration-300 ${
-                      viewType === view 
-                        ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
-                        : 'text-text-secondary hover:text-text-main'
-                    }`}
-                  >
-                    {view === 'day' ? 'Dia' : view === 'week' ? 'Sem' : view === 'month' ? 'Mês' : 'Age'}
-                  </button>
-                ))}
             </div>
 
           </div>
@@ -950,7 +975,7 @@ const Calendar: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="p-4 md:p-8 max-w-4xl mx-auto w-full">
+            <div ref={dayViewRef} className="p-4 md:p-8 max-w-4xl mx-auto w-full scroll-mt-[180px]">
 
               <div className="space-y-4">
                 {(() => {
@@ -1089,7 +1114,7 @@ const Calendar: React.FC = () => {
               </div>
             </div>
             
-            <div className="p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full">
+            <div ref={agendaViewRef} className="p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full scroll-mt-[180px]">
               {(() => {
                  // Filter events for the current month and year
                  const monthEvents = events.filter(e => {
