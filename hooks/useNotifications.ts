@@ -41,8 +41,45 @@ export const useNotifications = () => {
           : Promise.resolve({ items: [], totalItems: 0 })
       ]);
 
-      // Map pending requests to virtual notifications if they don't exist in notifications list
-      const existingRequestIds = new Set(notifResult.items.map(n => n.related_request));
+      // Map pending requests for easy access
+      const pendingRequestsMap = new Map((almcResult?.items || []).map(r => [r.id, r]));
+      const handledRequestIds = new Set<string>();
+
+      // 1. Enrich existing notifications if they match a pending request
+      // This ensures we show buttons even if the persisted notification is incomplete,
+      // while preserving the 'read' status.
+      const enrichedNotifications: any[] = [];
+      const seenEnrichedRequests = new Set<string>();
+
+      notifResult.items.forEach(n => {
+          let finalNotif = n;
+          
+          if (n.related_request && pendingRequestsMap.has(n.related_request)) {
+              const req = pendingRequestsMap.get(n.related_request)!;
+              handledRequestIds.add(n.related_request);
+              
+              // Force actionable state for pending requests
+              finalNotif = {
+                  ...n,
+                  type: 'almc_item_request', // Ensure type matches for buttons logic
+                  invite_status: 'pending',   // Ensure status matches for buttons logic
+                  expand: {
+                      ...n.expand,
+                      related_request: req, // Ensure we have the latest request data
+                  }
+              };
+          }
+
+          // Deduplicate: If it's a request type, only keep the first occurrence (latest)
+          if (finalNotif.related_request && (finalNotif.type === 'almc_item_request' || finalNotif.type === 'transport_request' || finalNotif.type === 'service_request')) {
+              if (seenEnrichedRequests.has(finalNotif.related_request)) {
+                  return; // Skip duplicate
+              }
+              seenEnrichedRequests.add(finalNotif.related_request);
+          }
+
+          enrichedNotifications.push(finalNotif);
+      });
       
       // Geração de Histórico Sintético (Chain of Events)
       // Cria notificações de "Origem" (ex: "Solicitação Enviada") para itens que já têm decisão,
@@ -50,35 +87,48 @@ export const useNotifications = () => {
       const historyNotifications: any[] = [];
       const processedHistory = new Set<string>();
 
-      notifResult.items.forEach(n => {
+      enrichedNotifications.forEach(n => {
           // 1. Histórico para Itens (Almoxarifado/DCA)
+          // Só gera histórico se NÃO for uma solicitação pendente que já tem botões de ação
+          // Se for uma notificação de "request" real (tipo almc_item_request), ela já é a própria solicitação
           if (n.related_request && n.expand?.related_request && !processedHistory.has(n.related_request)) {
               const req = n.expand.related_request;
-              // Verifica se já existe uma notificação de "request" explícita (raro no modelo atual, mas possível)
-              // Se não existir, cria a sintética baseada na data de criação do request
-              historyNotifications.push({
-                  id: `hist_${req.id}`,
-                  collectionId: 'virtual_history',
-                  collectionName: 'virtual_history',
-                  created: req.created,
-                  updated: req.created,
-                  user: user.id,
-                  title: 'Solicitação Enviada',
-                  message: `Solicitação de ${req.expand?.item?.name || 'Item'} enviada para análise.`,
-                  type: 'history_log',
-                  read: true, // Histórico nasce lido
-                  related_request: req.id,
-                  event: n.event,
-                  expand: {
-                    event: n.expand?.event,
-                    related_request: req
-                  },
-                  data: {
-                      icon: 'send',
-                      is_history: true
-                  }
-              });
-              processedHistory.add(n.related_request);
+              const isPending = req.status === 'pending';
+              
+              // Regra: Se a notificação atual (n) já é do tipo request, não cria histórico duplicado.
+              if (n.type !== 'almc_item_request' && n.type !== 'transport_request') {
+                   // Verifica se já existe uma notificação de "request" explícita na lista principal
+                   const hasExplicitRequest = enrichedNotifications.some(other => 
+                       (other.type === 'almc_item_request' || other.type === 'transport_request') && 
+                       other.related_request === n.related_request
+                   );
+
+                   if (!hasExplicitRequest && !isPending) {
+                      historyNotifications.push({
+                          id: `hist_${req.id}`,
+                          collectionId: 'virtual_history',
+                          collectionName: 'virtual_history',
+                          created: req.created,
+                          updated: req.created,
+                          user: user.id,
+                          title: 'Solicitação Enviada',
+                          message: `Solicitação de ${req.expand?.item?.name || 'Item'} enviada para análise.`,
+                          type: 'history_log',
+                          read: true, // Histórico nasce lido
+                          related_request: req.id,
+                          event: n.event,
+                          expand: {
+                            event: n.expand?.event,
+                            related_request: req
+                          },
+                          data: {
+                              icon: 'send',
+                              is_history: true
+                          }
+                      });
+                      processedHistory.add(n.related_request);
+                   }
+              }
           }
 
           // 2. Histórico para Transporte
@@ -89,7 +139,7 @@ export const useNotifications = () => {
                // Se n.type for transport_request, ele JÁ É o solicitado.
                if (n.type === 'transport_decision') {
                    // Verifica se tem um request real na lista
-                   const hasRealRequest = notifResult.items.some(other => other.type === 'transport_request' && other.event === n.event);
+                   const hasRealRequest = enrichedNotifications.some(other => other.type === 'transport_request' && other.event === n.event);
                    
                    if (!hasRealRequest) {
                        historyNotifications.push({
@@ -121,7 +171,7 @@ export const useNotifications = () => {
       }
 
       const almcNotifications = (almcResult?.items || [])
-        .filter(req => !existingRequestIds.has(req.id) && !ignored.includes(`req_${req.id}`))
+        .filter(req => !handledRequestIds.has(req.id) && !ignored.includes(`req_${req.id}`))
         .map(req => ({
           id: `req_${req.id}`,
           collectionId: 'virtual',
@@ -147,17 +197,16 @@ export const useNotifications = () => {
         }));
 
       const allNotifications = [
-        ...notifResult.items,
+        ...enrichedNotifications,
         ...almcNotifications,
         ...historyNotifications
       ].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
 
       setNotifications(allNotifications);
       
-      // The badge count is the sum of unread system notifications + pending administrative requests
-      const systemUnread = notifResult.items.filter(n => !n.read).length;
-      const almcCount = almcResult?.items?.length || 0;
-      setUnreadCount(systemUnread + almcCount);
+      // The badge count should reflect the actual unread items in the list
+      const unreadTotal = allNotifications.filter(n => !n.read).length;
+      setUnreadCount(unreadTotal);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {

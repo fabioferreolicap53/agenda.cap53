@@ -56,6 +56,22 @@ const Notifications: React.FC = () => {
     return result || {};
   };
 
+  const getEventCreator = (n: any) => {
+      // 1. Direct event expansion
+      if (n.expand?.event?.expand?.user?.name) {
+          return n.expand.event.expand.user.name;
+      }
+      // 2. Related event expansion
+      if (n.expand?.related_event?.expand?.user?.name) {
+          return n.expand.related_event.expand.user.name;
+      }
+      // 3. Virtual notification (ALMC Request)
+      if (n.expand?.event?.expand?.user?.name) {
+          return n.expand.event.expand.user.name;
+      }
+      return null;
+  };
+
   const getNotificationStatus = (n: any) => {
     const data = getData(n);
     const title = n.title?.toLowerCase() || '';
@@ -599,6 +615,8 @@ const Notifications: React.FC = () => {
                          const isLatest = index === 0;
                          const isOld = !isLatest;
                          
+                         const creatorName = getEventCreator(notification);
+
                          return (
                             <div
                               key={notification.id}
@@ -630,6 +648,14 @@ const Notifications: React.FC = () => {
                     {formatDistanceToNow(new Date(notification.created), { addSuffix: true, locale: ptBR })}
                   </span>
                 </div>
+                
+                {/* Event Creator */}
+                {creatorName && (
+                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] md:text-[11px] text-slate-500 font-medium">
+                        <span className="material-symbols-outlined text-[12px] md:text-[14px]">person</span>
+                        <span>Evento criado por {creatorName}</span>
+                    </div>
+                )}
                 
                 <p className={`text-[12px] md:text-[14px] leading-relaxed mb-3 md:mb-4 ${notification.read ? 'text-slate-400' : 'text-slate-500'}`}>
                   {getNotificationMessage(notification)}
