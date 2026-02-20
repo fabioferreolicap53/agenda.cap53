@@ -1,77 +1,72 @@
-# Correção de Acesso em Redes Corporativas/VPN (IPs 10.x.x.x)
+# Solução Definitiva para Redes Corporativas/VPN (IP 10.9.x.x)
 
-Se você está enfrentando problemas de acesso ao PocketBase especificamente em redes que iniciam com IP `10.9.x.x` (comum em redes corporativas, VPNs ou provedores via rádio/fibra com CGNAT), o problema geralmente é causado por **MTU (Tamanho do Pacote)** ou **Bloqueio de CORS**.
+Se o problema persiste especificamente na rede `10.9.x.x`, é quase certo que o **Firewall Corporativo** está bloqueando o protocolo **UDP (HTTP/3)** ou o **MTU (Tamanho do Pacote)** está incorreto.
 
-Siga estes passos no seu servidor (via Termius) para corrigir.
+Siga estes 3 passos na ordem para resolver.
 
-## 1. Ajustar o MTU (MSS Clamping) no Servidor
-Redes do tipo VPN ou corporativas frequentemente têm um tamanho máximo de pacote (MTU) menor que o padrão da internet (1500 bytes). Se o seu servidor tentar enviar pacotes grandes, eles serão descartados silenciosamente, fazendo a conexão "travar" ou dar timeout, mesmo que o ping funcione.
+## Passo 1: Forçar TCP (Desativar HTTP/3 no Caddy)
+Redes corporativas frequentemente bloqueiam UDP (usado pelo HTTP/3 moderno). Isso faz a conexão falhar silenciosamente ou dar erro "Network Error". Vamos forçar o uso de TCP (HTTP/1.1 e HTTP/2).
 
-Execute este comando no terminal do servidor para ajustar automaticamente o tamanho dos pacotes TCP:
+1. Edite o Caddyfile:
+   ```bash
+   sudo nano /etc/caddy/Caddyfile
+   ```
 
+2. Adicione o bloco `servers` no topo do arquivo (antes de qualquer domínio) e mantenha o restante:
+
+   ```caddy
+   {
+       # Força apenas protocolos TCP (HTTP/1.1 e HTTP/2)
+       servers {
+           protocols h1 h2
+       }
+   }
+
+   centraldedados.duckdns.org {
+       encode gzip zstd
+
+       # Headers CORS Permissivos (Essencial para acesso externo)
+       header {
+           Access-Control-Allow-Origin *
+           Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+           Access-Control-Allow-Headers "Origin, Content-Type, Authorization, X-Requested-With"
+       }
+
+       reverse_proxy 127.0.0.1:8090 {
+           header_up Host {host}
+           header_up X-Real-IP {remote_host}
+           header_up X-Forwarded-For {remote_host}
+           header_up X-Forwarded-Proto {scheme}
+       }
+
+       tls {
+           protocols tls1.2 tls1.3
+       }
+   }
+   ```
+
+3. Recarregue o Caddy:
+   ```bash
+   sudo systemctl reload caddy
+   ```
+
+## Passo 2: Ajustar MTU (MSS Clamping) - CRÍTICO
+Se você ainda não executou este comando, **FAÇA AGORA**. Redes VPN/Corporativas descartam pacotes grandes, causando timeouts em conexões HTTPS.
+
+Execute no terminal do servidor:
 ```bash
 sudo iptables -t mangle -A OUTPUT -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
-```
-
-Para garantir que essa regra persista após reiniciar o servidor:
-```bash
 sudo netfilter-persistent save
 ```
 
-## 2. Adicionar Headers CORS no Caddy
-Se você estiver desenvolvendo ou acessando via aplicações web locais nessa rede, o navegador pode bloquear a conexão por segurança (CORS). Vamos configurar o Caddy para permitir acesso de qualquer origem.
+## Passo 3: Diagnóstico no Navegador
+Se ainda falhar, precisamos saber se é bloqueio de DNS ou Certificado.
 
-Edite seu arquivo Caddyfile:
-```bash
-sudo nano /etc/caddy/Caddyfile
-```
-
-Substitua o conteúdo pelo abaixo (adicionamos a seção `header` com permissões CORS):
-
-```caddy
-centraldedados.duckdns.org {
-    encode gzip zstd
-
-    # Headers de Segurança e CORS (Permite acesso de qualquer origem)
-    header {
-        # Permite acesso de qualquer origem (útil para redes locais/desenvolvimento)
-        Access-Control-Allow-Origin *
-        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Origin, Content-Type, Authorization, X-Requested-With"
-        
-        # Segurança HTTPS
-        Strict-Transport-Security "max-age=31536000;"
-        X-Content-Type-Options "nosniff"
-    }
-
-    reverse_proxy 127.0.0.1:8090 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
-
-    tls {
-        protocols tls1.2 tls1.3
-    }
-}
-```
-
-Salve o arquivo (`Ctrl+O`, `Enter`) e saia (`Ctrl+X`).
-Em seguida, recarregue o Caddy:
-
-```bash
-sudo systemctl reload caddy
-```
-
-## 3. Liberar Tráfego de IPs Privados (Opcional)
-Se o firewall do servidor (iptables) estiver bloqueando faixas de IP privadas por segurança, você pode liberar explicitamente a faixa `10.0.0.0/8`.
-
-Execute:
-```bash
-sudo iptables -I INPUT -s 10.0.0.0/8 -j ACCEPT
-sudo netfilter-persistent save
-```
+1. No computador/dispositivo com erro, abra o navegador.
+2. Tente acessar diretamente: `https://centraldedados.duckdns.org/api/health`
+   - **Se abrir e mostrar JSON:** O problema é CORS no frontend (verifique o Passo 1).
+   - **Se der erro de certificado:** A rede corporativa está interceptando SSL (Proxy). Você precisará instalar o certificado raiz da empresa ou usar HTTP (não recomendado).
+   - **Se não carregar (Timeout/Erro de Conexão):** O IP ou Porta 443 está bloqueado pelo Firewall da empresa.
 
 ---
-**Resumo:** O comando de MSS Clamping (passo 1) é o mais importante para corrigir falhas de conexão em redes específicas (VPNs/Corporativas). O passo 2 resolve problemas de aplicações web/mobile rodando localmente.
+**Resumo:** A combinação de **Desativar HTTP/3 (Passo 1)** + **Ajustar MTU (Passo 2)** resolve 99% dos casos em redes corporativas restritivas.

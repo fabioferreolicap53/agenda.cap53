@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Conexão PocketBase</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .status { padding: 10px; border-radius: 5px; margin-bottom: 10px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #cce5ff; color: #004085; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Diagnóstico de Conexão</h1>
+    <p>Este teste verifica se o seu dispositivo consegue se conectar ao servidor PocketBase.</p>
+    
+    <div id="config">
+        <p><strong>URL do Servidor:</strong> <code id="serverUrl">...</code></p>
+    </div>
+
+    <button onclick="runTest()">Iniciar Teste</button>
+
+    <div id="results" style="margin-top: 20px;"></div>
+
+    <script>
+        // Tenta ler a URL do .env (injetado pelo Vite) ou usa o padrão
+        const POCKETBASE_URL = 'https://centraldedados.duckdns.org';
+        document.getElementById('serverUrl').textContent = POCKETBASE_URL;
+
+        async function runTest() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<div class="status info">Testando conexão...</div>';
+
+            try {
+                const startTime = performance.now();
+                const response = await fetch(`${POCKETBASE_URL}/api/health`, {
+                    method: 'GET',
+                    mode: 'cors', // Importante para testar CORS
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const endTime = performance.now();
+                const duration = Math.round(endTime - startTime);
+
+                if (response.ok) {
+                    const data = await response.json();
+                    results.innerHTML = `
+                        <div class="status success">
+                            <strong>✅ Sucesso!</strong><br>
+                            Status: ${response.status} ${response.statusText}<br>
+                            Tempo: ${duration}ms<br>
+                            Resposta: ${JSON.stringify(data)}
+                        </div>
+                    `;
+                } else {
+                    results.innerHTML = `
+                        <div class="status error">
+                            <strong>⚠️ Erro HTTP!</strong><br>
+                            Status: ${response.status} ${response.statusText}<br>
+                            Tempo: ${duration}ms
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error(error);
+                let suggestions = '';
+                if (error.message.includes('Failed to fetch')) {
+                    suggestions = `
+                        <ul>
+                            <li><strong>CORS:</strong> O servidor pode não estar enviando os cabeçalhos corretos.</li>
+                            <li><strong>Certificado SSL:</strong> A rede corporativa pode estar bloqueando o certificado. Tente abrir a URL diretamente no navegador.</li>
+                            <li><strong>Firewall:</strong> A rede pode estar bloqueando o acesso ao IP/Porta.</li>
+                        </ul>
+                    `;
+                }
+                
+                results.innerHTML = `
+                    <div class="status error">
+                        <strong>❌ Falha na Conexão (Erro 0)</strong><br>
+                        Erro: ${error.message}<br>
+                        <br>
+                        <strong>Possíveis Causas:</strong>
+                        ${suggestions}
+                        <br>
+                        <a href="${POCKETBASE_URL}/api/health" target="_blank" style="color: blue; text-decoration: underline;">
+                            Clique aqui para tentar abrir diretamente
+                        </a>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

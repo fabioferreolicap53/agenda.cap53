@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 const AlmacManagement: React.FC = () => {
     const { user, loading: authLoading } = useAuth();

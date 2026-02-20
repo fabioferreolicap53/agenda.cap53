@@ -512,7 +512,7 @@ const Calendar: React.FC = () => {
 
   const handleNavigate = (direction: 'prev' | 'next') => {
     const newDate = new Date(currentDate);
-    if (viewType === 'month') {
+    if (viewType === 'month' || viewType === 'agenda') {
       newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
     } else if (viewType === 'week') {
       newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));

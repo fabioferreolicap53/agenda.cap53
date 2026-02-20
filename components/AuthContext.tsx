@@ -216,6 +216,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         role: devRoleOverride || (model.role as UserRole),
                         avatar: model.avatar ? pb.files.getUrl(model, model.avatar) : undefined,
                         status: model.status,
+                        context_status: model.context_status,
                         last_active: model.last_active,
                         phone: model.phone,
                         sector: model.sector,

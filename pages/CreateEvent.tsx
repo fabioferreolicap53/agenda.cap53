@@ -46,6 +46,7 @@ const INVOLVEMENT_LEVELS = [
 const CreateEvent: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
 
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
@@ -976,7 +977,7 @@ const CreateEvent: React.FC = () => {
           setLoadingUsers(true);
           const users = await pb.collection('agenda_cap53_usuarios').getFullList({
             sort: 'name',
-            fields: 'id,name,role,sector,avatar,email',
+            fields: 'id,name,role,sector,avatar,email,collectionId,collectionName',
             requestKey: null
           });
           console.log('--- DEBUG: Usuários do Evento ---', users.length);
@@ -1047,10 +1048,19 @@ const CreateEvent: React.FC = () => {
           }
         });
 
+        const unsubUsers = await pb.collection('agenda_cap53_usuarios').subscribe('*', (e) => {
+          if (e.action === 'update') {
+            setAvailableUsers(prev => {
+              return prev.map(u => u.id === e.record.id ? { ...u, ...e.record } : u);
+            });
+          }
+        });
+
         unsubscribe = () => {
           unsubItems();
           unsubTypes();
           unsubLocs();
+          unsubUsers();
         };
       } catch (err) {
         console.error("Erro ao configurar inscrições em tempo real:", err);
@@ -1575,9 +1585,18 @@ const CreateEvent: React.FC = () => {
                       sortedFilteredUsers.map(u => {
                         const isSel = selectedParticipants.includes(u.id);
                         const isCreatorUser = u.id === user?.id;
-                        const avatarUrl = u.avatar 
-                          ? (u.avatar.startsWith('http') ? u.avatar : pb.files.getUrl(u, u.avatar))
-                          : `https://picsum.photos/seed/${u.email}/200`;
+                        
+                        // Determine avatar URL with fallback priority:
+                        // 1. u.avatar from list (updated via subscription) - PREFERRED for real-time updates
+                        // 2. AuthContext user.avatar (fallback)
+                        // 3. Picsum fallback
+                        let avatarUrl = `https://picsum.photos/seed/${u.email}/200`;
+                        
+                        if (u.avatar) {
+                          avatarUrl = u.avatar.startsWith('http') ? u.avatar : pb.files.getUrl(u, u.avatar);
+                        } else if (isCreatorUser && user?.avatar) {
+                          avatarUrl = user.avatar;
+                        }
 
                         return (
                           <div

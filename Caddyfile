@@ -1,0 +1,32 @@
+{
+    servers {
+        protocols h1 h2
+    }
+}
+
+centraldedados.duckdns.org {
+    encode gzip zstd
+
+    # Headers de Segurança e CORS (Permite acesso de qualquer origem)
+    header {
+        # Permite acesso de qualquer origem (útil para redes locais/desenvolvimento)
+        Access-Control-Allow-Origin *
+        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Origin, Content-Type, Authorization, X-Requested-With"
+        
+        # Segurança HTTPS
+        Strict-Transport-Security "max-age=31536000;"
+        X-Content-Type-Options "nosniff"
+    }
+
+    reverse_proxy 127.0.0.1:8090 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    tls {
+        protocols tls1.2 tls1.3
+    }
+}

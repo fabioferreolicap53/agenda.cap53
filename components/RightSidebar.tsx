@@ -140,6 +140,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
 
     const getAvatarUrl = (user: any) => {
         if (user?.avatar) {
+            if (user.avatar.startsWith('http')) return user.avatar;
             return pb.files.getUrl(user, user.avatar);
         }
         return `https://picsum.photos/seed/${user?.email || user?.id}/100`;
