@@ -267,33 +267,19 @@ const TeamManagement: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-2 md:gap-4 max-w-[1500px] mx-auto w-full p-2 md:p-4">
-            <div className="sticky top-[60px] z-40 bg-white/95 backdrop-blur-sm -mx-2 px-2 py-2 md:static md:bg-transparent md:mx-0 md:px-0 md:py-0 border-b md:border-none border-slate-100 mb-2 transition-all">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                    {/* Mobile/Tablet Search Bar */}
-                    <div className="w-full md:flex-1 lg:hidden relative">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar por nome, cargo ou setor..."
-                            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-400"
-                        />
-                    </div>
-
-                    <div className="w-full md:w-72 md:ml-auto">
-                        <CustomSelect
-                            value={selectedSectors}
-                            onChange={setSelectedSectors}
-                            startIcon="filter_list"
-                            className="h-10 md:h-12 text-xs md:text-sm"
-                            multiSelect={true}
-                            options={[
-                                { value: 'Todos', label: 'Todos os Setores' },
-                                ...SECTORS.map(s => ({ value: s, label: s }))
-                            ]}
-                        />
-                    </div>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-3 mb-1">
+                <div className="w-full md:w-72 md:ml-auto">
+                    <CustomSelect
+                        value={selectedSectors}
+                        onChange={setSelectedSectors}
+                        startIcon="filter_list"
+                        className="h-10 md:h-12 text-xs md:text-sm"
+                        multiSelect={true}
+                        options={[
+                            { value: 'Todos', label: 'Todos os Setores' },
+                            ...SECTORS.map(s => ({ value: s, label: s }))
+                        ]}
+                    />
                 </div>
             </div>
 
