@@ -519,13 +519,7 @@ const Notifications: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={refresh}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
-              title="Atualizar"
-            >
-              <span className="material-symbols-outlined text-[20px]">refresh</span>
-            </button>
+
             
             {user?.role === 'ADMIN' && (
               <button
