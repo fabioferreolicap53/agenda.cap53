@@ -1,14 +1,14 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function checkCollection() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         console.log('1. Fetching collection metadata directly...');
         // We can try to get it without admin if we know the name and it's public (unlikely for schema)
         // Better: try admin login again but with raw fetch to see what happens
-        const res = await fetch('https://centraldedados.duckdns.org/api/admins/auth-with-password', {
+        const res = await fetch('https://centraldedados.dev.br/api/admins/auth-with-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identity: 'fabioferreoli@gmail.com', password: '@Cap5364125' })
@@ -20,7 +20,7 @@ async function checkCollection() {
             const token = data.token;
             console.log('Admin login successful.');
 
-            const colRes = await fetch('https://centraldedados.duckdns.org/api/collections/agenda_cap53_usuarios', {
+            const colRes = await fetch('https://centraldedados.dev.br/api/collections/agenda_cap53_usuarios', {
                 headers: { 'Authorization': token }
             });
             const colMetadata = await colRes.json();
@@ -36,3 +36,4 @@ async function checkCollection() {
 }
 
 checkCollection();
+

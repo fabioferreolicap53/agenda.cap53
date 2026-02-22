@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function verifyUsers() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         console.log('Authenticating as admin...');
@@ -23,3 +23,4 @@ async function verifyUsers() {
 }
 
 verifyUsers();
+

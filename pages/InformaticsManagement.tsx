@@ -238,6 +238,16 @@ const InformaticsManagement: React.FC = () => {
         }
     };
 
+    const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
+        try {
+            await pb.collection('agenda_cap53_almac_requests').update(id, { status });
+            // Refresh logic handled by subscription
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('Erro ao atualizar status.');
+        }
+    };
+
     if (authLoading) return null;
     if (!user || (user.role !== 'DCA' && user.role !== 'ADMIN')) {
         return <Navigate to="/calendar" replace />;
@@ -557,15 +567,14 @@ const InformaticsManagement: React.FC = () => {
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
                                         <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Data/Hora</th>
                                         <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Evento / Solicitante</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Recurso / Finalidade</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Recurso</th>
                                         <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-20 text-center">
+                                            <td colSpan={4} className="px-6 py-20 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
                                                     <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando histórico...</p>
@@ -574,7 +583,7 @@ const InformaticsManagement: React.FC = () => {
                                         </tr>
                                     ) : history.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-32 text-center">
+                                            <td colSpan={4} className="px-6 py-32 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
                                                         <span className="material-symbols-outlined text-3xl text-slate-200">history_toggle_off</span>
@@ -606,32 +615,50 @@ const InformaticsManagement: React.FC = () => {
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span className="text-slate-900 font-bold">{req.expand?.item?.name || 'Recurso Removido'}</span>
-                                                            <span className="text-slate-400 text-[10px] font-medium uppercase tracking-wider italic">"{req.purpose || 'Sem observações'}"</span>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5">
-                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                                                        req.status === 'approved' 
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                                        : req.status === 'rejected'
-                                                        ? 'bg-rose-50 text-rose-700 border-rose-100'
-                                                        : 'bg-amber-50 text-amber-600 border-amber-100'
-                                                    }`}>
-                                                        <span className={`size-1.5 rounded-full ${
-                                                            req.status === 'approved' ? 'bg-emerald-500 animate-pulse' : req.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
-                                                        }`}></span>
-                                                        {req.status === 'approved' ? 'Entregue' : req.status === 'rejected' ? 'Negado' : 'Pendente'}
-                                                    </span>
-                                                </td>
                                                 <td className="px-6 py-5 text-right">
-                                                    <button
-                                                        onClick={() => handleDeleteHistory(req.id)}
-                                                        className="size-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 ml-auto"
-                                                        title="Excluir do histórico"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">delete</span>
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {req.status === 'pending' ? (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleUpdateStatus(req.id, 'approved')}
+                                                                    className="size-9 rounded-xl flex items-center justify-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all border border-emerald-100"
+                                                                    title="Aprovar"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-lg">check</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleUpdateStatus(req.id, 'rejected')}
+                                                                    className="size-9 rounded-xl flex items-center justify-center text-rose-600 bg-rose-50 hover:bg-rose-100 transition-all border border-rose-100"
+                                                                    title="Recusar"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-lg">close</span>
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                                                                    req.status === 'approved' 
+                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                                                                    : 'bg-rose-50 text-rose-700 border-rose-100'
+                                                                }`}>
+                                                                    <span className={`size-1.5 rounded-full ${
+                                                                        req.status === 'approved' ? 'bg-emerald-500' : 'bg-rose-500'
+                                                                    }`}></span>
+                                                                    {req.status === 'approved' ? 'Aprovado' : 'Recusado'}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleDeleteHistory(req.id)}
+                                                                    className="size-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
+                                                                    title="Excluir do histórico"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-lg">delete</span>
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))

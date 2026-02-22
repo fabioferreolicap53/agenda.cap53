@@ -1,7 +1,7 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
-// Configuração - Ajuste se necessário
-const PB_URL = 'https://centraldedados.duckdns.org';
+// ConfiguraÃ§Ã£o - Ajuste se necessÃ¡rio
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125'; // Senha encontrada nos scripts anteriores
 
@@ -11,8 +11,8 @@ async function addContextStatusField() {
     console.log(`Conectando a ${PB_URL}...`);
 
     try {
-        // 1. Autenticação Admin
-        // Tenta autenticar via API direta porque a SDK pode usar _superusers que falha em algumas versões
+        // 1. AutenticaÃ§Ã£o Admin
+        // Tenta autenticar via API direta porque a SDK pode usar _superusers que falha em algumas versÃµes
         const endpoints = ['/api/superusers/auth-with-password', '/api/admins/auth-with-password'];
         let authenticated = false;
 
@@ -34,21 +34,21 @@ async function addContextStatusField() {
         }
 
         if (!authenticated) {
-            throw new Error('Falha na autenticação Admin');
+            throw new Error('Falha na autenticaÃ§Ã£o Admin');
         }
 
-        console.log('Autenticação Admin realizada com sucesso!');
+        console.log('AutenticaÃ§Ã£o Admin realizada com sucesso!');
 
-        // 2. Buscar a coleção de usuários
+        // 2. Buscar a coleÃ§Ã£o de usuÃ¡rios
         const collection = await pb.collections.getOne('agenda_cap53_usuarios');
-        console.log(`Coleção encontrada: ${collection.name} (ID: ${collection.id})`);
+        console.log(`ColeÃ§Ã£o encontrada: ${collection.name} (ID: ${collection.id})`);
 
-        // 3. Verificar se o campo já existe
+        // 3. Verificar se o campo jÃ¡ existe
         const schema = collection.schema;
         const fieldExists = schema.find(f => f.name === 'context_status');
 
         if (fieldExists) {
-            console.log('✅ O campo "context_status" já existe. Nenhuma alteração necessária.');
+            console.log('âœ… O campo "context_status" jÃ¡ existe. Nenhuma alteraÃ§Ã£o necessÃ¡ria.');
             return;
         }
 
@@ -67,13 +67,14 @@ async function addContextStatusField() {
             }
         });
 
-        // 5. Atualizar a coleção
+        // 5. Atualizar a coleÃ§Ã£o
         await pb.collections.update(collection.id, { schema });
-        console.log('✅ Sucesso! Campo "context_status" adicionado à coleção.');
+        console.log('âœ… Sucesso! Campo "context_status" adicionado Ã  coleÃ§Ã£o.');
 
     } catch (error) {
-        console.error('❌ Erro:', error.originalError || error.message);
+        console.error('âŒ Erro:', error.originalError || error.message);
     }
 }
 
 addContextStatusField();
+

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NotificationRecord } from '../lib/notifications';
 import { pb } from '../lib/pocketbase';
 import { AlmacRequest, EventRecord } from '../lib/types';
+import CustomTimePicker from './CustomTimePicker';
 
 interface ReRequestModalProps {
   notification?: NotificationRecord;
@@ -63,7 +64,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
       destination: event.transporte_destino,
       horario_levar: event.transporte_horario_levar,
       horario_buscar: event.transporte_horario_buscar,
-      qtd_pessoas: event.transporte_qtd_pessoas,
+      qtd_pessoas: event.transporte_passageiro || event.transporte_qtd_pessoas, // Fallback for legacy
       event_title: event.title
     };
   }
@@ -85,14 +86,28 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
       if (isItemRequest) {
         if (!requestId) throw new Error('ID da solicitação não encontrado.');
 
-        // 1. Update status
+        // 1. Fetch current history
+        const currentRequest = await pb.collection('agenda_cap53_almac_requests').getOne(requestId);
+        const history = currentRequest.history || [];
+        
+        history.push({
+            timestamp: new Date().toISOString(),
+            action: 're_requested',
+            user: pb.authStore.model?.id,
+            user_name: pb.authStore.model?.name,
+            message: observation,
+            quantity: quantity
+        });
+
+        // 2. Update status and history
         await pb.collection('agenda_cap53_almac_requests').update(requestId, {
           status: 'pending',
           quantity: quantity,
-          justification: observation || null
+          justification: observation || null,
+          history: history
         });
 
-        // 2. Notify Responsible Sector
+        // 3. Notify Responsible Sector
         try {
             // Get item category to determine target role
             let category = request?.expand?.item?.category || 
@@ -153,17 +168,42 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
       } else if (isTransportRequest) {
         if (!eventId) throw new Error('ID do evento não encontrado.');
 
-        // 1. Update status
-        await pb.collection('agenda_cap53_eventos').update(eventId, {
+        // Validation for CustomTimePicker (as it doesn't support native 'required')
+        if (!transportData.horario_levar || !transportData.horario_buscar) {
+            alert('Por favor, preencha os horários de ida e volta.');
+            setLoading(false);
+            return;
+        }
+
+        // 1. Fetch current history
+        const currentEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+        const history = currentEvent.transport_history || [];
+        
+        history.push({
+            timestamp: new Date().toISOString(),
+            action: 're_requested',
+            user: pb.authStore.model?.id,
+            user_name: pb.authStore.model?.name,
+            message: observation,
+            quantity: transportData.qtd_pessoas
+        });
+
+        // 2. Update status and history
+        const updatePayload = {
           transporte_status: 'pending',
           transporte_destino: transportData.destino,
           transporte_horario_levar: transportData.horario_levar,
           transporte_horario_buscar: transportData.horario_buscar,
-          transporte_qtd_pessoas: transportData.qtd_pessoas,
-          transporte_justification: observation || null
-        });
+          transporte_qtd_pessoas: transportData.qtd_pessoas, // Legacy
+          transporte_passageiro: transportData.qtd_pessoas, // Standard field
+          transporte_justification: observation || null, // Keep for backward compatibility
+          transporte_obs: observation || null, // Standard field for observation
+          transport_history: history
+        };
 
-        // 2. Notify Transport Sector
+        await pb.collection('agenda_cap53_eventos').update(eventId, updatePayload);
+
+        // 3. Notify Transport Sector
         try {
             const eventTitle = event?.title || notification?.expand?.event?.title || initialData.event_title || 'Evento';
 
@@ -271,26 +311,21 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Horário Ida</label>
-                  <input
-                    type="time"
-                    value={transportData.horario_levar}
-                    onChange={e => setTransportData({...transportData, horario_levar: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-1">Horário Volta</label>
-                  <input
-                    type="time"
-                    value={transportData.horario_buscar}
-                    onChange={e => setTransportData({...transportData, horario_buscar: e.target.value})}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                    required
-                  />
-                </div>
+                <CustomTimePicker
+                  label="Horário Ida *"
+                  value={transportData.horario_levar}
+                  placeholderTime={`${String((new Date().getHours() + 1) % 24).padStart(2, '0')}:00`}
+                  onChange={(val) => setTransportData({...transportData, horario_levar: val})}
+                />
+                <CustomTimePicker
+                  label="Horário Volta *"
+                  value={transportData.horario_buscar}
+                  placeholderTime={transportData.horario_levar ? 
+                    `${String((parseInt(transportData.horario_levar.split(':')[0]) + 1) % 24).padStart(2, '0')}:00` : 
+                    `${String((new Date().getHours() + 2) % 24).padStart(2, '0')}:00`
+                  }
+                  onChange={(val) => setTransportData({...transportData, horario_buscar: val})}
+                />
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">Qtd. Pessoas</label>

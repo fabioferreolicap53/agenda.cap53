@@ -1,5 +1,5 @@
-async function verifyUser() {
-    const baseUrl = 'https://centraldedados.duckdns.org';
+﻿async function verifyUser() {
+    const baseUrl = 'https://centraldedados.dev.br';
     const email = 'fabioferreoli@gmail.com';
     const password = '@Cap5364125';
     const PREFIX = 'agenda_cap53_';
@@ -29,3 +29,4 @@ async function verifyUser() {
 }
 
 verifyUser();
+

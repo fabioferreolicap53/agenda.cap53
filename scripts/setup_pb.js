@@ -1,6 +1,6 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
-const PB_URL = 'https://centraldedados.duckdns.org';
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -109,7 +109,7 @@ async function createOrUpdateCollection(name, schema, rules = {}) {
         // For this script, we assume we want to ENFORCE the schema provided.
         // But let's check if fields exist physically as per protocol.
 
-        // Protocol: "Verifique se os campos necessários existem fisicamente... realiz um PATCH enviando o objeto completo"
+        // Protocol: "Verifique se os campos necessÃ¡rios existem fisicamente... realiz um PATCH enviando o objeto completo"
 
         // Let's create a map of existing fields
         const existingFieldsCheck = collection.fields || []; // PB 0.23+ might differ in structure?
@@ -455,3 +455,4 @@ async function createAuditLogs() {
     }
 
 })();
+

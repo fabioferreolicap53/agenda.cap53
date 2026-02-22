@@ -1,21 +1,21 @@
-const PocketBase = require('pocketbase/cjs');
+﻿const PocketBase = require('pocketbase/cjs');
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function listAllCollections() {
   try {
-    console.log('🔍 Listando todas as coleções disponíveis...');
+    console.log('ðŸ” Listando todas as coleÃ§Ãµes disponÃ­veis...');
     
     const collections = await pb.collections.getFullList();
     
-    console.log(`\n✅ Encontradas ${collections.length} coleções:`);
+    console.log(`\nâœ… Encontradas ${collections.length} coleÃ§Ãµes:`);
     collections.forEach((collection, index) => {
       console.log(`${index + 1}. ${collection.name} (${collection.type})`);
-      console.log(`   - Descrição: ${collection.schema?.length || 0} campos`);
+      console.log(`   - DescriÃ§Ã£o: ${collection.schema?.length || 0} campos`);
     });
     
-    // Filtrar coleções que contenham "request" ou "almc" ou "notification"
-    console.log('\n🔍 Coleções relevantes para notificações:');
+    // Filtrar coleÃ§Ãµes que contenham "request" ou "almc" ou "notification"
+    console.log('\nðŸ” ColeÃ§Ãµes relevantes para notificaÃ§Ãµes:');
     const relevantCollections = collections.filter(col => 
       col.name.toLowerCase().includes('request') || 
       col.name.toLowerCase().includes('almc') || 
@@ -28,26 +28,26 @@ async function listAllCollections() {
         console.log(`${index + 1}. ${collection.name}`);
       });
     } else {
-      console.log('❌ Nenhuma coleção relevante encontrada');
+      console.log('âŒ Nenhuma coleÃ§Ã£o relevante encontrada');
     }
     
-    // Verificar schema de algumas coleções importantes
-    console.log('\n🔍 Verificando schemas...');
+    // Verificar schema de algumas coleÃ§Ãµes importantes
+    console.log('\nðŸ” Verificando schemas...');
     
     for (const collection of relevantCollections.slice(0, 3)) {
       try {
         const fullCollection = await pb.collections.getOne(collection.id);
-        console.log(`\n📋 ${collection.name}:`);
+        console.log(`\nðŸ“‹ ${collection.name}:`);
         fullCollection.schema.forEach(field => {
-          console.log(`   - ${field.name}: ${field.type}${field.required ? ' (obrigatório)' : ''}`);
+          console.log(`   - ${field.name}: ${field.type}${field.required ? ' (obrigatÃ³rio)' : ''}`);
         });
       } catch (error) {
-        console.log(`   ❌ Erro ao obter schema de ${collection.name}: ${error.message}`);
+        console.log(`   âŒ Erro ao obter schema de ${collection.name}: ${error.message}`);
       }
     }
     
   } catch (error) {
-    console.error('❌ Erro ao listar coleções:', error.message);
+    console.error('âŒ Erro ao listar coleÃ§Ãµes:', error.message);
   }
 }
 

@@ -1,6 +1,6 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
-const PB_URL = 'https://centraldedados.duckdns.org';
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -30,9 +30,9 @@ async function verifyEventFields() {
         console.log('Schema fields:', fieldNames);
         
         if (fieldNames.includes('creator_role')) {
-            console.log('✅ Field "creator_role" exists in schema.');
+            console.log('âœ… Field "creator_role" exists in schema.');
         } else {
-            console.log('❌ Field "creator_role" is MISSING from schema.');
+            console.log('âŒ Field "creator_role" is MISSING from schema.');
             
             // Try to add it
             console.log('Attempting to add "creator_role" field to schema...');
@@ -45,7 +45,7 @@ async function verifyEventFields() {
                 options: {}
             });
             await pb.collections.update(collection.id, collection);
-            console.log('✅ Field "creator_role" added successfully.');
+            console.log('âœ… Field "creator_role" added successfully.');
         }
 
         // Check if any record has it populated
@@ -64,3 +64,4 @@ async function verifyEventFields() {
 }
 
 verifyEventFields();
+

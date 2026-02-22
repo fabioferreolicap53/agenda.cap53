@@ -1,6 +1,6 @@
+﻿
 
-
-const pbUrl = 'https://centraldedados.duckdns.org';
+const pbUrl = 'https://centraldedados.dev.br';
 const adminEmail = 'fabioferreoli@gmail.com';
 const adminPass = '@Cap5364125';
 
@@ -92,3 +92,4 @@ async function updateSchema() {
 }
 
 updateSchema();
+

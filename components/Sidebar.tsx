@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth, UserRole } from './AuthContext';
-import { pb } from '../lib/pocketbase';
+import { pb, getAvatarUrl } from '../lib/pocketbase';
 import { useNotifications } from '../hooks/useNotifications';
 
 const Sidebar: React.FC = () => {
@@ -202,12 +202,20 @@ const Sidebar: React.FC = () => {
                 >
                   <div
                     className="size-10 rounded-full bg-cover bg-center ring-2 ring-primary/5 hover:ring-primary/40 transition-all"
-                    style={{ backgroundImage: `url(${user?.avatar ? user.avatar : 'https://picsum.photos/100/100'})` }}
+                    style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
                   ></div>
                   <div className={`absolute -bottom-0.5 -right-0.5 size-3.5 border-2 border-white rounded-full ${
-                    user?.status === 'Online' ? 'bg-green-500' :
+                    user?.context_status ? 
+                      (user?.context_status === '🧠 Foco' ? 'bg-purple-500' :
+                       user?.context_status === '📅 Em Reunião' ? 'bg-red-500' :
+                       user?.context_status === '🍽️ Almoço' ? 'bg-amber-500' :
+                       user?.status === 'Online' ? 'bg-green-500' :
+                       user?.status === 'Ausente' ? 'bg-amber-500' :
+                       user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300')
+                    :
+                    (user?.status === 'Online' ? 'bg-green-500' :
                     user?.status === 'Ausente' ? 'bg-amber-500' :
-                    user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300'
+                    user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300')
                       }`}></div>
 
                   {/* Status Selector Dropdown */}
@@ -306,6 +314,11 @@ const Sidebar: React.FC = () => {
                         user?.role || 'Colaborador'
                       )}
                   </p>
+                  {user?.observations && (
+                    <p className="text-[10px] text-text-secondary/70 mt-1 italic leading-tight line-clamp-2" title={user.observations}>
+                        {user.observations}
+                    </p>
+                  )}
                 </div>
               </div>
 

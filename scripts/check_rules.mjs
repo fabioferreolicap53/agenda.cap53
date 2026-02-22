@@ -1,6 +1,6 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 const adminEmail = 'fabio.h.c.costa@gmail.com';
 const adminPass = 'Opala7980';
@@ -47,3 +47,4 @@ async function checkRules() {
 }
 
 checkRules();
+

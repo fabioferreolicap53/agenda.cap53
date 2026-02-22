@@ -1,15 +1,15 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function updateTestItem() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
     const targetId = '043114vxyrdfdb9';
 
     try {
         console.log(`--- Atualizando Item TESTE (ID: ${targetId}) ---`);
         
         // Login como Admin
-        const res = await fetch('https://centraldedados.duckdns.org/api/admins/auth-with-password', {
+        const res = await fetch('https://centraldedados.dev.br/api/admins/auth-with-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identity: 'fabioferreoli@gmail.com', password: '@Cap5364125' })
@@ -29,8 +29,8 @@ async function updateTestItem() {
         console.log('--- SUCESSO ---');
         console.log(`Item: ${updated.name}`);
         console.log(`ID: ${updated.id}`);
-        console.log(`Status atual: ${updated.is_available ? 'Disponível' : 'Indisponível'}`);
-        console.log(`Última atualização: ${updated.updated}`);
+        console.log(`Status atual: ${updated.is_available ? 'DisponÃ­vel' : 'IndisponÃ­vel'}`);
+        console.log(`Ãšltima atualizaÃ§Ã£o: ${updated.updated}`);
 
     } catch (err) {
         console.error('Erro ao atualizar item:', err.message);
@@ -39,3 +39,4 @@ async function updateTestItem() {
 }
 
 updateTestItem();
+

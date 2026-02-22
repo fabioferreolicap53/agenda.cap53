@@ -1,8 +1,8 @@
-
+﻿
 const PocketBase = require('pocketbase/cjs');
 
 async function testFilter() {
-  const pb = new PocketBase('https://centraldedados.duckdns.org');
+  const pb = new PocketBase('https://centraldedados.dev.br');
   
   const testFilters = [
     'categorias_profissionais ?= "ADMINISTRATIVO(A)"',
@@ -16,11 +16,12 @@ async function testFilter() {
       await pb.collection('agenda_cap53_eventos').getList(1, 1, {
         filter: f
       });
-      console.log(`✅ Filter "${f}" is valid (or at least didn't throw 400)`);
+      console.log(`âœ… Filter "${f}" is valid (or at least didn't throw 400)`);
     } catch (err) {
-      console.log(`❌ Filter "${f}" failed: ${err.status} - ${err.message}`);
+      console.log(`âŒ Filter "${f}" failed: ${err.status} - ${err.message}`);
     }
   }
 }
 
 testFilter();
+

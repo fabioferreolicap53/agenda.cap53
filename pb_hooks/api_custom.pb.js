@@ -38,41 +38,34 @@ routerAdd("POST", "/api/notifications/clear_safe", (c) => {
     for (const n of notifications) {
         let canDelete = true;
 
-        // Logic to protect future event requests
-        const type = n.getString("type");
+        // Logic to protect future/ongoing event notifications
+        // We now check if the event has ended (date_end < now)
+        // This applies to ALL notifications linked to an event, not just requests
         
-        // Access 'data' field safely
-        // In PocketBase JS hooks, JSON fields are automatically unmarshaled to objects
-        const data = n.get("data"); 
-        const kind = data ? data.kind : null;
+        const eventId = n.getString("event");
+        if (eventId) {
+            try {
+                const event = $app.dao().findRecordById("agenda_cap53_eventos", eventId);
+                if (event) {
+                    // Check date_end first, fallback to date_start
+                    let eventEndDateStr = event.getString("date_end");
+                    if (!eventEndDateStr) {
+                         eventEndDateStr = event.getString("date_start");
+                    }
 
-        const isRequest = 
-            type === 'service_request' ||
-            type === 'almc_item_request' ||
-            type === 'transport_request' ||
-            kind === 'almc_item_request' ||
-            kind === 'service_request' ||
-            kind === 'transport_request';
-
-        if (isRequest) {
-            const eventId = n.getString("event");
-            if (eventId) {
-                try {
-                    const event = $app.dao().findRecordById("agenda_cap53_eventos", eventId);
-                    if (event) {
-                        const dateStart = event.getString("date_start");
-                        if (dateStart) {
-                            // PocketBase dates are typically "2006-01-02 15:04:05.000Z"
-                            const eventDate = new Date(dateStart);
-                            if (eventDate > now) {
-                                canDelete = false;
-                            }
+                    if (eventEndDateStr) {
+                        // PocketBase dates are typically "2006-01-02 15:04:05.000Z"
+                        const eventEnd = new Date(eventEndDateStr);
+                        
+                        // If the event hasn't ended yet (now < eventEnd), prevent deletion
+                        if (now < eventEnd) {
+                            canDelete = false;
                         }
                     }
-                } catch (e) {
-                    // Event might be deleted or not found.
-                    // If event is deleted, we can delete the notification.
                 }
+            } catch (e) {
+                // Event might be deleted or not found.
+                // If event is deleted, we can delete the notification.
             }
         }
 

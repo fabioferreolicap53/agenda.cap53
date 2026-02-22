@@ -1,5 +1,5 @@
-
-const PB_URL = 'https://centraldedados.duckdns.org';
+﻿
+const PB_URL = 'https://centraldedados.dev.br';
 
 async function run() {
     try {
@@ -83,3 +83,4 @@ async function run() {
 }
 
 run();
+

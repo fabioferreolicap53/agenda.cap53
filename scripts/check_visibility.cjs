@@ -1,8 +1,8 @@
-
+﻿
 const PocketBase = require('pocketbase/cjs');
 
 async function checkData() {
-  const pb = new PocketBase('https://centraldedados.duckdns.org');
+  const pb = new PocketBase('https://centraldedados.dev.br');
   
   try {
     console.log('Attempting to fetch records from agenda_cap53_eventos...');
@@ -25,3 +25,4 @@ async function checkData() {
 }
 
 checkData();
+

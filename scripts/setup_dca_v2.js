@@ -1,5 +1,5 @@
-
-const PB_URL = 'https://centraldedados.duckdns.org';
+﻿
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -67,7 +67,7 @@ async function setupDCA_V2() {
                 email: 'dca@cap53.com',
                 password: 'password123',
                 passwordConfirm: 'password123',
-                name: 'DCA Informática',
+                name: 'DCA InformÃ¡tica',
                 role: 'DCA',
                 status: 'Online',
                 verified: true
@@ -86,3 +86,4 @@ async function setupDCA_V2() {
 }
 
 setupDCA_V2();
+

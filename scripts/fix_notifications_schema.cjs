@@ -1,7 +1,7 @@
-
+﻿
 const PocketBase = require('pocketbase/cjs');
 
-const PB_URL = 'https://centraldedados.duckdns.org';
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -27,7 +27,7 @@ async function fixSchema() {
         const collectionName = 'agenda_cap53_notifications';
         const collection = await pb.collections.getOne(collectionName);
         
-        console.log(`\n📦 Current Schema for 'invite_status':`);
+        console.log(`\nðŸ“¦ Current Schema for 'invite_status':`);
         const field = collection.schema.find(f => f.name === 'invite_status');
         console.log(JSON.stringify(field.options));
         
@@ -39,11 +39,11 @@ async function fixSchema() {
         const finalValues = [...new Set([...currentValues, ...newValues])];
         
         if (finalValues.length === currentValues.length) {
-            console.log('✅ Schema already has all required options.');
+            console.log('âœ… Schema already has all required options.');
             return;
         }
         
-        console.log(`\n🔄 Updating schema options to: ${JSON.stringify(finalValues)}`);
+        console.log(`\nðŸ”„ Updating schema options to: ${JSON.stringify(finalValues)}`);
         
         field.options.values = finalValues;
         
@@ -51,11 +51,12 @@ async function fixSchema() {
             schema: collection.schema
         });
         
-        console.log('✅ Schema updated successfully!');
+        console.log('âœ… Schema updated successfully!');
 
     } catch (err) {
-        console.error("❌ Error:", err.message);
+        console.error("âŒ Error:", err.message);
     }
 }
 
 fixSchema();
+

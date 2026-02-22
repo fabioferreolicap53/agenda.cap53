@@ -1,8 +1,8 @@
-
+﻿
 import https from 'https';
 
 const options = {
-  hostname: 'centraldedados.duckdns.org',
+  hostname: 'centraldedados.dev.br',
   port: 443,
   method: 'GET',
   rejectUnauthorized: false // Para pegar o erro de certificado se houver
@@ -26,3 +26,4 @@ req.on('error', (e) => {
 });
 
 req.end();
+

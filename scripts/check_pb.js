@@ -1,5 +1,5 @@
-import PocketBase from 'pocketbase';
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+﻿import PocketBase from 'pocketbase';
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function check() {
     try {
@@ -13,3 +13,4 @@ async function check() {
 }
 
 check();
+

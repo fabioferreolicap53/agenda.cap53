@@ -1,13 +1,13 @@
-const PocketBase = require('pocketbase/cjs');
+﻿const PocketBase = require('pocketbase/cjs');
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function testValidation() {
   try {
-    console.log('🔍 Testando validação de campos...');
+    console.log('ðŸ” Testando validaÃ§Ã£o de campos...');
     
-    // Testar com dados mínimos obrigatórios
-    console.log('1. Testando com dados mínimos...');
+    // Testar com dados mÃ­nimos obrigatÃ³rios
+    console.log('1. Testando com dados mÃ­nimos...');
     try {
       const minimalTest = await pb.collection('agenda_cap53_notifications').create({
         user: 'qsi3qe4dn3peo51',
@@ -16,16 +16,16 @@ async function testValidation() {
         type: 'almc_item_request',
         read: false,
         acknowledged: false,
-        invite_status: 'pending'  // Adicionando campo que pode ser obrigatório
+        invite_status: 'pending'  // Adicionando campo que pode ser obrigatÃ³rio
       });
-      console.log('✅ Teste mínimo: SUCESSO');
+      console.log('âœ… Teste mÃ­nimo: SUCESSO');
       console.log('   ID:', minimalTest.id);
     } catch (error) {
-      console.log('❌ Teste mínimo: FALHOU');
+      console.log('âŒ Teste mÃ­nimo: FALHOU');
       console.log('   Erro:', error.message);
-      console.log('   Código:', error.status);
+      console.log('   CÃ³digo:', error.status);
       if (error.data && error.data.data) {
-        console.log('   Detalhes de validação:', JSON.stringify(error.data.data, null, 2));
+        console.log('   Detalhes de validaÃ§Ã£o:', JSON.stringify(error.data.data, null, 2));
       }
     }
     
@@ -34,8 +34,8 @@ async function testValidation() {
     try {
       const fullTest = await pb.collection('agenda_cap53_notifications').create({
         user: 'qsi3qe4dn3peo51',
-        title: 'Solicitação de Item',
-        message: 'O evento "teste" solicitou o item "ÁGUA" (Qtd: 1).',
+        title: 'SolicitaÃ§Ã£o de Item',
+        message: 'O evento "teste" solicitou o item "ÃGUA" (Qtd: 1).',
         type: 'almc_item_request',
         event: 'fp6obwd8ig68267',
         related_request: 'some_request_id',
@@ -44,14 +44,14 @@ async function testValidation() {
         invite_status: 'pending',
         data: { kind: 'almc_item_request', quantity: 1, item: 'some_item_id' }
       });
-      console.log('✅ Teste completo: SUCESSO');
+      console.log('âœ… Teste completo: SUCESSO');
       console.log('   ID:', fullTest.id);
     } catch (error) {
-      console.log('❌ Teste completo: FALHOU');
+      console.log('âŒ Teste completo: FALHOU');
       console.log('   Erro:', error.message);
-      console.log('   Código:', error.status);
+      console.log('   CÃ³digo:', error.status);
       if (error.data && error.data.data) {
-        console.log('   Detalhes de validação:', JSON.stringify(error.data.data, null, 2));
+        console.log('   Detalhes de validaÃ§Ã£o:', JSON.stringify(error.data.data, null, 2));
       }
     }
     
@@ -73,9 +73,9 @@ async function testValidation() {
         ...baseData,
         invite_status: 'pending'
       });
-      console.log('   ✅ Sem event: SUCESSO');
+      console.log('   âœ… Sem event: SUCESSO');
     } catch (error) {
-      console.log('   ❌ Sem event: FALHOU');
+      console.log('   âŒ Sem event: FALHOU');
     }
     
     // Testar sem related_request
@@ -86,13 +86,13 @@ async function testValidation() {
         event: 'fp6obwd8ig68267',
         invite_status: 'pending'
       });
-      console.log('   ✅ Sem related_request: SUCESSO');
+      console.log('   âœ… Sem related_request: SUCESSO');
     } catch (error) {
-      console.log('   ❌ Sem related_request: FALHOU');
+      console.log('   âŒ Sem related_request: FALHOU');
     }
     
   } catch (error) {
-    console.error('❌ Erro geral:', error.message);
+    console.error('âŒ Erro geral:', error.message);
   }
 }
 

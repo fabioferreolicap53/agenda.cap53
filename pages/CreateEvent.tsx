@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import { pb } from '../lib/pocketbase';
+import { pb, getAvatarUrl } from '../lib/pocketbase';
+import { Collections, LocaisResponse, TiposEventoResponse, ItensServicoResponse, UsersResponse } from '../lib/pocketbase-types';
 import { useAuth } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
 import { debugLog } from '../src/lib/debug';
@@ -78,10 +79,10 @@ const CreateEvent: React.FC = () => {
       }
     }
   };
-  const [locations, setLocations] = useState<any[]>([]);
-  const [eventTypes, setEventTypes] = useState<any[]>([]);
-  const [availableItems, setAvailableItems] = useState<any[]>([]);
-  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [locations, setLocations] = useState<LocaisResponse[]>([]);
+  const [eventTypes, setEventTypes] = useState<TiposEventoResponse[]>([]);
+  const [availableItems, setAvailableItems] = useState<ItensServicoResponse[]>([]);
+  const [availableUsers, setAvailableUsers] = useState<UsersResponse[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
   // Form State
@@ -103,6 +104,7 @@ const CreateEvent: React.FC = () => {
   const [transporteDestino, setTransporteDestino] = useState('');
   const [transporteHorarioLevar, setTransporteHorarioLevar] = useState('');
   const [transporteHorarioBuscar, setTransporteHorarioBuscar] = useState('');
+  const [transportePassageiros, setTransportePassageiros] = useState('');
   const [transporteObs, setTransporteObs] = useState('');
   const [originalTransporteSuporte, setOriginalTransporteSuporte] = useState(false);
   const [isRestricted, setIsRestricted] = useState(false);
@@ -259,7 +261,7 @@ const CreateEvent: React.FC = () => {
       // Merge with existing status if editing
       if (isEditing && editingEventId) {
           try {
-              const existingEvent = await pb.collection('agenda_cap53_eventos').getOne(editingEventId);
+              const existingEvent = await pb.collection(Collections.AgendaCap53Eventos).getOne(editingEventId);
               existingTransporteStatus = existingEvent.transporte_status || null;
               if (existingEvent.participants_status) {
                   Object.assign(participantsStatus, existingEvent.participants_status);
@@ -282,6 +284,19 @@ const CreateEvent: React.FC = () => {
           }
       }
 
+      // Logic to initialize transport_history for new transport requests
+      let initialTransportHistory = undefined;
+      // If it's a new event with transport, or an existing event adding transport for the first time
+      if (transporteSuporte && (!isEditing || (isEditing && !existingTransporteStatus))) {
+           initialTransportHistory = [{
+               timestamp: new Date().toISOString(),
+               action: 'created',
+               user: user?.id,
+               user_name: user?.name,
+               message: 'Solicitação de transporte criada'
+           }];
+      }
+
       const eventData = {
         title, 
         nature: type, // Sincronizando com o campo Natureza usado nos relatórios
@@ -298,6 +313,7 @@ const CreateEvent: React.FC = () => {
         transporte_suporte: transporteSuporte,
         transporte_origem: transporteSuporte ? (transporteOrigem || null) : null,
         transporte_destino: transporteSuporte ? (transporteDestino || null) : null,
+        transporte_passageiro: transporteSuporte ? (transportePassageiros || null) : null,
         transporte_horario_levar: transporteSuporte ? (transporteHorarioLevar || null) : null,
         transporte_horario_buscar: transporteSuporte ? (transporteHorarioBuscar || null) : null,
         transporte_obs: transporteSuporte ? (transporteObs || null) : null,
@@ -307,20 +323,21 @@ const CreateEvent: React.FC = () => {
         transporte_status: transporteSuporte ? (existingTransporteStatus || 'pending') : null,
         participants_status: participantsStatus,
         participants_roles: participantsRoles,
-        creator_role: involvementLevel || 'PARTICIPANTE'
+        creator_role: involvementLevel || 'PARTICIPANTE',
+        transport_history: initialTransportHistory
       };
 
       let eventId = editingEventId;
 
       if (isEditing && editingEventId) {
          console.log('--- UPDATING EVENT ---', editingEventId, eventData);
-         await pb.collection('agenda_cap53_eventos').update(editingEventId, eventData);
+         await pb.collection(Collections.AgendaCap53Eventos).update(editingEventId, eventData);
 
          // Sincronizar atualizações de título em notificações de convite de evento
          // As notificações de itens/transporte são tratadas especificamente abaixo
          if (title !== originalTitle) {
            try {
-             const pendingNotifications = await pb.collection('agenda_cap53_notifications').getFullList({
+             const pendingNotifications = await pb.collection(Collections.AgendaCap53Notifications).getFullList({
                filter: `event = "${editingEventId}" && type = "event_invite" && invite_status = "pending"`
              });
 
@@ -344,7 +361,7 @@ const CreateEvent: React.FC = () => {
             try {
                 // Create participante records for new participants
                 await Promise.all(newParticipants.map(pId => 
-                  pb.collection('agenda_cap53_participantes').create({
+                  pb.collection(Collections.AgendaCap53Participantes).create({
                     event: editingEventId,
                     user: pId,
                     status: 'pending',
@@ -364,12 +381,12 @@ const CreateEvent: React.FC = () => {
          }
       } else {
          console.log('--- CREATING NEW EVENT ---', eventData);
-         const created = await pb.collection('agenda_cap53_eventos').create(eventData);
+         const created = await pb.collection(Collections.AgendaCap53Eventos).create(eventData);
          eventId = created.id;
          if (selectedParticipants.length > 0) {
           // Create participante records
           await Promise.all(selectedParticipants.map(participantId => 
-            pb.collection('agenda_cap53_participantes').create({
+            pb.collection(Collections.AgendaCap53Participantes).create({
               event: eventId,
               user: participantId,
               status: 'pending',
@@ -395,7 +412,7 @@ const CreateEvent: React.FC = () => {
             const selectedItemIds = confirmedItems;
             console.log('--- SYNC LOGÍSTICA START ---', { eventId, selectedItemIds, itemQuantities });
             
-            const existingRequests = await pb.collection('agenda_cap53_almac_requests').getFullList({
+            const existingRequests = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList({
               filter: `event = "${eventId}"`,
             });
             console.log('--- EXISTING REQUESTS ---', existingRequests.length);
@@ -411,14 +428,14 @@ const CreateEvent: React.FC = () => {
               console.log('--- REMOVING REQUESTS ---', removedRequests.length);
               await Promise.all(removedRequests.map(async (r: any) => {
                 try {
-                  const pendingNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
+                  const pendingNotifs = await pb.collection(Collections.AgendaCap53Notifications).getFullList({
                     filter: `related_request = "${r.id}" && invite_status = "pending"`
                   });
-                  await Promise.all(pendingNotifs.map(n => pb.collection('agenda_cap53_notifications').delete(n.id)));
+                  await Promise.all(pendingNotifs.map(n => pb.collection(Collections.AgendaCap53Notifications).delete(n.id)));
                 } catch (err) {
                   console.error('Erro ao remover notificações de pedido excluído:', err);
                 }
-                return pb.collection('agenda_cap53_almac_requests').delete(r.id);
+                return pb.collection(Collections.AgendaCap53AlmacRequests).delete(r.id);
               }));
             }
 
@@ -438,7 +455,14 @@ const CreateEvent: React.FC = () => {
                   status: 'pending',
                   created_by: user?.id,
                   quantity: Number(quantity), // Garantir que é número
-                  item_snapshot_available: isAvailable
+                  item_snapshot_available: isAvailable,
+                  history: [{
+                    timestamp: new Date().toISOString(),
+                    action: 'created',
+                    user: user?.id,
+                    user_name: user?.name,
+                    message: `Solicitação criada com quantidade: ${quantity}`
+                  }]
                 });
                 createdRequests.push(createdReq);
               } else {
@@ -465,7 +489,7 @@ const CreateEvent: React.FC = () => {
                   // 1. Atualiza o pedido
                   if (Object.keys(updateData).length > 0) {
                     console.log('--- UPDATING REQUEST ---', existing.id, updateData);
-                    await pb.collection('agenda_cap53_almac_requests').update(existing.id, updateData);
+                    await pb.collection(Collections.AgendaCap53AlmacRequests).update(existing.id, updateData);
                   }
                   
                   // 2. A sincronização de notificações (quantidade/título) é feita automaticamente
@@ -478,7 +502,7 @@ const CreateEvent: React.FC = () => {
             if (createdRequests.length > 0) {
               console.log('--- CREATING NOTIFICATIONS FOR NEW REQUESTS ---', createdRequests.length);
               // Buscar usuários ALMC e DCA
-              const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ 
+              const sectorUsers = await pb.collection(Collections.AgendaCap53Usuarios).getFullList({ 
                 filter: 'role = "ALMC" || role = "DCA"' 
               });
               
@@ -530,7 +554,7 @@ const CreateEvent: React.FC = () => {
 
             if (transporteSuporte && (!isEditing || !originalTransporteSuporte)) {
               try {
-                const traUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ 
+                const traUsers = await pb.collection(Collections.AgendaCap53Usuarios).getFullList({ 
                   filter: 'role = "TRA"' 
                 });
                 
@@ -568,7 +592,7 @@ const CreateEvent: React.FC = () => {
                 const pendingTraNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
                   filter: `event = "${editingEventId}" && type = "transport_request" && invite_status = "pending"`
                 });
-                await Promise.all(pendingTraNotifs.map(n => pb.collection('agenda_cap53_notifications').delete(n.id)));
+                await Promise.all(pendingTraNotifs.map(n => pb.collection(Collections.AgendaCap53Notifications).delete(n.id)));
               } catch (err) {
                 console.error('Erro ao remover notificações de transporte cancelado:', err);
               }
@@ -583,11 +607,11 @@ const CreateEvent: React.FC = () => {
       const clientSideSync = async (evtId: string) => {
           try {
               console.log('--- INICIANDO SYNC CLIENT-SIDE (FALLBACK) ---');
-              const notifs = await pb.collection('agenda_cap53_notifications').getFullList({
+              const notifs = await pb.collection(Collections.AgendaCap53Notifications).getFullList({
                   filter: `event = "${evtId}" && (type = "almc_item_request" || type = "service_request")`
               });
               
-              const reqs = await pb.collection('agenda_cap53_almac_requests').getFullList({
+              const reqs = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList({
                   filter: `event = "${evtId}"`,
                   expand: 'item'
               });
@@ -650,7 +674,7 @@ const CreateEvent: React.FC = () => {
                       if (shouldUpdate) {
                           console.log(`Atualizando notificação ${notif.id} para Qtd: ${correctQty}`);
                           updates.push(
-                              pb.collection('agenda_cap53_notifications').update(notif.id, {
+                              pb.collection(Collections.AgendaCap53Notifications).update(notif.id, {
                                   message: msg,
                                   data: data,
                                   related_request: req.id // Garante vínculo
@@ -671,7 +695,7 @@ const CreateEvent: React.FC = () => {
                       debugLog('CreateEvent', `Target role para item ${item.name}: ${targetRole}`);
                       
                       try {
-                          const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
+                          const sectorUsers = await pb.collection(Collections.AgendaCap53Usuarios).getFullList({
                               filter: `role = "${targetRole}"`
                           });
                           
@@ -733,7 +757,7 @@ const CreateEvent: React.FC = () => {
         }
       }
 
-      await pb.collection('agenda_audit_logs').create({
+      await pb.collection(Collections.AgendaAuditLogs).create({
         user: user?.id,
         action: isEditing ? 'UPDATE_EVENT' : 'CREATE_EVENT',
         target_type: 'agenda_cap53_eventos',
@@ -786,7 +810,7 @@ const CreateEvent: React.FC = () => {
       const loadEvent = async () => {
         try {
           console.log('--- BUSCANDO DADOS DO EVENTO ---', eventIdParam);
-          const event = await pb.collection('agenda_cap53_eventos').getOne(eventIdParam);
+          const event = await pb.collection(Collections.AgendaCap53Eventos).getOne(eventIdParam);
           console.log('--- DADOS DO EVENTO RECEBIDOS ---', event);
           
           setTitle(event.title || '');
@@ -828,13 +852,14 @@ const CreateEvent: React.FC = () => {
           setTransporteDestino(event.transporte_destino || '');
           setTransporteHorarioLevar(event.transporte_horario_levar || '');
           setTransporteHorarioBuscar(event.transporte_horario_buscar || '');
+          setTransportePassageiros(event.transporte_passageiro || '');
           setTransporteObs(event.transporte_obs || '');
           setOriginalTransporteSuporte(!!event.transporte_suporte);
           setIsRestricted(!!event.is_restricted);
           
           // Fetch items
           console.log('--- BUSCANDO SOLICITAÇÕES DE LOGÍSTICA ---');
-          const requests = await pb.collection('agenda_cap53_almac_requests').getFullList({
+          const requests = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList({
              filter: `event = "${eventIdParam}"`,
              expand: 'item'
           });
@@ -953,7 +978,7 @@ const CreateEvent: React.FC = () => {
 
         // Fetch event types
         try {
-          const types = await pb.collection('agenda_cap53_tipos_evento').getFullList({
+          const types = await pb.collection(Collections.AgendaCap53TiposEvento).getFullList({
             sort: 'name',
             filter: 'active = true'
           });
@@ -975,7 +1000,7 @@ const CreateEvent: React.FC = () => {
         // Fetch users
         try {
           setLoadingUsers(true);
-          const users = await pb.collection('agenda_cap53_usuarios').getFullList({
+          const users = await pb.collection(Collections.AgendaCap53Usuarios).getFullList({
             sort: 'name',
             fields: 'id,name,role,sector,avatar,email,collectionId,collectionName',
             requestKey: null
@@ -1001,7 +1026,7 @@ const CreateEvent: React.FC = () => {
     // Subscribe to changes
     const setupSubscription = async () => {
       try {
-        const unsubItems = await pb.collection('agenda_cap53_itens_servico').subscribe('*', (e) => {
+        const unsubItems = await pb.collection(Collections.AgendaCap53ItensServico).subscribe('*', (e) => {
           if (e.action === 'update' || e.action === 'create') {
             setAvailableItems(prev => {
               const exists = prev.find(i => i.id === e.record.id);
@@ -1015,7 +1040,7 @@ const CreateEvent: React.FC = () => {
           }
         });
 
-        const unsubTypes = await pb.collection('agenda_cap53_tipos_evento').subscribe('*', (e) => {
+        const unsubTypes = await pb.collection(Collections.AgendaCap53TiposEvento).subscribe('*', (e) => {
           if (e.action === 'update' || e.action === 'create') {
             setEventTypes(prev => {
               const exists = prev.find(t => t.id === e.record.id);
@@ -1034,7 +1059,7 @@ const CreateEvent: React.FC = () => {
           }
         });
 
-        const unsubLocs = await pb.collection('agenda_cap53_locais').subscribe('*', (e) => {
+        const unsubLocs = await pb.collection(Collections.AgendaCap53Locais).subscribe('*', (e) => {
           if (e.action === 'update' || e.action === 'create') {
             setLocations(prev => {
               const exists = prev.find(l => l.id === e.record.id);
@@ -1048,7 +1073,7 @@ const CreateEvent: React.FC = () => {
           }
         });
 
-        const unsubUsers = await pb.collection('agenda_cap53_usuarios').subscribe('*', (e) => {
+        const unsubUsers = await pb.collection(Collections.AgendaCap53Usuarios).subscribe('*', (e) => {
           if (e.action === 'update') {
             setAvailableUsers(prev => {
               return prev.map(u => u.id === e.record.id ? { ...u, ...e.record } : u);
@@ -1166,7 +1191,7 @@ const CreateEvent: React.FC = () => {
         console.log('DEBUG: Verificando conflitos de localização:', { location: selectedLoc.name, filter });
 
         try {
-          const conflicts = await pb.collection('agenda_cap53_eventos').getList(1, 1, {
+          const conflicts = await pb.collection(Collections.AgendaCap53Eventos).getList(1, 1, {
             filter: filter,
             requestKey: null
           });
@@ -1218,7 +1243,7 @@ const CreateEvent: React.FC = () => {
         });
 
         try {
-          const categoryConflicts = await pb.collection('agenda_cap53_eventos').getList(1, 1, {
+          const categoryConflicts = await pb.collection(Collections.AgendaCap53Eventos).getList(1, 1, {
             filter: categoryFilter,
             requestKey: null
           });
@@ -1586,17 +1611,7 @@ const CreateEvent: React.FC = () => {
                         const isSel = selectedParticipants.includes(u.id);
                         const isCreatorUser = u.id === user?.id;
                         
-                        // Determine avatar URL with fallback priority:
-                        // 1. u.avatar from list (updated via subscription) - PREFERRED for real-time updates
-                        // 2. AuthContext user.avatar (fallback)
-                        // 3. Picsum fallback
-                        let avatarUrl = `https://picsum.photos/seed/${u.email}/200`;
-                        
-                        if (u.avatar) {
-                          avatarUrl = u.avatar.startsWith('http') ? u.avatar : pb.files.getUrl(u, u.avatar);
-                        } else if (isCreatorUser && user?.avatar) {
-                          avatarUrl = user.avatar;
-                        }
+                        const avatarUrl = getAvatarUrl(u);
 
                         return (
                           <div
@@ -1652,7 +1667,7 @@ const CreateEvent: React.FC = () => {
                                     {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label || 'Selecione'}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-3 gap-1.5">
+                                <div className="grid grid-cols-3 gap-1">
                                   {INVOLVEMENT_LEVELS.map(level => {
                                     const isSelected = (participantRoles[u.id] || involvementLevel) === level.value;
                                     const getIcon = (val: string) => {
@@ -1668,16 +1683,16 @@ const CreateEvent: React.FC = () => {
                                         key={level.value}
                                         type="button"
                                         onClick={() => setParticipantRoles(prev => ({ ...prev, [u.id]: level.value }))}
-                                        className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-all duration-300 border ${
+                                        className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg transition-all duration-300 border ${
                                           isSelected
-                                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02] z-10'
-                                            : 'bg-slate-50 text-slate-400 border-slate-100 hover:border-primary/30 hover:bg-white hover:text-primary active:scale-95'
+                                            ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-[1.02] z-10'
+                                            : 'bg-slate-50 text-slate-500 border-slate-100 hover:border-primary/30 hover:bg-white hover:text-primary active:scale-95'
                                         }`}
                                       >
-                                        <span className={`material-symbols-outlined text-base mb-1 ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                                        <span className={`material-symbols-outlined text-[14px] mb-0.5 ${isSelected ? 'text-white' : 'text-slate-400'}`}>
                                           {getIcon(level.value)}
                                         </span>
-                                        <span className="text-[9px] font-bold uppercase tracking-tighter">
+                                        <span className="text-[7px] font-bold uppercase tracking-tight leading-none text-center">
                                           {level.label}
                                         </span>
                                       </button>
@@ -2061,6 +2076,21 @@ const CreateEvent: React.FC = () => {
                               if (val) setTransporteSuporte(true);
                             }}
                           />
+                          <div className="md:col-span-2 space-y-2.5">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Passageiros *</label>
+                            <input 
+                              type="number"
+                              min="1"
+                              value={transportePassageiros}
+                              tabIndex={activeTab === 'transporte' ? 0 : -1}
+                              onChange={(e) => {
+                                setTransportePassageiros(e.target.value);
+                                if (e.target.value) setTransporteSuporte(true);
+                              }}
+                              placeholder="Qtd."
+                              className="w-full h-12 px-5 rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 font-medium text-sm focus:outline-none focus:border-slate-400 focus:bg-white transition-all duration-300"
+                            />
+                          </div>
 
                           {isTransportTimeInvalid && (
                             <div className="md:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">

@@ -1,7 +1,7 @@
-const PocketBase = require('pocketbase/cjs');
+﻿const PocketBase = require('pocketbase/cjs');
 
 async function main() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         console.log("Authenticating as fabio@cap53.com...");
@@ -66,3 +66,4 @@ async function main() {
 }
 
 main();
+

@@ -1,13 +1,13 @@
-// Script para verificar estrutura do banco de dados
+﻿// Script para verificar estrutura do banco de dados
 const PocketBase = require('pocketbase/cjs');
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function checkDatabaseStructure() {
   try {
-    console.log('🔍 Verificando estrutura do banco de dados...');
+    console.log('ðŸ” Verificando estrutura do banco de dados...');
     
-    // Verificar coleções principais
+    // Verificar coleÃ§Ãµes principais
     const collections = [
       'agenda_cap53_eventos',
       'agenda_cap53_itens_servico', 
@@ -20,26 +20,26 @@ async function checkDatabaseStructure() {
     for (const collectionName of collections) {
       try {
         const result = await pb.collection(collectionName).getList(1, 1);
-        console.log(`✅ ${collectionName}: ${result.totalItems} registros`);
+        console.log(`âœ… ${collectionName}: ${result.totalItems} registros`);
       } catch (error) {
-        console.log(`❌ ${collectionName}: Erro - ${error.message}`);
+        console.log(`âŒ ${collectionName}: Erro - ${error.message}`);
       }
     }
     
-    console.log('\n📝 Para testar o sistema de notificações:');
+    console.log('\nðŸ“ Para testar o sistema de notificaÃ§Ãµes:');
     console.log('1. Acesse http://localhost:3002');
-    console.log('2. Faça login com suas credenciais');
+    console.log('2. FaÃ§a login com suas credenciais');
     console.log('3. Crie um novo evento');
     console.log('4. Adicione itens ao evento');
-    console.log('5. Verifique as notificações na página de Notificações');
+    console.log('5. Verifique as notificaÃ§Ãµes na pÃ¡gina de NotificaÃ§Ãµes');
     
-    console.log('\n🔧 O sistema de debug está ativado e irá mostrar:');
+    console.log('\nðŸ”§ O sistema de debug estÃ¡ ativado e irÃ¡ mostrar:');
     console.log('- Logs no console do navegador');
-    console.log('- Botão de debug na página de Notificações');
-    console.log('- Notificações salvas no localStorage');
+    console.log('- BotÃ£o de debug na pÃ¡gina de NotificaÃ§Ãµes');
+    console.log('- NotificaÃ§Ãµes salvas no localStorage');
     
   } catch (error) {
-    console.error('❌ Erro ao verificar estrutura:', error.message);
+    console.error('âŒ Erro ao verificar estrutura:', error.message);
   }
 }
 

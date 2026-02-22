@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import RefusalModal from '../components/RefusalModal';
 
 const TransportManagement: React.FC = () => {
     const { user } = useAuth();
@@ -20,6 +21,9 @@ const TransportManagement: React.FC = () => {
     const [transportFilterStatus, setTransportFilterStatus] = useState<'all' | 'confirmed' | 'rejected'>('all');
     const [actionMessage, setActionMessage] = useState<string | null>(null);
     const [rerequestIds, setRerequestIds] = useState<Set<string>>(new Set());
+    const [refusalModalOpen, setRefusalModalOpen] = useState(false);
+    const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+    const [processingDecision, setProcessingDecision] = useState(false);
 
     const fetchRerequestNotifications = useCallback(async () => {
         try {
@@ -39,18 +43,19 @@ const TransportManagement: React.FC = () => {
     }, []);
 
     const handleTransportDecision = async (eventId: string, status: 'confirmed' | 'rejected') => {
-        let justification = '';
-        
         if (status === 'rejected') {
-            const reason = prompt('Por favor, informe o motivo da recusa:');
-            if (reason === null) return; // Cancelou
-            if (!reason.trim()) {
-                alert('A justificativa é obrigatória para recusas.');
-                return;
-            }
-            justification = reason.trim();
+            setSelectedEventId(eventId);
+            setRefusalModalOpen(true);
+            return;
         }
 
+        // Se for confirmação, prossegue diretamente
+        await processDecision(eventId, 'confirmed', '');
+    };
+
+    const processDecision = async (eventId: string, status: 'confirmed' | 'rejected', justification: string) => {
+        setProcessingDecision(true);
+        
         // Capturar dados do evento antes de atualizar para garantir que temos o ID do usuário
         // Tenta pegar da lista local primeiro para evitar query extra
         const eventInList = transportRequests.find(e => e.id === eventId);
@@ -80,17 +85,38 @@ const TransportManagement: React.FC = () => {
 
         if (!targetUserId) {
             alert('ERRO CRÍTICO: Não foi possível identificar o usuário criador do evento para enviar a notificação. A operação será abortada.');
+            setProcessingDecision(false);
             return;
         }
 
         try {
             console.log('Processing transport decision:', { eventId, status, targetUserId, justification });
             
+            // Get current history first
+            let currentHistory = [];
+            try {
+                const currentEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId, { fields: 'transport_history' });
+                currentHistory = currentEvent.transport_history || [];
+            } catch (e) {
+                console.warn('Could not fetch current history, starting fresh', e);
+            }
+
+            // Append new history entry
+            const newHistoryEntry = {
+                timestamp: new Date().toISOString(), // Usar timestamp para compatibilidade com HistoryChain
+                action: status === 'confirmed' ? 'approved' : 'rejected',
+                user: pb.authStore.model?.id,
+                justification: status === 'rejected' ? justification : ''
+            };
+
+            const updatedHistory = [...currentHistory, newHistoryEntry];
+
             // Atualização do status do evento
             try {
                 await pb.collection('agenda_cap53_eventos').update(eventId, {
                     transporte_status: status,
-                    transporte_justification: status === 'rejected' ? justification : ''
+                    transporte_justification: status === 'rejected' ? justification : '',
+                    transport_history: updatedHistory
                 });
                 console.log('Evento atualizado com sucesso.');
             } catch (updateErr: any) {
@@ -100,8 +126,35 @@ const TransportManagement: React.FC = () => {
                 alert(`Aviso: O status do evento foi enviado, mas o servidor retornou um erro: ${updateErr.message}. Tentaremos enviar a notificação mesmo assim.`);
             }
             
+            // Sync with Notifications: Find and update related transport_request notifications
+            // This ensures that if we approve/reject here, the notification buttons in the other view are also updated/hidden
+            try {
+                const relatedNotifications = await pb.collection('agenda_cap53_notifications').getList(1, 50, {
+                    filter: `event = "${eventId}" && type = "transport_request" && invite_status = "pending"`
+                });
+                
+                const notifStatus = status === 'confirmed' ? 'accepted' : 'rejected';
+                
+                await Promise.all(relatedNotifications.items.map(n => 
+                    pb.collection('agenda_cap53_notifications').update(n.id, {
+                        invite_status: notifStatus,
+                        read: true
+                    })
+                ));
+            } catch (syncErr) {
+                console.error("Error syncing with notifications:", syncErr);
+                // Non-blocking error
+            }
+
             // Feedback visual de sucesso (Notificação agora é gerada pelo Hook no servidor)
             const actionText = status === 'rejected' ? 'recusada' : 'confirmada';
+            
+            // Se foi recusa via modal, fecha o modal
+            if (status === 'rejected') {
+                setRefusalModalOpen(false);
+                setSelectedEventId(null);
+            }
+
             alert(`Decisão registrada com sucesso!\n\nA solicitação foi ${actionText}. O solicitante será notificado automaticamente pelo sistema.`);
             
             fetchTransportRequests();
@@ -109,6 +162,8 @@ const TransportManagement: React.FC = () => {
             console.error(`Error processing transport ${status}:`, err);
             const errorMsg = err.data?.message || err.message || 'Erro desconhecido';
             alert(`Erro ao atualizar evento: ${errorMsg}`);
+        } finally {
+            setProcessingDecision(false);
         }
     };
 
@@ -358,17 +413,6 @@ const TransportManagement: React.FC = () => {
                                                         </div>
                                                     </div>
                                                 )}
-                                                {event.transporte_passageiro && (
-                                                    <div className="flex flex-col gap-1 border-l border-slate-100 pl-6">
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Passageiro</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center">
-                                                                <span className="material-symbols-outlined text-slate-400 text-[18px]">groups</span>
-                                                            </div>
-                                                            <span className="text-[12px] font-black text-slate-700">{event.transporte_passageiro}</span>
-                                                        </div>
-                                                    </div>
-                                                )}
                                             </div>
 
                                             {/* Origin/Destination */}
@@ -418,6 +462,15 @@ const TransportManagement: React.FC = () => {
                                                         <span className="text-[13px] font-black tracking-tight">{event.transporte_horario_buscar || '--:--'}</span>
                                                     </div>
                                                 </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Passageiros</span>
+                                                    <div className="flex items-center gap-2 text-slate-900">
+                                                        <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center">
+                                                            <span className="material-symbols-outlined text-slate-600 text-[18px]">groups</span>
+                                                        </div>
+                                                        <span className="text-[13px] font-black tracking-tight">{event.transporte_passageiro || '-'}</span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -426,18 +479,20 @@ const TransportManagement: React.FC = () => {
                                             {transportSubTab === 'pending' ? (
                                                 <>
                                                     <button 
-                                                        onClick={() => handleTransportDecision(event.id, 'confirmed')}
-                                                        className="h-11 px-6 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-md shadow-slate-200/50 active:scale-95"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                                                        Confirmar
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleTransportDecision(event.id, 'rejected')}
-                                                        className="h-11 px-6 bg-white text-slate-500 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all active:scale-95"
-                                                    >
-                                                        Recusar
-                                                    </button>
+                        onClick={() => handleTransportDecision(event.id, 'confirmed')}
+                        disabled={processingDecision}
+                        className="h-11 px-6 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-md shadow-slate-200/50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                        Confirmar
+                    </button>
+                    <button 
+                        onClick={() => handleTransportDecision(event.id, 'rejected')}
+                        disabled={processingDecision}
+                        className="h-11 px-6 bg-white text-slate-500 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Recusar
+                    </button>
                                                 </>
                                             ) : (
                                                 <button 
@@ -501,6 +556,21 @@ const TransportManagement: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {refusalModalOpen && (
+                <RefusalModal
+                    onClose={() => {
+                        setRefusalModalOpen(false);
+                        setSelectedEventId(null);
+                    }}
+                    onConfirm={(justification) => {
+                        if (selectedEventId) {
+                            processDecision(selectedEventId, 'rejected', justification);
+                        }
+                    }}
+                    loading={processingDecision}
+                />
+            )}
         </div>
     );
 };

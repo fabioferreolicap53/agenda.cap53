@@ -15,6 +15,8 @@ interface User {
     phone?: string;
     sector?: string;
     observations?: string;
+    bio?: string;
+    favorites?: string[];
 }
 
 export const SECTORS = [
@@ -33,6 +35,7 @@ interface AuthContextType {
     updateAvatar: (file: File) => Promise<void>;
     updateStatus: (status: User['status'], contextStatus?: string) => Promise<void>;
     setRole: (role: UserRole) => Promise<void>;
+    toggleFavorite: (targetUserId: string) => Promise<void>;
     requestPasswordReset: (email: string) => Promise<void>;
     confirmPasswordReset: (token: string, password: string) => Promise<void>;
 }
@@ -208,7 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         return;
                     }
 
-                    console.log('AuthContext: Setting user state for:', model.email);
+                    console.log('AuthContext: Setting user state for:', model.email, 'Favorites:', model.favorites);
                     setUser({
                         id: model.id,
                         name: model.name || '',
@@ -221,6 +224,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         phone: model.phone,
                         sector: model.sector,
                         observations: model.observations,
+                        bio: model.bio,
+                        favorites: model.favorites,
                     });
                 } else {
                     console.log('AuthContext: No valid session found');
@@ -399,6 +404,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const toggleFavorite = async (targetUserId: string) => {
+        if (!user || !pb.authStore.model) {
+            console.warn('Cannot toggle favorite: No user logged in');
+            return;
+        }
+
+        const currentFavorites = user.favorites || [];
+        const isFavorite = currentFavorites.includes(targetUserId);
+        
+        let newFavorites;
+        if (isFavorite) {
+            newFavorites = currentFavorites.filter(id => id !== targetUserId);
+        } else {
+            newFavorites = [...currentFavorites, targetUserId];
+        }
+
+        console.log(`Toggling favorite for ${targetUserId}. Current: ${currentFavorites.length}, New: ${newFavorites.length}`);
+
+        // Optimistic update
+        setUser(prev => prev ? ({ ...prev, favorites: newFavorites }) : null);
+
+        try {
+            // Use requestKey: null to prevent auto-cancellation of concurrent requests
+            await pb.collection('agenda_cap53_usuarios').update(user.id, {
+                favorites: newFavorites
+            }, { requestKey: null });
+            
+            // Force refresh to get the latest state from server (including any server-side hooks)
+            await pb.collection('agenda_cap53_usuarios').authRefresh();
+            
+            console.log('Favorite updated successfully on server');
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+            // Revert on error
+            setUser(prev => prev ? ({ ...prev, favorites: currentFavorites }) : null);
+            
+            // Show alert for immediate feedback
+            alert('Não foi possível salvar o favorito. Verifique sua conexão ou permissões.');
+            throw error;
+        }
+    };
+
     const requestPasswordReset = async (email: string) => {
         try {
             await pb.collection('agenda_cap53_usuarios').requestPasswordReset(email);
@@ -434,6 +481,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateAvatar,
             updateStatus, 
             setRole, 
+            toggleFavorite,
             requestPasswordReset, 
             confirmPasswordReset 
         }}>

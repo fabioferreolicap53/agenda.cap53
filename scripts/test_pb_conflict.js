@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function testConflict() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         console.log('1. Logging in as mock user...');
@@ -38,3 +38,4 @@ async function testConflict() {
 }
 
 testConflict();
+

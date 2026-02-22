@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function listCollections() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         console.log('Fetching collections...');
@@ -15,7 +15,7 @@ async function listCollections() {
             for (const col of collections) {
                 const fullName = prefix + col;
                 try {
-                    const res = await fetch(`https://centraldedados.duckdns.org/api/collections/${fullName}/records?perPage=1`);
+                    const res = await fetch(`https://centraldedados.dev.br/api/collections/${fullName}/records?perPage=1`);
                     console.log(`- ${fullName}: ${res.status} ${res.statusText}`);
                 } catch (e) {
                     console.log(`- ${fullName}: Error ${e.message}`);
@@ -28,3 +28,4 @@ async function listCollections() {
 }
 
 listCollections();
+

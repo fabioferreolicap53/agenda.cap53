@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pb } from '../lib/pocketbase';
+import { pb, getAvatarUrl } from '../lib/pocketbase';
 import { useAuth } from './AuthContext';
 
 interface RightSidebarProps {
@@ -138,13 +138,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
         }
     };
 
-    const getAvatarUrl = (user: any) => {
-        if (user?.avatar) {
-            if (user.avatar.startsWith('http')) return user.avatar;
-            return pb.files.getUrl(user, user.avatar);
-        }
-        return `https://picsum.photos/seed/${user?.email || user?.id}/100`;
-    };
+
 
     // Show all users (exclude current user)
     const allUsers = users.filter(u => u.id !== currentUser?.id);

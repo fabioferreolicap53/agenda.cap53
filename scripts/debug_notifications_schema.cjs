@@ -1,7 +1,7 @@
-
+﻿
 const PocketBase = require('pocketbase/cjs');
 
-const PB_URL = 'https://centraldedados.duckdns.org';
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -14,9 +14,9 @@ async function checkNotificationsSchema() {
         // Authenticate
         try {
             await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASS);
-            console.log('✅ Authenticated as Admin via SDK.');
+            console.log('âœ… Authenticated as Admin via SDK.');
         } catch (e) {
-            console.log('⚠️ SDK Admin auth failed, trying fallback REST...');
+            console.log('âš ï¸ SDK Admin auth failed, trying fallback REST...');
             try {
                  const response = await fetch(`${PB_URL}/api/admins/auth-with-password`, {
                      method: 'POST',
@@ -29,9 +29,9 @@ async function checkNotificationsSchema() {
                  }
                  const data = await response.json();
                  pb.authStore.save(data.token, data.admin);
-                 console.log('✅ Authenticated via REST fallback.');
+                 console.log('âœ… Authenticated via REST fallback.');
             } catch (restErr) {
-                 console.error('❌ Authentication failed:', restErr.message);
+                 console.error('âŒ Authentication failed:', restErr.message);
                  return;
             }
         }
@@ -40,17 +40,17 @@ async function checkNotificationsSchema() {
         try {
             const collection = await pb.collections.getOne(collectionName);
             
-            console.log(`\n📦 Collection: ${collection.name} (${collection.id})`);
+            console.log(`\nðŸ“¦ Collection: ${collection.name} (${collection.id})`);
             console.log(`Type: ${collection.type}`);
             
-            console.log('\n🔒 API Rules:');
-            console.log(`   List:   ${collection.listRule || '🚫 (Admin only)'}`);
-            console.log(`   View:   ${collection.viewRule || '🚫 (Admin only)'}`);
-            console.log(`   Create: ${collection.createRule || '🚫 (Admin only)'}`);
-            console.log(`   Update: ${collection.updateRule || '🚫 (Admin only)'}`);
-            console.log(`   Delete: ${collection.deleteRule || '🚫 (Admin only)'}`);
+            console.log('\nðŸ”’ API Rules:');
+            console.log(`   List:   ${collection.listRule || 'ðŸš« (Admin only)'}`);
+            console.log(`   View:   ${collection.viewRule || 'ðŸš« (Admin only)'}`);
+            console.log(`   Create: ${collection.createRule || 'ðŸš« (Admin only)'}`);
+            console.log(`   Update: ${collection.updateRule || 'ðŸš« (Admin only)'}`);
+            console.log(`   Delete: ${collection.deleteRule || 'ðŸš« (Admin only)'}`);
             
-            console.log('\n📝 Schema Fields:');
+            console.log('\nðŸ“ Schema Fields:');
             collection.schema.forEach(field => {
                 console.log(`   - ${field.name.padEnd(20)} [${field.type}] ${field.required ? '(Required)' : ''}`);
                 // Print options for Select/Relation fields if available
@@ -60,12 +60,13 @@ async function checkNotificationsSchema() {
             });
 
         } catch (err) {
-            console.error(`❌ Error fetching collection '${collectionName}':`, err.message);
+            console.error(`âŒ Error fetching collection '${collectionName}':`, err.message);
         }
 
     } catch (err) {
-        console.error("❌ General Error:", err.message);
+        console.error("âŒ General Error:", err.message);
     }
 }
 
 checkNotificationsSchema();
+

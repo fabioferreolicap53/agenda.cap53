@@ -297,6 +297,7 @@ const Calendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [initialChatOpen, setInitialChatOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests'>('details');
+  const [returnToNotifications, setReturnToNotifications] = useState(false);
   const todayRef = useRef<HTMLDivElement>(null);
 
   // Animation States
@@ -317,6 +318,7 @@ const Calendar: React.FC = () => {
     const chatEventId = searchParams.get('openChat');
     const viewEventId = searchParams.get('eventId');
     const tabParam = searchParams.get('tab');
+    const fromParam = searchParams.get('from');
     const targetEventId = chatEventId || viewEventId;
 
     if (targetEventId && events.length > 0) {
@@ -331,11 +333,16 @@ const Calendar: React.FC = () => {
           setInitialTab('details');
         }
 
+        if (fromParam === 'notifications') {
+          setReturnToNotifications(true);
+        }
+
         // Clean up the URL
         const newParams = new URLSearchParams(searchParams);
         if (chatEventId) newParams.delete('openChat');
         if (viewEventId) newParams.delete('eventId');
         if (tabParam) newParams.delete('tab');
+        if (fromParam) newParams.delete('from');
         setSearchParams(newParams, { replace: true });
       }
     }
@@ -1043,7 +1050,18 @@ const Calendar: React.FC = () => {
                       {/* Mobile View - Optimized Layout */}
                       <div 
                         className="md:hidden bg-white rounded-xl border border-slate-100 shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform"
+                        title={event.title}
                         onClick={() => setSelectedEvent(event)}
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setTooltipData({
+                            event: event,
+                            x: rect.left + rect.width / 2,
+                            y: rect.top,
+                            height: rect.height
+                          });
+                        }}
+                        onMouseLeave={() => setTooltipData(null)}
                       >
                         {/* Time Column */}
                         <div className="flex flex-col items-center justify-center px-2 border-r border-slate-50 min-w-[60px]">
@@ -1234,6 +1252,10 @@ const Calendar: React.FC = () => {
             setSelectedEvent(null);
             setInitialChatOpen(false);
             setInitialTab('details');
+            if (returnToNotifications) {
+              setReturnToNotifications(false);
+              navigate('/notifications');
+            }
           }}
           onCancel={handleCancelEvent}
           onDelete={handleDeleteEvent}
@@ -1415,7 +1437,7 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
         {/* Header Section */}
         <div className="flex justify-between items-start gap-3">
           <div className="flex flex-col min-w-0">
-            <h4 className="text-base font-black text-primary leading-tight truncate">
+            <h4 className="text-base font-black text-primary leading-tight">
               {event.title}
             </h4>
             <div className="flex items-center gap-2 mt-0.5">
@@ -1597,6 +1619,7 @@ const CalendarEventCard: React.FC<{
         setTooltipData(null);
         onSelect(event);
       }}
+      title={event.title}
       className={`w-full border-l-[3px] rounded-lg px-2.5 py-2 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
         ? 'bg-slate-50 border-slate-300 opacity-60'
         : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'

@@ -1,8 +1,8 @@
-
+﻿
 const PocketBase = require('pocketbase/cjs');
 
 async function getCollectionInfo() {
-  const pb = new PocketBase('https://centraldedados.duckdns.org');
+  const pb = new PocketBase('https://centraldedados.dev.br');
   await pb.admins.authWithPassword('admin@cap53.com', 'password123');
   
   try {
@@ -24,3 +24,4 @@ async function getCollectionInfo() {
 }
 
 getCollectionInfo();
+

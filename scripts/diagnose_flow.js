@@ -1,6 +1,6 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function diagnose() {
     console.log('--- DIAGNOSTIC START ---');
@@ -40,3 +40,4 @@ async function diagnose() {
 }
 
 diagnose();
+

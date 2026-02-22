@@ -1,8 +1,8 @@
-
+﻿
 const PocketBase = require('pocketbase/cjs');
 
 async function listCollections() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         // Authenticate - assuming admin credentials are required or there's a specific user
@@ -18,3 +18,4 @@ async function listCollections() {
 }
 
 listCollections();
+

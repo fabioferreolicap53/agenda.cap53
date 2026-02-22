@@ -1,7 +1,7 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
-const PB_URL = 'https://centraldedados.duckdns.org';
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -16,7 +16,7 @@ const pb = new PocketBase(PB_URL);
         const date_start = "2026-02-10 10:00:00.000Z";
         const date_end = "2026-02-10 11:00:00.000Z";
         const unit = "CF ALICE DE JESUS REGO";
-        const category = "MÉDICO(A)";
+        const category = "MÃ‰DICO(A)";
 
         console.log('1. Creating a base event...');
         const baseEvent = await pb.collection('agenda_cap53_eventos').create({
@@ -56,3 +56,4 @@ const pb = new PocketBase(PB_URL);
         if (e.data) console.error('Data:', JSON.stringify(e.data));
     }
 })();
+

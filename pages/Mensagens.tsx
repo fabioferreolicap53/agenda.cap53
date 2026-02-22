@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { pb } from '../lib/pocketbase';
+import { pb, getAvatarUrl } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 
 const Chat: React.FC = () => {
@@ -327,12 +327,7 @@ const Chat: React.FC = () => {
     }
   };
 
-  const getAvatarUrl = (user: any) => {
-    if (user?.avatar) {
-      return pb.files.getUrl(user, user.avatar);
-    }
-    return `https://picsum.photos/seed/${user?.id || 'default'}/200`;
-  };
+
 
   const filteredUsers = users.filter(u => 
     (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -400,6 +395,11 @@ const Chat: React.FC = () => {
                                         {user.status || 'Offline'}
                                     </span>
                                 </div>
+                                {user.observations && (
+                                    <p className="text-[10px] text-slate-400 mt-0.5 italic leading-tight line-clamp-1" title={user.observations}>
+                                        {user.observations}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     ))}

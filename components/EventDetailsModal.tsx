@@ -4,6 +4,7 @@ import { pb } from '../lib/pocketbase';
 import { notificationService } from '../lib/notifications';
 import EventChatModal from './EventChatModal';
 import ReRequestModal from './ReRequestModal';
+import RefusalModal from './RefusalModal';
 import CustomSelect from './CustomSelect';
 import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
@@ -35,6 +36,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const [requestRoles, setRequestRoles] = React.useState<Record<string, string>>({});
   const [messageCount, setMessageCount] = React.useState(0);
   const [reRequestTarget, setReRequestTarget] = React.useState<{type: 'item' | 'transport', data: any} | null>(null);
+  const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
+  const [processingTransport, setProcessingTransport] = React.useState(false);
 
   const getRoleLabel = (role: string) => {
     return INVOLVEMENT_LEVELS.find(l => l.value === (role || 'PARTICIPANTE').toUpperCase())?.label || 'PARTICIPANTE';
@@ -189,30 +192,29 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
               }
           });
 
-          // 4. Update the Creator's Notification
+          // 4. Update the Creator's Notification(s)
           try {
-              // Find the notification that prompted this action
-              // We look for notifications of type 'event_participation_request' for this event
-              // where the requester matches the user we are approving/rejecting
-              // The user.id here is the current user (the creator responding)
+              // Find all notifications of type 'event_participation_request' for this event and user (creator)
+              // that match the requester
               const notifications = await pb.collection('agenda_cap53_notifications').getFullList({
                   filter: `event = "${event.id}" && type = "event_participation_request" && user = "${user.id}"`,
                   requestKey: null
               });
 
-              // We need to check 'data' to find the matching requester_id
-              const targetNotification = notifications.find(n => {
+              // Filter notifications where the requester matches the approved/rejected user
+              const targetNotifications = notifications.filter(n => {
                   const data = n.data || {};
-                  // The data field stores requester_id as string
                   return data.requester_id === request.user;
               });
 
-              if (targetNotification) {
-                   await pb.collection('agenda_cap53_notifications').update(targetNotification.id, {
+              // Update all matching notifications
+              await Promise.all(targetNotifications.map(n => 
+                   pb.collection('agenda_cap53_notifications').update(n.id, {
                        invite_status: action === 'approve' ? 'accepted' : 'rejected',
                        read: true
-                   });
-              }
+                   })
+              ));
+              
           } catch (notifErr) {
               console.warn('Error syncing creator notification:', notifErr);
           }
@@ -242,7 +244,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     }
 
     // Safety check for restricted roles
-    if (['TRA', 'ALMC', 'DCA', 'CE'].includes(user.role)) {
+    // Permite que CE solicite participação, removendo-o da lista de bloqueio
+    if (['TRA', 'ALMC', 'DCA'].includes(user.role)) {
       alert('Seu perfil não possui permissão para solicitar participação em eventos.');
       return;
     }
@@ -443,6 +446,23 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       } catch (eventUpdateErr) {
         console.warn('Could not update event participants_status (likely permission issue, ignored):', eventUpdateErr);
       }
+
+      // 4. Notify Creator about the decision
+      if (event.user && event.user !== user.id) {
+          try {
+              await pb.collection('agenda_cap53_notifications').create({
+                  user: event.user,
+                  title: `Convite ${status === 'accepted' ? 'Aceito' : 'Recusado'}`,
+                  message: `${user.name || user.email} ${status === 'accepted' ? 'aceitou' : 'recusou'} o convite para "${event.title}".`,
+                  type: status === 'rejected' ? 'refusal' : 'system',
+                  event: event.id,
+                  read: false,
+                  data: { kind: 'event_invite_response', action: status }
+              });
+          } catch (notifErr) {
+              console.warn('Error sending notification to creator:', notifErr);
+          }
+      }
       
       // Refresh event data to update UI
       await refreshEvent();
@@ -451,6 +471,50 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       console.error('Error responding to invitation:', err);
       const msg = err.data?.message || err.message || 'Erro desconhecido';
       alert(`Erro ao processar resposta: ${msg}`);
+    }
+  };
+
+  const processTransportDecision = async (decision: 'confirmed' | 'rejected', justification?: string) => {
+    if (!event.id) return;
+    setProcessingTransport(true);
+    
+    try {
+        await pb.collection('agenda_cap53_eventos').update(event.id, {
+            transporte_status: decision,
+            transporte_justification: decision === 'rejected' ? justification : ''
+        });
+
+        // Sync notifications
+        try {
+            const relatedNotifications = await pb.collection('agenda_cap53_notifications').getList(1, 50, {
+                filter: `event = "${event.id}" && type = "transport_request" && invite_status = "pending"`
+            });
+            
+            const notifStatus = decision === 'confirmed' ? 'accepted' : 'rejected';
+            
+            await Promise.all(relatedNotifications.items.map(n => 
+                pb.collection('agenda_cap53_notifications').update(n.id, {
+                    invite_status: notifStatus,
+                    read: true
+                })
+            ));
+        } catch (syncErr) {
+            console.warn('Error syncing notifications:', syncErr);
+        }
+
+        // Refresh event data
+        await refreshEvent();
+        
+        if (decision === 'rejected') {
+            setRefusalModalOpen(false);
+        }
+        
+        alert(decision === 'confirmed' ? 'Transporte confirmado!' : 'Transporte recusado!');
+    } catch (err: any) {
+        console.error('Error processing transport decision:', err);
+        alert('Erro ao processar decisão de transporte.');
+    } finally {
+        setProcessingTransport(false);
     }
   };
 
@@ -492,12 +556,20 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                 }
             });
 
+            // Subscribe to event participation requests updates
+            const unsubParticipationRequests = await pb.collection('agenda_cap53_solicitacoes_evento').subscribe('*', (data) => {
+                if (data.record.event === event.id) {
+                    fetchParticipationRequests();
+                }
+            });
+
             // We should ideally track this unsubscribe as well, but for simplicity we'll add it to the existing cleanup
             const originalCleanup = unsubscribeEvent;
             unsubscribeEvent = () => {
                 if (originalCleanup) originalCleanup();
                 unsubNotifs();
                 unsubRequests();
+                unsubParticipationRequests();
             };
 
             // Subscribe to messages
@@ -725,7 +797,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         </div>
 
                         {/* Participation Management */}
-                        {user && event.user !== user.id && !['TRA', 'ALMC', 'DCA', 'CE'].includes(user.role) && (
+                        {user && event.user !== user.id && !['TRA', 'ALMC', 'DCA'].includes(user.role) && (
                             <div className="p-4 md:p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-4">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
                                     <div className="flex items-center gap-3">
@@ -1044,6 +1116,26 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     <span className="text-[10px] font-bold uppercase">Ciência Pendente</span>
                                                 </div>
                                             )}
+
+                                            {/* Transport Management Actions */}
+                                            {user?.role === 'TRA' && event.transporte_status === 'pending' && (
+                                                <div className="flex gap-2">
+                                                    <button 
+                                                        onClick={() => setRefusalModalOpen(true)}
+                                                        disabled={processingTransport}
+                                                        className="px-3 py-1.5 rounded-lg border border-red-100 bg-white text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 transition-colors disabled:opacity-50"
+                                                    >
+                                                        Recusar
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => processTransportDecision('confirmed')}
+                                                        disabled={processingTransport}
+                                                        className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50"
+                                                    >
+                                                        Confirmar
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -1073,6 +1165,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 <span className="text-xs font-bold text-slate-700 truncate block">
                                                     {event.transporte_horario_buscar || 'Não definido'}
                                                 </span>
+                                            </div>
+                                            <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 col-span-2 flex items-center justify-between">
+                                                <div>
+                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Passageiros</span>
+                                                    <span className="text-xs font-bold text-slate-700 truncate block">
+                                                        {event.transporte_passageiro ? `${event.transporte_passageiro} pessoas` : 'Não informado'}
+                                                    </span>
+                                                </div>
+                                                <div className="size-8 rounded-lg bg-white flex items-center justify-center border border-slate-100">
+                                                    <span className="material-symbols-outlined text-slate-400 text-[18px]">groups</span>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1131,29 +1234,29 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     ))}
                                 </div>
                             </div>
-                            <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
+                            <div className="p-4 sm:p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Infraestrutura</span>
                                 <div className="space-y-4">
                                     {/* ALMC Status */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">inventory_2</span>
                                             <span className="text-[11px] font-bold text-slate-600">Almoxarifado</span>
                                         </div>
                                         {(() => {
                                             const almcReqs = requests.filter(r => r.expand?.item?.category === 'ALMOXARIFADO');
-                                            if (almcReqs.length === 0) return <span className="text-[11px] font-black text-slate-300 uppercase">NÃO SOLIC.</span>;
+                                            if (almcReqs.length === 0) return <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>;
                                             
                                             const status = almcReqs.some(r => r.status === 'rejected') ? 'rejected' : 
                                                           almcReqs.some(r => r.status === 'pending') ? 'pending' : 'approved';
                                             
                                             return (
-                                                <div className="flex flex-col items-end">
-                                                    <span className={`text-[11px] font-black uppercase ${
+                                                <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
+                                                    <span className={`text-[10px] font-black uppercase ${
                                                         status === 'approved' ? 'text-green-600' : 
                                                         status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
                                                     }`}>
-                                                        {status === 'approved' ? 'ACEITO' : status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
+                                                        {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
                                                     </span>
                                                 </div>
                                             );
@@ -1161,25 +1264,25 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     </div>
 
                                     {/* COPA Status */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">local_cafe</span>
                                             <span className="text-[11px] font-bold text-slate-600">Copa</span>
                                         </div>
                                         {(() => {
                                             const copaReqs = requests.filter(r => r.expand?.item?.category === 'COPA');
-                                            if (copaReqs.length === 0) return <span className="text-[11px] font-black text-slate-300 uppercase">NÃO SOLIC.</span>;
+                                            if (copaReqs.length === 0) return <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>;
                                             
                                             const status = copaReqs.some(r => r.status === 'rejected') ? 'rejected' : 
                                                           copaReqs.some(r => r.status === 'pending') ? 'pending' : 'approved';
                                             
                                             return (
-                                                <div className="flex flex-col items-end">
-                                                    <span className={`text-[11px] font-black uppercase ${
+                                                <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
+                                                    <span className={`text-[10px] font-black uppercase ${
                                                         status === 'approved' ? 'text-green-600' : 
                                                         status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
                                                     }`}>
-                                                        {status === 'approved' ? 'ACEITO' : status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
+                                                        {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
                                                     </span>
                                                 </div>
                                             );
@@ -1187,51 +1290,49 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     </div>
 
                                     {/* DCA Status */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">laptop_mac</span>
                                             <span className="text-[11px] font-bold text-slate-600">Informática</span>
                                         </div>
                                         {(() => {
                                             const dcaReqs = requests.filter(r => r.expand?.item?.category === 'INFORMATICA');
-                                            if (dcaReqs.length === 0) return <span className="text-[11px] font-black text-slate-300 uppercase">NÃO SOLIC.</span>;
+                                            if (dcaReqs.length === 0) return <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>;
                                             
                                             const status = dcaReqs.some(r => r.status === 'rejected') ? 'rejected' : 
                                                           dcaReqs.some(r => r.status === 'pending') ? 'pending' : 'approved';
                                             
                                             return (
-                                                <div className="flex flex-col items-end">
-                                                    <span className={`text-[11px] font-black uppercase ${
+                                                <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
+                                                    <span className={`text-[10px] font-black uppercase ${
                                                         status === 'approved' ? 'text-green-600' : 
                                                         status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
                                                     }`}>
-                                                        {status === 'approved' ? 'ACEITO' : status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
+                                                        {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
                                                     </span>
-                                                    {/* Status de ciência removido conforme solicitação */}
                                                 </div>
                                             );
                                         })()}
                                     </div>
 
                                     {/* TRA Status */}
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">directions_car</span>
                                             <span className="text-[11px] font-bold text-slate-600">Transporte</span>
                                         </div>
                                         {event.transporte_suporte ? (
-                                            <div className="flex flex-col items-end">
-                                                <span className={`text-[11px] font-black uppercase ${
+                                            <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
+                                                <span className={`text-[10px] font-black uppercase ${
                                                     event.transporte_status === 'confirmed' ? 'text-green-600' : 
                                                     event.transporte_status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
                                                 }`}>
-                                                    {event.transporte_status === 'confirmed' ? 'ACEITO' : 
-                                                     event.transporte_status === 'rejected' ? 'RECUSADO' : 'PENDENTE'}
+                                                    {event.transporte_status === 'confirmed' ? 'Aceito' : 
+                                                     event.transporte_status === 'rejected' ? 'Recusado' : 'Pendente'}
                                                 </span>
-                                                {/* Status de ciência removido conforme solicitação */}
                                             </div>
                                         ) : (
-                                            <span className="text-[11px] font-black text-slate-300 uppercase">NÃO SOLIC.</span>
+                                            <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>
                                         )}
                                     </div>
                                 </div>
@@ -1242,11 +1343,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                 {activeTab === 'requests' && event.user === user?.id && (
                     <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Solicitações de Participação</h3>
-                            <span className="px-3 py-1 rounded-full bg-slate-100 text-[10px] font-black text-slate-500 uppercase">
-                                {eventParticipationRequests.filter(r => r.status === 'pending').length} PENDENTES
-                            </span>
+                        <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-2">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest max-w-[50%] leading-relaxed">
+                                Solicitações de <br/> Participação
+                            </h3>
+                            <div className="px-4 py-2 rounded-[1rem] bg-slate-50 flex flex-col items-center justify-center min-w-[80px]">
+                                <span className="text-sm font-black text-slate-700">
+                                    {eventParticipationRequests.filter(r => r.status === 'pending').length}
+                                </span>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+                                    Pendentes
+                                </span>
+                            </div>
                         </div>
 
                         <div className="space-y-4">
@@ -1317,48 +1425,50 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                 )}
             </div>
 
-            {/* Footer Actions */}
-            <div className="p-4 sm:p-6 bg-slate-50/50 border-t border-slate-100 flex flex-wrap sm:flex-nowrap items-center justify-between gap-2 sm:gap-4">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* Footer Actions - Mobile Optimized Minimalist */}
+            <div className="p-4 bg-white border-t border-slate-50 flex flex-col sm:flex-row items-center gap-3">
+                {/* Mobile: Grid for Actions */}
+                <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 w-full sm:w-auto sm:flex-1">
                     {canEdit && (
                         <button 
                             onClick={() => {
                                 onClose();
                                 navigate(`/create-event?eventId=${event.id}`);
                             }}
-                            className="flex-1 min-w-[90px] h-10 sm:h-11 rounded-xl bg-white border border-slate-200 text-slate-600 text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-1.5"
+                            className="h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-100 hover:text-slate-800 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                         >
-                            <span className="material-symbols-outlined text-base sm:text-lg">edit</span>
-                            <span className="truncate">Editar</span>
+                            <span className="material-symbols-outlined text-xl sm:text-lg">edit</span>
+                            <span>Editar</span>
                         </button>
                     )}
                     
                     {canCancel && (
                         <button 
                             onClick={handleCancelClick}
-                            className="flex-1 min-w-[120px] h-10 sm:h-11 rounded-xl bg-white border border-red-100 text-red-500 text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-red-50 hover:border-red-200 transition-all shadow-sm flex items-center justify-center gap-1.5"
+                            className="h-12 sm:h-10 rounded-xl bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                         >
-                            <span className="material-symbols-outlined text-base sm:text-lg">event_busy</span>
-                            <span className="truncate">Cancelar</span>
+                            <span className="material-symbols-outlined text-xl sm:text-lg">event_busy</span>
+                            <span>Cancelar</span>
                         </button>
                     )}
 
                     {event.user === user?.id && (
                         <button 
                             onClick={() => onDelete(event)}
-                            className="flex-1 min-w-[90px] h-10 sm:h-11 rounded-xl bg-white border border-red-100 text-red-500 text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-red-50 hover:border-red-200 transition-all shadow-sm flex items-center justify-center gap-1.5"
+                            className="h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                         >
-                            <span className="material-symbols-outlined text-base sm:text-lg">delete</span>
-                            <span className="truncate">Excluir</span>
+                            <span className="material-symbols-outlined text-xl sm:text-lg">delete</span>
+                            <span>Excluir</span>
                         </button>
                     )}
                 </div>
 
+                {/* Close Button - Full Width on Mobile */}
                 <button 
                     onClick={onClose}
-                    className="flex-1 sm:flex-none sm:min-w-[120px] h-10 sm:h-11 rounded-xl bg-slate-900 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all flex items-center justify-center gap-1.5"
+                    className="w-full sm:w-auto sm:min-w-[100px] h-12 sm:h-10 rounded-xl bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all flex items-center justify-center gap-2"
                 >
-                    <span className="material-symbols-outlined text-base sm:text-lg">close</span>
+                    <span className="material-symbols-outlined text-lg">close</span>
                     <span>Fechar</span>
                 </button>
             </div>
@@ -1391,6 +1501,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             .finally(() => setLoadingRequests(false));
                         }
                     }}
+                />
+            )}
+
+            {refusalModalOpen && (
+                <RefusalModal 
+                    onClose={() => setRefusalModalOpen(false)}
+                    onConfirm={(justification) => processTransportDecision('rejected', justification)}
+                    loading={processingTransport}
                 />
             )}
         </div>

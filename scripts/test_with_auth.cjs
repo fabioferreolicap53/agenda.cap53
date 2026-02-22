@@ -1,17 +1,17 @@
-const PocketBase = require('pocketbase/cjs');
+﻿const PocketBase = require('pocketbase/cjs');
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function testWithAuth() {
   try {
-    console.log('🔍 Testando com autenticação...');
+    console.log('ðŸ” Testando com autenticaÃ§Ã£o...');
     
     // Autenticar como admin (se tivermos as credenciais)
-    // Por enquanto, vamos tentar com um usuário comum
+    // Por enquanto, vamos tentar com um usuÃ¡rio comum
     
-    console.log('1. Testando criação com dados completos e autenticação...');
+    console.log('1. Testando criaÃ§Ã£o com dados completos e autenticaÃ§Ã£o...');
     
-    // Vamos tentar criar uma notificação muito simples primeiro
+    // Vamos tentar criar uma notificaÃ§Ã£o muito simples primeiro
     const simpleData = {
       user: 'qsi3qe4dn3peo51',
       title: 'Teste Simples',
@@ -21,13 +21,13 @@ async function testWithAuth() {
       acknowledged: false
     };
     
-    console.log('📋 Dados enviados:', JSON.stringify(simpleData, null, 2));
+    console.log('ðŸ“‹ Dados enviados:', JSON.stringify(simpleData, null, 2));
     
     try {
       const result = await pb.collection('agenda_cap53_notifications').create(simpleData);
-      console.log('✅ SUCESSO! Notificação criada:', result.id);
+      console.log('âœ… SUCESSO! NotificaÃ§Ã£o criada:', result.id);
     } catch (error) {
-      console.log('❌ FALHOU');
+      console.log('âŒ FALHOU');
       console.log('   Status:', error.status);
       console.log('   Mensagem:', error.message);
       console.log('   Dados:', error.data);
@@ -37,13 +37,13 @@ async function testWithAuth() {
         console.log('   Resposta completa:', error.response);
       }
       
-      // Verificar se é problema de permissão
+      // Verificar se Ã© problema de permissÃ£o
       if (error.status === 403) {
-        console.log('   ⚠️  Parece ser um problema de permissão!');
+        console.log('   âš ï¸  Parece ser um problema de permissÃ£o!');
       } else if (error.status === 400) {
-        console.log('   ⚠️  Parece ser um problema de validação de dados!');
+        console.log('   âš ï¸  Parece ser um problema de validaÃ§Ã£o de dados!');
         
-        // Tentar obter detalhes específicos dos campos
+        // Tentar obter detalhes especÃ­ficos dos campos
         if (error.data && error.data.data) {
           console.log('   Campos com erro:', Object.keys(error.data.data));
           for (const field in error.data.data) {
@@ -54,7 +54,7 @@ async function testWithAuth() {
     }
     
   } catch (error) {
-    console.error('❌ Erro geral:', error.message);
+    console.error('âŒ Erro geral:', error.message);
     console.error('Stack:', error.stack);
   }
 }

@@ -1,44 +1,50 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { format, isPast, isFuture, isToday } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { useMySpace, MySpaceEvent } from '../hooks/useMySpace';
 import { useAuth } from '../components/AuthContext';
-import EventDetailsModal from '../components/EventDetailsModal';
 import { deleteEventWithCleanup } from '../lib/eventUtils';
 import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
 import { pb } from '../lib/pocketbase';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  PieChart, Pie, Cell, LineChart, Line, AreaChart, Area, Legend
-} from 'recharts';
 
-const COLORS = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+// Novos componentes modularizados
+import { StatsCards } from '../components/MySpace/StatsCards';
+import { EventList } from '../components/MySpace/EventList';
+import { FilterBar } from '../components/MySpace/FilterBar';
+import { AnalyticsSection } from '../components/MySpace/AnalyticsSection';
 
 const MyInvolvement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Data hooks
   const { events, loading, stats, analytics, refresh } = useMySpace();
+  
+  // Local state
   const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected'>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  
+  // Inicializa busca com parâmetro da URL se existir, mas gerencia localmente
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('search') || '';
+  });
 
-  const handleCancelEvent = async (eventId: string, title: string, participants: string[]) => {
+  // Handlers
+  const handleCancelEvent = async (event: MySpaceEvent) => {
     const reason = prompt('Por que deseja cancelar este evento?');
     if (reason === null) return;
 
     try {
       // 1. Atualizar status
-      await pb.collection('agenda_cap53_eventos').update(eventId, {
+      await pb.collection('agenda_cap53_eventos').update(event.id, {
         status: 'cancelled',
         cancel_reason: reason
       });
 
-      // 2. Buscar evento atualizado e notificar todos os envolvidos
-      // (Participantes, Organizadores, Setores com solicitações aprovadas)
+      // 2. Notificar envolvidos
       try {
-        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(event.id);
         if (user) {
           await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', reason, user.id);
         }
@@ -54,16 +60,13 @@ const MyInvolvement: React.FC = () => {
     }
   };
 
-  const handleDeleteEvent = async (event: any) => {
+  const handleDeleteEvent = async (event: MySpaceEvent) => {
     if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"?`)) return;
 
     try {
-        // Use client-side cleanup utility to delete notifications first,
-        // then delete the event. This provides redundancy to the server-side hook.
         await deleteEventWithCleanup(event.id, user?.id);
         
         alert('Evento excluído com sucesso.');
-        setSelectedEvent(null);
         refresh();
     } catch (error: any) {
         console.error('Error deleting event:', error);
@@ -72,18 +75,19 @@ const MyInvolvement: React.FC = () => {
     }
   };
 
-  const handleOpenEventInCalendar = (event: any) => {
+  const handleOpenEventInCalendar = (event: MySpaceEvent) => {
     const eventDate = new Date(event.date_start);
     const dateStr = eventDate.toISOString().split('T')[0];
     navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=details`);
   };
 
+  // Filtragem
   const filteredEvents = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    const searchTerm = (params.get('search') || '').toLowerCase();
+    const term = searchTerm.toLowerCase();
     
     let result = events;
 
+    // 1. Filtro por Tab (Status/Papel)
     switch (activeTab) {
       case 'organizer': 
         result = events.filter(e => (e.userRole || '').toUpperCase() === 'ORGANIZADOR' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
@@ -105,596 +109,98 @@ const MyInvolvement: React.FC = () => {
         break;
     }
 
-    if (searchTerm) {
+    // 2. Filtro por Texto
+    if (term) {
       result = result.filter(e => 
-        (e.title || '').toLowerCase().includes(searchTerm) ||
-        (e.description || '').toLowerCase().includes(searchTerm) ||
-        (e.location || '').toLowerCase().includes(searchTerm) ||
-        (e.nature || '').toLowerCase().includes(searchTerm) ||
-        (e.category || '').toLowerCase().includes(searchTerm)
+        (e.title || '').toLowerCase().includes(term) ||
+        (e.description || '').toLowerCase().includes(term) ||
+        (e.location || '').toLowerCase().includes(term) ||
+        (e.nature || '').toLowerCase().includes(term) ||
+        (e.category || '').toLowerCase().includes(term)
       );
     }
     
     return result;
-  }, [events, activeTab, location.search]);
-
-  const getStatusBadge = (event: MySpaceEvent) => {
-    if (event.participationStatus === 'pending') {
-      return <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold uppercase animate-pulse">Convite Pendente</span>;
-    }
-    if (event.requestStatus === 'pending') {
-      return <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase animate-pulse">Solicitação Pendente</span>;
-    }
-
-    if (event.participationStatus === 'rejected') {
-      return <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">Convite Recusado</span>;
-    }
-    if (event.requestStatus === 'rejected') {
-      return <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold uppercase">Solicitação Recusada</span>;
-    }
-
-    const start = getSafeDate(event.date_start);
-    
-    if (event.status === 'canceled') {
-      return <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold uppercase">Cancelado</span>;
-    }
-    
-    if (isPast(getSafeDate(event.date_end))) {
-      return <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase">Concluído</span>;
-    }
-
-    if (isToday(start)) {
-      return <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase animate-pulse">Hoje</span>;
-    }
-
-    if (isFuture(start)) {
-      return <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold uppercase">Agendado</span>;
-    }
-
-    return <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold uppercase">Ativo</span>;
-  };
-
-  const getRoleIcon = (event: MySpaceEvent) => {
-    if (event.requestStatus === 'pending' || event.participationStatus === 'pending') return 'hourglass_top';
-    if (event.requestStatus === 'rejected' || event.participationStatus === 'rejected') return 'person_off';
-
-    const role = (event.userRole || '').toUpperCase();
-    switch (role) {
-      case 'ORGANIZADOR': return 'assignment_ind';
-      case 'COORGANIZADOR': return 'group_work';
-      case 'PARTICIPANTE': return 'person';
-      default: return 'event';
-    }
-  };
-
-  const getRoleBadge = (event: MySpaceEvent) => {
-    const role = (event.userRole || '').toUpperCase();
-    const isCreator = event.type === 'created';
-    const isRejected = event.requestStatus === 'rejected' || event.participationStatus === 'rejected';
-
-    let roleText = 'Participante';
-    let roleIcon = 'person';
-    let roleClass = 'bg-indigo-50 text-indigo-700 border-indigo-100';
-
-    if (role === 'ORGANIZADOR') {
-      roleText = 'Organizador';
-      roleIcon = 'assignment_ind';
-      roleClass = 'bg-blue-50 text-blue-700 border-blue-100';
-    } else if (role === 'COORGANIZADOR') {
-      roleText = 'Coorganizador';
-      roleIcon = 'group_work';
-      roleClass = 'bg-green-50 text-green-700 border-green-100';
-    }
-
-    if (isRejected) {
-      roleClass = 'bg-slate-50 text-slate-400 border-slate-200 opacity-60';
-      roleIcon = 'person_off';
-    }
-
-    const baseBadgeClass = "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase tracking-wide transition-colors";
-
-    return (
-      <>
-        <span className={`${baseBadgeClass} ${roleClass}`}>
-          <span className="material-symbols-outlined text-[14px]">{roleIcon}</span>
-          {roleText}
-        </span>
-        {isCreator && (
-          <span className={`${baseBadgeClass} border-slate-200 bg-slate-50 text-slate-600`}>
-            <span className="material-symbols-outlined text-[14px]">edit_calendar</span>
-            Criador
-          </span>
-        )}
-      </>
-    );
-  };
-
-  const getSafeDate = (dateStr: string | undefined) => {
-    if (!dateStr) return new Date();
-    const date = new Date(dateStr);
-    return isNaN(date.getTime()) ? new Date() : date;
-  };
-
-  if (loading && events.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
-        <div className="size-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-slate-500 font-medium animate-pulse">Carregando seu espaço...</p>
-      </div>
-    );
-  }
-
-  const safeAnalytics = analytics || { byType: [], byNature: [], byTime: [], byResources: [] };
+  }, [events, activeTab, searchTerm]);
 
   return (
-    <div className="max-w-7xl mx-auto p-3 md:p-8 space-y-6 md:space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 md:gap-6">
-        {/* Quick Stats Group - Filling the space with professional metrics */}
-        <div className="grid grid-cols-2 md:flex md:flex-wrap items-center gap-1.5 md:gap-4">
-          <div className="group bg-white px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] transition-all hover:border-indigo-100 hover:shadow-md">
-            <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] mb-0.5 md:mb-1 group-hover:text-indigo-400 transition-colors truncate">Total Eventos</span>
-            <div className="flex items-end gap-1.5 md:gap-2">
-              <span className="text-lg md:text-2xl font-black text-slate-900 leading-none">{events.length}</span>
-              <span className="text-[8px] md:text-[10px] font-bold text-slate-400 mb-0.5 truncate">atividades</span>
-            </div>
-          </div>
-
-          <div className="group bg-white px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-slate-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] transition-all hover:border-blue-100 hover:shadow-md">
-            <span className="text-[8px] md:text-[10px] font-black text-blue-500 uppercase tracking-[0.15em] mb-0.5 md:mb-1 truncate">Como Criador</span>
-            <div className="flex items-end gap-1.5 md:gap-2">
-              <span className="text-lg md:text-2xl font-black text-blue-600 leading-none">{stats.totalCreated}</span>
-              <span className="text-[8px] md:text-[10px] font-bold text-slate-400 mb-0.5 truncate">eventos</span>
-            </div>
-          </div>
-
-          {stats.invitesPending > 0 && (
-            <div className="group bg-amber-50/50 px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-amber-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] animate-in fade-in zoom-in duration-500 hover:bg-amber-50 transition-all">
-              <span className="text-[8px] md:text-[10px] font-black text-amber-600 uppercase tracking-[0.15em] mb-0.5 md:mb-1 truncate">Convites Pend.</span>
-              <div className="flex items-end gap-1.5 md:gap-2">
-                <span className="text-lg md:text-2xl font-black text-amber-700 leading-none">{stats.invitesPending}</span>
-                <span className="material-symbols-outlined text-amber-500 text-xs md:text-sm mb-0.5 md:mb-1 animate-pulse">notification_important</span>
-              </div>
-            </div>
-          )}
-          
-          {stats.requestsPending > 0 && (
-            <div className="group bg-blue-50/50 px-2.5 md:px-5 py-2 md:py-3 rounded-xl md:rounded-2xl border border-blue-200 shadow-sm flex flex-col min-w-0 md:min-w-[150px] animate-in fade-in zoom-in duration-500 hover:bg-blue-50 transition-all">
-              <span className="text-[8px] md:text-[10px] font-black text-blue-600 uppercase tracking-[0.15em] mb-0.5 md:mb-1 truncate">Solic. Ativas</span>
-              <div className="flex items-end gap-1.5 md:gap-2">
-                <span className="text-lg md:text-2xl font-black text-blue-700 leading-none">{stats.requestsPending}</span>
-                <span className="material-symbols-outlined text-blue-400 text-xs md:text-sm mb-0.5 md:mb-1">outbound</span>
-              </div>
-            </div>
-          )}
+      {/* Header Section */}
+      <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
+        <div className="space-y-2">
+           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+             Meu Espaço
+           </h1>
+           <p className="text-slate-500 font-medium max-w-xl">
+             Gerencie suas atividades, acompanhe solicitações e visualize seu impacto na agenda.
+           </p>
         </div>
 
-        {/* Premium Action Controls */}
-        <div className="flex items-center gap-1.5 md:gap-3 bg-white p-1 md:p-2 rounded-xl md:rounded-2xl border border-slate-200 shadow-sm self-stretch md:self-end lg:self-auto justify-between md:justify-start">
+        {/* Action Controls */}
+        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm self-start xl:self-auto">
           <button 
             onClick={() => navigate('/create-event')}
-            className="flex items-center justify-center flex-1 sm:flex-none gap-1.5 md:gap-2 px-2 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl transition-all font-black text-[9px] md:text-[11px] uppercase tracking-wider bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:-translate-y-0.5 active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-bold text-xs uppercase tracking-wider bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:-translate-y-0.5 active:scale-95"
           >
-            <span className="material-symbols-outlined text-xs md:text-sm font-bold">add</span>
-            <span className="sm:hidden">Novo</span>
+            <span className="material-symbols-outlined text-lg">add</span>
             <span className="hidden sm:inline">Nova Atividade</span>
+            <span className="sm:hidden">Novo</span>
           </button>
 
-          <div className="hidden sm:block w-px h-8 bg-slate-100 mx-1" />
+          <div className="w-px h-8 bg-slate-100 mx-1" />
 
           <button 
             onClick={() => setShowAnalytics(!showAnalytics)}
-            className={`flex items-center justify-center flex-1 sm:flex-none gap-1.5 md:gap-2 px-2 md:px-6 py-1.5 md:py-2.5 rounded-lg md:rounded-xl transition-all font-black text-[9px] md:text-[11px] uppercase tracking-wider ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-bold text-xs uppercase tracking-wider ${
               showAnalytics 
                 ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' 
                 : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
             }`}
           >
-            <span className="material-symbols-outlined text-xs md:text-sm">{showAnalytics ? 'view_list' : 'analytics'}</span>
-            <span className="sm:hidden">{showAnalytics ? 'Lista' : 'Análise'}</span>
+            <span className="material-symbols-outlined text-lg">{showAnalytics ? 'view_list' : 'analytics'}</span>
             <span className="hidden sm:inline">{showAnalytics ? 'Ver Lista' : 'Visão Analítica'}</span>
           </button>
           
-          <div className="hidden sm:block w-px h-8 bg-slate-200 mx-1" />
-          
           <button 
             onClick={() => refresh()}
-            className="group size-9 md:size-11 flex items-center justify-center bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600 shadow-sm shrink-0"
+            className="group size-10 flex items-center justify-center bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600 shadow-sm shrink-0"
             title="Sincronizar dados"
           >
-            <span className="material-symbols-outlined text-[18px] md:text-[24px] transition-transform duration-1000 group-hover:rotate-180">refresh</span>
+            <span className="material-symbols-outlined text-xl transition-transform duration-1000 group-hover:rotate-180">refresh</span>
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-10 md:gap-8">
-        <div className="space-y-2 md:space-y-4">
-          <div className="flex items-center gap-2 px-1">
-            <span className="material-symbols-outlined text-slate-400 text-lg md:text-xl">dashboard</span>
-            <h2 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-widest">Visão Geral</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-2 md:gap-4">
-            {[
-              { id: 'all', label: 'Criados', value: stats.totalCreated, icon: 'edit_calendar', color: 'text-slate-600', bg: 'bg-slate-50' },
-              { id: 'organizer', label: 'Organizador', icon: 'assignment_ind', color: 'text-blue-600', bg: 'bg-blue-50', value: stats.organizer },
-              { id: 'coorganizer', label: 'Coorganizador', icon: 'group_work', color: 'text-green-600', bg: 'bg-green-50', value: stats.coorganizer },
-              { id: 'participant', label: 'Participante', icon: 'person', color: 'text-indigo-600', bg: 'bg-indigo-50', value: stats.participant },
-            ].map((stat, i) => (
-              <div 
-                key={i} 
-                onClick={() => setActiveTab(stat.id as any)}
-                className={`bg-white p-2 md:p-3 rounded-xl md:rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all group text-center flex flex-col justify-center items-center h-20 md:h-full cursor-pointer`}
-              >
-                <div className={`hidden md:flex size-8 md:size-10 mx-auto rounded-xl md:rounded-2xl ${stat.bg} ${stat.color} items-center justify-center mb-1.5 md:mb-2 group-hover:scale-110 transition-transform`}>
-                  <span className="material-symbols-outlined text-lg md:text-xl">{stat.icon}</span>
-                </div>
-                <div className="flex items-center gap-1.5 md:block">
-                  <span className={`md:hidden material-symbols-outlined text-base ${stat.color}`}>{stat.icon}</span>
-                  <p className="text-lg md:text-2xl font-black text-slate-900 leading-none mb-0 md:mb-1">{stat.value}</p>
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter truncate w-full px-1" title={stat.label}>{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Stats Overview */}
+      <StatsCards 
+        stats={stats} 
+        activeTab={activeTab} 
+        onTabChange={setActiveTab} 
+      />
 
-        {[
-          { 
-            title: 'Convites Enviados', 
-            icon: 'mail', 
-            iconColor: 'text-amber-400',
-            data: [
-              { label: 'Pendentes', value: stats.sentInvitesPending, icon: 'mail', color: 'text-amber-600', bg: 'bg-amber-50' },
-              { label: 'Aceitos', value: stats.sentInvitesAccepted, icon: 'mark_email_read', color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Recusados', value: stats.sentInvitesRejected, icon: 'mail_lock', color: 'text-red-600', bg: 'bg-red-50' },
-            ]
-          },
-          { 
-            title: 'Convites Recebidos', 
-            icon: 'inbox', 
-            iconColor: 'text-amber-400',
-            data: [
-              { label: 'Pendentes', value: stats.invitesPending, icon: 'mail', color: 'text-amber-600', bg: 'bg-amber-50' },
-              { label: 'Aceitos', value: stats.invitesAccepted, icon: 'mark_email_read', color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Recusados', value: stats.invitesRejected, icon: 'mail_lock', color: 'text-red-600', bg: 'bg-red-50' },
-            ]
-          },
-          { 
-            title: 'Solicitações Enviadas', 
-            icon: 'send', 
-            iconColor: 'text-blue-400',
-            data: [
-              { label: 'Pendentes', value: stats.requestsPending, icon: 'send', color: 'text-blue-600', bg: 'bg-blue-50' },
-              { label: 'Aceitas', value: stats.requestsAccepted, icon: 'task_alt', color: 'text-indigo-600', bg: 'bg-indigo-50' },
-              { label: 'Recusadas', value: stats.requestsRejected, icon: 'cancel_schedule_send', color: 'text-slate-600', bg: 'bg-slate-50' },
-            ]
-          },
-          { 
-            title: 'Solicitações Recebidas', 
-            icon: 'inbox_customize', 
-            iconColor: 'text-purple-400',
-            data: [
-              { label: 'Pendentes', value: stats.receivedRequestsPending, icon: 'hourglass_top', color: 'text-purple-600', bg: 'bg-purple-50' },
-              { label: 'Aceitas', value: stats.receivedRequestsAccepted, icon: 'check_circle', color: 'text-green-600', bg: 'bg-green-50' },
-              { label: 'Recusadas', value: stats.receivedRequestsRejected, icon: 'cancel', color: 'text-red-600', bg: 'bg-red-50' },
-            ]
-          }
-        ].map((section, idx) => (
-          <div key={idx} className="space-y-1.5 md:space-y-4">
-            <div className="flex items-center gap-2 px-1">
-              <span className={`material-symbols-outlined text-base md:text-xl ${section.iconColor}`}>{section.icon}</span>
-              <h2 className="text-[10px] md:text-sm font-black text-slate-900 uppercase tracking-widest">{section.title}</h2>
-            </div>
-            <div className="bg-white p-1.5 md:p-2 rounded-xl md:rounded-[2rem] border border-slate-100 shadow-sm flex flex-row md:flex-col gap-1.5 md:gap-1.5 h-auto md:h-full md:max-h-[260px] md:justify-center overflow-x-auto md:overflow-visible custom-scrollbar-hide snap-x snap-mandatory">
-              {section.data.map((stat, i) => (
-                <div key={i} className="flex-1 min-w-[85px] md:min-w-0 flex flex-col md:flex-row items-center md:justify-between p-1.5 md:p-3 rounded-lg md:rounded-2xl bg-slate-50/50 md:bg-transparent md:hover:bg-slate-50 transition-colors border md:border-none border-slate-100 snap-center">
-                  <div className="flex flex-col md:flex-row items-center gap-1 md:gap-4 w-full md:w-auto">
-                    <div className={`size-5 md:size-10 rounded-lg md:rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center`}>
-                      <span className="material-symbols-outlined text-sm md:text-xl">{stat.icon}</span>
-                    </div>
-                    <span className="text-[9px] md:text-sm font-bold text-slate-500 text-center md:text-left leading-none md:leading-tight truncate w-full md:w-auto mt-1 md:mt-0">{stat.label}</span>
-                  </div>
-                  <span className="text-sm md:text-xl font-black text-slate-900 mt-0.5 md:mt-0">{stat.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="space-y-4 md:space-y-6">
+      {/* Main Content Area */}
+      <div className="space-y-6">
         {showAnalytics ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8 animate-in zoom-in-95 duration-500">
-            {safeAnalytics.byType.length > 0 ? (
-              <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 md:space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-base md:text-lg font-black text-slate-900">Distribuição por Tipo</h3>
-                    <p className="text-[10px] md:text-xs text-slate-500 font-medium">Categorização dos seus eventos confirmados</p>
-                  </div>
-                  <div className="size-8 md:size-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-lg md:text-2xl">category</span>
-                  </div>
-                </div>
-                <div className="h-[250px] md:h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={safeAnalytics.byType}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {safeAnalytics.byType.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Legend verticalAlign="bottom" height={36}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center py-20">
-                <span className="material-symbols-outlined text-4xl text-slate-200 mb-4">pie_chart_off</span>
-                <p className="text-slate-500 font-medium">Sem dados para tipos de eventos</p>
-              </div>
-            )}
-
-            {safeAnalytics.byTime.length > 0 ? (
-              <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 md:space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-base md:text-lg font-black text-slate-900">Histórico Temporal</h3>
-                    <p className="text-[10px] md:text-xs text-slate-500 font-medium">Frequência de eventos nos últimos meses</p>
-                  </div>
-                  <div className="size-8 md:size-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-lg md:text-2xl">timeline</span>
-                  </div>
-                </div>
-                <div className="h-[250px] md:h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={safeAnalytics.byTime}>
-                      <defs>
-                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.1}/>
-                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
-                        dy={10}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
-                      />
-                      <Tooltip 
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Area 
-                        type="monotone" 
-                        dataKey="count" 
-                        stroke="#6366f1" 
-                        strokeWidth={3}
-                        fillOpacity={1} 
-                        fill="url(#colorCount)" 
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center py-20">
-                <span className="material-symbols-outlined text-4xl text-slate-200 mb-4">show_chart</span>
-                <p className="text-slate-500 font-medium">Sem histórico temporal disponível</p>
-              </div>
-            )}
-
-            {/* Removido o gráfico de Natureza conforme solicitado, pois já está definido no cabeçalho */}
-
-            {safeAnalytics.byResources.length > 0 ? (
-              <div className="bg-white p-4 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm space-y-4 md:space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h3 className="text-base md:text-lg font-black text-slate-900">Recursos & Logística</h3>
-                    <p className="text-[10px] md:text-xs text-slate-500 font-medium">Itens mais solicitados nos seus eventos</p>
-                  </div>
-                  <div className="size-8 md:size-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                    <span className="material-symbols-outlined text-lg md:text-2xl">inventory_2</span>
-                  </div>
-                </div>
-                <div className="h-[250px] md:h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={safeAnalytics.byResources}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 9, fontWeight: 700 }}
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false} 
-                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
-                      />
-                      <Tooltip 
-                        cursor={{ fill: '#f8fafc' }}
-                        contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      />
-                      <Bar dataKey="count" fill="#f59e0b" radius={[10, 10, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col items-center justify-center text-center py-20">
-                <span className="material-symbols-outlined text-4xl text-slate-200 mb-4">inventory</span>
-                <p className="text-slate-500 font-medium">Sem dados de logística e recursos</p>
-              </div>
-            )}
-          </div>
+          <AnalyticsSection analytics={analytics || { byType: [], byNature: [], byTime: [], byResources: [] }} />
         ) : (
           <>
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4">
-              <div className="flex items-center gap-1 md:gap-1.5 bg-slate-100 p-1 rounded-xl md:rounded-2xl border border-slate-200 flex-1 overflow-x-auto custom-scrollbar-hide">
-                {[
-                  { id: 'all', label: 'Todos', icon: 'list' },
-                  { id: 'organizer', label: 'Organizador', icon: 'assignment_ind' },
-                  { id: 'coorganizer', label: 'Coorganizador', icon: 'group_work' },
-                  { id: 'participant', label: 'Participante', icon: 'person' },
-                  { id: 'pending', label: 'Pendentes', icon: 'hourglass_top' },
-                  { id: 'rejected', label: 'Recusados', icon: 'person_off' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 justify-center flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-black transition-all whitespace-nowrap ${
-                      activeTab === tab.id 
-                        ? 'bg-white text-primary shadow-sm scale-100 md:scale-105' 
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[14px] md:text-[18px]">{tab.icon}</span>
-                    <span className="inline">{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-white rounded-full border border-slate-100 text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest self-start md:self-auto shadow-sm md:shadow-none">
-                <span className="size-1.5 md:size-2 rounded-full bg-primary animate-pulse" />
-                {filteredEvents.length} Eventos
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4">
-              {filteredEvents.length === 0 ? (
-                <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm py-12 md:py-20 flex flex-col items-center justify-center text-center space-y-4 md:space-y-6">
-                  <div className="size-16 md:size-24 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
-                    <span className="material-symbols-outlined text-3xl md:text-5xl">event_busy</span>
-                  </div>
-                  <div className="space-y-1 md:space-y-2 px-4">
-                    <h3 className="text-lg md:text-xl font-black text-slate-900">Nenhum evento por aqui</h3>
-                    <p className="text-sm md:text-base text-slate-500 max-w-xs mx-auto font-medium">Você não possui compromissos nesta categoria no momento.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-6">
-                  {filteredEvents.map((event) => {
-                    const statusColor = (event.requestStatus === 'pending' || event.participationStatus === 'pending') ? 'amber' :
-                                      (event.requestStatus === 'rejected' || event.participationStatus === 'rejected') ? 'red' :
-                                      (event.userRole || '').toUpperCase() === 'ORGANIZADOR' ? 'blue' : 
-                                      (event.userRole || '').toUpperCase() === 'COORGANIZADOR' ? 'green' : 'indigo';
-                    
-                    return (
-                    <div 
-                      key={event.id}
-                      onClick={() => setSelectedEvent(event)}
-                      className={`group relative bg-white rounded-xl md:rounded-[1.5rem] border border-slate-100 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer overflow-hidden flex flex-col`}
-                    >
-                      <div className={`absolute top-0 left-0 w-1 md:w-1.5 h-full bg-${statusColor}-500 opacity-80`} />
-                      
-                      <div className="p-2 md:p-5 flex flex-col h-full gap-1.5 md:gap-4">
-                        {/* Header */}
-                        <div className="flex items-start justify-between gap-2 md:gap-3">
-                           <div className="flex flex-col gap-0.5 md:gap-1 w-full min-w-0">
-                              <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-                                {getRoleBadge(event)}
-                                {(event.nature || event.category) && (
-                                  <span className="flex items-center gap-1 px-1.5 py-0.5 md:px-2.5 md:py-1 rounded-md md:rounded-lg border border-slate-200 bg-slate-50 text-slate-600 text-[8px] md:text-[10px] font-black uppercase tracking-wide transition-colors whitespace-nowrap overflow-hidden text-ellipsis max-w-[100px]">
-                                    <span className="material-symbols-outlined text-[10px] md:text-[14px]">label</span>
-                                    {event.nature || event.category}
-                                  </span>
-                                )}
-                              </div>
-                              <h3 className="text-xs md:text-lg font-black text-slate-900 leading-tight line-clamp-2 group-hover:text-primary transition-colors mt-0.5 md:mt-1">
-                                {event.title}
-                              </h3>
-                           </div>
-                           <div className="shrink-0 scale-75 md:scale-100 origin-top-right -mt-1 -mr-1 md:mt-0 md:mr-0">
-                              {getStatusBadge(event)}
-                           </div>
-                        </div>
-
-                        {/* Divider */}
-                        <div className="h-px w-full bg-slate-50" />
-
-                        {/* Meta Info Grid */}
-                        <div className="grid grid-cols-2 gap-y-1 md:gap-y-3 gap-x-2 text-[9px] md:text-xs">
-                            <div className="flex items-center gap-1 md:gap-2 text-slate-600">
-                                <span className="material-symbols-outlined text-[10px] md:text-base text-slate-400">calendar_today</span>
-                                <span className="font-bold truncate">{format(getSafeDate(event.date_start), 'dd MMM yyyy', { locale: ptBR })}</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-1 md:gap-2 text-slate-600">
-                                <span className="material-symbols-outlined text-[10px] md:text-base text-slate-400">schedule</span>
-                                <div className="flex items-center gap-0.5 md:gap-1 font-bold truncate">
-                                  <span>{format(getSafeDate(event.date_start), 'HH:mm')}</span>
-                                  {event.date_end && (
-                                    <>
-                                      <span className="text-[7px] md:text-[9px] text-slate-300 font-black uppercase">até</span>
-                                      <span>{format(getSafeDate(event.date_end), 'HH:mm')}</span>
-                                    </>
-                                  )}
-                                </div>
-                            </div>
-
-                            <div className="col-span-2 flex items-center gap-1 md:gap-2 text-slate-600">
-                                <span className="material-symbols-outlined text-[10px] md:text-base text-slate-400">location_on</span>
-                                <span className="font-bold truncate w-full" title={event.expand?.location?.name || event.custom_location || 'Local não definido'}>
-                                  {event.expand?.location?.name || event.custom_location || 'Local não definido'}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Footer Action */}
-                        <div className="mt-auto pt-0.5 md:pt-2 flex justify-end">
-                            <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenEventInCalendar(event);
-                                }}
-                                className="text-[8px] md:text-[10px] font-black uppercase tracking-wider text-slate-400 hover:text-primary transition-colors flex items-center gap-1 md:gap-1.5 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded-lg hover:bg-slate-50"
-                            >
-                                <span className="material-symbols-outlined text-[10px] md:text-sm">calendar_month</span>
-                                Ver no Calendário
-                            </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                  })}
-                </div>
-              )}
-            </div>
+            <FilterBar 
+              searchTerm={searchTerm} 
+              onSearchChange={setSearchTerm} 
+              resultCount={filteredEvents.length} 
+            />
+            
+            <EventList 
+              events={filteredEvents}
+              loading={loading}
+              onOpenCalendar={handleOpenEventInCalendar}
+              onCancel={handleCancelEvent}
+              onDelete={handleDeleteEvent}
+            />
           </>
         )}
       </div>
-
-      {selectedEvent && (
-        <EventDetailsModal
-          event={selectedEvent}
-          onClose={() => setSelectedEvent(null)}
-          onCancel={handleCancelEvent}
-          onDelete={handleDeleteEvent}
-          user={user}
-        />
-      )}
     </div>
   );
 };

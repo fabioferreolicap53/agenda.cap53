@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface CustomTimePickerProps {
   value: string; // Format "HH:mm"
@@ -17,6 +18,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const portalRef = useRef<HTMLDivElement>(null);
   const hoursRef = useRef<HTMLDivElement>(null);
   const minutesRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +31,10 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
   // Close on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const isOutsideContainer = containerRef.current && !containerRef.current.contains(event.target as Node);
+      const isOutsidePortal = portalRef.current && !portalRef.current.contains(event.target as Node);
+      
+      if (isOutsideContainer && isOutsidePortal) {
         setIsOpen(false);
       }
     };
@@ -79,6 +84,22 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
       setIsOpen(false);
     }
   };
+
+  // Calculate position on open
+  const [popupStyle, setPopupStyle] = useState({});
+
+  useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setPopupStyle({
+        position: 'fixed',
+        left: rect.left,
+        top: rect.bottom + 8,
+        width: rect.width,
+        zIndex: 9999
+      });
+    }
+  }, [isOpen]);
 
   return (
     <div className={`relative w-full ${isOpen ? 'z-[100]' : ''}`} ref={containerRef}>
@@ -233,9 +254,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                 <button 
                   type="button"
                   onClick={() => {
-                    if (!value) {
-                      onChange(`${currentHour}:${currentMinute}`);
-                    }
+                    onChange(`${currentHour}:${currentMinute}`);
                     setIsOpen(false);
                   }}
                   className="w-full py-3 rounded-full bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
@@ -246,103 +265,106 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
             </div>
           </div>
 
-          {/* Desktop Popup */}
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="hidden md:block absolute top-full left-0 mt-2 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[100] p-1.5 animate-in zoom-in-95 fade-in duration-300 md:min-w-[240px] overflow-hidden"
-          >
-            <div className="overflow-y-auto no-scrollbar min-w-0">
-              <div className="flex p-0.5 gap-1 bg-transparent rounded-2xl overflow-hidden relative h-[220px]">
-                {/* Hours Column */}
-                <div 
-                  ref={hoursRef}
-                  className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
-                  role="listbox"
-                  aria-label="Selecionar hora"
-                >
-                  <div className="py-12 px-0.5 space-y-1">
-                    {hours.map((h) => {
-                      const isSelected = h === currentHour;
-                      return (
-                        <button
-                          key={h}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          data-hour={h}
-                          onClick={() => handleSelectHour(h)}
-                          className={`
-                            w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
-                            ${isSelected 
-                              ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
-                              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
-                          `}
-                        >
-                          {h}
-                        </button>
-                      );
-                    })}
+          {/* Desktop Popup - Uses Portal for z-index safety */}
+          {createPortal(
+            <div 
+              ref={portalRef}
+              onClick={(e) => e.stopPropagation()}
+              className="hidden md:block bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 p-1.5 animate-in zoom-in-95 fade-in duration-300 overflow-hidden fixed z-[9999]"
+              style={popupStyle}
+            >
+              <div className="overflow-y-auto no-scrollbar min-w-0">
+                <div className="flex p-0.5 gap-1 bg-transparent rounded-2xl overflow-hidden relative h-[220px]">
+                  {/* Hours Column */}
+                  <div 
+                    ref={hoursRef}
+                    className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
+                    role="listbox"
+                    aria-label="Selecionar hora"
+                  >
+                    <div className="py-12 px-0.5 space-y-1">
+                      {hours.map((h) => {
+                        const isSelected = h === currentHour;
+                        return (
+                          <button
+                            key={h}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            data-hour={h}
+                            onClick={() => handleSelectHour(h)}
+                            className={`
+                              w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                              ${isSelected 
+                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
+                            `}
+                          >
+                            {h}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
+                  <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
 
-                {/* Minutes Column */}
-                <div 
-                  ref={minutesRef}
-                  className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
-                  role="listbox"
-                  aria-label="Selecionar minutos"
-                >
-                  <div className="py-12 px-0.5 space-y-1">
-                    {minutes.map((m) => {
-                      const isSelected = m === currentMinute;
-                      return (
-                        <button
-                          key={m}
-                          type="button"
-                          role="option"
-                          aria-selected={isSelected}
-                          data-minute={m}
-                          onClick={() => handleSelectMinute(m)}
-                          className={`
-                            w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
-                            ${isSelected 
-                              ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
-                              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
-                          `}
-                        >
-                          {m}
-                        </button>
-                      );
-                    })}
+                  {/* Minutes Column */}
+                  <div 
+                    ref={minutesRef}
+                    className="flex-1 overflow-y-auto scrollbar-hide p-1 min-w-0"
+                    role="listbox"
+                    aria-label="Selecionar minutos"
+                  >
+                    <div className="py-12 px-0.5 space-y-1">
+                      {minutes.map((m) => {
+                        const isSelected = m === currentMinute;
+                        return (
+                          <button
+                            key={m}
+                            type="button"
+                            role="option"
+                            aria-selected={isSelected}
+                            data-minute={m}
+                            onClick={() => handleSelectMinute(m)}
+                            className={`
+                              w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                              ${isSelected 
+                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
+                            `}
+                          >
+                            {m}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
 
-                {/* Overlays for better depth */}
-                <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
-                <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
-                
-                {/* Center Indicator */}
-                <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
+                  {/* Overlays for better depth */}
+                  <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
+                  
+                  {/* Center Indicator */}
+                  <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
+                </div>
               </div>
-            </div>
-            
-            <div className="p-1.5 mt-1 border-t border-slate-100/50 shrink-0">
-              <button 
-                type="button"
-                onClick={() => {
-                  if (!value) {
+              
+              <div className="p-1.5 mt-1 border-t border-slate-100/50 shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => {
                     onChange(`${currentHour}:${currentMinute}`);
-                  }
-                  setIsOpen(false);
-                }}
-                className="w-full py-3 rounded-full bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
-              >
-                Confirmar
-              </button>
-            </div>
-          </div>
+                    setIsOpen(false);
+                  }}
+                  className="w-full py-3 rounded-full bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>,
+            document.body
+          )}
         </>
       )}
     </div>

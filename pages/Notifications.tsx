@@ -7,6 +7,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ReRequestModal from '../components/ReRequestModal';
 import RefusalModal from '../components/RefusalModal';
+import ReInviteModal from '../components/ReInviteModal';
+import HistoryChain, { HistoryEntry } from '../components/HistoryChain';
 
 type FilterType = 'all' | 'unread' | 'actions';
 
@@ -35,9 +37,10 @@ const Notifications: React.FC = () => {
   }, [location.search]);
   const [reRequestNotification, setReRequestNotification] = useState<any | null>(null);
   const [rejectingNotification, setRejectingNotification] = useState<any | null>(null);
+  const [reInviteNotification, setReInviteNotification] = useState<any | null>(null);
 
-  const getData = (n: any) => {
-    let result = {};
+  const getData = (n: any): any => {
+    let result: any = {};
     // Prioridade 1: Campo 'data' já parseado ou objeto
     if (n.data && Object.keys(n.data).length > 0) {
         result = typeof n.data === 'string' ? JSON.parse(n.data) : n.data;
@@ -263,6 +266,26 @@ const Notifications: React.FC = () => {
         else if ((n.type === 'transport_request' || n.type === 'transport_decision' || (n.type === 'history_log' && getData(n).icon === 'local_shipping')) && n.event) {
             key = `transport_${n.event}`;
         }
+        // 3. Agrupa Recusas de Convite do mesmo usuário para o mesmo evento
+        else if ((n.type === 'refusal' || n.type === 'event_invite' || getData(n).kind === 'event_invite_response') && n.event) {
+             const data = getData(n);
+             
+             // Event ID pode ser objeto ou string
+             const eventId = typeof n.event === 'object' ? n.event.id : n.event;
+             
+             // Guest ID pode estar no data (recusa/resposta) ou ser o usuário (convite para o convidado)
+             const guestId = data.guest_id || (n.type === 'event_invite' ? n.user : null);
+             
+             // Para o organizador vendo recusas/respostas:
+             if (guestId && (data.guest_id || data.kind === 'event_invite_response')) {
+                 key = `invite_flow_${eventId}_${guestId}`;
+             }
+             // Para o convidado vendo seus convites (se houver múltiplos):
+             else if (n.type === 'event_invite' && !data.guest_id) {
+                  // Agrupa convites do mesmo evento para o usuário logado
+                  key = `invite_flow_${eventId}_${user?.id}`; 
+             }
+        }
         
         if (key) {
             if (!groups.has(key)) groups.set(key, []);
@@ -276,31 +299,45 @@ const Notifications: React.FC = () => {
 
     groups.forEach((items, key) => {
         // Ordena por data (mais recente primeiro)
-        items.sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+        items.sort((a, b) => {
+            const timeA = new Date(a.created).getTime();
+            const timeB = new Date(b.created).getTime();
+            return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+        });
+        
+        const latestItem = items[0];
+        const latestDate = latestItem ? new Date(latestItem.created) : new Date();
+
         result.push({
             id: key,
             items: items,
-            latest: new Date(items[0].created)
+            latest: isNaN(latestDate.getTime()) ? new Date() : latestDate
         });
     });
 
     singles.forEach(n => {
+        const d = new Date(n.created);
         result.push({
             id: n.id,
             items: [n],
-            latest: new Date(n.created)
+            latest: isNaN(d.getTime()) ? new Date() : d
         });
     });
 
     // Ordena grupos pela notificação mais recente
-    return result.sort((a, b) => b.latest.getTime() - a.latest.getTime());
+    return result.sort((a, b) => {
+        const timeA = a.latest.getTime();
+        const timeB = b.latest.getTime();
+        return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+    });
   }, [filteredNotifications]);
 
   const getStatusContainerStyles = (n: any) => {
     const status = getNotificationStatus(n);
     
     // Base styles for modern cards
-    const baseStyles = 'bg-white transition-all duration-300 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]';
+    // Unread notifications get a slightly different background to stand out
+    const baseStyles = `${!n.read ? 'bg-slate-50/80' : 'bg-white'} transition-all duration-300 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]`;
     
     if (status === 'approved') {
         // Premium Success: Clean white with Emerald accent
@@ -358,9 +395,250 @@ const Notifications: React.FC = () => {
     }
   };
 
+  const onConfirmReInvite = async (message: string) => {
+    if (!reInviteNotification) return;
+    setProcessingId(reInviteNotification.id);
+
+    try {
+        const data = getData(reInviteNotification);
+        const guestId = data.guest_id;
+        
+        // Sanitize Event ID
+        let eventId = reInviteNotification.event;
+        if (typeof eventId === 'object' && eventId !== null) {
+            eventId = (eventId as any).id;
+        }
+
+        if (!guestId || !eventId) {
+            alert('Não foi possível identificar o usuário ou evento para reenviar o convite. (Dados antigos ou incompletos)');
+            setProcessingId(null);
+            return;
+        }
+
+        // Verify if event still exists and ensure we have details
+        let eventRecord = reInviteNotification.expand?.event;
+        try {
+            if (!eventRecord) {
+                 eventRecord = await pb.collection('agenda_cap53_eventos').getOne(eventId, { expand: 'user' });
+            }
+        } catch (e) {
+            alert('O evento associado a este convite não existe mais.');
+            setProcessingId(null);
+            return;
+        }
+
+        // 1. Update Participant Status (Delete & Re-create strategy to bypass potential Update restrictions)
+        try {
+            const participants = await pb.collection('agenda_cap53_participantes').getFullList({
+                filter: `event = "${eventId}" && user = "${guestId}"`
+            });
+
+            let recordHandled = false;
+
+            if (participants.length > 0) {
+                try {
+                    // Try to DELETE the old record first.
+                    // This is preferred because:
+                    // 1. It resets the record completely (created date, etc.)
+                    // 2. Organizers usually have permission to DELETE participants, but might not have permission to UPDATE a participant's status (owned by the user).
+                    await pb.collection('agenda_cap53_participantes').delete(participants[0].id);
+                    // If delete successful, we will fall through to CREATE below.
+                } catch (delErr) {
+                    console.warn('Failed to delete participant record, attempting update as fallback:', delErr);
+                    
+                    // Fallback: Try to UPDATE if delete failed
+                    try {
+                        await pb.collection('agenda_cap53_participantes').update(participants[0].id, {
+                            status: 'pending'
+                        });
+                        recordHandled = true; // We successfully updated, no need to create
+                    } catch (updateErr: any) {
+                        console.error('Update also failed:', updateErr);
+                        throw new Error('Não foi possível atualizar nem excluir o registro do participante. Verifique as permissões.');
+                    }
+                }
+            }
+
+            // Create new record if we didn't update an existing one
+            if (!recordHandled) {
+                await pb.collection('agenda_cap53_participantes').create({
+                    event: eventId,
+                    user: guestId,
+                    status: 'pending',
+                    role: 'PARTICIPANTE'
+                });
+            }
+
+        } catch (e: any) {
+            console.warn('Non-critical error managing participant record (likely permission issue):', e);
+            // We proceed anyway because the Guest can update their own record status upon accepting the new invite.
+            // This avoids blocking the "Re-invite" flow due to strict API rules.
+        }
+
+        // 2. Notify Guest (with duplicate check and history injection)
+        const eventTitle = eventRecord?.title || 'Evento';
+        
+        let history: HistoryEntry[] = [];
+        let safeResentTimestamp = new Date().toISOString();
+
+        try {
+            // Prepare History Context from the refusal notification
+            const refusalData = getData(reInviteNotification);
+
+            // 1. Recover accumulated history
+            if (refusalData.history_context && Array.isArray(refusalData.history_context.full_history)) {
+                 history = [...refusalData.history_context.full_history];
+            } else if (refusalData.history_context && refusalData.history_context.previous_refusal) {
+                 // Retro-compatibility
+                 history.push(refusalData.history_context.previous_refusal);
+            }
+
+            // FIX: If history is empty (first rejection), reconstruct the initial "Invite Created" event
+            if (history.length === 0 && eventRecord) {
+                 history.push({
+                    action: 'invite_created',
+                    timestamp: eventRecord.created,
+                    user: eventRecord.user,
+                    user_name: eventRecord.expand?.user?.name || 'Organizador',
+                    message: `Convite para evento "${eventRecord.title}"`
+                });
+            }
+
+            // 2. Add Current Refusal (if not already present in loaded history)
+            // We use the notification creation date as the refusal timestamp
+            // Check if this refusal is already in history to avoid duplication
+            const isRefusalInHistory = history.some(h => 
+                h.action === 'invite_rejected' && 
+                h.timestamp === reInviteNotification.created
+            );
+
+            if (!isRefusalInHistory) {
+                history.push({
+                    action: 'invite_rejected',
+                    timestamp: reInviteNotification.created,
+                    user: refusalData.guest_id,
+                    user_name: refusalData.guest_name || 'Convidado',
+                    justification: refusalData.justification || reInviteNotification.message
+                });
+            }
+
+            // 3. Add Current Re-invite Action
+            // Ensure timestamp is strictly after refusal to maintain order even with clock skew
+            const refusalTime = new Date(reInviteNotification.created).getTime();
+            const now = Date.now();
+            safeResentTimestamp = new Date(Math.max(now, refusalTime + 1000)).toISOString();
+
+            history.push({
+                action: 'invite_resent',
+                timestamp: safeResentTimestamp,
+                user: user?.id || '',
+                user_name: user?.name || 'Organizador', // Avoid 'Você' for Guest view
+                message: message || 'Convite reenviado'
+            });
+
+            const historyContext = {
+                full_history: history
+            };
+
+            // Check for existing recent auto-generated notification (to prevent duplicates)
+            // We look for 'event_invite' for this user/event created in the last minute
+            const recentDate = new Date();
+            recentDate.setMinutes(recentDate.getMinutes() - 1);
+            
+            const existingNotifs = await pb.collection('agenda_cap53_notifications').getList(1, 1, {
+                filter: `user = "${guestId}" && event = "${eventId}" && type = "event_invite" && created >= "${recentDate.toISOString().replace('T', ' ')}"`
+            });
+
+            const notifData = {
+                title: 'Novo Convite',
+                message: message || `${user?.name || 'O organizador'} convidou você novamente para o evento "${eventTitle}".`,
+                type: 'event_invite',
+                event: eventId,
+                read: false,
+                data: {
+                    re_invited_from: reInviteNotification.id,
+                    history_context: historyContext,
+                    invite_message: message // Persist custom message for history display
+                }
+            };
+
+            if (existingNotifs.items.length > 0) {
+                // Update existing auto-generated notification
+                await pb.collection('agenda_cap53_notifications').update(existingNotifs.items[0].id, notifData);
+            } else {
+                // Create new manually
+                await pb.collection('agenda_cap53_notifications').create({
+                    user: guestId,
+                    ...notifData
+                });
+            }
+
+        } catch (e: any) {
+            console.error('Error managing notification:', e);
+            throw new Error(`Erro ao enviar notificação: ${e.message}`);
+        }
+
+        // 3. Update Refusal Notification (Mark as handled and persist history)
+        try {
+            // Fetch fresh record to avoid optimistic lock errors and ensure data integrity
+            const freshRecord = await pb.collection('agenda_cap53_notifications').getOne(reInviteNotification.id);
+            const currentData = getData(freshRecord);
+            
+            // Validate history array before mapping
+            let historyToClean = history;
+            if (!Array.isArray(historyToClean)) {
+                console.warn('CRITICAL: history variable is not an array. Resetting to empty array.', historyToClean);
+                historyToClean = [];
+            }
+
+            // Sanitize history to ensure no undefined values (which break JSON)
+            // Explicitly cast all fields to strings to prevent serialization errors
+            const cleanHistory = historyToClean.map(h => ({
+                action: String(h.action || ''),
+                timestamp: String(h.timestamp || new Date().toISOString()),
+                user: String(h.user || ''),
+                user_name: String(h.user_name || 'Usuário'),
+                message: String(h.message || ''),
+                justification: String(h.justification || '')
+            }));
+            
+            console.log('Updating notification history with payload:', cleanHistory);
+
+            await pb.collection('agenda_cap53_notifications').update(reInviteNotification.id, {
+                data: { 
+                    ...currentData, 
+                    re_invited: true,
+                    re_invite_info: {
+                        timestamp: safeResentTimestamp,
+                        message: message || ''
+                    },
+                    history_context: {
+                        full_history: cleanHistory // Persist full history back to refusal notification for Organizer View
+                    }
+                }
+            });
+        } catch (e: any) {
+            console.error('CRITICAL: Could not update refusal notification status', e);
+            const errorDetails = e.data?.data ? JSON.stringify(e.data.data) : e.message;
+            alert(`Aviso: O convite foi enviado ao convidado, mas houve um erro ao salvar o histórico no seu painel. Detalhes do erro: ${errorDetails}`);
+        }
+
+        // Refresh UI
+        await refresh();
+        setReInviteNotification(null);
+        alert('Convite reenviado com sucesso!');
+
+    } catch (error: any) {
+        console.error('Erro ao reenviar convite:', error);
+        alert('Erro ao reenviar convite: ' + error.message);
+    } finally {
+        setProcessingId(null);
+    }
+  };
+
   const onHandleAction = async (notification: any, action: 'accepted' | 'rejected' | 'approved') => {
-    // If rejecting a request (item or transport), show modal
-    if (action === 'rejected' && (notification.type === 'almc_item_request' || notification.type === 'transport_request')) {
+    // If rejecting a request (item, transport, or event invite), show modal
+    if (action === 'rejected' && (notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'event_invite')) {
         setRejectingNotification(notification);
         return;
     }
@@ -405,7 +683,8 @@ const Notifications: React.FC = () => {
   const handleViewEvent = (notification: any) => {
     if (!notification.event) return;
     const eventData = notification.expand?.event;
-    const eventDate = eventData?.date_start ? new Date(eventData.date_start) : new Date();
+    let eventDate = eventData?.date_start ? new Date(eventData.date_start) : new Date();
+    if (isNaN(eventDate.getTime())) eventDate = new Date();
     const dateStr = eventDate.toISOString().split('T')[0];
 
     // Lógica de redirecionamento específica por tipo
@@ -418,7 +697,7 @@ const Notifications: React.FC = () => {
         notification.title?.toLowerCase().includes('almoxarifado') ||
         notification.title?.toLowerCase().includes('copa')
     ) {
-        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=resources`);
+        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=resources&from=notifications`);
         return;
     }
 
@@ -428,12 +707,12 @@ const Notifications: React.FC = () => {
         notification.type === 'transport_decision' || 
         data.kind === 'transport_decision'
     ) {
-        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=transport`);
+        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=transport&from=notifications`);
         return;
     }
 
     // Default: Visão geral
-    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}`);
+    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&from=notifications`);
   };
 
   const getNotificationMessage = (n: any) => {
@@ -697,16 +976,13 @@ const Notifications: React.FC = () => {
         ) : (
           groupedNotifications.map((group) => (
             <div key={group.id} className="relative group-container">
-                {/* Connecting Line for Groups */}
-                {group.items.length > 1 && (
-                    <div className="absolute left-[43px] top-10 bottom-10 w-0.5 bg-slate-200 z-0"></div>
-                )}
+                {/* Connecting Line for Groups - REMOVED to avoid repetition, showing only latest card */}
                 
                 <div className="space-y-1">
-                    {group.items.map((notification, index) => {
+                    {group.items.slice(0, 1).map((notification, index) => {
                          const isLatest = index === 0;
-                         const isPenultimate = index === 1; // Efeito ghost na penúltima
-                         const isOld = !isLatest;
+                         const isPenultimate = false;
+                         const isOld = false;
                          
                          const creatorName = getEventCreator(notification);
 
@@ -718,15 +994,24 @@ const Notifications: React.FC = () => {
                               }}
                               className={`group relative flex gap-3 md:gap-5 p-3 md:p-5 rounded-xl transition-all duration-200 z-10 
                                 ${getStatusContainerStyles(notification)} 
-                                ${isPenultimate ? 'opacity-60 grayscale-[0.3] scale-[0.98]' : ''}
-                                ${isOld && !isPenultimate ? 'opacity-40 scale-[0.95] hover:opacity-100 hover:scale-100' : ''}
-                                ${isLatest ? 'z-20' : 'z-10'}
+                                z-20
                                 ${notification.event ? 'cursor-pointer hover:bg-slate-50/50' : ''}
                               `}
                             >
-              {!notification.read && (
-                <div className="absolute top-3 md:top-5 right-3 md:right-5 size-2 bg-blue-500 rounded-full ring-4 ring-blue-50/50"></div>
-              )}
+              <div className="absolute top-3 md:top-5 right-3 md:right-5 flex items-center gap-2 z-30">
+                {!notification.read && (
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markAsRead(notification.id);
+                    }}
+                    className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-full transition-colors"
+                    title="Marcar como lida"
+                  >
+                    <span className="material-symbols-outlined text-[18px] md:text-[20px]">mark_chat_read</span>
+                  </button>
+                )}
+              </div>
 
               <div className={`flex-shrink-0 size-9 md:size-12 rounded-2xl flex items-center justify-center mt-0.5 ${getIconStyles(notification)} z-10 relative bg-white`}>
                 <span className="material-symbols-outlined text-[18px] md:text-[24px]">
@@ -735,12 +1020,18 @@ const Notifications: React.FC = () => {
               </div>
 
               <div className="flex-1 min-w-0 pt-0 md:pt-1">
-                <div className="flex items-center justify-between gap-2 mb-1 pr-4 md:pr-6">
+                <div className={`flex items-center justify-between gap-2 mb-1 ${!notification.read ? 'pr-10 md:pr-14' : 'pr-4 md:pr-6'}`}>
                   <h4 className={`text-[13px] md:text-[15px] font-semibold tracking-tight ${notification.read ? 'text-slate-600' : 'text-slate-900'}`}>
                     {notification.title}
                   </h4>
                   <span className="text-[10px] md:text-[11px] text-slate-400 whitespace-nowrap font-medium">
-                    {formatDistanceToNow(new Date(notification.created), { addSuffix: true, locale: ptBR })}
+                    {(() => {
+                        try {
+                            const d = new Date(notification.created);
+                            if (isNaN(d.getTime())) return '';
+                            return formatDistanceToNow(d, { addSuffix: true, locale: ptBR });
+                        } catch (e) { return ''; }
+                    })()}
                   </span>
                 </div>
                 
@@ -785,82 +1076,279 @@ const Notifications: React.FC = () => {
                    </div>
                 )}
 
-                {/* Justification/Observation */}
-                {getRefusalJustification(notification) && (
-                   <div className={`mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 ${
-                       isNotificationRefusal(notification)
-                       ? 'bg-red-50 text-red-900 border-red-100 ring-1 ring-red-200/50'
-                       : 'bg-amber-50 text-amber-900 border-amber-100 ring-1 ring-amber-200/50'
-                   }`}>
-                      <span className="material-symbols-outlined text-[16px] mt-px">
-                        {isNotificationRefusal(notification) ? 'report' : 'sticky_note_2'}
-                      </span>
-                      <span className="leading-relaxed">
-                        <strong className="font-bold block mb-0.5 uppercase tracking-wide text-[10px] opacity-80">
-                            {isNotificationRefusal(notification) ? 'Motivo da Recusa' : 'Observação'}
-                        </strong>
-                        {getRefusalJustification(notification)}
-                      </span>
-                   </div>
-                )}
-
-                {/* Re-request Justification (User's Response) */}
+                {/* History Chain or Legacy Justifications */}
                 {(() => {
-                    // Check if this is a rejection notification
-                    const isRejection = isNotificationRefusal(notification);
+                    let history: HistoryEntry[] = [];
                     
-                    if (!isRejection) return null;
-
-                    // Get the related request data
-                    let relatedReq = notification.expand?.related_request;
-                    if (Array.isArray(relatedReq)) relatedReq = relatedReq[0];
-
-                    let eventData = notification.expand?.event || notification.expand?.related_event;
-                    if (Array.isArray(eventData)) eventData = eventData[0];
-
-                    // Determine if there is a user response (justification)
-                    let userJustification = null;
-                    let isReRequested = false;
-
-                    // 1. Check Item Request
-                    if (relatedReq) {
-                        userJustification = relatedReq.justification;
-                        isReRequested = relatedReq.status === 'pending';
-                    } 
-                    // 2. Check Transport Request
-                    else if (eventData) {
-                        userJustification = eventData.transporte_justification;
-                        isReRequested = eventData.transporte_status === 'pending';
+                    // 1. Get history from related request (Item)
+                    const relatedReq = notification.expand?.related_request;
+                    const reqHistory = Array.isArray(relatedReq) ? relatedReq[0]?.history : relatedReq?.history;
+                    if (Array.isArray(reqHistory) && reqHistory.length > 0) {
+                        history = reqHistory;
                     }
 
-                    // Validation Logic:
-                    // We want to show the user's response (justification) if:
-                    // 1. The request is currently marked as PENDING (it's a live re-request)
-                    // 2. The notification metadata says it was re-requested (historical context)
-                    // 3. The current justification is DIFFERENT from the refusal reason (updates that might not be pending anymore)
-                    
-                    const refusalReason = getRefusalJustification(notification);
-                    const markedAsReRequested = getData(notification).re_requested;
-                    
-                    // Allow showing even if same text, IF it is explicitly a re-request state
-                    const shouldShow = (isReRequested || markedAsReRequested) 
-                                     ? !!userJustification // If re-requested, just need text existence
-                                     : (userJustification && userJustification !== refusalReason); // Else, must be new text
+                    // 2. Get history from event (Transport)
+                    if (history.length === 0) {
+                         const eventData = notification.expand?.event || notification.expand?.related_event;
+                         const evtHistory = Array.isArray(eventData) ? eventData[0]?.transport_history : eventData?.transport_history;
+                         if (Array.isArray(evtHistory) && evtHistory.length > 0) {
+                             history = evtHistory;
+                         }
+                    }
 
-                    if (shouldShow) {
-                        return (
-                           <div className="mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 bg-blue-50 text-blue-900 border-blue-100 ring-1 ring-blue-200/50">
-                              <span className="material-symbols-outlined text-[16px] mt-px">reply</span>
-                              <span className="leading-relaxed">
-                                <strong className="font-bold block mb-0.5 uppercase tracking-wide text-[10px] opacity-80">
-                                    Sua Resposta (Solicitação Reaberta)
-                                </strong>
-                                {userJustification}
-                              </span>
-                           </div>
+                    // 3. Construct Virtual History for Event Invites / Responses
+                    if (history.length === 0 && (notification.type === 'event_invite' || notification.type === 'refusal' || getData(notification).kind === 'event_invite_response')) {
+                        // 3a. Try to recover accumulated history from the notification payload (Guest View)
+                        const notifData = getData(notification);
+                        if (notifData.history_context && Array.isArray(notifData.history_context.full_history) && notifData.history_context.full_history.length > 0) {
+                             history = [...notifData.history_context.full_history];
+                        }
+
+                        // 3b. Construct from group items (Append to payload history or start fresh)
+                        // Sort items chronologically (oldest first)
+                        const sortedItems = [...group.items].sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+                        
+                        // Initial Event (Creation) - Only if history is empty
+                        const event = notification.expand?.event;
+                        if (history.length === 0 && event) {
+                            history.push({
+                                action: 'invite_created',
+                                timestamp: event.created,
+                                user: event.user, // Creator
+                                user_name: notification.expand?.created_by?.name || 'Organizador',
+                                message: `Convite para evento "${event.title}"`
+                            });
+                        }
+
+                        // Only process group items if we DON'T have a payload history (to avoid duplication)
+                        // OR if we need to append specific current items that might be missing from payload (e.g. current refusal)
+                        if (history.length === 0) {
+                             // Process each notification in the group (Legacy or clean build)
+                             sortedItems.forEach((item, idx) => {
+                                  const itemData = getData(item);
+                                  const isMe = itemData.guest_id === user?.id; // Guest perspective
+                                  
+                                  // 1. Refusal / Response
+                                  if (item.type === 'refusal' || itemData.kind === 'event_invite_response' || itemData.action === 'rejected') {
+                                      // Handle Acceptance explicitly if kind is response
+                                      if (itemData.kind === 'event_invite_response' && (itemData.action === 'accepted' || itemData.action === 'approved')) {
+                                           history.push({
+                                              action: 'invite_accepted',
+                                              timestamp: item.created,
+                                              user: itemData.guest_id || '',
+                                              user_name: itemData.guest_name || 'Convidado',
+                                              message: 'Convite aceito'
+                                          });
+                                      } else {
+                                          // Is Rejection
+                                          history.push({
+                                              action: 'invite_rejected',
+                                              timestamp: item.created,
+                                              user: itemData.guest_id || '',
+                                              user_name: itemData.guest_name || 'Convidado',
+                                              justification: itemData.justification || item.message
+                                          });
+     
+                                          // Check if Organizer Replied (Re-invited) - Persisted in refusal notification data
+                                          if (itemData.re_invited && itemData.re_invite_info) {
+                                              history.push({
+                                                  action: 'invite_resent',
+                                                  timestamp: itemData.re_invite_info.timestamp,
+                                                  user: user?.id || '', 
+                                                  user_name: 'Você',
+                                                  message: itemData.re_invite_info.message || 'Convite reenviado'
+                                              });
+                                          }
+                                      }
+                                  }
+                                  // 2. Re-invite (Sent by Organizer)
+                                  else if (item.type === 'event_invite') {
+                                      // Only add 'invite_resent' if there was a rejection before it.
+                                      const hasPriorRejection = history.some(h => h.action === 'invite_rejected' && new Date(h.timestamp!).getTime() < new Date(item.created).getTime());
+                                      
+                                      if (hasPriorRejection) {
+                                          const customMsg = itemData.invite_message;
+                                          history.push({
+                                              action: 'invite_resent',
+                                              timestamp: item.created,
+                                              user: event?.user || '',
+                                              user_name: notification.expand?.created_by?.name || 'Organizador',
+                                              message: customMsg || item.message || 'Convite reenviado'
+                                          });
+                                      }
+                                  }
+                             });
+                        } else {
+                             // If we HAVE history from payload, we might need to append the CURRENT Refusal
+                             // because the payload comes from the Invite (previous step), not including the current refusal itself.
+                             if (notification.type === 'refusal' || getData(notification).kind === 'event_invite_response' || notification.invite_status === 'rejected') {
+                                 const notifData = getData(notification);
+                                 // Check if the latest history entry is already a rejection or a response to it
+                                 // We use timestamp comparison to ensure we only append NEW refusals that happened AFTER the last history entry.
+                                 // This prevents duplication when the history already contains the refusal or a subsequent re-invite.
+                                 const lastEntry = history.length > 0 ? history[history.length - 1] : null;
+                                 const lastTimestamp = lastEntry ? new Date(lastEntry.timestamp || '').getTime() : 0;
+                                 const currentRefusalTimestamp = new Date(notification.created).getTime();
+                                 
+                                 // Only add if the refusal is strictly newer than the last recorded action
+                                 if (currentRefusalTimestamp > lastTimestamp) {
+                                      history.push({
+                                          action: 'invite_rejected',
+                                          timestamp: notification.created,
+                                          user: notifData.guest_id || '',
+                                          user_name: notifData.guest_name || 'Convidado',
+                                          justification: notifData.justification || notification.message
+                                      });
+                                      
+                                      // If Organizer already replied to THIS refusal (re-invited again), add it too
+                                      if (notifData.re_invited && notifData.re_invite_info) {
+                                          history.push({
+                                              action: 'invite_resent',
+                                              timestamp: notifData.re_invite_info.timestamp,
+                                              user: user?.id || '', 
+                                              user_name: 'Você',
+                                              message: notifData.re_invite_info.message || 'Convite reenviado'
+                                          });
+                                      }
+                                 }
+                             }
+                        }
+                        
+                        // Deduplicate history based on timestamp and action to prevent loops
+                        history = history.filter((entry, index, self) =>
+                            index === self.findIndex((t) => (
+                                t.timestamp === entry.timestamp && t.action === entry.action
+                            ))
                         );
                     }
-                    return null;
+
+                    // 4. Render History Chain if available
+                    if (history.length > 0) {
+                        // Ensure we handle both object and array expansion safely
+                        const safeReq = Array.isArray(relatedReq) ? relatedReq[0] : relatedReq;
+                        const rawEvent = notification.expand?.event || notification.expand?.related_event;
+                        const safeEvent = Array.isArray(rawEvent) ? rawEvent[0] : rawEvent;
+
+                        const isPending = (safeReq?.status === 'pending') || 
+                                          (safeEvent?.transporte_status === 'pending');
+
+                        // Determine Sector Name for clearer feedback
+                        let sectorName = 'setor responsável';
+                        if (safeEvent?.transporte_status === 'pending') {
+                            sectorName = 'Transporte';
+                        } else if (safeReq?.expand?.item?.category === 'INFORMATICA') {
+                            sectorName = 'Informática';
+                        } else if (safeReq?.expand?.item?.category === 'ALMOXARIFADO') {
+                            sectorName = 'Almoxarifado';
+                        } else if (safeReq?.expand?.item?.category === 'COPA') {
+                            sectorName = 'Copa';
+                        }
+                        
+                        // Check if current user is a SECTOR user
+                        // If user is ALMC, DCA, or TRA, they don't need to see "Pending in Sector X" message
+                        // unless they are viewing a request they made themselves (which is rare but possible for ADMIN)
+                        // Logic: Show message ONLY if user is NOT the sector responsible for this request type
+                        
+                        let showPendingMessage = isPending;
+
+                        if (user?.role === 'ALMC' && (sectorName === 'Almoxarifado' || sectorName === 'Copa')) {
+                            showPendingMessage = false;
+                        } else if (user?.role === 'DCA' && sectorName === 'Informática') {
+                            showPendingMessage = false;
+                        } else if (user?.role === 'TRA' && sectorName === 'Transporte') {
+                            showPendingMessage = false;
+                        }
+
+                        return (
+                            <div className="mt-4">
+                                <HistoryChain history={history} currentUserId={user?.id} />
+                                {showPendingMessage && (
+                                    <div className="ml-10 mt-2 px-3 py-2 bg-amber-50 text-amber-800 border border-amber-100 rounded-lg text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2 relative z-0">
+                                        <div className="absolute -left-[21px] top-1/2 -translate-y-1/2 w-4 h-px bg-slate-200"></div>
+                                        <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
+                                        <span>O pedido se encontra pendente no setor <strong>{sectorName}</strong>.</span>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    }
+
+                    // 4. Fallback: Legacy Render
+                    return (
+                        <>
+                           {/* Justification/Observation */}
+                            {getRefusalJustification(notification) && (
+                               <div className={`mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 ${
+                                   isNotificationRefusal(notification)
+                                   ? 'bg-red-50 text-red-900 border-red-100 ring-1 ring-red-200/50'
+                                   : 'bg-amber-50 text-amber-900 border-amber-100 ring-1 ring-amber-200/50'
+                               }`}>
+                                  <span className="material-symbols-outlined text-[16px] mt-px">
+                                    {isNotificationRefusal(notification) ? 'report' : 'sticky_note_2'}
+                                  </span>
+                                  <span className="leading-relaxed">
+                                    <strong className="font-bold block mb-0.5 uppercase tracking-wide text-[10px] opacity-80">
+                                        {isNotificationRefusal(notification) ? 'Motivo da Recusa' : 'Observação'}
+                                    </strong>
+                                    {getRefusalJustification(notification)}
+                                  </span>
+                               </div>
+                            )}
+            
+                            {/* Re-request Justification (User's Response) */}
+                            {(() => {
+                                // Check if this is a rejection notification
+                                const isRejection = isNotificationRefusal(notification);
+                                
+                                if (!isRejection) return null;
+            
+                                // Get the related request data
+                                let relatedReq = notification.expand?.related_request;
+                                if (Array.isArray(relatedReq)) relatedReq = relatedReq[0];
+            
+                                let eventData = notification.expand?.event || notification.expand?.related_event;
+                                if (Array.isArray(eventData)) eventData = eventData[0];
+            
+                                // Determine if there is a user response (justification)
+                                let userJustification = null;
+                                let isReRequested = false;
+            
+                                // 1. Check Item Request
+                                if (relatedReq) {
+                                    userJustification = relatedReq.justification;
+                                    isReRequested = relatedReq.status === 'pending';
+                                } 
+                                // 2. Check Transport Request
+                                else if (eventData) {
+                                    userJustification = eventData.transporte_justification;
+                                    isReRequested = eventData.transporte_status === 'pending';
+                                }
+            
+                                // Validation Logic
+                                const refusalReason = getRefusalJustification(notification);
+                                const markedAsReRequested = getData(notification).re_requested;
+                                
+                                const shouldShow = (isReRequested || markedAsReRequested) 
+                                                 ? !!userJustification 
+                                                 : (userJustification && userJustification !== refusalReason);
+            
+                                if (shouldShow) {
+                                    return (
+                                       <div className="mt-2 p-3 text-xs rounded-lg border flex items-start gap-2 bg-blue-50 text-blue-900 border-blue-100 ring-1 ring-blue-200/50">
+                                          <span className="material-symbols-outlined text-[16px] mt-px">reply</span>
+                                          <span className="leading-relaxed">
+                                            <strong className="font-bold block mb-0.5 uppercase tracking-wide text-[10px] opacity-80">
+                                                Sua Resposta (Solicitação Reaberta)
+                                            </strong>
+                                            {userJustification}
+                                          </span>
+                                       </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+                        </>
+                    );
                 })()}
 
                 {/* Actions Area */}
@@ -881,7 +1369,7 @@ const Notifications: React.FC = () => {
                                 const eventData = notification.expand?.event;
                                 const eventDate = eventData?.date_start ? new Date(eventData.date_start) : new Date();
                                 const dateStr = eventDate.toISOString().split('T')[0];
-                                navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=transport`);
+                                navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${notification.event}&tab=transport&from=notifications`);
                             }
                         }}
                         className="px-3 py-1.5 bg-cyan-50 text-cyan-700 border border-cyan-100 text-xs font-bold rounded-lg hover:bg-cyan-100 transition-all flex items-center gap-1.5"
@@ -892,31 +1380,63 @@ const Notifications: React.FC = () => {
                    )}
 
                    {/* Decision Buttons */}
-                   {notification.invite_status === 'pending' && 
+                   {(notification.invite_status === 'pending' || (notification.type === 'event_invite' && !notification.invite_status)) && 
+                    // Exclude participation request responses (informational only)
+                    getData(notification).kind !== 'participation_request_response' &&
                     // For sector requests, only show actions if it's the latest notification in the chain
                     !((notification.type === 'almc_item_request' || notification.type === 'transport_request') && !isLatest) && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        disabled={processingId === notification.id}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'approved' : 'accepted');
-                        }}
-                        className="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
-                      >
-                         {(notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'Aprovar' : 'Aceitar'}
-                      </button>
-                      <button
-                        disabled={processingId === notification.id}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onHandleAction(notification, 'rejected');
-                        }}
-                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-all disabled:opacity-50"
-                      >
-                        Recusar
-                      </button>
-                    </div>
+                    // Check Permissions:
+                    // 1. Only SECTOR users (ALMC, DCA, TRA, ADMIN) can approve/reject sector requests
+                    // 2. Regular users (USER, CE) can only accept/reject event invites
+                    (() => {
+                        const isSectorRequest = notification.type === 'almc_item_request' || notification.type === 'transport_request';
+                        
+                        // If it's a sector request, check if user has permission
+                        if (isSectorRequest) {
+                             const itemCategory = notification.expand?.related_request?.expand?.item?.category;
+                             const isTransport = notification.type === 'transport_request';
+                             
+                             // Check for ALMC (Almoxarifado/Copa)
+                             const canDecideAlmac = (user?.role === 'ALMC' || user?.role === 'ADMIN') && 
+                                                    (itemCategory === 'ALMOXARIFADO' || itemCategory === 'COPA' || (!itemCategory && !isTransport));
+                             
+                             // Check for DCA (Informática)
+                             const canDecideDca = (user?.role === 'DCA' || user?.role === 'ADMIN') && itemCategory === 'INFORMATICA';
+                             
+                             // Check for TRA (Transporte)
+                             const canDecideTransport = (user?.role === 'TRA' || user?.role === 'ADMIN') && isTransport;
+
+                             // If none of the permissions match, hide the buttons
+                             if (!canDecideAlmac && !canDecideDca && !canDecideTransport) {
+                                 return null; 
+                             }
+                        }
+
+                        return (
+                            <div className="flex items-center gap-2">
+                            <button
+                                disabled={processingId === notification.id}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'approved' : 'accepted');
+                                }}
+                                className="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
+                            >
+                                {(notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'Aprovar' : 'Aceitar'}
+                            </button>
+                            <button
+                                disabled={processingId === notification.id}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onHandleAction(notification, 'rejected');
+                                }}
+                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-50 transition-all disabled:opacity-50"
+                            >
+                                Recusar
+                            </button>
+                            </div>
+                        );
+                    })()
                   )}
 
                   {/* Re-request Button */}
@@ -1037,6 +1557,89 @@ const Notifications: React.FC = () => {
                     })()
                   )}
 
+                  {/* Re-Invite Button (Event Invites) */}
+                  {(
+                    isLatest && 
+                    notification.type === 'refusal' && 
+                    getData(notification).kind === 'event_invite_response' &&
+                    getData(notification).action === 'rejected'
+                  ) && (
+                    (() => {
+                        // Check if already re-invited (check history order)
+                        const notifData = getData(notification);
+                        let history = notifData.history_context?.full_history || [];
+                        
+                        // Ensure history is an array
+                        if (!Array.isArray(history)) {
+                            history = [];
+                        }
+
+                        // Create a working copy of history
+                        const effectiveHistory = [...history];
+
+                        // If the current notification is a REFUSAL, it implies a rejection event.
+                        // We must ensure this rejection is accounted for in the timeline.
+                        // If it's not in the history yet, we assume it comes AFTER the existing history.
+                        const isRefusalInHistory = effectiveHistory.some((h: any) => 
+                            h.action === 'invite_rejected' && 
+                            (h.timestamp === notification.created || Math.abs(new Date(h.timestamp).getTime() - new Date(notification.created).getTime()) < 1000)
+                        );
+
+                        if (!isRefusalInHistory) {
+                             effectiveHistory.push({
+                                 action: 'invite_rejected',
+                                 timestamp: notification.created
+                             });
+                        }
+
+                        let isPendingDecision = false;
+
+                        if (effectiveHistory.length > 0) {
+                             // Sort history chronologically
+                             const sortedHistory = effectiveHistory.sort((a: any, b: any) => 
+                                 new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                             );
+                             
+                             // Check the LAST action
+                             const lastAction = sortedHistory[sortedHistory.length - 1];
+                             
+                             // If the last action was a re-invite from organizer, we are pending
+                             if (lastAction.action === 'invite_resent') {
+                                 isPendingDecision = true;
+                             }
+                             // If the last action was a rejection (from guest), we are NOT pending (can invite again)
+                             else if (lastAction.action === 'invite_rejected') {
+                                 isPendingDecision = false;
+                             }
+                        } else {
+                             // Fallback to flag if no history (legacy behavior)
+                             isPendingDecision = notifData.re_invited === true;
+                        }
+                        
+                        if (isPendingDecision) {
+                             return (
+                                <div className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default" title="Aguardando decisão da pessoa convidada">
+                                    <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
+                                    Convite enviado: Aguardando decisão
+                                </div>
+                             );
+                        }
+
+                        return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReInviteNotification(notification);
+                              }}
+                              className="px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1.5"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">person_add</span>
+                              Convidar Novamente
+                            </button>
+                        );
+                    })()
+                  )}
+
                   {/* Status Badge */}
                    {notification.invite_status && notification.invite_status !== 'pending' && (
                       <span className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1.5 ${
@@ -1056,18 +1659,6 @@ const Notifications: React.FC = () => {
 
                 {/* Hover Actions */}
                 <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-50 opacity-0 group-hover:opacity-100 transition-opacity relative z-20">
-                  {!notification.read && (
-                    <button 
-                      onClick={(e) => {
-                          e.stopPropagation();
-                          markAsRead(notification.id);
-                      }}
-                      className="text-[10px] font-semibold text-primary hover:text-primary-dark cursor-pointer"
-                    >
-                      Marcar como lida
-                    </button>
-                  )}
-                  
                   <button 
                     onClick={(e) => {
                         e.stopPropagation();
@@ -1126,6 +1717,15 @@ const Notifications: React.FC = () => {
             onClose={() => setRejectingNotification(null)}
             onConfirm={onConfirmRejection}
             loading={processingId === rejectingNotification.id}
+        />
+      )}
+
+      {reInviteNotification && (
+        <ReInviteModal
+          notification={reInviteNotification}
+          onClose={() => setReInviteNotification(null)}
+          onConfirm={onConfirmReInvite}
+          loading={processingId === reInviteNotification.id}
         />
       )}
     </div>

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { getAvatarUrl } from '../lib/pocketbase';
 import { useAuth } from './AuthContext';
 
 interface AvatarUploadModalProps {
@@ -108,7 +109,7 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({ isOpen, onClose }
                             ) : (
                                 <div className="w-full h-full bg-slate-100 flex flex-col items-center justify-center text-slate-400 group-hover:text-primary transition-colors">
                                     {user?.avatar ? (
-                                        <img src={user.avatar} alt="Current" className="w-full h-full object-cover opacity-50 group-hover:opacity-30 transition-opacity" />
+                                        <img src={getAvatarUrl(user)} alt="Current" className="w-full h-full object-cover opacity-50 group-hover:opacity-30 transition-opacity" />
                                     ) : (
                                         <span className="material-symbols-outlined text-5xl">person</span>
                                     )}

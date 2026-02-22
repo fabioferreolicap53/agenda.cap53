@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function test() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
     try {
         console.log('Testing user auth...');
         // Using credentials from verify_pb_data.js as regular user
@@ -27,3 +27,4 @@ async function test() {
 }
 
 test();
+

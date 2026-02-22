@@ -1,7 +1,7 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
-const PB_URL = 'https://centraldedados.duckdns.org';
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -10,12 +10,12 @@ const pb = new PocketBase(PB_URL);
 async function authenticate() {
     console.log(`Connecting to ${PB_URL}...`);
     try {
-        // Tentar autenticação de admin (PocketBase < 0.23)
+        // Tentar autenticaÃ§Ã£o de admin (PocketBase < 0.23)
         await pb.admins.authWithPassword(ADMIN_EMAIL, ADMIN_PASS);
         console.log('Authenticated successfully as Admin (legacy).');
     } catch (e) {
         try {
-            // Tentar autenticação unificada (PocketBase >= 0.23)
+            // Tentar autenticaÃ§Ã£o unificada (PocketBase >= 0.23)
             await pb.collection('_superusers').authWithPassword(ADMIN_EMAIL, ADMIN_PASS);
             console.log('Authenticated successfully as Superuser.');
         } catch (e2) {
@@ -75,3 +75,4 @@ async function updateSchema() {
 }
 
 updateSchema();
+

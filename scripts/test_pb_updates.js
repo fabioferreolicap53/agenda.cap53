@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function testUpdate() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         console.log('1. Trying to login as admin...');
@@ -62,3 +62,4 @@ async function testUpdate() {
 }
 
 testUpdate();
+

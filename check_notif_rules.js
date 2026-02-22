@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 // Configuration extracted from other project scripts
-const PB_URL = 'https://centraldedados.duckdns.org';
+const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
 const ADMIN_PASS = '@Cap5364125';
 
@@ -62,3 +62,4 @@ async function checkRules() {
 }
 
 checkRules();
+

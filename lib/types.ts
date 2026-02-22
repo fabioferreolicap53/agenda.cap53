@@ -30,6 +30,8 @@ export interface EventRecord {
   transporte_horario_levar?: string;
   transporte_horario_buscar?: string;
   transporte_qtd_pessoas?: number;
+  transporte_passageiro?: number;
   transporte_justification?: string;
+  transporte_obs?: string;
   user: string;
 }

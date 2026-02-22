@@ -1,17 +1,17 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
 async function checkSchema() {
-    const pbUrl = 'https://centraldedados.duckdns.org';
+    const pbUrl = 'https://centraldedados.dev.br';
     const adminEmail = 'fabioferreoli@gmail.com';
     const adminPass = '@Cap5364125';
     const pb = new PocketBase(pbUrl);
 
     try {
         await pb.admins.authWithPassword(adminEmail, adminPass);
-        console.log('✅ Autenticado como Admin');
+        console.log('âœ… Autenticado como Admin');
 
         const collections = await pb.collections.getFullList();
-        console.log('--- Coleções disponíveis ---');
+        console.log('--- ColeÃ§Ãµes disponÃ­veis ---');
         collections.forEach(c => {
             console.log(`- ${c.name} (${c.id})`);
             if (c.name.includes('eventos')) {
@@ -23,8 +23,9 @@ async function checkSchema() {
         });
 
     } catch (e) {
-        console.error('❌ Erro:', e.message);
+        console.error('âŒ Erro:', e.message);
     }
 }
 
 checkSchema();
+

@@ -1,10 +1,10 @@
-const PocketBase = require('pocketbase/cjs');
+﻿const PocketBase = require('pocketbase/cjs');
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function testFixedQuery() {
   try {
-    console.log('🔍 Testando query corrigida do useNotifications...');
+    console.log('ðŸ” Testando query corrigida do useNotifications...');
     
     const userId = '7t90giut8htg8vh'; // user1@cap53.com (ALMC)
     
@@ -14,7 +14,7 @@ async function testFixedQuery() {
         filter: 'status = "pending" && (item.category = "ALMOXARIFADO" || item.category = "COPA")',
         expand: 'item,event'
       });
-      console.log(`   ✅ SUCESSO! Encontradas: ${almcResult.totalItems} solicitações ALMC pendentes`);
+      console.log(`   âœ… SUCESSO! Encontradas: ${almcResult.totalItems} solicitaÃ§Ãµes ALMC pendentes`);
       
       if (almcResult.totalItems > 0) {
         almcResult.items.forEach((item, index) => {
@@ -23,8 +23,8 @@ async function testFixedQuery() {
       }
       
     } catch (error) {
-      console.log(`   ❌ Erro na query ALMC: ${error.message}`);
-      console.log(`   🔍 Tentando query simplificada...`);
+      console.log(`   âŒ Erro na query ALMC: ${error.message}`);
+      console.log(`   ðŸ” Tentando query simplificada...`);
       
       // Tentar sem o filtro de categoria
       try {
@@ -32,7 +32,7 @@ async function testFixedQuery() {
           filter: 'status = "pending"',
           expand: 'item,event'
         });
-        console.log(`   ✅ Query simplificada: ${simpleResult.totalItems} solicitações pendentes`);
+        console.log(`   âœ… Query simplificada: ${simpleResult.totalItems} solicitaÃ§Ãµes pendentes`);
         
         if (simpleResult.totalItems > 0) {
           simpleResult.items.forEach((item, index) => {
@@ -41,7 +41,7 @@ async function testFixedQuery() {
         }
         
       } catch (error2) {
-        console.log(`   ❌ Query simplificada também falhou: ${error2.message}`);
+        console.log(`   âŒ Query simplificada tambÃ©m falhou: ${error2.message}`);
       }
     }
     
@@ -50,7 +50,7 @@ async function testFixedQuery() {
       const traResult = await pb.collection('agenda_cap53_eventos').getList(1, 50, {
         filter: 'transporte_suporte = true && transporte_status = "pending"'
       });
-      console.log(`   ✅ Solicitações TRA: ${traResult.totalItems}`);
+      console.log(`   âœ… SolicitaÃ§Ãµes TRA: ${traResult.totalItems}`);
       
       if (traResult.totalItems > 0) {
         traResult.items.forEach((item, index) => {
@@ -59,15 +59,15 @@ async function testFixedQuery() {
       }
       
     } catch (error) {
-      console.log(`   ❌ Erro na query TRA: ${error.message}`);
+      console.log(`   âŒ Erro na query TRA: ${error.message}`);
     }
     
-    console.log('\n3. Testando notificações do sistema:');
+    console.log('\n3. Testando notificaÃ§Ãµes do sistema:');
     try {
       const notifResult = await pb.collection('agenda_cap53_notifications').getList(1, 50, {
         filter: `user = "${userId}"`
       });
-      console.log(`   ✅ Notificações do sistema: ${notifResult.totalItems}`);
+      console.log(`   âœ… NotificaÃ§Ãµes do sistema: ${notifResult.totalItems}`);
       
       if (notifResult.totalItems > 0) {
         notifResult.items.forEach((item, index) => {
@@ -76,11 +76,11 @@ async function testFixedQuery() {
       }
       
     } catch (error) {
-      console.log(`   ❌ Erro nas notificações: ${error.message}`);
+      console.log(`   âŒ Erro nas notificaÃ§Ãµes: ${error.message}`);
     }
     
   } catch (error) {
-    console.error('❌ Erro geral:', error.message);
+    console.error('âŒ Erro geral:', error.message);
   }
 }
 

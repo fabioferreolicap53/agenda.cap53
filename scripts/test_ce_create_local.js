@@ -1,6 +1,6 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function testCECreate() {
     try {
@@ -34,3 +34,4 @@ async function testCECreate() {
 }
 
 testCECreate();
+

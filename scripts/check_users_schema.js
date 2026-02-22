@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 async function checkUsersSchema() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
 
     try {
         console.log('Authenticating as admin...');
@@ -28,3 +28,4 @@ async function checkUsersSchema() {
 }
 
 checkUsersSchema();
+

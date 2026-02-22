@@ -34,9 +34,16 @@ export const useNotificationActions = (
 
     // 2. Backend/Persistence Update
     if (id.startsWith('req_') || id.startsWith('tra_')) {
-        console.log('Virtual notification, skipping backend update');
-        // For virtual notifications, we could persist to localStorage if needed
-        // For now, local state update is enough for the session
+        console.log('Virtual notification, updating local storage');
+        try {
+            const readVirtual = JSON.parse(localStorage.getItem('virtual_notifications_read') || '[]');
+            if (!readVirtual.includes(id)) {
+                readVirtual.push(id);
+                localStorage.setItem('virtual_notifications_read', JSON.stringify(readVirtual));
+            }
+        } catch (e) {
+            console.error('Error saving read virtual notifications:', e);
+        }
         return;
     }
 
@@ -56,15 +63,33 @@ export const useNotificationActions = (
 
   const markAllAsRead = async () => {
     try {
-      const unread = notifications.filter(n => !n.read && !n.id.startsWith('req_') && !n.id.startsWith('tra_'));
-      await Promise.all(unread.map(n => pb.collection('agenda_cap53_notifications').update(n.id, { read: true })));
+      // 1. Mark real notifications as read in backend
+      const unreadReal = notifications.filter(n => !n.read && !n.id.startsWith('req_') && !n.id.startsWith('tra_'));
+      await Promise.all(unreadReal.map(n => pb.collection('agenda_cap53_notifications').update(n.id, { read: true })));
       
-      setNotifications(prev => prev.map(n => 
-        (n.id.startsWith('req_') || n.id.startsWith('tra_')) ? n : { ...n, read: true }
-      ));
-      
-      const virtualCount = notifications.filter(n => (n.id.startsWith('req_') || n.id.startsWith('tra_')) && !n.read).length;
-      setUnreadCount(virtualCount);
+      // 2. Mark virtual notifications as read in localStorage
+      const unreadVirtual = notifications.filter(n => !n.read && (n.id.startsWith('req_') || n.id.startsWith('tra_')));
+      if (unreadVirtual.length > 0) {
+          try {
+              const readVirtual = JSON.parse(localStorage.getItem('virtual_notifications_read') || '[]');
+              let changed = false;
+              unreadVirtual.forEach(n => {
+                  if (!readVirtual.includes(n.id)) {
+                      readVirtual.push(n.id);
+                      changed = true;
+                  }
+              });
+              if (changed) {
+                  localStorage.setItem('virtual_notifications_read', JSON.stringify(readVirtual));
+              }
+          } catch (e) {
+              console.error('Error saving read virtual notifications:', e);
+          }
+      }
+
+      // 3. Update local state
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -188,17 +213,80 @@ export const useNotificationActions = (
           }
 
           // Notify Creator
-          if (notification.expand?.event?.user) {
+          let creatorId = notification.expand?.event?.user;
+          // Handle case where user is expanded as object
+          if (creatorId && typeof creatorId === 'object') {
+              creatorId = (creatorId as any).id;
+          }
+          
+          let eventTitle = notification.expand?.event?.title || 'Evento';
+
+          if (!creatorId && eventId) {
+             try {
+                 const evt = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+                 creatorId = evt.user;
+                 eventTitle = evt.title;
+             } catch (e) {
+                 console.warn('Failed to fetch event for creator notification:', e);
+             }
+          }
+
+          if (creatorId && creatorId !== user.id) {
+            let message = `${user.name || user.email} ${action === 'accepted' ? 'aceitou' : 'recusou'} o convite para "${eventTitle}".`;
+            
+            if (action === 'rejected' && justification) {
+                message += ` Motivo: ${justification}`;
+            }
+
             await pb.collection('agenda_cap53_notifications').create({
-              user: notification.expand.event.user,
+              user: creatorId,
               title: `Convite ${action === 'accepted' ? 'Aceito' : 'Recusado'}`,
-              message: `${user.name || user.email} ${action === 'accepted' ? 'aceitou' : 'recusou'} o convite para "${notification.expand.event.title}".`,
+              message: message,
               type: action === 'rejected' ? 'refusal' : 'system',
               event: eventId,
               read: false,
-              data: { kind: 'event_invite_response', action }
+              data: { 
+                  kind: 'event_invite_response', 
+                  action,
+                  justification: justification || undefined,
+                  guest_id: user.id,
+                  guest_name: user.name || user.email,
+                  history_context: notification.data?.history_context // Pass forward the history context
+              }
             });
           }
+
+          // Update the notification status to prevent further actions
+          // Also persist the history of this action for the Guest's view
+          let currentData = notification.data || {};
+          if (typeof currentData === 'string') {
+              try { currentData = JSON.parse(currentData); } catch (e) { currentData = {}; }
+          }
+          
+          let history = currentData.history_context?.full_history || [];
+          if (!Array.isArray(history)) history = [];
+
+          // Add current action to history
+          history.push({
+              action: action === 'accepted' ? 'invite_accepted' : 'invite_rejected',
+              timestamp: new Date().toISOString(),
+              user: user.id,
+              user_name: 'Você', // Guest sees "Você"
+              justification: justification || '',
+              message: justification || (action === 'accepted' ? 'Convite aceito' : 'Convite recusado')
+          });
+
+          await pb.collection('agenda_cap53_notifications').update(notification.id, {
+              invite_status: action === 'accepted' ? 'accepted' : 'rejected',
+              read: true,
+              data: {
+                  ...currentData,
+                  justification: justification || '', // Persist justification in root data for fallback access
+                  history_context: {
+                      full_history: history
+                  }
+              }
+          });
         }
       }
 
@@ -229,6 +317,28 @@ export const useNotificationActions = (
               });
             }
           }
+
+          // Update the notification itself to reflect the decision
+          await pb.collection('agenda_cap53_notifications').update(notification.id, {
+            invite_status: action === 'accepted' ? 'accepted' : 'rejected',
+            read: true
+          });
+          
+          // Notify the requester about the decision
+          await pb.collection('agenda_cap53_notifications').create({
+              user: requesterId,
+              title: action === 'accepted' ? 'Solicitação Aprovada' : 'Solicitação Recusada',
+              message: action === 'accepted' 
+                  ? `Sua solicitação para participar do evento foi aprovada!`
+                  : `Sua solicitação para participar do evento foi recusada pelo criador.`,
+              type: action === 'accepted' ? 'event_invite' : 'system',
+              event: eventId,
+              data: {
+                  kind: 'participation_request_response',
+                  action: action === 'accepted' ? 'accepted' : 'rejected',
+                  original_message: notification.data?.requester_message
+              }
+          });
         }
       }
 
@@ -249,7 +359,20 @@ export const useNotificationActions = (
           const status = action === 'approved' || action === 'accepted' ? 'approved' : 'rejected';
           
           try {
-              const payload: any = { status: status };
+              // Fetch current history
+              const currentRequest = await pb.collection('agenda_cap53_almac_requests').getOne(requestId);
+              const history = currentRequest.history || [];
+              
+              // Append new action
+              history.push({
+                  timestamp: new Date().toISOString(),
+                  action: status === 'approved' ? 'approved' : 'rejected',
+                  user: user.id,
+                  user_name: user.name,
+                  message: justification || ''
+              });
+
+              const payload: any = { status: status, history: history };
               // Ensure justification is always sent, even if empty string, to clear previous values or set new ones
               payload.justification = justification || '';
               
@@ -320,11 +443,24 @@ export const useNotificationActions = (
 
         if (eventId) {
           // Transporte usa 'confirmed' ao invés de 'approved'
-          const status = action === 'approved' || action === 'accepted' ? 'confirmed' : 'rejected';
+          const status = action === 'approved' ? 'confirmed' : 'rejected';
           
-          const payload: any = { transporte_status: status };
-          // Ensure justification is always sent
-          payload.transporte_justification = justification || '';
+          const currentEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+          const history = currentEvent.transport_history || [];
+          
+          history.push({
+              timestamp: new Date().toISOString(),
+              action: status === 'confirmed' ? 'approved' : 'rejected',
+              user: user.id,
+              user_name: user.name,
+              message: justification || ''
+          });
+
+          const payload: any = { 
+              transporte_status: status,
+              transport_history: history,
+              transporte_justification: justification || ''
+          };
 
           await pb.collection('agenda_cap53_eventos').update(eventId, payload, { requestKey: null });
         }

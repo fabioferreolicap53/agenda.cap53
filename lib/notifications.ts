@@ -12,7 +12,8 @@ export type NotificationType =
   | 'info'
   | 'refusal'
   | 'acknowledgment'
-  | 'system';
+  | 'system'
+  | 'history_log';
 
 export interface CreateNotificationParams {
   user: string;
@@ -33,7 +34,7 @@ export interface NotificationRecord {
   read: boolean;
   event?: string;
   related_request?: string;
-  invite_status?: 'pending' | 'accepted' | 'rejected';
+  invite_status?: 'pending' | 'accepted' | 'rejected' | 'confirmed' | 'approved';
   data?: any;
   meta?: any;
   acknowledged: boolean;
@@ -43,6 +44,9 @@ export interface NotificationRecord {
     event?: any;
     related_request?: any;
     user?: any;
+    related_event?: any;
+    created_by?: any;
+    item?: any;
   };
 }
 
@@ -184,25 +188,26 @@ export const notificationService = {
  * Rule: Request notifications linked to an event cannot be deleted before the event starts.
  */
 export const isNotificationDeletable = (notification: NotificationRecord): { canDelete: boolean; reason?: string } => {
-  const isRequest = 
-    notification.type === 'service_request' ||
-    notification.type === 'almc_item_request' ||
-    notification.type === 'transport_request' ||
-    notification.data?.kind === 'almc_item_request' ||
-    notification.data?.kind === 'service_request' ||
-    notification.data?.kind === 'transport_request';
-
-  if (isRequest) {
-    // Check expand.event first, then try to see if event is an object (in case of virtual notifications mixed in)
-    const event = notification.expand?.event || (typeof notification.event === 'object' ? notification.event : null);
+  // Check expand.event first, then try to see if event is an object (in case of virtual notifications mixed in)
+  // Also check related_event as a fallback
+  const event = notification.expand?.event || 
+                (typeof notification.event === 'object' ? notification.event : null) ||
+                notification.expand?.related_event;
+  
+  if (event) {
+    // Check if the event has ended
+    // We use date_end if available, otherwise fallback to date_start (assuming 1h duration or similar, but safer to stick to date_end)
+    const eventEndDateStr = event.date_end || event.date_start;
     
-    if (event && event.date_start) {
-      const eventDate = new Date(event.date_start);
+    if (eventEndDateStr) {
+      const eventEnd = new Date(eventEndDateStr);
       const now = new Date();
-      if (eventDate > now) {
+      
+      // If the event hasn't ended yet (now < eventEnd), prevent deletion
+      if (now < eventEnd) {
         return { 
           canDelete: false, 
-          reason: 'Não é possível excluir notificações de solicitações vinculadas a eventos futuros.' 
+          reason: 'Esta notificação está vinculada a um evento que ainda não terminou. Ela só poderá ser removida após o término do evento.' 
         };
       }
     }

@@ -1,8 +1,8 @@
-
+﻿
 const PocketBase = require('pocketbase/cjs');
 
 async function checkData() {
-  const pb = new PocketBase('https://centraldedados.duckdns.org');
+  const pb = new PocketBase('https://centraldedados.dev.br');
   
   try {
     // We don't have credentials here, but maybe we can list if rules allow
@@ -27,3 +27,4 @@ async function checkData() {
 }
 
 checkData();
+

@@ -1,5 +1,5 @@
 
-const pbUrl = process.env.PB_URL || 'https://centraldedados.duckdns.org';
+const pbUrl = process.env.PB_URL || 'https://centraldedados.dev.br';
 const adminEmail = process.env.PB_ADMIN_EMAIL;
 const adminPass = process.env.PB_ADMIN_PASS;
 
@@ -203,6 +203,7 @@ async function setup() {
                 { name: 'transporte_destino', type: 'text' },
                 { name: 'transporte_horario_levar', type: 'text' },
                 { name: 'transporte_horario_buscar', type: 'text' },
+                { name: 'transporte_passageiro', type: 'text' },
                 { name: 'transporte_obs', type: 'text' },
                 { name: 'transporte_justification', type: 'text' },
                 { name: 'participants_status', type: 'json', options: { maxSize: 2000000 } }
@@ -350,7 +351,7 @@ async function setup() {
         if (!tiposRecords.items || tiposRecords.items.length === 0) {
             console.log('Creating mock event types...');
             const mockTipos = [
-                { name: 'Reunião', active: true },
+                { name: 'ReuniÃ£o', active: true },
                 { name: 'Treinamento', active: true },
                 { name: 'Workshop', active: true },
                 { name: 'Planejamento', active: true }
@@ -371,8 +372,8 @@ async function setup() {
         if (!locaisRecords.items || locaisRecords.items.length === 0) {
             console.log('Creating mock locations...');
             const mockLocs = [
-                { name: 'Auditório Principal', description: 'Capacidade 100 pessoas', capacity: 100 },
-                { name: 'Sala de Reunião 01', description: 'Capacidade 10 pessoas', capacity: 10 }
+                { name: 'AuditÃ³rio Principal', description: 'Capacidade 100 pessoas', capacity: 100 },
+                { name: 'Sala de ReuniÃ£o 01', description: 'Capacidade 10 pessoas', capacity: 10 }
             ];
             for (const l of mockLocs) {
                 await fetch(`${pbUrl}/api/collections/${PREFIX}locais/records`, {
@@ -391,3 +392,4 @@ async function setup() {
 }
 
 setup();
+

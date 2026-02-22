@@ -1,5 +1,5 @@
-
-const pbUrl = 'https://centraldedados.duckdns.org';
+﻿
+const pbUrl = 'https://centraldedados.dev.br';
 const adminEmail = 'fabioferreoli@gmail.com';
 const adminPass = '@Cap5364125';
 const PREFIX = 'agenda_cap53_';
@@ -51,3 +51,4 @@ async function debug() {
 }
 
 debug();
+

@@ -1,5 +1,5 @@
-async function checkServer() {
-    const url = 'https://centraldedados.duckdns.org/api/health';
+﻿async function checkServer() {
+    const url = 'https://centraldedados.dev.br/api/health';
     try {
         console.log('Checking health at:', url);
         const res = await fetch(url);
@@ -12,3 +12,4 @@ async function checkServer() {
 }
 
 checkServer();
+

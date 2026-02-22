@@ -1,7 +1,7 @@
-# Caddyfile Original (Limpo)
+﻿# Caddyfile Original (Limpo)
 
-Copie todo o código abaixo e cole no arquivo `/etc/caddy/Caddyfile` no Termius.
-Este arquivo remove a configuração de IP e mantém apenas o DuckDNS com HTTPS.
+Copie todo o cÃ³digo abaixo e cole no arquivo `/etc/caddy/Caddyfile` no Termius.
+Este arquivo remove a configuraÃ§Ã£o de IP e mantÃ©m apenas o DuckDNS com HTTPS.
 
 ```caddy
 {
@@ -10,11 +10,11 @@ Este arquivo remove a configuração de IP e mantém apenas o DuckDNS com HTTPS.
     }
 }
 
-centraldedados.duckdns.org {
+centraldedados.dev.br {
     encode gzip zstd
     
     # O bloco header abaixo foi removido para evitar conflito de CORS com o PocketBase
-    # O PocketBase já envia esses headers nativamente.
+    # O PocketBase jÃ¡ envia esses headers nativamente.
 
     reverse_proxy 127.0.0.1:8090 {
         header_up Host {host}
@@ -29,11 +29,12 @@ centraldedados.duckdns.org {
 }
 ```
 
-## Instruções para aplicar no Termius:
+## InstruÃ§Ãµes para aplicar no Termius:
 
 1.  Abra o arquivo: `sudo nano /etc/caddy/Caddyfile`
-2.  Apague **TUDO** o que está lá (Dica: segure `Ctrl+K` para cortar linhas rapidamente).
-3.  Cole o conteúdo acima.
+2.  Apague **TUDO** o que estÃ¡ lÃ¡ (Dica: segure `Ctrl+K` para cortar linhas rapidamente).
+3.  Cole o conteÃºdo acima.
 4.  Salve: `Ctrl+O` -> `Enter`.
 5.  Saia: `Ctrl+X`.
 6.  Recarregue: `sudo systemctl reload caddy`.
+

@@ -1,33 +1,33 @@
-const PocketBase = require('pocketbase/cjs');
+﻿const PocketBase = require('pocketbase/cjs');
 
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function createManualNotification() {
   try {
-    console.log('🔍 Criando notificação manual com dados mínimos...');
+    console.log('ðŸ” Criando notificaÃ§Ã£o manual com dados mÃ­nimos...');
     
-    // Vamos tentar criar uma notificação com apenas os campos absolutamente necessários
-    // e ver qual erro específico o PocketBase nos dá
+    // Vamos tentar criar uma notificaÃ§Ã£o com apenas os campos absolutamente necessÃ¡rios
+    // e ver qual erro especÃ­fico o PocketBase nos dÃ¡
     
     const testData = {
       user: 'qsi3qe4dn3peo51',
       title: 'Teste Manual',
-      message: 'Teste de notificação manual',
+      message: 'Teste de notificaÃ§Ã£o manual',
       type: 'almc_item_request'
     };
     
-    console.log('📋 Tentando criar com dados:', testData);
+    console.log('ðŸ“‹ Tentando criar com dados:', testData);
     
     try {
       const result = await pb.collection('agenda_cap53_notifications').create(testData);
-      console.log('✅ SUCESSO! Notificação criada manualmente:', result.id);
+      console.log('âœ… SUCESSO! NotificaÃ§Ã£o criada manualmente:', result.id);
       
       // Verificar se realmente foi salva
       const verify = await pb.collection('agenda_cap53_notifications').getOne(result.id);
-      console.log('✅ Verificação: Notificação encontrada no banco!');
+      console.log('âœ… VerificaÃ§Ã£o: NotificaÃ§Ã£o encontrada no banco!');
       
     } catch (error) {
-      console.log('❌ FALHA ao criar notificação manual');
+      console.log('âŒ FALHA ao criar notificaÃ§Ã£o manual');
       console.log('   Erro completo:', error);
       
       // Vamos tentar obter mais detalhes do erro
@@ -36,13 +36,13 @@ async function createManualNotification() {
       }
       
       // Tentar diferentes abordagens
-      console.log('\n🔍 Tentando abordagem alternativa...');
+      console.log('\nðŸ” Tentando abordagem alternativa...');
       
       // Talvez o problema seja que precisamos autenticar primeiro
-      console.log('🔄 Tentando autenticar como usuário...');
+      console.log('ðŸ”„ Tentando autenticar como usuÃ¡rio...');
       
-      // Vamos verificar se conseguimos autenticar com um usuário existente
-      // Mas primeiro, vamos tentar criar com campos padrão do PocketBase
+      // Vamos verificar se conseguimos autenticar com um usuÃ¡rio existente
+      // Mas primeiro, vamos tentar criar com campos padrÃ£o do PocketBase
       
       const minimalData = {
         user: 'qsi3qe4dn3peo51',
@@ -50,38 +50,38 @@ async function createManualNotification() {
         message: 'Teste'
       };
       
-      console.log('📋 Tentando com dados mínimos:', minimalData);
+      console.log('ðŸ“‹ Tentando com dados mÃ­nimos:', minimalData);
       
       try {
         const result2 = await pb.collection('agenda_cap53_notifications').create(minimalData);
-        console.log('✅ SUCESSO com dados mínimos:', result2.id);
+        console.log('âœ… SUCESSO com dados mÃ­nimos:', result2.id);
       } catch (error2) {
-        console.log('❌ Falha mesmo com dados mínimos');
+        console.log('âŒ Falha mesmo com dados mÃ­nimos');
         console.log('   Erro:', error2.message);
         
-        // Última tentativa: verificar se o problema é o tipo de notificação
-        console.log('\n🔍 Verificando se o problema é o tipo...');
+        // Ãšltima tentativa: verificar se o problema Ã© o tipo de notificaÃ§Ã£o
+        console.log('\nðŸ” Verificando se o problema Ã© o tipo...');
         
         const typeTest = {
           user: 'qsi3qe4dn3peo51',
           title: 'Teste Tipo',
           message: 'Teste',
-          type: 'test' // Tipo genérico
+          type: 'test' // Tipo genÃ©rico
         };
         
         try {
           const result3 = await pb.collection('agenda_cap53_notifications').create(typeTest);
-          console.log('✅ SUCESSO com tipo genérico:', result3.id);
+          console.log('âœ… SUCESSO com tipo genÃ©rico:', result3.id);
         } catch (error3) {
-          console.log('❌ Falha até com tipo genérico');
+          console.log('âŒ Falha atÃ© com tipo genÃ©rico');
           console.log('   Erro final:', error3.message);
-          console.log('   💡 CONCLUSÃO: O PocketBase remoto está bloqueando criações!');
+          console.log('   ðŸ’¡ CONCLUSÃƒO: O PocketBase remoto estÃ¡ bloqueando criaÃ§Ãµes!');
         }
       }
     }
     
   } catch (error) {
-    console.error('❌ Erro geral:', error.message);
+    console.error('âŒ Erro geral:', error.message);
   }
 }
 

@@ -1,20 +1,20 @@
-{
+﻿{
     servers {
         protocols h1 h2
     }
 }
 
-centraldedados.duckdns.org {
+centraldedados.dev.br {
     encode gzip zstd
 
-    # Headers de Segurança e CORS (Permite acesso de qualquer origem)
+    # Headers de SeguranÃ§a e CORS (Permite acesso de qualquer origem)
     header {
-        # Permite acesso de qualquer origem (útil para redes locais/desenvolvimento)
+        # Permite acesso de qualquer origem (Ãºtil para redes locais/desenvolvimento)
         Access-Control-Allow-Origin *
         Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
         Access-Control-Allow-Headers "Origin, Content-Type, Authorization, X-Requested-With"
         
-        # Segurança HTTPS
+        # SeguranÃ§a HTTPS
         Strict-Transport-Security "max-age=31536000;"
         X-Content-Type-Options "nosniff"
     }
@@ -30,3 +30,4 @@ centraldedados.duckdns.org {
         protocols tls1.2 tls1.3
     }
 }
+

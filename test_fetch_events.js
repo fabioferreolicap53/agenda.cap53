@@ -1,7 +1,7 @@
-import PocketBase from 'pocketbase';
+﻿import PocketBase from 'pocketbase';
 
 async function testFetch() {
-    const pb = new PocketBase('https://centraldedados.duckdns.org');
+    const pb = new PocketBase('https://centraldedados.dev.br');
     try {
         const events = await pb.collection('agenda_cap53_eventos').getList(1, 5, {
             sort: '-created'
@@ -19,3 +19,4 @@ async function testFetch() {
 }
 
 testFetch();
+

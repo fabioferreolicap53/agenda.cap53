@@ -1,5 +1,5 @@
-const PocketBase = require('pocketbase');
-const pb = new PocketBase('https://centraldedados.duckdns.org');
+﻿const PocketBase = require('pocketbase');
+const pb = new PocketBase('https://centraldedados.dev.br');
 
 async function check() {
     try {
@@ -18,3 +18,4 @@ async function check() {
 }
 
 check();
+

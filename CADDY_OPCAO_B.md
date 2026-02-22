@@ -1,6 +1,6 @@
-# Como Habilitar Acesso via IP (Opção B)
+﻿# Como Habilitar Acesso via IP (OpÃ§Ã£o B)
 
-Essa configuração permite acessar o PocketBase diretamente pelo IP da Oracle Cloud (`http://137.131.183.95`), contornando o bloqueio de DNS Dinâmico da empresa.
+Essa configuraÃ§Ã£o permite acessar o PocketBase diretamente pelo IP da Oracle Cloud (`http://137.131.183.95`), contornando o bloqueio de DNS DinÃ¢mico da empresa.
 
 ## 1. Atualize o Caddyfile (no Servidor)
 
@@ -9,7 +9,7 @@ Edite o arquivo:
 sudo nano /etc/caddy/Caddyfile
 ```
 
-Adicione o bloco do IP (`137.131.183.95`) logo após o bloco do domínio. O arquivo deve ficar assim:
+Adicione o bloco do IP (`137.131.183.95`) logo apÃ³s o bloco do domÃ­nio. O arquivo deve ficar assim:
 
 ```caddy
 {
@@ -18,7 +18,7 @@ Adicione o bloco do IP (`137.131.183.95`) logo após o bloco do domínio. O arqu
     }
 }
 
-centraldedados.duckdns.org {
+centraldedados.dev.br {
     encode gzip zstd
     header {
         Access-Control-Allow-Origin *
@@ -58,17 +58,18 @@ sudo systemctl reload caddy
 
 ## 2. Atualize o Frontend (No seu computador de desenvolvimento)
 
-Para que o aplicativo funcione na rede bloqueada, você precisa apontar ele para o IP em vez do domínio.
+Para que o aplicativo funcione na rede bloqueada, vocÃª precisa apontar ele para o IP em vez do domÃ­nio.
 
 1. Abra o arquivo `.env` no seu projeto local.
 2. Altere a linha `VITE_POCKETBASE_URL`:
 
 ```env
-# VITE_POCKETBASE_URL=https://centraldedados.duckdns.org
+# VITE_POCKETBASE_URL=https://centraldedados.dev.br
 VITE_POCKETBASE_URL=http://137.131.183.95
 ```
 
 3. Reinicie seu servidor de desenvolvimento (`npm run dev`) ou gere uma nova build.
 
 ---
-**Observação:** Ao usar o IP, o navegador mostrará "Não seguro" na barra de endereços. Isso é esperado e necessário para contornar o bloqueio do FortiGuard sem comprar um domínio.
+**ObservaÃ§Ã£o:** Ao usar o IP, o navegador mostrarÃ¡ "NÃ£o seguro" na barra de endereÃ§os. Isso Ã© esperado e necessÃ¡rio para contornar o bloqueio do FortiGuard sem comprar um domÃ­nio.
+

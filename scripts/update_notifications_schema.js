@@ -1,8 +1,8 @@
-
+﻿
 import PocketBase from 'pocketbase';
 
 // Using raw fetch to avoid SDK version mismatches with the server
-const BASE_URL = 'https://centraldedados.duckdns.org';
+const BASE_URL = 'https://centraldedados.dev.br';
 
 async function updateSchema() {
     try {
@@ -125,3 +125,4 @@ async function updateSchema() {
 }
 
 updateSchema();
+

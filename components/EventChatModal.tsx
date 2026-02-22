@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { pb } from '../lib/pocketbase';
+import { pb, getAvatarUrl } from '../lib/pocketbase';
 
 interface EventChatModalProps {
     event: any;
@@ -156,12 +156,7 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
         }
     };
 
-    const getAvatarUrl = (userRecord: any) => {
-        if (userRecord?.avatar) {
-            return pb.files.getUrl(userRecord, userRecord.avatar);
-        }
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(userRecord?.name || 'U')}&background=random&color=fff`;
-    };
+
 
     return (
         <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
