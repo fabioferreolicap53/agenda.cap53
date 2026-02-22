@@ -764,25 +764,42 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                             <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-2">
                                 <span className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Início e Término</span>
-                                <div className="flex flex-wrap items-center gap-2 md:gap-3 text-slate-900 font-bold text-xs md:text-base">
-                                    <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm">
-                                        <span className="material-symbols-outlined text-slate-400 text-base md:text-lg">event</span>
-                                        <span>{startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm">
-                                        <span className="material-symbols-outlined text-slate-400 text-base md:text-lg">schedule</span>
-                                        <div className="flex items-center gap-1.5">
-                                            <span>{startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                            {event.date_end && !isNaN(endDate.getTime()) && (
-                                                <>
-                                                    <span className="text-slate-300 font-black text-[8px] md:text-[9px] uppercase tracking-widest">ATÉ</span>
-                                                    <span>{endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <div className="flex-1 flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm">
+              <div className="size-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                <span className="material-symbols-outlined text-lg">calendar_today</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Data</span>
+                <span className="text-sm font-bold text-slate-700">
+                  {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex-1 flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm">
+              <div className="size-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                <span className="material-symbols-outlined text-lg">schedule</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Horário</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-bold text-slate-700">
+                    {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {event.date_end && !isNaN(endDate.getTime()) && (
+                    <>
+                      <span className="text-slate-300 material-symbols-outlined text-xs">arrow_forward</span>
+                      <span className="text-sm font-bold text-slate-700">
+                        {endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
                             <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Localização</span>
                                 <div className="flex items-center gap-2 text-slate-900 font-bold">
@@ -1432,16 +1449,16 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             {/* Footer Actions - Mobile Optimized Minimalist */}
             <div className="p-4 bg-white border-t border-slate-50 flex flex-col sm:flex-row items-center gap-3">
                 {/* Mobile: Flex for Actions */}
-                <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1">
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
                     {canEdit && (
                         <button 
                             onClick={() => {
                                 onClose();
                                 navigate(`/create-event?eventId=${event.id}`);
                             }}
-                            className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-100 hover:text-slate-800 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                            className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-100 hover:text-slate-800 transition-all flex items-center justify-center gap-2 border border-slate-200"
                         >
-                            <span className="material-symbols-outlined text-xl sm:text-lg">edit</span>
+                            <span className="material-symbols-outlined text-lg">edit</span>
                             <span>Editar</span>
                         </button>
                     )}
@@ -1449,9 +1466,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     {canCancel && (
                         <button 
                             onClick={handleCancelClick}
-                            className="flex-1 h-12 sm:h-10 rounded-xl bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                            className="flex-1 h-12 sm:h-10 rounded-xl bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-red-100"
                         >
-                            <span className="material-symbols-outlined text-xl sm:text-lg">event_busy</span>
+                            <span className="material-symbols-outlined text-lg">event_busy</span>
                             <span>Cancelar</span>
                         </button>
                     )}
@@ -1459,9 +1476,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     {event.user === user?.id && (
                         <button 
                             onClick={() => onDelete(event)}
-                            className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                            className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center gap-2 border border-slate-200 hover:border-red-100"
                         >
-                            <span className="material-symbols-outlined text-xl sm:text-lg">delete</span>
+                            <span className="material-symbols-outlined text-lg">delete</span>
                             <span>Excluir</span>
                         </button>
                     )}

@@ -205,18 +205,13 @@ const Sidebar: React.FC = () => {
                     style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
                   ></div>
                   <div className={`absolute -bottom-0.5 -right-0.5 size-3.5 border-2 border-white rounded-full ${
-                    user?.context_status ? 
-                      (user?.context_status === '🧠 Foco' ? 'bg-purple-500' :
-                       user?.context_status === '📅 Em Reunião' ? 'bg-red-500' :
-                       user?.context_status === '🍽️ Almoço' ? 'bg-amber-500' :
-                       user?.status === 'Online' ? 'bg-green-500' :
-                       user?.status === 'Ausente' ? 'bg-amber-500' :
-                       user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300')
-                    :
-                    (user?.status === 'Online' ? 'bg-green-500' :
+                    user?.context_status?.includes('Foco') ? 'bg-purple-500' :
+                    user?.context_status?.includes('Reunião') ? 'bg-red-500' :
+                    user?.context_status?.includes('Almoço') ? 'bg-amber-500' :
+                    user?.status === 'Online' ? 'bg-green-500' :
                     user?.status === 'Ausente' ? 'bg-amber-500' :
-                    user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300')
-                      }`}></div>
+                    user?.status === 'Ocupado' ? 'bg-red-500' : 'bg-slate-300'
+                  }`}></div>
 
                   {/* Status Selector Dropdown */}
                   {showStatusMenu && (

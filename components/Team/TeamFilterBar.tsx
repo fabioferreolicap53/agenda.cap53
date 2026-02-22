@@ -27,7 +27,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
         <div className="sticky -top-2 z-[99] bg-white py-3 px-4 -mx-4 md:px-0 md:mx-0 border-b border-gray-100 shadow-sm md:static md:bg-transparent md:mb-4 md:border-none md:shadow-none transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-end gap-2 md:gap-3">
                 {/* Mobile Search Input */}
-                <div className="md:hidden w-full relative group mb-2">
+                <div className="md:hidden w-full relative group mb-2 block">
                     <span className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-primary material-symbols-outlined text-[20px] transition-colors">search</span>
                     <input 
                         type="text"

@@ -94,7 +94,7 @@ const Header: React.FC = () => {
           {/* Hamburger Button Mobile */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center justify-center size-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95 transition-all"
+            className="lg:hidden flex items-center justify-center size-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95 transition-all z-[101]"
           >
             <span className="material-symbols-outlined text-[24px]">menu</span>
           </button>

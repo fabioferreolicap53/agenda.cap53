@@ -410,6 +410,20 @@ const Chat: React.FC = () => {
                         </div>
                     )}
                 </>
+{/* Developer Card - Added as requested */}
+                    <div className="mt-4 pt-4 border-t border-dashed border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Desenvolvedor</p>
+                        <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 opacity-75 hover:opacity-100 transition-opacity">
+                            <div className="size-10 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400">
+                                <span className="material-symbols-outlined text-xl">code</span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-slate-700">Fabio Ferreira</p>
+                                <p className="text-[10px] text-slate-500">DAPS/CAP5.3</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
       </div>
