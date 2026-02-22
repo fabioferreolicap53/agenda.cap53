@@ -762,20 +762,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     <div className="space-y-3 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Summary Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                            <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
+                            <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-2">
                                 <span className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Início e Término</span>
-                                <div className="flex items-center gap-2 text-slate-900 font-bold text-xs md:text-base">
-                                    <span className="material-symbols-outlined text-slate-400 text-base md:text-lg">event</span>
-                                    {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                                    <span className="w-1 h-1 rounded-full bg-slate-300" />
-                                    <div className="flex items-center gap-1">
-                                        <span>{startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                        {event.date_end && !isNaN(endDate.getTime()) && (
-                                            <>
-                                                <span className="text-slate-300 font-black text-[8px] md:text-[9px] uppercase tracking-widest mx-1">até</span>
-                                                <span>{endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                            </>
-                                        )}
+                                <div className="flex flex-wrap items-center gap-2 md:gap-3 text-slate-900 font-bold text-xs md:text-base">
+                                    <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                                        <span className="material-symbols-outlined text-slate-400 text-base md:text-lg">event</span>
+                                        <span>{startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-lg border border-slate-100 shadow-sm">
+                                        <span className="material-symbols-outlined text-slate-400 text-base md:text-lg">schedule</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span>{startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                            {event.date_end && !isNaN(endDate.getTime()) && (
+                                                <>
+                                                    <span className="text-slate-300 font-black text-[8px] md:text-[9px] uppercase tracking-widest">ATÉ</span>
+                                                    <span>{endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1427,15 +1431,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
             {/* Footer Actions - Mobile Optimized Minimalist */}
             <div className="p-4 bg-white border-t border-slate-50 flex flex-col sm:flex-row items-center gap-3">
-                {/* Mobile: Grid for Actions */}
-                <div className="grid grid-cols-3 sm:flex sm:items-center gap-2 w-full sm:w-auto sm:flex-1">
+                {/* Mobile: Flex for Actions */}
+                <div className="flex items-center gap-2 w-full sm:w-auto sm:flex-1">
                     {canEdit && (
                         <button 
                             onClick={() => {
                                 onClose();
                                 navigate(`/create-event?eventId=${event.id}`);
                             }}
-                            className="h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-100 hover:text-slate-800 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                            className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-100 hover:text-slate-800 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                         >
                             <span className="material-symbols-outlined text-xl sm:text-lg">edit</span>
                             <span>Editar</span>
@@ -1445,7 +1449,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     {canCancel && (
                         <button 
                             onClick={handleCancelClick}
-                            className="h-12 sm:h-10 rounded-xl bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                            className="flex-1 h-12 sm:h-10 rounded-xl bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                         >
                             <span className="material-symbols-outlined text-xl sm:text-lg">event_busy</span>
                             <span>Cancelar</span>
@@ -1455,7 +1459,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     {event.user === user?.id && (
                         <button 
                             onClick={() => onDelete(event)}
-                            className="h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
+                            className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2"
                         >
                             <span className="material-symbols-outlined text-xl sm:text-lg">delete</span>
                             <span>Excluir</span>
