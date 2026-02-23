@@ -39,6 +39,45 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
   const [processingTransport, setProcessingTransport] = React.useState(false);
 
+  // Touch/Swipe logic
+  const [touchStart, setTouchStart] = React.useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const tabs = React.useMemo(() => [
+    { id: 'details', label: 'Detalhes', icon: 'info' },
+    { id: 'professionals', label: 'Participantes', icon: 'group' },
+    { id: 'resources', label: 'Recursos', icon: 'inventory_2' },
+    { id: 'transport', label: 'Transporte', icon: 'directions_car' },
+    { id: 'dashboard', label: 'Painel', icon: 'monitoring' },
+    ...(event.user === user?.id ? [{ id: 'requests', label: 'Solicitações', icon: 'person_add' }] : [])
+  ], [event.user, user?.id]);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe || isRightSwipe) {
+        const currentIndex = tabs.findIndex(t => t.id === activeTab);
+        if (isLeftSwipe && currentIndex < tabs.length - 1) {
+            setActiveTab(tabs[currentIndex + 1].id as any);
+        } else if (isRightSwipe && currentIndex > 0) {
+            setActiveTab(tabs[currentIndex - 1].id as any);
+        }
+    }
+  };
+
   const getRoleLabel = (role: string) => {
     return INVOLVEMENT_LEVELS.find(l => l.value === (role || 'PARTICIPANTE').toUpperCase())?.label || 'PARTICIPANTE';
   };
@@ -50,20 +89,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
     return (
       <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="size-8 rounded-full bg-cover bg-center border border-gray-100" style={{ backgroundImage: `url(${p.avatar ? pb.files.getUrl(p, p.avatar) : `https://picsum.photos/seed/${p.email}/200`})` }} />
-          <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-text-main">{p.name || 'Convidado'}</span>
-              {isCreator && (
-                <span className="text-[8px] bg-slate-800 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">CRIADOR</span>
-              )}
-            </div>
-            <span className="text-[10px] text-text-secondary">{getRoleLabel(role)}</span>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="size-8 shrink-0 rounded-full bg-cover bg-center border border-gray-100" style={{ backgroundImage: `url(${p.avatar ? pb.files.getUrl(p, p.avatar) : `https://picsum.photos/seed/${p.email}/200`})` }} />
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-bold text-text-main truncate">{p.name || 'Convidado'}</span>
+            <span className="text-[10px] text-text-secondary truncate">{getRoleLabel(role)}</span>
           </div>
         </div>
-        <div className="flex flex-col items-end">
-          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          {isCreator && (
+            <span className="text-[8px] bg-slate-800 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0">CRIADOR</span>
+          )}
+          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded shrink-0 ${
             status === 'accepted' ? 'bg-green-100 text-green-700' :
             status === 'rejected' ? 'bg-red-100 text-red-700' :
             'bg-yellow-100 text-yellow-700'
@@ -686,7 +723,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 md:p-4 bg-slate-900/20 backdrop-blur-md animate-in fade-in duration-300">
-        <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-slate-100">
+        <div 
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-slate-100"
+        >
             {/* Header - Refined Minimalist */}
             <div className="px-4 md:px-8 pt-4 md:pt-8 pb-2 md:pb-6 flex flex-col gap-3 md:gap-6 shrink-0">
                 <div className="flex justify-between items-start gap-3">
@@ -731,14 +773,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                 {/* Tabs */}
                 <div className="flex gap-1 p-1 bg-slate-50 rounded-xl sm:rounded-2xl border border-slate-100 overflow-x-auto custom-scrollbar-hide">
-                    {[
-                        { id: 'details', label: 'Detalhes', icon: 'info' },
-                        { id: 'professionals', label: 'Participantes', icon: 'group' },
-                        { id: 'resources', label: 'Recursos', icon: 'inventory_2' },
-                        { id: 'transport', label: 'Transporte', icon: 'directions_car' },
-                        { id: 'dashboard', label: 'Painel', icon: 'monitoring' },
-                        ...(event.user === user?.id ? [{ id: 'requests', label: 'Solicitações', icon: 'person_add' }] : [])
-                    ].map(tab => (
+                    {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}

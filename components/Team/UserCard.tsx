@@ -39,12 +39,9 @@ export const UserCard: React.FC<UserCardProps> = ({
     const startEditing = () => {
         setEditData({
             name: user.name,
-            role: user.role,
             sector: user.sector,
             observations: user.observations,
-            whatsapp: user.whatsapp,
-            birthDate: user.birthDate,
-            admissionDate: user.admissionDate
+            whatsapp: user.whatsapp
         });
         setIsEditing(true);
     };
@@ -107,46 +104,14 @@ export const UserCard: React.FC<UserCardProps> = ({
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-slate-400">Cargo</label>
-                                    <input
-                                        type="text"
-                                        value={editData.role || ''}
-                                        onChange={e => setEditData({...editData, role: e.target.value})}
-                                        className="w-full text-xs border-b border-primary/50 focus:border-primary outline-none bg-transparent py-1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-slate-400">Setor</label>
-                                    <input
-                                        type="text"
-                                        value={editData.sector || ''}
-                                        onChange={e => setEditData({...editData, sector: e.target.value})}
-                                        className="w-full text-xs border-b border-primary/50 focus:border-primary outline-none bg-transparent py-1"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-slate-400">Nascimento</label>
-                                    <input
-                                        type="date"
-                                        value={editData.birthDate ? editData.birthDate.split(' ')[0] : ''}
-                                        onChange={e => setEditData({...editData, birthDate: e.target.value})}
-                                        className="w-full text-xs border-b border-primary/50 focus:border-primary outline-none bg-transparent py-1"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase font-bold text-slate-400">Admissão</label>
-                                    <input
-                                        type="date"
-                                        value={editData.admissionDate ? editData.admissionDate.split(' ')[0] : ''}
-                                        onChange={e => setEditData({...editData, admissionDate: e.target.value})}
-                                        className="w-full text-xs border-b border-primary/50 focus:border-primary outline-none bg-transparent py-1"
-                                    />
-                                </div>
+                            <div>
+                                <label className="text-[10px] uppercase font-bold text-slate-400">Setor</label>
+                                <input
+                                    type="text"
+                                    value={editData.sector || ''}
+                                    onChange={e => setEditData({...editData, sector: e.target.value})}
+                                    className="w-full text-xs border-b border-primary/50 focus:border-primary outline-none bg-transparent py-1"
+                                />
                             </div>
                         </div>
                     ) : (

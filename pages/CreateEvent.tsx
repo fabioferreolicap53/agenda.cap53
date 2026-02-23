@@ -2124,7 +2124,7 @@ const CreateEvent: React.FC = () => {
           </section>
 
           {/* Submit Button Section */}
-          <div className="flex justify-end pt-6 border-t border-slate-100">
+          <div className="flex justify-center lg:justify-end pt-6 border-t border-slate-100">
             <button
               type="submit"
               disabled={loading || isDateInvalid || isDurationInvalid || isTransportTimeInvalid}

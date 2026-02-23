@@ -594,7 +594,7 @@ const Calendar: React.FC = () => {
                     >
                       <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                     </button>
-                    <span className="h-full flex items-center justify-center px-2 text-[10px] md:text-[11px] font-black text-text-main w-full md:w-auto md:min-w-[140px] text-center uppercase tracking-widest truncate">
+                    <span className="h-full flex items-center justify-center px-2 text-xs md:text-sm font-black text-text-main w-full md:w-auto md:min-w-[140px] text-center uppercase tracking-widest truncate">
                       {viewType === 'day'
                         ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
                         : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
@@ -1071,7 +1071,7 @@ const Calendar: React.FC = () => {
 
                         {/* Content Column */}
                         <div className="flex-1 flex flex-col justify-center gap-1 overflow-hidden">
-                          <h4 className={`text-sm font-bold truncate leading-tight ${event.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                          <h4 className={`text-sm font-bold leading-tight ${event.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                             {event.title}
                           </h4>
                           
@@ -1205,6 +1205,9 @@ const Calendar: React.FC = () => {
                                 <span className={`text-4xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>{String(date.getDate()).padStart(2, '0')}</span>
                                 <div className="flex flex-col leading-tight">
                                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>{date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
+                                    <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
+                                      {date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')}
+                                    </span>
                                     {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
                                 </div>
                             </div>
@@ -1607,6 +1610,29 @@ const CalendarEventCard: React.FC<{
   const copaStatus = getCategoryStatus('COPA');
   const infStatus = getCategoryStatus('INFORMATICA');
 
+  // Helper to determine involvement level
+  const getInvolvementLevel = () => {
+    if (event.user === user?.id) return { label: 'Criador', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' };
+    
+    const participant = event.expand?.participants?.find((p: any) => p.user === user?.id);
+    if (participant) {
+        if (participant.role === 'coordenador') return { label: 'Coordenação', color: 'bg-purple-50 text-purple-700 border-purple-100' };
+        if (participant.role === 'convidado') return { label: 'Convidado', color: 'bg-blue-50 text-blue-700 border-blue-100' };
+        if (participant.role === 'apoio') return { label: 'Apoio', color: 'bg-slate-50 text-slate-700 border-slate-100' };
+    }
+    
+    // Check specific roles based on sector
+    if (user?.role === 'TRA' && event.transporte_suporte) return { label: 'Transporte', color: 'bg-amber-50 text-amber-700 border-amber-100' };
+    if (user?.role === 'ALMC' && (almcStatus || copaStatus)) return { label: 'Logística', color: 'bg-orange-50 text-orange-700 border-orange-100' };
+    if (user?.role === 'DCA' && infStatus) return { label: 'Técnico', color: 'bg-cyan-50 text-cyan-700 border-cyan-100' };
+
+    return null;
+  };
+
+  const involvement = getInvolvementLevel();
+  const creatorName = event.expand?.user?.name || 'Desconhecido';
+  const participantCount = (event.expand?.participants?.length || 0) + 1; // +1 for creator
+
   return (
     <div
       onMouseEnter={handleMouseEnter}
@@ -1617,72 +1643,123 @@ const CalendarEventCard: React.FC<{
         onSelect(event);
       }}
       title={event.title}
-      className={`w-full border-l-[3px] rounded-lg px-2.5 py-2 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
+      className={`w-full border-l-[3px] rounded-lg px-3 py-3 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
         ? 'bg-slate-50 border-slate-300 opacity-60'
         : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'
         } ${detailed ? 'p-5' : ''}`}
     >
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
-          <p className={`font-bold leading-snug truncate ${detailed ? 'text-lg text-slate-800' : 'text-[10px] md:text-[11px] text-slate-700'} ${isCancelled ? 'line-through decoration-slate-400' : ''}`}>
-            {event.title}
-          </p>
+          <div className="flex flex-col gap-0.5 min-w-0">
+             <p className={`font-bold leading-tight ${detailed ? 'text-lg text-slate-800' : 'text-xs text-slate-800 truncate'} ${isCancelled ? 'line-through decoration-slate-400' : ''}`}>
+               {event.title}
+             </p>
+             {/* Mobile/Tablet Extra Details */}
+             {!detailed && (
+               <div className="flex md:hidden flex-wrap items-center gap-1.5 mt-1">
+                  {involvement && (
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${involvement.color}`}>
+                          {involvement.label}
+                      </span>
+                  )}
+                  <span className="text-[9px] font-medium text-slate-500 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[10px]">person</span>
+                      {creatorName.split(' ')[0]}
+                  </span>
+               </div>
+             )}
+          </div>
+
           {!detailed && (
-             <span className="text-[9px] font-bold text-slate-400 whitespace-nowrap bg-slate-50 px-1 rounded border border-slate-100">
-               {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-             </span>
+             <div className="flex flex-col items-end gap-1">
+                 <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                   {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                 </span>
+                 {/* Participant Count Badge */}
+                 <div className="flex md:hidden items-center gap-0.5 text-[9px] font-bold text-slate-400">
+                    <span className="material-symbols-outlined text-[10px]">group</span>
+                    {participantCount}
+                 </div>
+             </div>
           )}
         </div>
 
         {detailed && (
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-2 text-xs font-medium text-slate-500">
-             <div className="flex items-center gap-1.5">
-               <span className="material-symbols-outlined text-base">schedule</span>
-               <span>
-                 {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                 {event.date_end && ` - ${new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
-               </span>
+          <div className="flex flex-col gap-2 mt-1">
+             <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-slate-500">
+                 <div className="flex items-center gap-1.5">
+                   <span className="material-symbols-outlined text-base text-primary/70">schedule</span>
+                   <span>
+                     {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                     {event.date_end && ` - ${new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                   </span>
+                 </div>
+                 <div className="flex items-center gap-1.5">
+                   <span className="material-symbols-outlined text-base text-primary/70">location_on</span>
+                   <span>{event.expand?.location?.name || event.custom_location || 'Local não definido'}</span>
+                 </div>
              </div>
-             <div className="flex items-center gap-1.5">
-               <span className="material-symbols-outlined text-base">location_on</span>
-               <span>{event.expand?.location?.name || event.custom_location || 'Local não definido'}</span>
+
+             <div className="flex flex-wrap items-center gap-3 pt-3 mt-1 border-t border-slate-50">
+                <div className="flex items-center gap-2">
+                    <div className="size-6 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
+                        <span className="text-[10px] font-black text-slate-500">{creatorName.charAt(0).toUpperCase()}</span>
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-0.5">Criado por</span>
+                        <span className="text-[10px] font-bold text-slate-700 leading-none truncate max-w-[140px]">{creatorName}</span>
+                    </div>
+                </div>
+
+                {involvement && (
+                    <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[9px] font-bold uppercase tracking-wide ${involvement.color}`}>
+                        {involvement.label}
+                    </div>
+                )}
+
+                <div className="flex items-center gap-1.5 ml-auto pl-3 border-l border-slate-100" title={`${participantCount} participantes`}>
+                    <span className="material-symbols-outlined text-[14px] text-slate-400">group</span>
+                    <span className="text-[10px] font-bold text-slate-600">
+                        {participantCount}
+                    </span>
+                </div>
              </div>
           </div>
         )}
 
         {/* Status Indicators Row */}
-        <div className="flex items-center gap-1.5 mt-0.5 h-4">
+        <div className="flex items-center gap-1.5 mt-0.5 min-h-[16px]">
            {/* Transport */}
            {event.transporte_suporte && (
-             <div className={`flex items-center justify-center size-4 rounded border ${
+             <div className={`flex items-center justify-center size-5 rounded border ${
                 event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
                 (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
                 'bg-yellow-50 border-yellow-200 text-yellow-600'
              }`} title="Transporte">
-               <span className="material-symbols-outlined text-[10px]">directions_car</span>
+               <span className="material-symbols-outlined text-[12px]">directions_car</span>
              </div>
            )}
 
            {/* Resources */}
            {almcStatus && (
-             <div className={`flex items-center justify-center size-4 rounded border ${getStatusColor(almcStatus)}`} title="Almoxarifado">
-               <span className="material-symbols-outlined text-[10px]">inventory_2</span>
+             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(almcStatus)}`} title="Almoxarifado">
+               <span className="material-symbols-outlined text-[12px]">inventory_2</span>
              </div>
            )}
            {copaStatus && (
-             <div className={`flex items-center justify-center size-4 rounded border ${getStatusColor(copaStatus)}`} title="Copa">
-               <span className="material-symbols-outlined text-[10px]">local_cafe</span>
+             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(copaStatus)}`} title="Copa">
+               <span className="material-symbols-outlined text-[12px]">local_cafe</span>
              </div>
            )}
            {infStatus && (
-             <div className={`flex items-center justify-center size-4 rounded border ${getStatusColor(infStatus)}`} title="Informática">
-               <span className="material-symbols-outlined text-[10px]">laptop_mac</span>
+             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(infStatus)}`} title="Informática">
+               <span className="material-symbols-outlined text-[12px]">laptop_mac</span>
              </div>
            )}
 
            {/* Cancelled Label */}
            {isCancelled && (
-             <span className="text-[8px] font-black text-red-500 uppercase tracking-wider bg-red-50 px-1.5 rounded border border-red-100">
+             <span className="text-[9px] font-black text-red-500 uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded border border-red-100 ml-auto">
                Cancelado
              </span>
            )}
