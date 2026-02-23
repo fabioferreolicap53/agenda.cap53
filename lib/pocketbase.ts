@@ -6,6 +6,7 @@ const PB_URL = 'https://centraldedados.dev.br';
 
 console.log('--- POCKETBASE INIT ---');
 console.log('Target URL:', PB_URL);
+console.log('Lib Version: 2026-02-23 v2 (Clean URL)');
 
 // Instância tipada do PocketBase
 export interface TypedPocketBase extends PocketBase {

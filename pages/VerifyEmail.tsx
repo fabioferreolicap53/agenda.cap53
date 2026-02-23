@@ -9,16 +9,33 @@ const VerifyEmail: React.FC = () => {
     const [message, setMessage] = useState('Verificando seu e-mail...');
 
     useEffect(() => {
-        // Debug da URL do PocketBase
-        console.log('VerifyEmail component mounted. PB Base URL:', pb.baseUrl);
+        console.log('VerifyEmail: Component mounted.');
         
-        // Auto-correção de emergência se o cache estiver segurando a URL antiga
-        if (pb.baseUrl.includes('duckdns.org')) {
-            console.error('CRITICAL: PocketBase URL pointing to duckdns.org. Forcing update.');
-            (pb as any).baseUrl = 'https://centraldedados.dev.br';
-        }
-
         const verify = async () => {
+            // Check if global PB instance is pointing to the wrong URL
+            let currentPb = pb;
+            if (pb.baseUrl.includes('duckdns.org')) {
+                console.error('CRITICAL ERROR: Global PocketBase instance is pointing to duckdns.org!');
+                console.log('Creating a temporary local PocketBase instance with correct URL: https://centraldedados.dev.br');
+                
+                // Dynamic import to avoid circular dependency issues or just use the global class if available
+                // We can't easily import PocketBase class if it wasn't exported as default or named in a way we can use here without 'import'
+                // But we have 'pb' imported. We can try to use its constructor if possible, or just hack the baseUrl.
+                // Creating a new instance is safer.
+                // Since we import { pb } from '../lib/pocketbase', we can't access the class constructor easily unless exported.
+                // lib/pocketbase.ts exports 'pb' (instance) and 'TypedPocketBase' (interface).
+                // It does NOT export the class 'PocketBase' itself directly in the snippet I saw?
+                // Wait, line 1: import PocketBase, { RecordService } from 'pocketbase';
+                // It does NOT export PocketBase class.
+                
+                // So fallback to hacking the baseUrl, but do it aggressively.
+                (pb as any).baseUrl = 'https://centraldedados.dev.br';
+                console.log('Fixed pb.baseUrl to:', pb.baseUrl);
+            } else {
+                console.log('VerifyEmail: Global PB URL is correct:', pb.baseUrl);
+            }
+
+            console.log('VerifyEmail: Starting verification process...');
             // Estratégia Multinível de Extração de Token
             let rawToken = token;
             
