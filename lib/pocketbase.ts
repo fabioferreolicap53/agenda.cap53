@@ -1,58 +1,47 @@
 import PocketBase, { RecordService } from 'pocketbase';
 import { CollectionResponses } from './pocketbase-types';
 
-const pocketbaseUrl = 'https://centraldedados.dev.br';
-// let pocketbaseUrl = import.meta.env.VITE_POCKETBASE_URL;
+// URL fixa para garantir que sempre aponte para o servidor correto
+const PB_URL = 'https://centraldedados.dev.br';
 
-// // Fallback/Override de segurança para garantir a nova URL
-// if (!pocketbaseUrl || pocketbaseUrl.includes('duckdns.org')) {
-//   console.warn('URL do PocketBase inválida ou antiga detectada. Forçando uso da nova URL.');
-//   pocketbaseUrl = 'https://centraldedados.dev.br';
-// }
+console.log('--- POCKETBASE INIT ---');
+console.log('Target URL:', PB_URL);
 
-if (!pocketbaseUrl) {
-  throw new Error('VITE_POCKETBASE_URL não definida');
-}
-
+// Instância tipada do PocketBase
 export interface TypedPocketBase extends PocketBase {
     collection<K extends keyof CollectionResponses>(idOrName: K): RecordService<CollectionResponses[K]>;
-    collection(idOrName: string): RecordService; // Fallback for unknown collections
+    collection(idOrName: string): RecordService; // Fallback para coleções desconhecidas
 }
 
-export const pb = new PocketBase(pocketbaseUrl) as TypedPocketBase;
+export const pb = new PocketBase(PB_URL) as TypedPocketBase;
 
-// Disable auto-cancellation to prevent request aborts when React re-renders quickly
+// Desabilitar cancelamento automático para evitar aborts em re-renders rápidos do React
 pb.autoCancellation(false);
 
+// Lógica de sincronização de auth em múltiplas abas/janelas
 const globalKey = '__pb_realtime_auth_sync__';
 const g = globalThis as any;
+
 if (!g[globalKey]) {
-  g[globalKey] = true;
-  let lastToken = pb.authStore.token;
-  pb.authStore.onChange(() => {
-    const nextToken = pb.authStore.token;
-    if (nextToken !== lastToken) {
-      lastToken = nextToken;
-      try {
-        (pb as any).realtime?.disconnect?.();
-      } catch { }
-    }
-  });
-}
-
-if (import.meta.env.DEV) {
-  console.log(`PocketBase client initialized for: ${pocketbaseUrl} (HARDCODED FIX)`);
-}
-
-/**
- * Helper to get the full avatar URL for a user
- */
-export const getAvatarUrl = (user: any) => {
-    if (user?.avatar) {
-        if (user.avatar.startsWith('http')) {
-            return user.avatar;
+    g[globalKey] = true;
+    let lastToken = pb.authStore.token;
+    
+    pb.authStore.onChange(() => {
+        const nextToken = pb.authStore.token;
+        if (nextToken !== lastToken) {
+            lastToken = nextToken;
+            try {
+                // Tenta desconectar realtime ao mudar token para evitar conflitos
+                (pb as any).realtime?.disconnect?.();
+            } catch (e) { 
+                console.warn('Erro ao desconectar realtime:', e);
+            }
         }
-        return pb.files.getUrl(user, user.avatar);
-    }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=E2E8F0&color=64748B&size=200&bold=true`;
-};
+    });
+}
+
+// Log extra em desenvolvimento
+if (import.meta.env.DEV) {
+    (window as any).pb = pb;
+    console.log('PocketBase instance attached to window.pb for debugging');
+}

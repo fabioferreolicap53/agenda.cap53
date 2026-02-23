@@ -9,6 +9,15 @@ const VerifyEmail: React.FC = () => {
     const [message, setMessage] = useState('Verificando seu e-mail...');
 
     useEffect(() => {
+        // Debug da URL do PocketBase
+        console.log('VerifyEmail component mounted. PB Base URL:', pb.baseUrl);
+        
+        // Auto-correção de emergência se o cache estiver segurando a URL antiga
+        if (pb.baseUrl.includes('duckdns.org')) {
+            console.error('CRITICAL: PocketBase URL pointing to duckdns.org. Forcing update.');
+            (pb as any).baseUrl = 'https://centraldedados.dev.br';
+        }
+
         const verify = async () => {
             // Estratégia Multinível de Extração de Token
             let rawToken = token;
