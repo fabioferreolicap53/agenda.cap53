@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface FilterBarProps {
   searchTerm: string;
@@ -19,6 +19,65 @@ interface FilterBarProps {
   locations: string[];
 }
 
+interface CustomSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+}
+
+const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, placeholder }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedLabel = options.find(opt => opt.value === value)?.label || placeholder;
+
+  return (
+    <div className="relative group" ref={containerRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`w-full bg-slate-50/50 hover:bg-white border border-transparent hover:border-indigo-100 rounded-2xl h-11 px-4 flex items-center justify-between text-sm font-semibold text-slate-600 hover:text-indigo-600 focus:ring-2 focus:ring-indigo-50 focus:border-indigo-200 outline-none transition-all shadow-sm hover:shadow-md ${isOpen ? 'ring-2 ring-indigo-50 border-indigo-200 bg-white' : ''}`}
+      >
+        <span className="truncate">{selectedLabel}</span>
+        <span className={`material-symbols-outlined text-slate-400 group-hover:text-indigo-400 text-xl transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+          <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+            {options.map((opt) => (
+              <div
+                key={opt.value}
+                onClick={() => {
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }}
+                className={`px-4 py-3 text-sm font-bold uppercase tracking-wide cursor-pointer transition-colors rounded-xl mx-1 my-0.5
+                  ${value === opt.value 
+                    ? 'bg-indigo-50 text-indigo-700' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                  }`}
+              >
+                {opt.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const FilterBar: React.FC<FilterBarProps> = ({ 
   searchTerm, 
   onSearchChange, 
@@ -37,6 +96,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
   const [showFilters, setShowFilters] = useState(false);
 
   const months = [
+    { value: 'all', label: 'Todos os Meses' },
     { value: '0', label: 'Janeiro' },
     { value: '1', label: 'Fevereiro' },
     { value: '2', label: 'Março' },
@@ -53,7 +113,23 @@ export const FilterBar: React.FC<FilterBarProps> = ({
 
   // Generate years (current year - 1 to current year + 2)
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 4 }, (_, i) => (currentYear - 1 + i).toString());
+  const years = [
+    { value: 'all', label: 'Todos os Anos' },
+    ...Array.from({ length: 4 }, (_, i) => {
+        const year = (currentYear - 1 + i).toString();
+        return { value: year, label: year };
+    })
+  ];
+
+  const typeOptions = [
+    { value: 'all', label: 'Todos os Tipos' },
+    ...eventTypes.map(t => ({ value: t, label: t }))
+  ];
+
+  const locationOptions = [
+    { value: 'all', label: 'Todos os Locais' },
+    ...locations.map(l => ({ value: l, label: l }))
+  ];
 
   return (
     <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
@@ -88,58 +164,38 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       </div>
 
       {/* Bottom Row: Filters */}
-      <div className={`${showFilters ? 'grid' : 'hidden'} lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 transition-all duration-300 ease-in-out`}>
+      <div className={`${showFilters ? 'grid' : 'hidden'} lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-300 ease-in-out`}>
         {/* Month */}
-        <select 
-            value={selectedMonth}
-            onChange={(e) => onMonthChange(e.target.value)}
-            className="w-full bg-slate-50 border-none rounded-xl h-10 px-4 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer appearance-none"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
-        >
-            <option value="all">Todos os Meses</option>
-            {months.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-        </select>
+        <CustomSelect 
+            value={selectedMonth} 
+            onChange={onMonthChange} 
+            options={months} 
+            placeholder="Todos os Meses" 
+        />
 
         {/* Year */}
-        <select 
-            value={selectedYear}
-            onChange={(e) => onYearChange(e.target.value)}
-            className="w-full bg-slate-50 border-none rounded-xl h-10 px-4 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer appearance-none"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
-        >
-            <option value="all">Todos os Anos</option>
-            {years.map(y => (
-                <option key={y} value={y}>{y}</option>
-            ))}
-        </select>
+        <CustomSelect 
+            value={selectedYear} 
+            onChange={onYearChange} 
+            options={years} 
+            placeholder="Todos os Anos" 
+        />
 
         {/* Type */}
-        <select 
-            value={selectedType}
-            onChange={(e) => onTypeChange(e.target.value)}
-            className="w-full bg-slate-50 border-none rounded-xl h-10 px-4 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer appearance-none"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
-        >
-            <option value="all">Todos os Tipos</option>
-            {eventTypes.map(t => (
-                <option key={t} value={t}>{t}</option>
-            ))}
-        </select>
+        <CustomSelect 
+            value={selectedType} 
+            onChange={onTypeChange} 
+            options={typeOptions} 
+            placeholder="Todos os Tipos" 
+        />
 
         {/* Location */}
-        <select 
-            value={selectedLocation}
-            onChange={(e) => onLocationChange(e.target.value)}
-            className="w-full bg-slate-50 border-none rounded-xl h-10 px-4 text-sm font-medium text-slate-600 focus:ring-2 focus:ring-indigo-100 outline-none cursor-pointer appearance-none"
-            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 0.5rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em`, paddingRight: `2.5rem` }}
-        >
-            <option value="all">Todos os Locais</option>
-            {locations.map(l => (
-                <option key={l} value={l}>{l}</option>
-            ))}
-        </select>
+        <CustomSelect 
+            value={selectedLocation} 
+            onChange={onLocationChange} 
+            options={locationOptions} 
+            placeholder="Todos os Locais" 
+        />
       </div>
     </div>
   );

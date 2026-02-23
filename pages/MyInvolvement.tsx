@@ -191,36 +191,37 @@ const MyInvolvement: React.FC = () => {
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 shadow-sm self-start xl:self-auto">
+        <div className="w-full xl:w-auto flex items-center justify-center p-1.5 gap-2 bg-white rounded-full border border-slate-200 shadow-sm">
           <button 
             onClick={() => navigate('/create-event')}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-bold text-xs uppercase tracking-wider bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:-translate-y-0.5 active:scale-95"
+            className="flex items-center gap-2 pl-3 pr-5 py-2.5 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 group"
           >
-            <span className="material-symbols-outlined text-lg">add</span>
-            <span className="hidden sm:inline">Nova Atividade</span>
-            <span className="sm:hidden">Novo</span>
+            <div className="flex items-center justify-center size-6 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
+                <span className="material-symbols-outlined text-sm font-bold">add</span>
+            </div>
+            <span className="text-sm font-semibold tracking-wide">Novo</span>
           </button>
-
-          <div className="w-px h-8 bg-slate-100 mx-1" />
 
           <button 
             onClick={() => setShowAnalytics(!showAnalytics)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all font-bold text-xs uppercase tracking-wider ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
               showAnalytics 
-                ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' 
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
+                ? 'bg-slate-100 text-slate-900' 
+                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
             }`}
           >
-            <span className="material-symbols-outlined text-lg">{showAnalytics ? 'view_list' : 'analytics'}</span>
-            <span className="hidden sm:inline">{showAnalytics ? 'Ver Lista' : 'Visão Analítica'}</span>
+            <span className="material-symbols-outlined text-[20px]">{showAnalytics ? 'view_list' : 'analytics'}</span>
+            <span className="hidden sm:inline">{showAnalytics ? 'Lista' : 'Análises'}</span>
           </button>
           
+          <div className="w-px h-5 bg-slate-200 mx-1" />
+
           <button 
             onClick={() => refresh()}
-            className="group size-10 flex items-center justify-center bg-white hover:bg-indigo-50 border border-slate-200 hover:border-indigo-100 rounded-xl transition-all text-slate-400 hover:text-indigo-600 shadow-sm shrink-0"
+            className="size-10 flex items-center justify-center rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors group"
             title="Sincronizar dados"
           >
-            <span className="material-symbols-outlined text-xl transition-transform duration-1000 group-hover:rotate-180">refresh</span>
+            <span className="material-symbols-outlined text-[22px] transition-transform duration-700 group-hover:rotate-180">refresh</span>
           </button>
         </div>
       </header>
