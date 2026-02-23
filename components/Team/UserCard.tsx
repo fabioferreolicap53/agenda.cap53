@@ -153,11 +153,6 @@ export const UserCard: React.FC<UserCardProps> = ({
                         <>
                             {/* Tags de Cargo e Setor */}
                             <div className="flex flex-col items-start gap-2 mt-2 mb-3">
-                                {user.role && (
-                                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-bold border border-slate-200 uppercase">
-                                        {user.role}
-                                    </span>
-                                )}
                                 {user.sector && (
                                     <span className="px-3 py-1 rounded-md bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-100 uppercase tracking-wide">
                                         {user.sector}
@@ -169,12 +164,14 @@ export const UserCard: React.FC<UserCardProps> = ({
                             <div className="pt-3 border-t border-slate-50 mt-auto">
                                 <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase">Status</span>
-                                    <div className="flex items-center gap-1.5">
-                                        <span className={`w-2 h-2 rounded-full ${user.active ? 'bg-emerald-500' : 'bg-red-400'}`}></span>
-                                        <span className={`text-xs font-medium ${user.active ? 'text-emerald-600' : 'text-red-500'}`}>
-                                            {user.active ? 'Ativo' : 'Inativo'}
-                                        </span>
-                                    </div>
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                                        user.status === 'Online' ? 'bg-green-100 text-green-700' :
+                                        user.status === 'Ausente' ? 'bg-amber-100 text-amber-700' :
+                                        user.status === 'Ocupado' ? 'bg-red-100 text-red-700' :
+                                        'bg-slate-100 text-slate-500'
+                                    }`}>
+                                        {user.context_status || user.status || 'Offline'}
+                                    </span>
                                 </div>
                             </div>
                         </>
@@ -232,17 +229,17 @@ export const UserCard: React.FC<UserCardProps> = ({
 
     return (
         <div 
-            className={`group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${
+            className={`group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col ${
                 isSelected 
                     ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10' 
                     : 'border-slate-100 shadow-sm hover:border-slate-200'
             }`}
         >
             {/* Header com Avatar e Ações Principais */}
-            <div className="p-4 border-b border-slate-50">
+            <div className="p-4 border-b border-slate-50 min-h-[104px] flex flex-col justify-center">
                 <div className="flex items-start justify-between gap-3">
                     {/* Avatar Area */}
-                    <div className="relative">
+                    <div className="relative shrink-0">
                         <div 
                             onClick={isMe ? onAvatarClick : undefined}
                             className={`relative w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all ${
@@ -264,13 +261,16 @@ export const UserCard: React.FC<UserCardProps> = ({
                         {/* Status Indicator */}
                         <div className="absolute -bottom-1 -right-1 bg-white p-0.5 rounded-full">
                             <span className={`block w-3 h-3 rounded-full border-2 border-white ${
-                                user.active ? 'bg-emerald-500' : 'bg-slate-300'
-                            }`}></span>
+                                user.status === 'Online' ? 'bg-green-500' :
+                                user.status === 'Ausente' ? 'bg-amber-500' :
+                                user.status === 'Ocupado' ? 'bg-red-500' :
+                                'bg-slate-300'
+                            }`} title={user.context_status || user.status || 'Offline'}></span>
                         </div>
                     </div>
 
                     {/* Name and Role */}
-                    <div className="flex-1 min-w-0 pt-1">
+                    <div className="flex-1 min-w-0 pt-1 flex flex-col h-full">
                         <div className="flex items-center justify-between">
                             <h3 className="font-bold text-slate-800 text-sm truncate pr-2" title={user.name}>
                                 {user.name}
@@ -289,20 +289,22 @@ export const UserCard: React.FC<UserCardProps> = ({
                                 </button>
                             )}
                         </div>
-                        <p className="text-xs text-slate-500 truncate">{user.role || 'Membro da Equipe'}</p>
-                        
                         {/* Bio Display */}
-                        {!isEditing && user.observations && (
-                            <p className="text-xs text-slate-600 mt-1.5 line-clamp-3 leading-snug">
-                                {user.observations}
-                            </p>
-                        )}
+                        <div className="h-[40px]">
+                            {!isEditing && user.observations ? (
+                                <p className="text-xs text-slate-600 mt-1.5 line-clamp-2 leading-snug">
+                                    {user.observations}
+                                </p>
+                            ) : (
+                                <div className="h-full"></div> // Spacer to keep height consistent
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex border-b border-slate-50 px-2">
+            <div className="flex border-b border-slate-50 px-2 shrink-0">
                 {(['identity', 'contact'] as const).map((tab) => (
                     <button
                         key={tab}
@@ -324,12 +326,12 @@ export const UserCard: React.FC<UserCardProps> = ({
             </div>
 
             {/* Tab Content Area */}
-            <div className="p-4 h-[180px] overflow-y-auto custom-scrollbar">
+            <div className="p-4 h-[180px] overflow-y-auto custom-scrollbar flex-1">
                 {renderTabContent()}
             </div>
 
             {/* Footer Actions */}
-            <div className="p-3 border-t border-slate-50 bg-slate-50/50 rounded-b-2xl flex items-center justify-between gap-2">
+            <div className="p-3 border-t border-slate-50 bg-slate-50/50 rounded-b-2xl flex items-center justify-between gap-2 mt-auto shrink-0">
                 {isMe ? (
                     isEditing ? (
                         <>

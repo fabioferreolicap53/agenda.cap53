@@ -252,6 +252,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, [devRoleOverride]);
 
+    // Real-time subscription for current user data
+    useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+
+        const subscribeToUser = async () => {
+            if (user?.id) {
+                try {
+                    unsubscribe = await pb.collection('agenda_cap53_usuarios').subscribe(user.id, (e) => {
+                        if (e.action === 'update' || e.action === 'create') {
+                            console.log('AuthContext: Realtime update received', e.record);
+                            setUser(prev => {
+                                if (!prev || prev.id !== e.record.id) return prev;
+                                
+                                return {
+                                    ...prev,
+                                    name: e.record.name || prev.name,
+                                    email: e.record.email || prev.email,
+                                    role: (e.record.role as UserRole) || prev.role,
+                                    avatar: e.record.avatar ? pb.files.getUrl(e.record, e.record.avatar) : prev.avatar,
+                                    status: e.record.status || prev.status,
+                                    context_status: e.record.context_status, // can be empty string
+                                    last_active: e.record.last_active || prev.last_active,
+                                    phone: e.record.phone || prev.phone,
+                                    sector: e.record.sector || prev.sector,
+                                    observations: e.record.observations || prev.observations,
+                                    bio: e.record.bio || prev.bio,
+                                    favorites: e.record.favorites || prev.favorites,
+                                };
+                            });
+                        }
+                    });
+                } catch (err) {
+                    console.error('AuthContext: Failed to subscribe to user updates', err);
+                }
+            }
+        };
+
+        subscribeToUser();
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user?.id]);
+
     const login = async (email: string, password: string) => {
         try {
             await pb.collection('agenda_cap53_usuarios').authWithPassword(email, password);

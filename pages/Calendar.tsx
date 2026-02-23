@@ -249,6 +249,10 @@ const Calendar: React.FC = () => {
      if (view === 'month' || view === 'week' || view === 'day' || view === 'agenda') {
        return view;
      }
+     // Mobile/Tablet default view: Agenda (AGE)
+     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+         return 'agenda';
+     }
      return 'month';
     });
 
@@ -1052,16 +1056,6 @@ const Calendar: React.FC = () => {
                         className="md:hidden bg-white rounded-xl border border-slate-100 shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform"
                         title={event.title}
                         onClick={() => setSelectedEvent(event)}
-                        onMouseEnter={(e) => {
-                          const rect = e.currentTarget.getBoundingClientRect();
-                          setTooltipData({
-                            event: event,
-                            x: rect.left + rect.width / 2,
-                            y: rect.top,
-                            height: rect.height
-                          });
-                        }}
-                        onMouseLeave={() => setTooltipData(null)}
                       >
                         {/* Time Column */}
                         <div className="flex flex-col items-center justify-center px-2 border-r border-slate-50 min-w-[60px]">
@@ -1337,6 +1331,9 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
   }, [isRendered, x, y, height, event]);
 
   if (!isRendered || !event) return null;
+
+  // Mobile/Tablet Check: Don't render tooltip on small screens
+  if (window.innerWidth < 1024) return null;
 
   const startDate = new Date(event.date_start || event.date);
   const endDate = new Date(event.date_end || event.date_start || event.date);

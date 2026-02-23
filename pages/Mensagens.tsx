@@ -409,8 +409,8 @@ const Chat: React.FC = () => {
                             <p className="text-slate-400 text-sm font-medium">Nenhum usuário encontrado</p>
                         </div>
                     )}
-                </>
-{/* Developer Card - Added as requested */}
+                    
+                    {/* Developer Card - Added as requested */}
                     <div className="mt-4 pt-4 border-t border-dashed border-slate-200">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Desenvolvedor</p>
                         <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 opacity-75 hover:opacity-100 transition-opacity">
@@ -423,7 +423,7 @@ const Chat: React.FC = () => {
                             </div>
                         </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
       </div>

@@ -7,6 +7,7 @@ import { useNotifications } from '../hooks/useNotifications';
 const Sidebar: React.FC = () => {
   const { user, setRole, logout, updateStatus, isSidebarOpen, setSidebarOpen } = useAuth();
   const [showStatusMenu, setShowStatusMenu] = React.useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
   const { unreadCount: notificationCount } = useNotifications();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -318,7 +319,7 @@ const Sidebar: React.FC = () => {
               </div>
 
               <button
-                onClick={logout}
+                onClick={() => setShowLogoutConfirm(true)}
                 className="text-[10px] font-bold uppercase tracking-wider text-text-secondary text-left hover:text-red-500 flex items-center gap-2 transition-colors py-1"
               >
                 <span className="material-symbols-outlined text-lg">logout</span>
@@ -332,6 +333,41 @@ const Sidebar: React.FC = () => {
           </div>
         </div>
       </aside>
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 flex flex-col items-center gap-4 animate-in zoom-in-95 duration-200 border border-white/20">
+            <div className="size-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
+              <span className="material-symbols-outlined text-2xl">logout</span>
+            </div>
+            
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-bold text-slate-800">Encerrar Sessão?</h3>
+              <p className="text-xs text-slate-500 leading-relaxed max-w-[200px]">
+                Você precisará fazer login novamente para acessar o sistema.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3 w-full mt-2">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-[10px] font-bold uppercase tracking-wider hover:bg-slate-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setShowLogoutConfirm(false);
+                  logout();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-red-500 text-white text-[10px] font-bold uppercase tracking-wider shadow-lg shadow-red-500/20 hover:bg-red-600 transition-colors"
+              >
+                Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

@@ -438,69 +438,51 @@ export const useNotifications = () => {
   }, [user?.id, user?.role]);
 
   // Use actions hook
-  const {
+  const { 
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    clearHistory,
-    clearAllNotifications,
-    handleDecision
-  } = useNotificationActions(notifications, setNotifications, setUnreadCount, fetchNotifications);
+    clearAll
+  } = useNotificationActions(fetchNotifications);
 
+  // Initial fetch
   useEffect(() => {
     fetchNotifications();
-
-    // Fallback: Polling a cada 10 segundos para garantir atualização mesmo se o Realtime (502) falhar
-    const intervalId = setInterval(() => {
-        if (document.visibilityState === 'visible') { // Só atualiza se a aba estiver visível para economizar recurso
-            fetchNotifications();
+    
+    // Subscribe to realtime updates
+    if (user?.id) {
+      pb.collection('agenda_cap53_notifications').subscribe('*', (e) => {
+        if (e.record.user === user.id) {
+          fetchNotifications();
         }
-    }, 10000);
+      });
+      
+      pb.collection('agenda_cap53_almac_requests').subscribe('*', (e) => {
+         // Re-fetch if user is ALMC/DCA (seeing all requests) OR if user created the request
+         // We can't easily filter by role here inside the subscription callback without access to user object,
+         // but we can check the record data.
+         const isRelevant = 
+             (user.role === 'ALMC' && (e.record.category === 'ALMOXARIFADO' || e.record.category === 'COPA')) ||
+             (user.role === 'DCA' && e.record.category === 'INFORMATICA') ||
+             e.record.created_by === user.id;
 
-    if (!user?.id) {
-        clearInterval(intervalId);
-        return;
+         if (isRelevant) {
+             fetchNotifications();
+         }
+      });
+
+      pb.collection('agenda_cap53_eventos').subscribe('*', (e) => {
+        if (e.record.user === user.id) { // Transport status updates on user events
+           fetchNotifications();
+        }
+      });
     }
 
-    const subscribe = async () => {
-      const unsubs: (() => void)[] = [];
-      
-      const u1 = await pb.collection('agenda_cap53_notifications').subscribe<NotificationRecord>('*', (e) => {
-         // Verifica se a notificação é para o usuário atual
-         if (e.record.user === user.id) {
-           // Sempre recarrega a lista completa para garantir que temos os dados expandidos (relacionamentos)
-           // O evento realtime 'create'/'update' não traz os campos expandidos, o que causava notificações "vazias" ou erros
-           fetchNotifications();
-         }
-       });
-      unsubs.push(u1);
-
-      if (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'ADMIN') {
-        const u2 = await pb.collection('agenda_cap53_almac_requests').subscribe('*', (e) => {
-          // Quando um pedido de almoxarifado é alterado, recarregamos para atualizar contadores e dados expandidos
-          fetchNotifications();
-        });
-        unsubs.push(u2);
-      }
-
-      if (user.role === 'TRA' || user.role === 'ADMIN') {
-        const u3 = await pb.collection('agenda_cap53_eventos').subscribe('*', (e) => {
-          if (e.record.transporte_suporte === true) fetchNotifications();
-        });
-        unsubs.push(u3);
-      }
-
-      return () => unsubs.forEach(unsub => unsub());
-    };
-
-    let unsubscribe: (() => void) | undefined;
-    subscribe().then(unsub => unsubscribe = unsub);
-
     return () => {
-      clearInterval(intervalId); // Limpa o polling
-      if (unsubscribe) unsubscribe();
+      pb.collection('agenda_cap53_notifications').unsubscribe('*');
+      pb.collection('agenda_cap53_almac_requests').unsubscribe('*');
+      pb.collection('agenda_cap53_eventos').unsubscribe('*');
     };
-  }, [user?.id, user?.role, fetchNotifications]);
+  }, [user?.id, fetchNotifications]);
 
   return {
     notifications,
@@ -508,10 +490,7 @@ export const useNotifications = () => {
     unreadCount,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    clearHistory,
-    clearAllNotifications,
-    handleDecision,
+    clearAll,
     refresh: fetchNotifications
   };
 };

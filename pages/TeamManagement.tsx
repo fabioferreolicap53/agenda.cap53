@@ -127,7 +127,7 @@ const TeamManagement: React.FC = () => {
             const result = await pb.collection('agenda_cap53_usuarios').getList<UsersResponse>(page, ITEMS_PER_PAGE, {
                 sort: '-created',
                 filter: filter,
-                fields: 'id,collectionId,collectionName,name,email,avatar,role,sector,observations,whatsapp,birthDate,admissionDate,active,lastActive,created',
+                fields: 'id,collectionId,collectionName,name,email,avatar,role,sector,observations,whatsapp,birthDate,admissionDate,active,lastActive,created,status,context_status',
                 requestKey: 'team_fetch' 
             });
 
@@ -156,31 +156,53 @@ const TeamManagement: React.FC = () => {
 
         let unsubscribeUsers: (() => void) | undefined;
         let unsubscribeMessages: (() => void) | undefined;
+        let isMounted = true;
 
         // Subscribe to real-time changes
         const setupSubscriptions = async () => {
-            // Only update existing users in the list to avoid messing up pagination
-            unsubscribeUsers = await pb.collection('agenda_cap53_usuarios').subscribe('*', (e) => {
-                if (e.action === 'update') {
-                    setUsers(prev => prev.map(u => u.id === e.record.id ? { ...u, ...e.record } : u));
-                } else if (e.action === 'delete') {
-                    setUsers(prev => prev.filter(u => u.id !== e.record.id));
+            try {
+                // Only update existing users in the list to avoid messing up pagination
+                const unsubUsersFunc = await pb.collection('agenda_cap53_usuarios').subscribe('*', (e) => {
+                    if (!isMounted) return;
+                    
+                    if (e.action === 'update') {
+                        setUsers(prev => prev.map(u => u.id === e.record.id ? { ...u, ...e.record } : u));
+                    } else if (e.action === 'delete') {
+                        setUsers(prev => prev.filter(u => u.id !== e.record.id));
+                    }
+                    // For 'create', we don't append automatically to avoid UI jumps
+                });
+                
+                if (isMounted) {
+                    unsubscribeUsers = unsubUsersFunc;
+                } else {
+                    unsubUsersFunc();
                 }
-                // For 'create', we typically don't append to a paginated list automatically to avoid UI jumps
-            });
 
-            unsubscribeMessages = await pb.collection('agenda_cap53_mensagens').subscribe('*', (e) => {
-                if (e.action === 'create' && e.record.receiver === currentUser?.id) {
-                    fetchUnreadCounts();
-                } else if (e.action === 'update' && (e.record.receiver === currentUser?.id || e.record.sender === currentUser?.id)) {
-                    fetchUnreadCounts();
+                const unsubMsgFunc = await pb.collection('agenda_cap53_mensagens').subscribe('*', (e) => {
+                    if (!isMounted) return;
+                    
+                    if (e.action === 'create' && e.record.receiver === currentUser?.id) {
+                        fetchUnreadCounts();
+                    } else if (e.action === 'update' && (e.record.receiver === currentUser?.id || e.record.sender === currentUser?.id)) {
+                        fetchUnreadCounts();
+                    }
+                });
+
+                if (isMounted) {
+                    unsubscribeMessages = unsubMsgFunc;
+                } else {
+                    unsubMsgFunc();
                 }
-            });
+            } catch (err) {
+                console.error('Failed to subscribe:', err);
+            }
         };
 
         setupSubscriptions();
 
         return () => {
+            isMounted = false;
             if (unsubscribeUsers) unsubscribeUsers();
             if (unsubscribeMessages) unsubscribeMessages();
         };
@@ -236,19 +258,21 @@ const TeamManagement: React.FC = () => {
                         (selectedSectors.includes('Todos') || (currentUser.sector && selectedSectors.includes(currentUser.sector))) &&
                         (!showFavoritesOnly) // Usually we don't "favorite" ourselves, so hide if showing favorites only? Or show? Let's hide if logic demands.
                          ? (
-                            <UserCard
-                                key={currentUser.id}
-                                user={currentUser}
-                                isMe={true}
-                                unreadCount={unreadCounts[currentUser.id] || 0}
-                                isSelected={false}
-                                onToggleSelection={() => {}}
-                                onUpdateProfile={handleUpdateProfile}
-                                isFavorite={false} // Cannot favorite self
-                                onToggleFavorite={async () => {}}
-                                onChatClick={(userId) => navigate(`/chat?userId=${userId}`)}
-                                onAvatarClick={() => setShowAvatarModal(true)}
-                            />
+                            <div className="h-full">
+                                <UserCard
+                                    key={currentUser.id}
+                                    user={currentUser}
+                                    isMe={true}
+                                    unreadCount={unreadCounts[currentUser.id] || 0}
+                                    isSelected={false}
+                                    onToggleSelection={() => {}}
+                                    onUpdateProfile={handleUpdateProfile}
+                                    isFavorite={false} // Cannot favorite self
+                                    onToggleFavorite={async () => {}}
+                                    onChatClick={(userId) => navigate(`/chat?userId=${userId}`)}
+                                    onAvatarClick={() => setShowAvatarModal(true)}
+                                />
+                            </div>
                         ) : null
                     )}
 
@@ -257,7 +281,7 @@ const TeamManagement: React.FC = () => {
                         const isLastElement = users.length === index + 1;
                         
                         return (
-                            <div key={user.id} ref={isLastElement ? lastUserElementRef : null}>
+                            <div key={user.id} ref={isLastElement ? lastUserElementRef : null} className="h-full">
                                 <UserCard
                                     user={user}
                                     isMe={false}

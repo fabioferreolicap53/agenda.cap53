@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { pb } from '../lib/pocketbase';
+import { useNotifications } from '../hooks/useNotifications';
 
 const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, setSidebarOpen } = useAuth();
+  const { unreadCount } = useNotifications();
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -94,9 +96,14 @@ const Header: React.FC = () => {
           {/* Hamburger Button Mobile */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden flex items-center justify-center size-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95 transition-all z-[101]"
+            className="lg:hidden relative flex items-center justify-center size-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95 transition-all z-[101]"
           >
             <span className="material-symbols-outlined text-[24px]">menu</span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 size-4 bg-red-500 border-2 border-white rounded-full flex items-center justify-center text-[9px] text-white font-bold animate-in zoom-in duration-200">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           <button
