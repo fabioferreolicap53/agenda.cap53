@@ -147,7 +147,7 @@ const App: React.FC = () => {
         <AuthProvider>
           <LayoutContent>
             <Routes>
-              <Route path="/" element={<Navigate to="/calendar" replace />} />
+              <Route path="/" element={<Navigate to="/create-event" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
               {/* Rotas de contingência para capturar variações de links malformados ou encodados */}
@@ -160,7 +160,7 @@ const App: React.FC = () => {
               <Route path="/reset-password/*" element={<ResetPassword />} />
               <Route path="/confirm-password-reset/*" element={<ResetPassword />} />
               <Route path="/calendar" element={<Calendar />} />
-              <Route path="/create-event" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><CreateEvent /></ProtectedRoute>} />
+              <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
               <Route path="/chat" element={<Mensagens />} />
               <Route path="/notifications" element={<Notifications />} />

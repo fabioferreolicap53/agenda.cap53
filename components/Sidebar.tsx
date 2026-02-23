@@ -81,16 +81,14 @@ const Sidebar: React.FC = () => {
                 )}
               </NavLink>
 
-              {(user?.role === 'ADMIN' || user?.role === 'USER' || user?.role === 'CE' || !user?.role) && (
-                <NavLink to="/create-event" className={linkClass} onClick={() => setSidebarOpen(false)}>
-                  {({ isActive }) => (
-                    <>
-                      <span className={iconClass(isActive)}>add_circle</span>
-                      <p className="text-sm font-bold">Novo Evento</p>
-                    </>
-                  )}
-                </NavLink>
-              )}
+              <NavLink to="/create-event" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                {({ isActive }) => (
+                  <>
+                    <span className={iconClass(isActive)}>add_circle</span>
+                    <p className="text-sm font-bold">Novo Evento</p>
+                  </>
+                )}
+              </NavLink>
 
               <NavLink to="/chat" className={linkClass} onClick={() => setSidebarOpen(false)}>
                 {({ isActive }) => (

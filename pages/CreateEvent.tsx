@@ -127,6 +127,12 @@ const CreateEvent: React.FC = () => {
   const [itemQuantities, setItemQuantities] = useState<{ [itemId: string]: number }>({});
   const [confirmedItems, setConfirmedItems] = useState<string[]>([]);
   const [participantRoles, setParticipantRoles] = useState<Record<string, string>>({});
+  const [visibleParticipantsCount, setVisibleParticipantsCount] = useState(5);
+
+  // Reset pagination when search changes
+  useEffect(() => {
+    setVisibleParticipantsCount(5);
+  }, [participantSearch]);
 
   const [searchParams] = useSearchParams();
   const [isEditing, setIsEditing] = useState(false);
@@ -1407,7 +1413,7 @@ const CreateEvent: React.FC = () => {
         <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-primary/2 rounded-full blur-[120px]" />
       </div>
 
-      <div className="max-w-[1300px] mx-auto px-6 py-3 relative z-10 flex flex-col gap-6">
+      <div className="max-w-[1300px] mx-auto px-6 py-3 relative z-10 flex flex-col gap-6 pb-28 md:pb-6">
 
         <form id="create-event-form" onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="flex flex-col gap-4">
 
@@ -1607,7 +1613,8 @@ const CreateEvent: React.FC = () => {
                         <span className="text-[10px] font-bold uppercase tracking-widest">Nenhum resultado encontrado</span>
                       </div>
                     ) : (
-                      sortedFilteredUsers.map(u => {
+                      <>
+                        {sortedFilteredUsers.slice(0, visibleParticipantsCount).map(u => {
                         const isSel = selectedParticipants.includes(u.id);
                         const isCreatorUser = u.id === user?.id;
                         
@@ -1631,16 +1638,10 @@ const CreateEvent: React.FC = () => {
                                   {u.name || (u.email ? u.email.split('@')[0] : 'Usuário')}
                                 </span>
                                 <div className="flex items-center gap-1.5">
-                                  <span className={`text-[10px] font-bold uppercase tracking-wider ${isSel ? 'text-primary/60' : 'text-slate-400'}`}>
-                                  {u.role || (u.id === user?.id ? 'Criador' : 'Participante')}
-                                </span>
                                   {u.sector && (
-                                    <>
-                                      <span className={`size-1 rounded-full ${isSel ? 'bg-primary/20' : 'bg-slate-300'}`} />
-                                      <span className={`text-[10px] font-medium uppercase tracking-tight ${isSel ? 'text-primary/40' : 'text-slate-400/70'}`}>
-                                        {u.sector}
-                                      </span>
-                                    </>
+                                    <span className={`text-[10px] font-medium uppercase tracking-tight ${isSel ? 'text-primary/40' : 'text-slate-400/70'}`}>
+                                      {u.sector}
+                                    </span>
                                   )}
                                 </div>
                               </div>
@@ -1703,7 +1704,18 @@ const CreateEvent: React.FC = () => {
                             )}
                           </div>
                         );
-                      })
+                      })}
+                      {sortedFilteredUsers.length > visibleParticipantsCount && (
+                        <button
+                          type="button"
+                          onClick={() => setVisibleParticipantsCount(prev => prev + 5)}
+                          className="w-full py-2.5 text-[10px] font-bold text-primary/70 uppercase tracking-widest hover:bg-primary/5 hover:text-primary rounded-xl transition-colors border border-primary/10 border-dashed mt-2 flex items-center justify-center gap-2 group"
+                        >
+                          <span className="material-symbols-outlined text-base group-hover:translate-y-0.5 transition-transform">expand_more</span>
+                          <span>Carregar mais ({sortedFilteredUsers.length - visibleParticipantsCount})</span>
+                        </button>
+                      )}
+                      </>
                     )}
                   </>
                 )}
@@ -2124,18 +2136,18 @@ const CreateEvent: React.FC = () => {
           </section>
 
           {/* Submit Button Section */}
-          <div className="flex justify-center lg:justify-end pt-6 border-t border-slate-100">
+          <div className="fixed bottom-4 left-4 right-4 z-[100] p-2 bg-white/80 backdrop-blur-2xl border border-white/50 shadow-2xl shadow-slate-200/50 rounded-2xl md:static md:bg-transparent md:backdrop-blur-none md:border-none md:shadow-none md:p-0 md:pt-6 flex justify-center lg:justify-end transition-all duration-300">
             <button
               type="submit"
               disabled={loading || isDateInvalid || isDurationInvalid || isTransportTimeInvalid}
-              className="h-12 px-10 bg-primary text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-primary-hover active:scale-95 hover:shadow-xl hover:shadow-primary/20 transition-all duration-300 flex items-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+              className="w-full md:w-auto h-12 md:h-12 px-8 bg-primary text-white rounded-xl font-bold text-[10px] uppercase tracking-[0.15em] hover:bg-primary-hover active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25 md:shadow-none"
             >
               {loading ? (
                 <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
                   <span>{isEditing ? 'Salvar Alterações' : 'Agendar Atividade'}</span>
-                  <span className="material-symbols-outlined text-xl group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform">send</span>
+                  <span className="material-symbols-outlined text-lg group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">send</span>
                 </>
               )}
             </button>
