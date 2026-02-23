@@ -16,6 +16,23 @@ export interface TypedPocketBase extends PocketBase {
 
 export const pb = new PocketBase(PB_URL) as TypedPocketBase;
 
+/**
+ * Helper para obter a URL completa do avatar do usuário.
+ * Retorna uma URL padrão da UI Avatars se não houver avatar definido.
+ */
+export const getAvatarUrl = (record: any) => {
+    if (!record) return '';
+    
+    // Se já tiver um avatar definido
+    if (record.avatar) {
+        return pb.files.getUrl(record, record.avatar);
+    }
+    
+    // Fallback para UI Avatars
+    const name = record.name || 'User';
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`;
+};
+
 // Desabilitar cancelamento automático para evitar aborts em re-renders rápidos do React
 pb.autoCancellation(false);
 
