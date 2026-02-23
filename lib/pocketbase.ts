@@ -1,7 +1,15 @@
 import PocketBase, { RecordService } from 'pocketbase';
 import { CollectionResponses } from './pocketbase-types';
 
-const pocketbaseUrl = import.meta.env.VITE_POCKETBASE_URL;
+const pocketbaseUrl = 'https://centraldedados.dev.br';
+// let pocketbaseUrl = import.meta.env.VITE_POCKETBASE_URL;
+
+// // Fallback/Override de segurança para garantir a nova URL
+// if (!pocketbaseUrl || pocketbaseUrl.includes('duckdns.org')) {
+//   console.warn('URL do PocketBase inválida ou antiga detectada. Forçando uso da nova URL.');
+//   pocketbaseUrl = 'https://centraldedados.dev.br';
+// }
+
 if (!pocketbaseUrl) {
   throw new Error('VITE_POCKETBASE_URL não definida');
 }
@@ -33,7 +41,7 @@ if (!g[globalKey]) {
 }
 
 if (import.meta.env.DEV) {
-  console.log(`PocketBase client initialized for: ${pocketbaseUrl}`);
+  console.log(`PocketBase client initialized for: ${pocketbaseUrl} (HARDCODED FIX)`);
 }
 
 /**
