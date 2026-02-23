@@ -45,6 +45,7 @@ export interface UsersRecord {
 	active?: boolean
 	lastActive?: string
 	status?: string
+    context_status?: string
     online?: boolean
     favorites?: string[]
 }
@@ -61,6 +62,7 @@ export interface EventsRecord {
 	date_end?: string
 	participants?: string[] // User IDs
 	participants_roles?: Record<string, string> // JSON
+	participants_status?: Record<string, string> // JSON
 	unidades?: string[] // JSON/Select
 	categorias_profissionais?: string[] // JSON/Select
 	transporte_suporte?: boolean
@@ -70,6 +72,7 @@ export interface EventsRecord {
 	transporte_horario_buscar?: string
 	transporte_passageiro?: string | number
 	transporte_obs?: string
+	transporte_status?: string
 	is_restricted?: boolean
 	creator_role?: string
     observacoes?: string

@@ -87,12 +87,13 @@ export const useMySpace = () => {
       const createdRes = await pb.collection('agenda_cap53_eventos').getFullList<any>({
         filter: `user = "${user.id}"`,
         sort: '-date_start',
-        expand: 'location,user'
+        expand: 'location,user,type'
       });
       
       const createdWithMeta = createdRes.map(e => {
         return { 
           ...e, 
+          category: e.expand?.type?.name || e.type,
           type: 'created' as const, 
           userRole: e.creator_role || 'PARTICIPANTE'
         };
@@ -101,13 +102,14 @@ export const useMySpace = () => {
       // 2. Fetch participations (Invites received by me OR roles I have in other events)
       const participationsRes = await pb.collection('agenda_cap53_participantes').getFullList({
         filter: `user = "${user.id}"`,
-        expand: 'event,event.location,event.user'
+        expand: 'event,event.location,event.user,event.type'
       });
       
       const participationEvents = participationsRes
         .filter(p => p.expand?.event)
         .map(p => ({
           ...p.expand.event,
+          category: p.expand.event.expand?.type?.name || p.expand.event.type,
           userRole: p.role || 'PARTICIPANTE',
           type: 'participation' as const,
           participationStatus: p.status
@@ -147,13 +149,14 @@ export const useMySpace = () => {
       // 3. Fetch requests (Solicitations sent)
       const requestsRes = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
         filter: `user = "${user.id}"`,
-        expand: 'event,event.location,event.user'
+        expand: 'event,event.location,event.user,event.type'
       });
       
       const requestEvents = requestsRes
         .filter(r => r.expand?.event)
         .map(r => ({
           ...r.expand.event,
+          category: r.expand.event.expand?.type?.name || r.expand.event.type,
           type: 'request' as const,
           requestStatus: r.status === 'approved' ? 'accepted' : r.status,
           userRole: r.role || 'PARTICIPANTE'

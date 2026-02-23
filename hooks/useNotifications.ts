@@ -441,8 +441,11 @@ export const useNotifications = () => {
   const { 
     markAsRead,
     markAllAsRead,
-    clearAll
-  } = useNotificationActions(fetchNotifications);
+    deleteNotification,
+    clearHistory,
+    clearAllNotifications,
+    handleDecision
+  } = useNotificationActions(notifications, setNotifications, setUnreadCount, fetchNotifications);
 
   // Initial fetch
   useEffect(() => {
@@ -490,7 +493,10 @@ export const useNotifications = () => {
     unreadCount,
     markAsRead,
     markAllAsRead,
-    clearAll,
+    deleteNotification,
+    clearHistory,
+    clearAllNotifications,
+    handleDecision,
     refresh: fetchNotifications
   };
 };

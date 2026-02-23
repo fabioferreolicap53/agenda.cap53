@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
-import { Collections, LocaisResponse, TiposEventoResponse, ItensServicoResponse, UsersResponse } from '../lib/pocketbase-types';
+import { Collections, LocaisResponse, TiposEventoResponse, ItensServicoResponse, UsersResponse, AlmacRequestsResponse } from '../lib/pocketbase-types';
 import { useAuth } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
 import { debugLog } from '../src/lib/debug';
@@ -565,7 +565,7 @@ const CreateEvent: React.FC = () => {
                 });
                 
                 const traIds = traUsers
-                  .filter((traUser: any) => traUser.id !== user?.id)
+                  .filter((traUser: any) => traUser.id !== user?.id && !selectedParticipants.includes(traUser.id))
                   .map((traUser: any) => traUser.id);
 
                 if (traIds.length > 0) {
@@ -617,10 +617,10 @@ const CreateEvent: React.FC = () => {
                   filter: `event = "${evtId}" && (type = "almc_item_request" || type = "service_request")`
               });
               
-              const reqs = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList({
-                  filter: `event = "${evtId}"`,
-                  expand: 'item'
-              });
+              const reqs = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList<AlmacRequestsResponse<{ item: ItensServicoResponse }>>({
+                filter: `event = "${evtId}"`,
+                expand: 'item'
+            });
               
               console.log(`Encontradas ${notifs.length} notificações e ${reqs.length} pedidos.`);
               
@@ -671,7 +671,7 @@ const CreateEvent: React.FC = () => {
                           }
                       } else {
                           const itemName = req.expand?.item?.name || 'Item';
-                          if (!msg.includes(`(Qtd: ${correctQty})` || !msg.includes(itemName))) {
+                          if (!msg.includes(`(Qtd: ${correctQty})`) || !msg.includes(itemName)) {
                               msg = `O evento "${title}" solicitou o item "${itemName}" (Qtd: ${correctQty}).`;
                               shouldUpdate = true;
                           }
@@ -794,6 +794,7 @@ const CreateEvent: React.FC = () => {
   useEffect(() => {
     const dateParam = searchParams.get('date');
     const eventIdParam = searchParams.get('eventId') || searchParams.get('edit');
+    const duplicateIdParam = searchParams.get('duplicate_from');
     const participantsParam = searchParams.get('participants');
 
     if (participantsParam) {
@@ -807,7 +808,52 @@ const CreateEvent: React.FC = () => {
       }
     }
 
-    if (eventIdParam) {
+    if (duplicateIdParam) {
+      console.log('--- MODO DUPLICAÇÃO DETECTADO ---', { duplicateIdParam });
+      setLoading(true);
+
+      const loadDuplicateEvent = async () => {
+        try {
+          console.log('--- BUSCANDO DADOS PARA DUPLICAÇÃO ---', duplicateIdParam);
+          const event = await pb.collection(Collections.AgendaCap53Eventos).getOne(duplicateIdParam);
+          
+          // Copiar apenas Dados Essenciais
+          setTitle(event.title ? `${event.title} (Cópia)` : '');
+          setType(event.type || '');
+          setInvolvementLevel(event.creator_role || 'PARTICIPANTE');
+          setObservacoes(event.observacoes || event.description || '');
+          
+          // Copiar Localização
+          if (event.location === 'external' || (!event.location && event.custom_location)) {
+            setLocationState({ mode: 'free', fixedId: 'external', freeText: event.custom_location || '' });
+          } else {
+            setLocationState({ mode: 'fixed', fixedId: event.location || '', freeText: '' });
+          }
+          
+          // Copiar Restrição
+          setIsRestricted(!!event.is_restricted);
+
+          // Configurar Datas Padrão (Hoje + 1h)
+          const now = new Date();
+          const startHour = now.getHours() + 1;
+          const start = new Date();
+          start.setHours(startHour, 0, 0, 0);
+          const end = new Date(start);
+          end.setHours(start.getHours() + 1);
+          setDateStart(start.toISOString());
+          setDateEnd(end.toISOString());
+
+          console.log('--- DADOS PARA DUPLICAÇÃO CARREGADOS ---');
+        } catch (err) {
+           console.error("Erro ao carregar evento para duplicação", err);
+           alert("Erro ao carregar dados para duplicação.");
+        } finally {
+           setLoading(false);
+        }
+      };
+
+      loadDuplicateEvent();
+    } else if (eventIdParam) {
       console.log('--- MODO EDIÇÃO DETECTADO ---', { eventIdParam });
       setEditingEventId(eventIdParam);
       setIsEditing(true);
@@ -858,7 +904,7 @@ const CreateEvent: React.FC = () => {
           setTransporteDestino(event.transporte_destino || '');
           setTransporteHorarioLevar(event.transporte_horario_levar || '');
           setTransporteHorarioBuscar(event.transporte_horario_buscar || '');
-          setTransportePassageiros(event.transporte_passageiro || '');
+          setTransportePassageiros(event.transporte_passageiro ? String(event.transporte_passageiro) : '');
           setTransporteObs(event.transporte_obs || '');
           setOriginalTransporteSuporte(!!event.transporte_suporte);
           setIsRestricted(!!event.is_restricted);
@@ -965,7 +1011,7 @@ const CreateEvent: React.FC = () => {
         // Fetch locations
          try {
             console.log('--- BUSCANDO LOCAIS ---');
-            const locs = await pb.collection('agenda_cap53_locais').getFullList({
+            const locs = await pb.collection('agenda_cap53_locais').getFullList<LocaisResponse>({
               sort: 'name'
             });
             console.log('--- BUSCA DE LOCAIS CONCLUÍDA, TOTAL: ---', locs.length);
@@ -984,7 +1030,7 @@ const CreateEvent: React.FC = () => {
 
         // Fetch event types
         try {
-          const types = await pb.collection(Collections.AgendaCap53TiposEvento).getFullList({
+          const types = await pb.collection(Collections.AgendaCap53TiposEvento).getFullList<TiposEventoResponse>({
             sort: 'name',
             filter: 'active = true'
           });
@@ -996,7 +1042,7 @@ const CreateEvent: React.FC = () => {
 
         // Fetch items
         try {
-          const items = await pb.collection('agenda_cap53_itens_servico').getFullList({ sort: 'name' });
+          const items = await pb.collection('agenda_cap53_itens_servico').getFullList<ItensServicoResponse>({ sort: 'name' });
           console.log('--- DEBUG: Itens do Evento ---', items.length);
           setAvailableItems(items);
         } catch (err) {
@@ -1006,7 +1052,7 @@ const CreateEvent: React.FC = () => {
         // Fetch users
         try {
           setLoadingUsers(true);
-          const users = await pb.collection(Collections.AgendaCap53Usuarios).getFullList({
+          const users = await pb.collection(Collections.AgendaCap53Usuarios).getFullList<UsersResponse>({
             sort: 'name',
             fields: 'id,name,role,sector,avatar,email,collectionId,collectionName',
             requestKey: null
@@ -1980,7 +2026,7 @@ const CreateEvent: React.FC = () => {
                         
                         <div className="mt-8 flex flex-wrap gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
                           {availableItems
-                            .filter(i => (i.category === 'ALMOXARIFADO' || i.type === 'almoxarifado') && ((i.is_available !== false) || almoxarifadoItems.includes(i.id)))
+                            .filter(i => (i.category === 'ALMOXARIFADO') && ((i.is_available !== false) || almoxarifadoItems.includes(i.id)))
                             .map(item => renderResourceItem(item, almoxarifadoItems, setAlmoxarifadoItems))}
                         </div>
                       </div>
@@ -2000,7 +2046,7 @@ const CreateEvent: React.FC = () => {
                         
                         <div className="mt-8 flex flex-wrap gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
                           {availableItems
-                            .filter(i => (i.category === 'COPA' || i.type === 'copa') && ((i.is_available !== false) || copaItems.includes(i.id)))
+                            .filter(i => (i.category === 'COPA') && ((i.is_available !== false) || copaItems.includes(i.id)))
                             .map(item => renderResourceItem(item, copaItems, setCopaItems))}
                         </div>
                       </div>
@@ -2020,7 +2066,7 @@ const CreateEvent: React.FC = () => {
                         
                         <div className="mt-8 flex flex-wrap gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
                           {availableItems
-                            .filter(i => (i.category === 'INFORMATICA' || i.type === 'informatica') && ((i.is_available !== false) || informaticaItems.includes(i.id)))
+                            .filter(i => (i.category === 'INFORMATICA') && ((i.is_available !== false) || informaticaItems.includes(i.id)))
                             .map(item => renderResourceItem(item, informaticaItems, setInformaticaItems))}
                         </div>
                       </div>

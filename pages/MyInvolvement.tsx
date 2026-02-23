@@ -30,6 +30,31 @@ const MyInvolvement: React.FC = () => {
     return params.get('search') || '';
   });
 
+  // Novos Filtros
+  const [selectedMonth, setSelectedMonth] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedType, setSelectedType] = useState<string>('all');
+  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+
+  // Carregar opções de filtro
+  React.useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const types = await pb.collection('agenda_cap53_tipos_evento').getFullList({ sort: 'name' });
+        setAvailableTypes(types.map((t: any) => t.name));
+
+        const locs = await pb.collection('agenda_cap53_locais').getFullList({ sort: 'name' });
+        setAvailableLocations(locs.map((l: any) => l.name));
+      } catch (error) {
+        console.error('Error fetching filter options:', error);
+      }
+    };
+    fetchOptions();
+  }, []);
+
   // Handlers
   const handleCancelEvent = async (event: MySpaceEvent) => {
     const reason = prompt('Por que deseja cancelar este evento?');
@@ -81,6 +106,10 @@ const MyInvolvement: React.FC = () => {
     navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=details`);
   };
 
+  const handleDuplicateEvent = (event: MySpaceEvent) => {
+    navigate(`/create-event?duplicate_from=${event.id}`);
+  };
+
   // Filtragem
   const filteredEvents = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -119,9 +148,33 @@ const MyInvolvement: React.FC = () => {
         (e.category || '').toLowerCase().includes(term)
       );
     }
+
+    // 3. Novos Filtros Avançados
+    result = result.filter(e => {
+        // Data
+        if (selectedMonth !== 'all' || selectedYear !== 'all') {
+            const eventDate = new Date(e.date_start);
+            if (selectedMonth !== 'all' && eventDate.getMonth().toString() !== selectedMonth) return false;
+            if (selectedYear !== 'all' && eventDate.getFullYear().toString() !== selectedYear) return false;
+        }
+
+        // Tipo
+        if (selectedType !== 'all') {
+            const type = e.category || e.nature;
+            if (type !== selectedType) return false;
+        }
+
+        // Localização
+        if (selectedLocation !== 'all') {
+             const locName = e.expand?.location?.name || e.custom_location || e.location || '';
+             if (locName !== selectedLocation) return false;
+        }
+        
+        return true;
+    });
     
     return result;
-  }, [events, activeTab, searchTerm]);
+  }, [events, activeTab, searchTerm, selectedMonth, selectedYear, selectedType, selectedLocation]);
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
@@ -188,7 +241,17 @@ const MyInvolvement: React.FC = () => {
             <FilterBar 
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
-              resultCount={filteredEvents.length} 
+              resultCount={filteredEvents.length}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+              selectedYear={selectedYear}
+              onYearChange={setSelectedYear}
+              selectedType={selectedType}
+              onTypeChange={setSelectedType}
+              selectedLocation={selectedLocation}
+              onLocationChange={setSelectedLocation}
+              eventTypes={availableTypes}
+              locations={availableLocations}
             />
             
             <EventList 
@@ -197,6 +260,7 @@ const MyInvolvement: React.FC = () => {
               onOpenCalendar={handleOpenEventInCalendar}
               onCancel={handleCancelEvent}
               onDelete={handleDeleteEvent}
+              onDuplicate={handleDuplicateEvent}
             />
           </>
         )}

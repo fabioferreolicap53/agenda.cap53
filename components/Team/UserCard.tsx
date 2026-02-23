@@ -212,7 +212,7 @@ export const UserCard: React.FC<UserCardProps> = ({
                             }`}
                         >
                             <img 
-                                src={imgError ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=random&color=fff&size=200` : getAvatarUrl(user)} 
+                                src={imgError ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=E2E8F0&color=64748B&size=200&bold=true` : getAvatarUrl(user)} 
                                 alt={user.name} 
                                 className="w-full h-full object-cover"
                                 onError={handleImageError}

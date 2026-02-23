@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { pb } from '../lib/pocketbase';
+import { pb, getAvatarUrl } from '../lib/pocketbase';
 import { notificationService } from '../lib/notifications';
 import EventChatModal from './EventChatModal';
 import ReRequestModal from './ReRequestModal';
@@ -90,7 +90,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     return (
       <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
-          <div className="size-8 shrink-0 rounded-full bg-cover bg-center border border-gray-100" style={{ backgroundImage: `url(${p.avatar ? pb.files.getUrl(p, p.avatar) : `https://picsum.photos/seed/${p.email}/200`})` }} />
+          <div className="size-8 shrink-0 rounded-full bg-cover bg-center border border-gray-100" style={{ backgroundImage: `url(${getAvatarUrl(p)})` }} />
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-bold text-text-main truncate">{p.name || 'Convidado'}</span>
             <span className="text-[10px] text-text-secondary truncate">{getRoleLabel(role)}</span>
@@ -796,50 +796,48 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                 {activeTab === 'details' && (
                     <div className="space-y-3 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Summary Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                            <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-2">
-                                <span className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Início e Término</span>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-            <div className="flex-1 flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm">
-              <div className="size-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
-                <span className="material-symbols-outlined text-lg">calendar_today</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Data</span>
-                <span className="text-sm font-bold text-slate-700">
-                  {startDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                </span>
-              </div>
-            </div>
-            
-            <div className="flex-1 flex items-center gap-3 bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm">
-              <div className="size-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
-                <span className="material-symbols-outlined text-lg">schedule</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-400 font-bold uppercase">Horário</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold text-slate-700">
-                    {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                  {event.date_end && !isNaN(endDate.getTime()) && (
-                    <>
-                      <span className="text-slate-300 material-symbols-outlined text-xs">arrow_forward</span>
-                      <span className="text-sm font-bold text-slate-700">
-                        {endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-                            <div className="p-3 md:p-5 rounded-2xl md:rounded-[1.5rem] bg-slate-50/50 border border-slate-100 flex flex-col gap-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Localização</span>
-                                <div className="flex items-center gap-2 text-slate-900 font-bold">
-                                    <span className="material-symbols-outlined text-slate-400 text-lg">location_on</span>
-                                    <span className="truncate">{event.expand?.location?.name || event.custom_location || 'Local não definido'}</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Date & Time Block */}
+                            <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-300">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                                        <span className="material-symbols-outlined text-xl">event</span>
+                                    </div>
+                                    <div className="space-y-1.5 min-w-0">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data e Horário</p>
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="font-bold text-slate-800 text-sm capitalize truncate">
+                                                {startDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
+                                            </span>
+                                            <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium">
+                                                <span className="material-symbols-outlined text-[16px]">schedule</span>
+                                                <span className="whitespace-nowrap">
+                                                    {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                    {event.date_end && !isNaN(endDate.getTime()) && (
+                                                        <>
+                                                            <span className="mx-1.5 text-slate-300">•</span>
+                                                            {endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                        </>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Location Block */}
+                            <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                                        <span className="material-symbols-outlined text-xl">location_on</span>
+                                    </div>
+                                    <div className="space-y-1.5 min-w-0">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Localização</p>
+                                        <p className="font-bold text-slate-800 text-sm leading-snug break-words">
+                                            {event.expand?.location?.name || event.custom_location || 'Local não definido'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

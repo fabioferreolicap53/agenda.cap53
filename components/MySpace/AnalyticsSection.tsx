@@ -98,6 +98,91 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({ analytics })
           </ResponsiveContainer>
         </div>
       </div>
+
+      {/* Chart 3: Distribution by Nature */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Natureza dos Eventos</h3>
+            <p className="text-xs text-slate-400 mt-1">Classificação por natureza</p>
+          </div>
+          <span className="material-symbols-outlined text-slate-200">category</span>
+        </div>
+        
+        <div className="flex-1 min-h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={analytics.byNature}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={5}
+                dataKey="value"
+              >
+                {analytics.byNature.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} stroke="none" />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                itemStyle={{ color: '#1e293b', fontWeight: 600, fontSize: '12px' }}
+              />
+              <Legend 
+                verticalAlign="bottom" 
+                height={36} 
+                iconType="circle"
+                wrapperStyle={{ fontSize: '10px', fontWeight: 500, color: '#64748b' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Chart 4: Logistics Resources */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Recursos Logísticos</h3>
+            <p className="text-xs text-slate-400 mt-1">Demandas mais solicitadas</p>
+          </div>
+          <span className="material-symbols-outlined text-slate-200">inventory_2</span>
+        </div>
+
+        <div className="flex-1 min-h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart 
+                data={analytics.byResources} 
+                layout="vertical"
+                margin={{ top: 10, right: 30, left: 40, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#f1f5f9" />
+              <XAxis type="number" hide />
+              <YAxis 
+                dataKey="name" 
+                type="category" 
+                axisLine={false} 
+                tickLine={false} 
+                tick={{ fontSize: 10, fill: '#64748b' }}
+                width={100}
+              />
+              <Tooltip 
+                cursor={{ fill: '#f8fafc' }}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                itemStyle={{ color: '#1e293b', fontWeight: 600, fontSize: '12px' }}
+              />
+              <Bar 
+                dataKey="count" 
+                name="Solicitações" 
+                fill="#10b981" 
+                radius={[0, 4, 4, 0]} 
+                barSize={20}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 };

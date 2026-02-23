@@ -187,7 +187,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                         <div className="flex flex-col gap-4">
                             {[1, 2, 3].map((i) => (
                                 <div key={i} className="animate-pulse flex items-center gap-3">
-                                    <div className="size-10 rounded-xl bg-primary/5"></div>
+                                    <div className="size-10 rounded-2xl bg-primary/5"></div>
                                     <div className="flex-1 space-y-2">
                                         <div className="h-3 w-24 bg-primary/5 rounded"></div>
                                         <div className="h-2 w-16 bg-primary/[0.02] rounded"></div>
@@ -202,7 +202,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                                     <div className="flex items-start gap-3">
                                         <div className="relative flex-shrink-0">
                                             <div
-                                                className="size-10 rounded-xl bg-cover bg-center ring-2 ring-primary/5 group-hover:ring-primary/20 transition-all cursor-pointer"
+                                                className="size-10 rounded-2xl bg-cover bg-center border border-slate-100 group-hover:border-primary/30 transition-all cursor-pointer shadow-sm"
                                                 style={{ backgroundImage: `url(${getAvatarUrl(u)})` }}
                                                 onDoubleClick={() => {
                                                     navigate(`/chat?userId=${u.id}`);

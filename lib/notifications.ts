@@ -188,6 +188,11 @@ export const notificationService = {
  * Rule: Request notifications linked to an event cannot be deleted before the event starts.
  */
 export const isNotificationDeletable = (notification: NotificationRecord): { canDelete: boolean; reason?: string } => {
+  // Allow deletion if it's a cancellation notification or explicit refusal/info
+  if (notification.type === 'cancellation' || notification.type === 'refusal' || notification.type === 'info') {
+    return { canDelete: true };
+  }
+
   // Check expand.event first, then try to see if event is an object (in case of virtual notifications mixed in)
   // Also check related_event as a fallback
   const event = notification.expand?.event || 

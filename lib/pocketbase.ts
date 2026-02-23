@@ -46,5 +46,5 @@ export const getAvatarUrl = (user: any) => {
         }
         return pb.files.getUrl(user, user.avatar);
     }
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=random&color=fff&size=200`;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=E2E8F0&color=64748B&size=200&bold=true`;
 };

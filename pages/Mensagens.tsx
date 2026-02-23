@@ -371,7 +371,7 @@ const Chat: React.FC = () => {
                         >
                             <div className="relative shrink-0">
                                 <div 
-                                    className="size-12 rounded-2xl bg-primary/10 bg-cover bg-center shadow-sm group-hover:scale-105 transition-transform" 
+                                    className="size-12 rounded-2xl bg-slate-50 bg-cover bg-center border border-slate-100 group-hover:border-primary/30 group-hover:scale-105 transition-all shadow-sm" 
                                     style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
                                 ></div>
                                 <span className={`absolute -bottom-1 -right-1 size-4 border-2 border-white rounded-full shadow-sm ${getStatusColor(user.status)}`}></span>
@@ -414,7 +414,7 @@ const Chat: React.FC = () => {
                     <div className="mt-4 pt-4 border-t border-dashed border-slate-200">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">Desenvolvedor</p>
                         <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 opacity-75 hover:opacity-100 transition-opacity">
-                            <div className="size-10 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400">
+                            <div className="size-10 rounded-2xl bg-slate-200 flex items-center justify-center text-slate-400">
                                 <span className="material-symbols-outlined text-xl">code</span>
                             </div>
                             <div className="flex-1 min-w-0">
@@ -445,7 +445,7 @@ const Chat: React.FC = () => {
                  )}
                  <div className="relative shrink-0">
                     <div 
-                        className="size-10 lg:size-11 rounded-xl lg:rounded-2xl bg-primary/10 bg-cover bg-center shadow-sm" 
+                        className="size-10 lg:size-11 rounded-2xl bg-slate-50 bg-cover bg-center border border-slate-100 shadow-sm" 
                         style={{ backgroundImage: `url(${getAvatarUrl(selectedUser)})` }}
                     ></div>
                     {selectedUser && (
@@ -499,7 +499,7 @@ const Chat: React.FC = () => {
                          )}
                          <div className={`flex gap-3 lg:gap-4 max-w-[90%] lg:max-w-2xl group ${isMe ? 'flex-row-reverse ml-auto' : ''}`}>
                              <div 
-                               className="size-7 lg:size-8 rounded-lg lg:rounded-xl bg-primary/10 bg-cover shrink-0 shadow-sm" 
+                               className="size-8 lg:size-10 rounded-2xl bg-slate-50 border border-slate-100 bg-cover shrink-0 shadow-sm" 
                                style={{ backgroundImage: `url(${getAvatarUrl(isMe ? currentUser : selectedUser)})` }}
                              ></div>
                             <div className={`flex flex-col gap-1 relative ${isMe ? 'items-end' : ''}`}>

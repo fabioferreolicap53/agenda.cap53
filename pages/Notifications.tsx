@@ -1087,13 +1087,13 @@ const Notifications: React.FC = () => {
                         history = reqHistory;
                     }
 
-                    // 2. Get history from event (Transport)
-                    if (history.length === 0) {
-                         const eventData = notification.expand?.event || notification.expand?.related_event;
-                         const evtHistory = Array.isArray(eventData) ? eventData[0]?.transport_history : eventData?.transport_history;
-                         if (Array.isArray(evtHistory) && evtHistory.length > 0) {
-                             history = evtHistory;
-                         }
+                    // 2. Get history from event (Transport) - ONLY for Transport notifications
+                    if (history.length === 0 && (notification.type === 'transport_request' || notification.type === 'transport_decision' || (notification.type === 'history_log' && getData(notification).icon === 'local_shipping'))) {
+                        const eventData = notification.expand?.event || notification.expand?.related_event;
+                        const evtHistory = Array.isArray(eventData) ? eventData[0]?.transport_history : eventData?.transport_history;
+                        if (Array.isArray(evtHistory) && evtHistory.length > 0) {
+                            history = evtHistory;
+                        }
                     }
 
                     // 3. Construct Virtual History for Event Invites / Responses

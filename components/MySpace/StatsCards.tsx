@@ -8,6 +8,8 @@ interface StatsProps {
     participant: number;
     invitesPending: number;
     requestsPending: number;
+    invitesRejected: number;
+    requestsRejected: number;
   };
   activeTab: 'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected';
   onTabChange: (tab: 'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected') => void;
@@ -47,10 +49,26 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
       activeColor: 'text-violet-600 bg-violet-50 border-violet-200',
       inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
     },
+    { 
+      id: 'pending', 
+      label: 'Pendentes', 
+      value: stats.invitesPending + stats.requestsPending, 
+      icon: 'pending_actions', 
+      activeColor: 'text-amber-600 bg-amber-50 border-amber-200',
+      inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
+    },
+    { 
+      id: 'rejected', 
+      label: 'Recusados', 
+      value: stats.invitesRejected + stats.requestsRejected, 
+      icon: 'cancel', 
+      activeColor: 'text-red-600 bg-red-50 border-red-200',
+      inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
+    },
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
       {items.map((item) => {
         const isActive = activeTab === item.id;
         return (
