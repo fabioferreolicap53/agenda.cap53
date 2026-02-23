@@ -45,8 +45,9 @@ const VerifyEmail: React.FC = () => {
 
                 console.log('Iniciando verificação para o token:', cleanToken.substring(0, 10) + '...');
                 
-                if (cleanToken.split('.').length !== 3) {
-                    throw new Error('Formato de token inválido. Use o link original do e-mail.');
+                // Removemos a validação estrita de 3 partes para evitar falsos negativos se o formato mudar
+                if (cleanToken.length < 30) {
+                     throw new Error('Token de verificação parece inválido ou incompleto.');
                 }
                 
                 await pb.collection('agenda_cap53_usuarios').confirmVerification(cleanToken);
@@ -61,11 +62,17 @@ const VerifyEmail: React.FC = () => {
                 console.error('Erro na verificação:', error);
                 setStatus('error');
                 
-                // Mensagens amigáveis para erros comuns
-                if (error.status === 400) {
-                    setMessage('Este link de verificação expirou ou já foi utilizado.');
+                // Tradução de erros comuns do PocketBase
+                const errorMessage = error?.message || '';
+                
+                if (error.status === 400 || errorMessage.includes('failed to load')) {
+                    setMessage('Este link de verificação é inválido, expirou ou já foi utilizado.');
+                } else if (errorMessage.includes('Something went wrong') || error.status === 500) {
+                    setMessage('Ocorreu um erro interno no servidor. Tente novamente mais tarde.');
+                } else if (errorMessage.includes('Failed to fetch') || error.status === 0) {
+                    setMessage('Erro de conexão. Verifique sua internet.');
                 } else {
-                    setMessage(error.message || 'Falha na verificação. Tente solicitar um novo link.');
+                    setMessage('Não foi possível verificar seu e-mail. Tente solicitar um novo link de verificação.');
                 }
             }
         };

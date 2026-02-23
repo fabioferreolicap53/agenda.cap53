@@ -46,7 +46,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, p
     <div className="relative group" ref={containerRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-slate-50/50 hover:bg-white border border-transparent hover:border-indigo-100 rounded-2xl h-11 px-4 flex items-center justify-between text-sm font-semibold text-slate-600 hover:text-indigo-600 focus:ring-2 focus:ring-indigo-50 focus:border-indigo-200 outline-none transition-all shadow-sm hover:shadow-md ${isOpen ? 'ring-2 ring-indigo-50 border-indigo-200 bg-white' : ''}`}
+        className={`w-full bg-slate-50/50 hover:bg-white border border-transparent hover:border-indigo-100 rounded-2xl h-11 px-4 flex items-center justify-between text-sm font-bold uppercase tracking-wide text-slate-600 hover:text-indigo-600 focus:ring-2 focus:ring-indigo-50 focus:border-indigo-200 outline-none transition-all shadow-sm hover:shadow-md ${isOpen ? 'ring-2 ring-indigo-50 border-indigo-200 bg-white' : ''}`}
       >
         <span className="truncate">{selectedLabel}</span>
         <span className={`material-symbols-outlined text-slate-400 group-hover:text-indigo-400 text-xl transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>

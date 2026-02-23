@@ -18,7 +18,8 @@ const ResetPassword: React.FC = () => {
             // Tenta extrair da URL se o roteador falhar (comum em HashRouter)
             const parts = window.location.hash.split('/');
             const extractedToken = parts[parts.length - 1];
-            if (!extractedToken || extractedToken.split('.').length !== 3) {
+            // Validação mais flexível
+            if (!extractedToken || extractedToken.length < 10) {
                 setStatus('error');
                 setMessage('Token de recuperação inválido ou ausente.');
             }
@@ -50,6 +51,11 @@ const ResetPassword: React.FC = () => {
                 cleanToken = parts[parts.length - 1];
             }
 
+            // Validação básica de comprimento em vez de estrutura rígida
+            if (!cleanToken || cleanToken.length < 30) {
+                throw new Error('Token de recuperação inválido ou incompleto.');
+            }
+
             await confirmPasswordReset(cleanToken!, password);
             setStatus('success');
             setMessage('Senha redefinida com sucesso! Redirecionando para o login...');
@@ -60,7 +66,15 @@ const ResetPassword: React.FC = () => {
         } catch (error: any) {
             console.error('Reset password error:', error);
             setStatus('error');
-            setMessage(error.message || 'Falha ao redefinir senha. O link pode ter expirado.');
+            
+            const errorMessage = error?.message || '';
+            if (error.status === 400 || errorMessage.includes('failed to load')) {
+                setMessage('Este link de recuperação é inválido, expirou ou já foi utilizado.');
+            } else if (errorMessage.includes('Something went wrong') || error.status === 500) {
+                setMessage('Ocorreu um erro interno no servidor. Tente novamente mais tarde.');
+            } else {
+                setMessage(errorMessage || 'Falha ao redefinir senha. O link pode ter expirado.');
+            }
         }
     };
 
