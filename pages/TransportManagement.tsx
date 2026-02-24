@@ -366,153 +366,169 @@ const TransportManagement: React.FC = () => {
                             <div 
                                 key={event.id} 
                                 ref={el => { if (el) scrollRef.current[event.id] = el; }}
-                                className={`group bg-white relative rounded-2xl shadow-sm border overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 flex flex-col md:flex-row items-stretch ${
-                                    transportSubTab === 'history' ? 'opacity-90' : ''
-                                } ${highlightEventId === event.id ? 'ring-2 ring-primary ring-offset-2 border-primary shadow-xl shadow-primary/10' : 'border-slate-100'}`}
+                                className={`group bg-white relative rounded-[24px] shadow-sm border overflow-hidden hover:shadow-xl hover:border-slate-200 transition-all duration-500 flex flex-col md:flex-row items-stretch ${
+                                    transportSubTab === 'history' ? 'opacity-95' : ''
+                                } ${highlightEventId === event.id ? 'ring-2 ring-slate-900 ring-offset-2 border-slate-900 shadow-2xl shadow-slate-900/10' : 'border-slate-100'}`}
                             >
                                 {rerequestIds.has(event.id) && (
-                                    <div className="absolute top-3 right-4 md:right-6 px-2 py-0.5 bg-purple-100 text-purple-700 border border-purple-200 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm z-20 animate-pulse">
-                                        <span className="material-symbols-outlined text-[12px]">history</span>
+                                    <div className="absolute top-4 right-6 px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm z-20 animate-pulse">
+                                        <span className="material-symbols-outlined text-[14px]">history</span>
                                         Re-solicitação
                                     </div>
                                 )}
-                                {/* Status Indicator (Vertical Bar) */}
+                                
+                                {/* Status Indicator (Vertical Bar) - Thinner and more elegant */}
                                 <div className={`w-1.5 shrink-0 ${
-                                    event.transporte_status === 'confirmed' ? 'bg-green-500' :
-                                    event.transporte_status === 'rejected' ? 'bg-red-500' :
+                                    event.transporte_status === 'confirmed' ? 'bg-emerald-500' :
+                                    event.transporte_status === 'rejected' ? 'bg-rose-500' :
                                     'bg-amber-500'
                                 }`}></div>
 
-                                <div className="p-5 flex-1 flex flex-col gap-6">
-                                    <div className="flex flex-col lg:flex-row items-start gap-6">
-                                        {/* Info Column */}
-                                        <div className="flex flex-col gap-2 min-w-[200px] w-full lg:w-auto">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`text-[9px] font-black uppercase tracking-[0.15em] px-2 py-0.5 rounded-full ${
-                                                    event.transporte_status === 'confirmed' ? 'bg-green-50 text-green-600' :
-                                                    event.transporte_status === 'rejected' ? 'bg-red-50 text-red-600' :
-                                                    'bg-amber-50 text-amber-600'
+                                <div className="p-6 flex-1 flex flex-col gap-8">
+                                    <div className="flex flex-col lg:flex-row items-start gap-8">
+                                        {/* Info Column: Title and Requester */}
+                                        <div className="flex flex-col gap-3 min-w-[240px] w-full lg:w-auto">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className={`text-[10px] font-black uppercase tracking-[0.1em] px-2.5 py-1 rounded-lg border ${
+                                                    event.transporte_status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                    event.transporte_status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                                                    'bg-amber-50 text-amber-700 border-amber-100'
                                                 }`}>
                                                     {event.transporte_status === 'pending' ? 'Pendente' : event.transporte_status === 'confirmed' ? 'Confirmado' : 'Recusado'}
                                                 </span>
-                                                <span className="text-[9px] text-slate-300 font-bold uppercase tracking-wider">Ref: #{event.id.slice(-4)}</span>
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-lg border border-slate-100">
+                                                    Ref: #{event.id.slice(-4)}
+                                                </span>
                                             </div>
-                                            <h3 className="font-black text-slate-900 text-base leading-tight group-hover:text-primary transition-colors">{event.title}</h3>
-                                            <div className="flex items-center gap-2 text-slate-400">
-                                                <div className="size-6 rounded-full bg-slate-50 flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-[14px]">person</span>
+                                            <h3 className="font-black text-slate-900 text-lg leading-tight group-hover:text-primary transition-colors">
+                                                {event.title}
+                                            </h3>
+                                            <div className="flex items-center gap-2.5 text-slate-500">
+                                                <div className="size-7 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200/50">
+                                                    <span className="material-symbols-outlined text-[16px]">person</span>
                                                 </div>
-                                                <span className="text-[11px] font-bold">{event.expand?.user?.name || 'Sistema'}</span>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[8px] uppercase font-black text-slate-400 tracking-wider">Solicitante</span>
+                                                    <span className="text-[12px] font-bold text-slate-700">{event.expand?.user?.name || 'Sistema'}</span>
+                                                </div>
                                             </div>
                                         </div>
 
-                                        {/* Event Details */}
-                                        <div className="flex flex-wrap items-start gap-y-6 gap-x-8 flex-1 w-full lg:w-auto">
-                                            {/* Date/Location/Passenger */}
-                                            <div className="flex items-start gap-6">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Data</span>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center">
-                                                            <span className="material-symbols-outlined text-slate-400 text-[18px]">calendar_month</span>
+                                        {/* Event Details Grid */}
+                                        <div className="flex flex-wrap items-start gap-y-8 gap-x-10 flex-1 w-full lg:w-auto">
+                                            {/* Date and Location */}
+                                            <div className="flex items-start gap-8">
+                                                <div className="flex flex-col gap-1.5">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Data</span>
+                                                    <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                                        <div className="size-9 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+                                                            <span className="material-symbols-outlined text-slate-600 text-[20px]">calendar_month</span>
                                                         </div>
-                                                        <span className="text-[12px] font-black text-slate-700 whitespace-nowrap">
+                                                        <span className="text-[13px] font-black text-slate-800 whitespace-nowrap pr-2">
                                                             {new Date(event.date_start).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
                                                         </span>
                                                     </div>
                                                 </div>
                                                 {(event.expand?.location || event.custom_location) && (
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Local</span>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center">
-                                                                <span className="material-symbols-outlined text-slate-400 text-[18px]">location_on</span>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">Local</span>
+                                                        <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                                                            <div className="size-9 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center">
+                                                                <span className="material-symbols-outlined text-slate-600 text-[20px]">location_on</span>
                                                             </div>
-                                                            <span className="text-[12px] font-black text-slate-700">{event.expand?.location?.name || event.custom_location}</span>
+                                                            <span className="text-[13px] font-black text-slate-800 pr-2">{event.expand?.location?.name || event.custom_location}</span>
                                                         </div>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            {/* Origin/Destination */}
-                                            <div className="flex flex-col sm:flex-row items-stretch gap-4 flex-1 min-w-[350px] bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
-                                                <div className="flex-1 flex flex-col gap-1.5">
+                                            {/* Route Visualization (Origin -> Destination) */}
+                                            <div className="flex flex-col sm:flex-row items-stretch gap-6 flex-1 min-w-[380px] bg-slate-50/50 p-5 rounded-[20px] border border-slate-200/40 relative">
+                                                <div className="flex-1 flex flex-col gap-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="size-2 rounded-full bg-slate-300"></span>
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Origem</span>
+                                                        <div className="size-2 rounded-full bg-slate-400"></div>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Origem</span>
                                                     </div>
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="text-[11px] font-bold text-slate-800 leading-relaxed pl-4">{event.transporte_origem || '---'}</span>
-                                                    </div>
+                                                    <p className="text-[13px] font-bold text-slate-900 leading-tight pl-4">
+                                                        {event.transporte_origem || '---'}
+                                                    </p>
                                                 </div>
-                                                <div className="flex sm:flex-col items-center justify-center gap-2 text-slate-200">
+                                                
+                                                <div className="flex sm:flex-col items-center justify-center gap-2 text-slate-300">
                                                     <div className="w-px h-full sm:w-full sm:h-px bg-slate-200 flex-1 hidden sm:block"></div>
-                                                    <span className="material-symbols-outlined text-[20px] rotate-90 sm:rotate-0">arrow_forward</span>
+                                                    <span className="material-symbols-outlined text-[22px] rotate-90 sm:rotate-0 font-bold">arrow_forward</span>
                                                     <div className="w-px h-full sm:w-full sm:h-px bg-slate-200 flex-1 hidden sm:block"></div>
                                                 </div>
-                                                <div className="flex-1 flex flex-col gap-1.5">
+
+                                                <div className="flex-1 flex flex-col gap-2">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="size-2 rounded-full bg-primary/40"></span>
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Destino</span>
+                                                        <div className="size-2 rounded-full bg-primary/60 shadow-[0_0_8px_rgba(var(--color-primary),0.4)]"></div>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Destino</span>
                                                     </div>
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="text-[11px] font-bold text-slate-800 leading-relaxed pl-4">{event.transporte_destino || '---'}</span>
-                                                    </div>
+                                                    <p className="text-[13px] font-bold text-slate-900 leading-tight pl-4">
+                                                        {event.transporte_destino || '---'}
+                                                    </p>
                                                 </div>
                                             </div>
 
-                                            {/* Times */}
-                                            <div className="flex items-start gap-6">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Saída</span>
-                                                    <div className="flex items-center gap-2 text-slate-900">
-                                                        <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center">
-                                                            <span className="material-symbols-outlined text-slate-600 text-[18px]">departure_board</span>
+                                            {/* Metrics: Times and Passengers - Enhanced distribution and alignment */}
+                                            <div className="flex items-start gap-8">
+                                                <div className="flex flex-col gap-1.5 w-full">
+                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] ml-1">Logística</span>
+                                                    <div className="flex items-center bg-white p-1 rounded-2xl border border-slate-100 shadow-sm min-w-[380px]">
+                                                        <div className="flex-1 flex items-center justify-center gap-3 px-4 py-2 border-r border-slate-50">
+                                                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                                                                <span className="material-symbols-outlined text-slate-500 text-[18px]">departure_board</span>
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Saída</span>
+                                                                <span className="text-[13px] font-black text-slate-900 tabular-nums leading-none">{event.transporte_horario_levar || '--:--'}</span>
+                                                            </div>
                                                         </div>
-                                                        <span className="text-[13px] font-black tracking-tight">{event.transporte_horario_levar || '--:--'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Retorno</span>
-                                                    <div className="flex items-center gap-2 text-slate-900">
-                                                        <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center">
-                                                            <span className="material-symbols-outlined text-slate-600 text-[18px]">update</span>
+                                                        <div className="flex-1 flex items-center justify-center gap-3 px-4 py-2 border-r border-slate-50">
+                                                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                                                                <span className="material-symbols-outlined text-slate-500 text-[18px]">update</span>
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Retorno</span>
+                                                                <span className="text-[13px] font-black text-slate-900 tabular-nums leading-none">{event.transporte_horario_buscar || '--:--'}</span>
+                                                            </div>
                                                         </div>
-                                                        <span className="text-[13px] font-black tracking-tight">{event.transporte_horario_buscar || '--:--'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Passageiros</span>
-                                                    <div className="flex items-center gap-2 text-slate-900">
-                                                        <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center">
-                                                            <span className="material-symbols-outlined text-slate-600 text-[18px]">groups</span>
+                                                        <div className="flex-1 flex items-center justify-center gap-3 px-4 py-2">
+                                                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                                                                <span className="material-symbols-outlined text-slate-500 text-[18px]">groups</span>
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Passageiros</span>
+                                                                <span className="text-[13px] font-black text-slate-900 leading-none">{event.transporte_passageiro || '-'}</span>
+                                                            </div>
                                                         </div>
-                                                        <span className="text-[13px] font-black tracking-tight">{event.transporte_passageiro || '-'}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Action Column */}
-                                        <div className="flex flex-col sm:flex-row lg:flex-col items-stretch gap-2 w-full lg:w-auto shrink-0 self-stretch justify-center border-l border-slate-50 pl-6">
+                                        {/* Action Sidebar - Optimized for alignment and size */}
+                                        <div className="flex flex-col items-center justify-center gap-3 w-full lg:w-[150px] shrink-0 self-stretch border-l border-slate-100/60 pl-8 ml-2">
                                             {transportSubTab === 'pending' ? (
-                                                <>
+                                                <div className="flex flex-col w-full gap-2">
                                                     <button 
-                        onClick={() => handleTransportDecision(event.id, 'confirmed')}
-                        disabled={processingDecision}
-                        className="h-11 px-6 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-md shadow-slate-200/50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                        Confirmar
-                    </button>
-                    <button 
-                        onClick={() => handleTransportDecision(event.id, 'rejected')}
-                        disabled={processingDecision}
-                        className="h-11 px-6 bg-white text-slate-500 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Recusar
-                    </button>
-                                                </>
+                                                        onClick={() => handleTransportDecision(event.id, 'confirmed')}
+                                                        disabled={processingDecision}
+                                                        className="h-11 w-full bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 active:scale-[0.98] disabled:opacity-50"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                                        Confirmar
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleTransportDecision(event.id, 'rejected')}
+                                                        disabled={processingDecision}
+                                                        className="h-11 w-full bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all active:scale-[0.98] disabled:opacity-50"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">cancel</span>
+                                                        Recusar
+                                                    </button>
+                                                </div>
                                             ) : (
                                                 <button 
                                                     onClick={() => {
@@ -537,47 +553,67 @@ const TransportManagement: React.FC = () => {
                                                         });
                                                         setConfirmationModalOpen(true);
                                                     }}
-                                                    className="size-11 rounded-xl bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center active:scale-95"
+                                                    className="size-11 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 border border-slate-100 hover:border-rose-100 transition-all flex items-center justify-center active:scale-[0.98]"
                                                     title="Remover do histórico"
                                                 >
                                                     <span className="material-symbols-outlined text-[20px]">delete</span>
                                                 </button>
                                             )}
                                             
-                                            {event.user && (
+                                            <div className="flex items-center justify-center gap-2 w-full">
                                                 <button
-                                                    onClick={() => navigate(`/chat?userId=${event.user}`)}
-                                                    className="size-11 rounded-xl bg-slate-50 text-slate-400 hover:text-primary hover:bg-primary/5 transition-all flex items-center justify-center active:scale-95"
-                                                    title="Conversar com solicitante"
+                                                    onClick={() => {
+                                                        const eventDate = new Date(event.date_start);
+                                                        const dateStr = eventDate.toISOString().split('T')[0];
+                                                        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=transport&from=transporte`);
+                                                    }}
+                                                    className="size-11 rounded-xl bg-slate-50 text-slate-500 hover:text-primary hover:bg-primary/5 border border-slate-100 hover:border-primary/20 transition-all flex items-center justify-center active:scale-[0.98]"
+                                                    title="Ver detalhes do evento"
                                                 >
-                                                    <span className="material-symbols-outlined text-[20px]">chat</span>
+                                                    <span className="material-symbols-outlined text-[20px]">visibility</span>
                                                 </button>
-                                            )}
+
+                                                {event.user && (
+                                                    <button
+                                                        onClick={() => navigate(`/chat?userId=${event.user}`)}
+                                                        className="size-11 rounded-xl bg-slate-50 text-slate-500 hover:text-primary hover:bg-primary/5 border border-slate-100 hover:border-primary/20 transition-all flex items-center justify-center active:scale-[0.98]"
+                                                        title="Conversar com solicitante"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[20px]">chat</span>
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Footer Details (Observations/Justifications) */}
-                                    <div className="flex flex-col gap-3 border-t border-slate-50 pt-6 mt-2">
-                                        {event.transporte_obs && (
-                                            <div className="flex flex-col gap-2 p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50">
-                                                <div className="flex items-center gap-2 text-slate-400">
-                                                    <span className="material-symbols-outlined text-[16px]">info</span>
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.15em]">Observações do Solicitante</span>
+                                    {/* Observation/Footer Section */}
+                                    {(event.transporte_obs || (transportSubTab === 'history' && event.transporte_justification)) && (
+                                        <div className="flex flex-col gap-4 border-t border-slate-100/80 pt-6 mt-2">
+                                            {event.transporte_obs && (
+                                                <div className="flex flex-col gap-2.5 p-5 bg-slate-50/50 rounded-[20px] border border-slate-200/40 shadow-inner">
+                                                    <div className="flex items-center gap-2 text-slate-400">
+                                                        <span className="material-symbols-outlined text-[18px]">info</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.15em]">Observações do Solicitante</span>
+                                                    </div>
+                                                    <p className="text-[13px] text-slate-600 font-medium leading-relaxed italic pl-1 whitespace-pre-wrap border-l-2 border-slate-200 ml-1.5 pl-4">
+                                                        "{event.transporte_obs}"
+                                                    </p>
                                                 </div>
-                                                <p className="text-[12px] text-slate-600 font-medium leading-relaxed italic pl-1 whitespace-pre-wrap">"{event.transporte_obs}"</p>
-                                            </div>
-                                        )}
+                                            )}
 
-                                        {transportSubTab === 'history' && event.transporte_justification && (
-                                            <div className="flex flex-col gap-2 p-4 bg-red-50/30 rounded-2xl border border-red-100/30">
-                                                <div className="flex items-center gap-2 text-red-400">
-                                                    <span className="material-symbols-outlined text-[16px]">report</span>
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.15em]">Motivo da Recusa</span>
+                                            {transportSubTab === 'history' && event.transporte_justification && (
+                                                <div className="flex flex-col gap-2.5 p-5 bg-rose-50/40 rounded-[20px] border border-rose-100/50">
+                                                    <div className="flex items-center gap-2 text-rose-500/80">
+                                                        <span className="material-symbols-outlined text-[18px]">report</span>
+                                                        <span className="text-[10px] font-black uppercase tracking-[0.15em]">Motivo da Recusa</span>
+                                                    </div>
+                                                    <p className="text-[13px] text-rose-800/80 font-bold leading-relaxed italic pl-1 whitespace-pre-wrap border-l-2 border-rose-200/60 ml-1.5 pl-4">
+                                                        "{event.transporte_justification}"
+                                                    </p>
                                                 </div>
-                                                <p className="text-[12px] text-red-800/70 font-bold leading-relaxed italic pl-1 whitespace-pre-wrap">"{event.transporte_justification}"</p>
-                                            </div>
-                                        )}
-                                    </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
