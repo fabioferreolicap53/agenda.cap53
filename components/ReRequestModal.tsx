@@ -8,7 +8,7 @@ interface ReRequestModalProps {
   notification?: NotificationRecord;
   request?: AlmacRequest; // Direct request object (for items)
   event?: EventRecord;   // Direct event object (for transport)
-  type?: 'item' | 'transport';
+  type?: 'item' | 'transport' | 'participation';
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -20,6 +20,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
   let initialData: any = {};
   let isItemRequest = false;
   let isTransportRequest = false;
+  let isParticipationRequest = false;
   let requestId = '';
   let eventId = '';
 
@@ -35,21 +36,35 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
         }
     }
 
-    // Robust type detection
-    isItemRequest = 
-        initialData.kind === 'almc_item_decision' || 
-        notification.type === 'request_decision' || 
-        notification.type === 'almc_item_request' || 
-        type === 'item';
+    // Robust type detection (Mutually Exclusive)
+    isParticipationRequest = 
+        notification.type === 'event_participation_request' || 
+        initialData.kind === 'participation_request_response' ||
+        type === 'participation';
 
     isTransportRequest = 
-        initialData.kind === 'transport_decision' || 
-        notification.type === 'transport_decision' || 
-        notification.type === 'transport_request' || 
-        type === 'transport';
+        !isParticipationRequest && (
+            initialData.kind === 'transport_decision' || 
+            notification.type === 'transport_decision' || 
+            notification.type === 'transport_request' || 
+            type === 'transport'
+        );
+
+    isItemRequest = 
+        !isParticipationRequest && !isTransportRequest && (
+            initialData.kind === 'almc_item_decision' || 
+            notification.type === 'request_decision' || 
+            notification.type === 'almc_item_request' || 
+            type === 'item'
+        );
 
     requestId = notification.related_request || '';
-    eventId = notification.event || '';
+    // Tenta extrair o ID do evento de várias fontes possíveis
+    eventId = notification.event || 
+              (notification.expand?.event?.id) || 
+              initialData.event_id || 
+              initialData.event || 
+              '';
   } else if (request && type === 'item') {
     isItemRequest = true;
     requestId = request.id;
@@ -67,6 +82,12 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
       qtd_pessoas: event.transporte_passageiro || event.transporte_qtd_pessoas, // Fallback for legacy
       event_title: event.title
     };
+  } else if (type === 'participation' && event) {
+    isParticipationRequest = true;
+    eventId = event.id;
+    initialData = {
+      event_title: event.title
+    };
   }
 
   const [quantity, setQuantity] = useState<number>(initialData.quantity || 1);
@@ -82,8 +103,126 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
     e.preventDefault();
     setLoading(true);
 
+    let targetEventId = '';
+
     try {
-      if (isItemRequest) {
+      if (isParticipationRequest) {
+        const rawEventId = eventId;
+        targetEventId = (rawEventId && typeof rawEventId === 'object') ? (rawEventId as any).id : rawEventId;
+        
+        console.log('ReRequestModal: Início do reenvio de participação', { targetEventId, observation });
+
+        if (!targetEventId) throw new Error('ID do evento não encontrado.');
+
+        const user = pb.authStore.model;
+        if (!user) throw new Error('Usuário não autenticado.');
+
+        // 1. Validar permissões e restrições (igual ao EventDetailsModal)
+        const eventData = await pb.collection('agenda_cap53_eventos').getOne(targetEventId);
+        
+        if (eventData.is_restricted) {
+          alert('Este evento é restrito e não permite novas solicitações de participação.');
+          setLoading(false);
+          return;
+        }
+
+        if (['TRA', 'ALMC', 'DCA'].includes(user.role)) {
+          alert('Seu perfil não possui permissão para solicitar participação em eventos.');
+          setLoading(false);
+          return;
+        }
+
+        // 2. Reiniciar a solicitação (Delete + Create para contornar restrições de UpdateRule)
+        const requests = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
+            filter: `event = "${targetEventId}" && user = "${user.id}"`,
+            requestKey: null
+        });
+
+        console.log('ReRequestModal: Busca de solicitações existentes', { count: requests.length });
+
+        if (requests.length > 0) {
+            // Se já existir, removemos para criar uma nova limpa
+            // A permissão deleteRule permite que o próprio usuário remova sua solicitação
+            await pb.collection('agenda_cap53_solicitacoes_evento').delete(requests[0].id);
+            console.log('ReRequestModal: Solicitação antiga removida', { requestId: requests[0].id });
+        }
+        
+        // Criamos uma nova solicitação com o status 'pending' e a observação no campo 'message'
+        const newRequest = await pb.collection('agenda_cap53_solicitacoes_evento').create({
+            event: targetEventId,
+            user: user.id,
+            status: 'pending',
+            message: observation || ''
+        });
+        console.log('ReRequestModal: Nova solicitação criada com sucesso', { requestId: newRequest.id, message: observation });
+
+        // 3. Notificar o criador do evento com histórico
+        try {
+            const eventCreatorId = typeof eventData.user === 'object' ? eventData.user.id : eventData.user;
+            const eventTitle = eventData.title;
+
+            if (eventCreatorId && eventCreatorId !== user.id) {
+                // Recuperar histórico anterior se houver
+                let history: any[] = [];
+                const prevData = notification?.data || {};
+                
+                if (prevData.history_context?.full_history) {
+                    history = [...prevData.history_context.full_history];
+                }
+
+                // Adicionar a recusa atual se não estiver no histórico
+                const isDecisionInHistory = history.some(h => 
+                    (h.action === 'request_rejected' || h.action === 'request_approved') && 
+                    (h.timestamp === notification?.created)
+                );
+
+                if (!isDecisionInHistory && notification) {
+                    history.push({
+                        action: 'request_rejected',
+                        timestamp: notification.created,
+                        user: prevData.rejected_by || eventCreatorId,
+                        user_name: prevData.rejected_by_name || 'Organizador',
+                        justification: prevData.justification || notification.message,
+                        message: 'Solicitação recusada'
+                    });
+                }
+
+                // Adicionar a nova re-solicitação
+                const now = new Date().toISOString();
+                history.push({
+                    action: 'request_resent',
+                    timestamp: now,
+                    user: user.id,
+                    user_name: user.name,
+                    message: observation || 'Solicitação de participação reaberta'
+                });
+
+                await pb.collection('agenda_cap53_notifications').create({
+                    user: eventCreatorId,
+                    title: 'Solicitação Reaberta',
+                    message: `${user.name || 'Um usuário'} solicitou novamente participar do evento "${eventTitle}".${observation ? `\n\nObservação: "${observation}"` : ''}`,
+                    type: 'event_participation_request',
+                    event: targetEventId,
+                    read: false,
+                    invite_status: 'pending',
+                    data: {
+                        requester_id: user.id,
+                        requester_name: user.name,
+                        event_title: eventTitle,
+                        justification: observation,
+                        is_rerequest: true,
+                        previous_refusal_id: notification?.id,
+                        history_context: {
+                            full_history: history
+                        }
+                    }
+                });
+                console.log('ReRequestModal: Notificação enviada ao criador com histórico', { eventCreatorId });
+            }
+        } catch (notifyError) {
+            console.error('Error notifying event creator:', notifyError);
+        }
+      } else if (isItemRequest) {
         if (!requestId) throw new Error('ID da solicitação não encontrado.');
 
         // 1. Fetch current history
@@ -166,76 +305,46 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
         }
 
       } else if (isTransportRequest) {
-        const rawEventId = eventId;
-        const targetEventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
-        
-        if (!targetEventId) throw new Error('ID do evento não encontrado.');
+        if (!eventId) throw new Error('ID do evento não encontrado.');
 
-        // Validation for CustomTimePicker (as it doesn't support native 'required')
-        if (!transportData.horario_levar || !transportData.horario_buscar) {
-            alert('Por favor, preencha os horários de ida e volta.');
-            setLoading(false);
-            return;
-        }
-
-        // 1. Fetch current history
-        const currentEvent = await pb.collection('agenda_cap53_eventos').getOne(targetEventId);
-        const history = currentEvent.transport_history || [];
-        
-        history.push({
-            timestamp: new Date().toISOString(),
-            action: 're_requested',
-            user: pb.authStore.model?.id,
-            user_name: pb.authStore.model?.name,
-            message: observation,
-            quantity: transportData.qtd_pessoas,
-            kind: 'transport'
+        // 1. Update event transport details
+        await pb.collection('agenda_cap53_eventos').update(eventId, {
+            transporte_status: 'pending',
+            transporte_destino: transportData.destino,
+            transporte_horario_levar: transportData.horario_levar,
+            transporte_horario_buscar: transportData.horario_buscar,
+            transporte_passageiro: transportData.qtd_pessoas,
+            transporte_obs: observation || ''
         });
 
-        // 2. Update status and history
-        const updatePayload = {
-          transporte_status: 'pending',
-          transporte_destino: transportData.destino,
-          transporte_horario_levar: transportData.horario_levar,
-          transporte_horario_buscar: transportData.horario_buscar,
-          transporte_qtd_pessoas: transportData.qtd_pessoas, // Legacy
-          transporte_passageiro: transportData.qtd_pessoas, // Standard field
-          transporte_justification: observation || null, // Keep for backward compatibility
-          transporte_obs: observation || null, // Standard field for observation
-          transport_history: history
-        };
-
-        await pb.collection('agenda_cap53_eventos').update(targetEventId, updatePayload);
-
-        // 3. Notify Transport Sector
+        // 2. Notify Transport Sector (TRA)
         try {
-            const eventTitle = event?.title || notification?.expand?.event?.title || initialData.event_title || 'Evento';
-
-            // Find users with TRA role
-            const targetUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
-                filter: `role = "TRA" || role = "ADMIN"`
+            const traUsers = await pb.collection('agenda_cap53_usuarios').getFullList({ 
+                filter: 'role = "TRA" || role = "ADMIN"' 
             });
+            
+            const eventData = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+            const eventTitle = eventData.title;
 
-            // Send notifications
-            await Promise.all(targetUsers.map(u => 
+            await Promise.all(traUsers.map(u => 
                 pb.collection('agenda_cap53_notifications').create({
                     user: u.id,
-                    title: 'Transporte Reaberto',
+                    title: 'Transporte Re-solicitado',
                     message: `${pb.authStore.model?.name || 'Um usuário'} solicitou novamente transporte para o evento "${eventTitle}".`,
                     type: 'transport_request',
-                    event: targetEventId,
+                    event: eventId,
                     read: false,
                     invite_status: 'pending',
                     data: { 
-                        destino: transportData.destino,
+                        kind: 'transport_request',
+                        is_rerequest: true,
                         event_title: eventTitle,
+                        destino: transportData.destino,
                         horario_levar: transportData.horario_levar,
                         horario_buscar: transportData.horario_buscar,
                         qtd_pessoas: transportData.qtd_pessoas,
                         justification: observation,
-                        is_rerequest: true,
-                        previous_refusal_id: notification?.id,
-                        user_name: pb.authStore.model?.name
+                        previous_refusal_id: notification?.id
                     }
                 })
             ));
@@ -244,7 +353,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
         }
       }
 
-      // Only mark notification as read if it exists
+      // Mark the original notification as read and updated if it exists
       if (notification) {
         const newData = {
             ...initialData,
@@ -260,16 +369,29 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
       
       onSuccess();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao reenviar solicitação:', error);
-      alert('Erro ao reenviar solicitação. Tente novamente.');
+      
+      // Detalhes adicionais para depuração
+      if (isParticipationRequest) {
+          console.error('Detalhes da falha (Participação):', {
+              eventId,
+              targetEventId,
+              userId: pb.authStore.model?.id,
+              errorStack: error.stack,
+              errorMessage: error.message,
+              errorData: error.data
+          });
+      }
+
+      alert(`Erro ao reenviar solicitação: ${error.message || 'Tente novamente.'}`);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
           <h3 className="font-bold text-slate-800 flex items-center gap-2">
@@ -287,20 +409,6 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
             {initialData.item_name && <p className="font-bold mt-1">Item: {initialData.item_name}</p>}
             {initialData.event_title && <p className="text-xs mt-1 opacity-80">Evento: {initialData.event_title}</p>}
           </div>
-
-          {isItemRequest && (
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">Nova Quantidade</label>
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={e => setQuantity(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
-                required
-              />
-            </div>
-          )}
 
           {isTransportRequest && (
             <div className="space-y-3">
@@ -343,6 +451,20 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
                   required
                 />
               </div>
+            </div>
+          )}
+
+          {isItemRequest && (
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Quantidade</label>
+              <input
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={e => setQuantity(parseInt(e.target.value) || 1)}
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+                required
+              />
             </div>
           )}
 

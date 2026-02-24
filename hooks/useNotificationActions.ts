@@ -362,55 +362,205 @@ export const useNotificationActions = (
             });
         }
       }
-      // 3. CASO: Convite de Evento (Aceitar/Recusar)
-      else if (notification.type === 'event_invite') {
+      // 3. CASO: Convite de Evento (Aceitar/Recusar) ou Solicitação de Participação
+      else if (notification.type === 'event_invite' || notification.type === 'event_participation_request') {
         const eventId = notification.event;
         if (!eventId) {
-            console.error('handleDecision: eventId is missing for event_invite');
+            console.error('handleDecision: eventId is missing');
             throw new Error('ID do evento não encontrado.');
         }
 
-        // Atualiza status do participante
-        const participants = await pb.collection('agenda_cap53_participantes').getFullList({
-            filter: `event = "${eventId}" && user = "${user?.id}"`
-        });
+        const data = notification.data || {};
+        const isParticipationRequest = notification.type === 'event_participation_request';
+        const targetUserId = isParticipationRequest ? data.requester_id : user?.id;
 
-        if (participants.length > 0) {
-            await pb.collection('agenda_cap53_participantes').update(participants[0].id, {
-                status: action === 'accepted' ? 'accepted' : 'rejected'
-            });
-        } else if (action === 'accepted') {
-            await pb.collection('agenda_cap53_participantes').create({
-                event: eventId,
-                user: user?.id,
-                status: 'accepted',
-                role: 'PARTICIPANTE'
-            });
+        if (!targetUserId) {
+            console.error('handleDecision: targetUserId is missing');
+            throw new Error('Usuário não identificado.');
         }
 
-        // Se recusou, cria notificação de recusa para o organizador
-        if (action === 'rejected') {
-            const event = await pb.collection('agenda_cap53_eventos').getOne(eventId, { expand: 'user' });
-            const organizerId = event.expand?.user?.id || event.user;
-            
-            if (organizerId && organizerId !== user?.id) {
-                await pb.collection('agenda_cap53_notifications').create({
-                    user: organizerId,
-                    title: 'Convite Recusado',
-                    message: `${user?.name} recusou o convite para o evento "${event.title}".${justification ? ` Motivo: ${justification}` : ''}`,
-                    type: 'refusal',
-                    read: false,
-                    event: eventId,
-                    data: {
-                        kind: 'event_invite_response',
-                        action: 'rejected',
-                        guest_id: user?.id,
-                        guest_name: user?.name,
-                        justification: justification,
-                        event_title: event.title
-                    },
-                    acknowledged: false
+        // Se for uma solicitação de participação sendo aprovada/recusada pelo criador
+        if (isParticipationRequest) {
+            // 1. Atualizar a coleção de solicitações
+            const requests = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
+                filter: `event = "${eventId}" && user = "${targetUserId}" && status = "pending"`,
+                requestKey: null
+            });
+
+            if (requests.length > 0) {
+                await pb.collection('agenda_cap53_solicitacoes_evento').update(requests[0].id, {
+                    status: action === 'approved' || action === 'accepted' ? 'approved' : 'rejected'
                 });
+            }
+
+            // 2. Se aprovado, adicionar participante ao evento
+            if (action === 'approved' || action === 'accepted') {
+                const event = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+                const currentParticipants = event.participants || [];
+                const currentStatus = event.participants_status || {};
+                const currentRoles = event.participants_roles || {};
+
+                if (!currentParticipants.includes(targetUserId)) {
+                    await pb.collection('agenda_cap53_eventos').update(eventId, {
+                        participants: [...currentParticipants, targetUserId],
+                        participants_status: { ...currentStatus, [targetUserId]: 'accepted' },
+                        participants_roles: { ...currentRoles, [targetUserId]: 'PARTICIPANTE' }
+                    });
+
+                    // Criar ou atualizar registro de participante
+                    const existingPart = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
+                        filter: `event = "${eventId}" && user = "${targetUserId}"`,
+                        requestKey: null
+                    });
+
+                    if (existingPart.items.length > 0) {
+                        await pb.collection('agenda_cap53_participantes').update(existingPart.items[0].id, {
+                            status: 'accepted',
+                            role: 'PARTICIPANTE'
+                        });
+                    } else {
+                        await pb.collection('agenda_cap53_participantes').create({
+                            event: eventId,
+                            user: targetUserId,
+                            status: 'accepted',
+                            role: 'PARTICIPANTE'
+                        });
+                    }
+                }
+            }
+
+            // 3. Notificar o solicitante sobre a decisão (Usuário 2)
+            const event = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+            const isApproved = action === 'approved' || action === 'accepted';
+            const reqData = notification.data || {};
+            
+            // Construir histórico para o solicitante
+            let history: any[] = [];
+            if (reqData.history_context?.full_history) {
+                history = [...reqData.history_context.full_history];
+            } else {
+                // Se não houver histórico acumulado, adicionar a solicitação inicial
+                history.push({
+                    action: 'request_created',
+                    timestamp: notification.created,
+                    user: targetUserId,
+                    user_name: reqData.requester_name || 'Solicitante',
+                    message: 'Solicitação de participação enviada'
+                });
+            }
+
+            // Adicionar a decisão atual ao histórico
+            const now = new Date().toISOString();
+            history.push({
+                action: isApproved ? 'request_approved' : 'request_rejected',
+                timestamp: now,
+                user: user?.id || '',
+                user_name: user?.name || 'Organizador',
+                justification: justification,
+                message: isApproved ? 'Solicitação aprovada' : 'Solicitação recusada'
+            });
+
+            await pb.collection('agenda_cap53_notifications').create({
+                user: targetUserId,
+                title: isApproved ? 'Solicitação Aprovada' : 'Solicitação Recusada',
+                message: isApproved 
+                    ? `Sua solicitação para participar do evento "${event.title}" foi aprovada!`
+                    : `Sua solicitação para participar do evento "${event.title}" foi recusada pelo criador.${justification ? ` Motivo: ${justification}` : ''}`,
+                type: isApproved ? 'system' : 'refusal',
+                read: false,
+                event: eventId,
+                data: {
+                    kind: 'participation_request_response',
+                    action: isApproved ? 'accepted' : 'rejected',
+                    justification: justification,
+                    event_title: event.title,
+                    requester_id: targetUserId,
+                    requester_name: reqData.requester_name,
+                    history_context: {
+                        full_history: history
+                    }
+                },
+                acknowledged: false
+            });
+
+            // 4. Notifica o próprio decider (Organizador) para manter no histórico dele
+            if (user?.id) {
+                await pb.collection('agenda_cap53_notifications').create({
+                    user: user.id,
+                    title: isApproved ? 'Solicitação Aprovada' : 'Solicitação Recusada',
+                    message: `Você ${isApproved ? 'aprovou' : 'recusou'} a solicitação de ${reqData.requester_name || 'um usuário'} para o evento "${event.title}".${!isApproved && justification ? ` Motivo: ${justification}` : ''}`,
+                    type: isApproved ? 'system' : 'refusal',
+                    read: true,
+                    event: eventId,
+                    invite_status: isApproved ? 'approved' : 'rejected',
+                    data: {
+                        kind: 'participation_request_response',
+                        action: isApproved ? 'approved' : 'rejected',
+                        justification: justification,
+                        is_decider_copy: true,
+                        approver_id: isApproved ? user.id : undefined,
+                        approver_name: isApproved ? user.name : undefined,
+                        rejected_by: !isApproved ? user.id : undefined,
+                        rejected_by_name: !isApproved ? user.name : undefined,
+                        event_title: event.title,
+                        requester_id: targetUserId,
+                        requester_name: reqData.requester_name,
+                        history_context: {
+                            full_history: history
+                        }
+                    },
+                    acknowledged: true
+                });
+            }
+        } 
+        // Caso normal de convite recebido pelo usuário
+        else {
+            // Atualiza status do participante
+            const participants = await pb.collection('agenda_cap53_participantes').getFullList({
+                filter: `event = "${eventId}" && user = "${user?.id}"`
+            });
+
+            if (participants.length > 0) {
+                await pb.collection('agenda_cap53_participantes').update(participants[0].id, {
+                    status: action === 'accepted' ? 'accepted' : 'rejected'
+                });
+            } else if (action === 'accepted') {
+                await pb.collection('agenda_cap53_participantes').create({
+                    event: eventId,
+                    user: user?.id,
+                    status: 'accepted',
+                    role: 'PARTICIPANTE'
+                });
+            }
+
+            // Se respondeu (aceitou ou recusou), cria notificação para o organizador
+            if (action === 'accepted' || action === 'rejected') {
+                const event = await pb.collection('agenda_cap53_eventos').getOne(eventId, { expand: 'user' });
+                const organizerId = event.expand?.user?.id || event.user;
+                
+                if (organizerId && organizerId !== user?.id) {
+                    const isAcceptance = action === 'accepted';
+                    await pb.collection('agenda_cap53_notifications').create({
+                        user: organizerId,
+                        title: isAcceptance ? 'Convite Aceito' : 'Convite Recusado',
+                        message: isAcceptance 
+                            ? `${user?.name} aceitou o convite para o evento "${event.title}".`
+                            : `${user?.name} recusou o convite para o evento "${event.title}".${justification ? ` Motivo: ${justification}` : ''}`,
+                        type: isAcceptance ? 'system' : 'refusal',
+                        read: false,
+                        event: eventId,
+                        invite_status: action === 'accepted' ? 'accepted' : 'rejected',
+                        data: {
+                            kind: 'event_invite_response',
+                            action: action,
+                            guest_id: user?.id,
+                            guest_name: user?.name,
+                            justification: justification,
+                            event_title: event.title
+                        },
+                        acknowledged: false
+                    });
+                }
             }
         }
       }

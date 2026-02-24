@@ -293,22 +293,29 @@ const Notifications: React.FC = () => {
             const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
             key = `transport_${eventId}`;
         }
-        // 3. Agrupa Recusas de Convite do mesmo usuário para o mesmo evento
-        else if ((n.type === 'refusal' || n.type === 'event_invite' || data.kind === 'event_invite_response') && n.event) {
+        // 3. Agrupa Recusas de Convite ou Solicitações de Participação do mesmo usuário para o mesmo evento
+        else if ((n.type === 'refusal' || n.type === 'event_invite' || n.type === 'event_participation_request' || data.kind === 'event_invite_response' || data.kind === 'organizer_invite_sent' || data.kind === 'participation_request_response') && n.event) {
              // Event ID pode ser objeto ou string
              const rawEventId = n.event;
              const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
              
-             // Guest ID pode estar no data (recusa/resposta) ou ser o usuário (convite para o convidado)
-             const guestId = data.guest_id || (n.type === 'event_invite' ? n.user : null);
+             // Guest/Requester ID
+             const guestId = data.guest_id || 
+                             data.requester_id || 
+                             (n.type === 'event_invite' ? n.user : null) || 
+                             (n.type === 'event_participation_request' ? (data.requester_id || n.user) : null) ||
+                             (data.kind === 'organizer_invite_sent' ? 'organizer_view' : null);
              
-             // Para o organizador vendo recusas/respostas:
-             if (guestId && (data.guest_id || data.kind === 'event_invite_response')) {
-                 key = `invite_flow_${eventId}_${guestId}`;
+             // Para o organizador vendo recusas/respostas ou seu próprio envio:
+             if (guestId && (data.guest_id || data.requester_id || data.kind === 'event_invite_response' || data.kind === 'organizer_invite_sent' || n.type === 'event_participation_request')) {
+                 // Unificamos tudo do mesmo evento para o organizador em um único fluxo
+                 // Se for uma solicitação de participação, usamos o ID do solicitante para separar fluxos se houver múltiplos solicitantes
+                 const flowId = (n.type === 'event_participation_request' || data.kind === 'participation_request_response') ? guestId : 'general';
+                 key = `invite_flow_${eventId}_${flowId}`;
              }
-             // Para o convidado vendo seus convites (se houver múltiplos):
-             else if (n.type === 'event_invite' && !data.guest_id) {
-                  // Agrupa convites do mesmo evento para o usuário logado
+             // Para o convidado/solicitante vendo seus próprios convites/respostas/solicitações:
+             else if ((n.type === 'event_invite' || n.type === 'event_participation_request' || data.kind === 'participation_request_response') && !data.guest_id) {
+                  // Agrupa convites/respostas/solicitações do mesmo evento para o usuário logado
                   key = `invite_flow_${eventId}_${user?.id}`; 
              }
         }
@@ -362,22 +369,30 @@ const Notifications: React.FC = () => {
   const getStatusContainerStyles = (n: any) => {
     const status = getNotificationStatus(n);
     
-    // Base styles for modern cards
-    // Unread notifications get a slightly different background to stand out
-    const baseStyles = `${!n.read ? 'bg-slate-50/80' : 'bg-white'} transition-all duration-300 hover:shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]`;
+    // Base styles: clean, minimalist, with subtle shadow on hover
+    const baseStyles = `group relative overflow-hidden transition-all duration-300 border border-slate-100 hover:border-slate-200 hover:shadow-sm`;
+    
+    // Unread state: very subtle background tint
+    const readStateStyles = !n.read 
+      ? 'bg-blue-50/40' 
+      : 'bg-white';
     
     if (status === 'approved') {
-        // Premium Success: Clean white with Emerald accent
-        return `${baseStyles} border-y border-r border-slate-100 border-l-[3px] border-l-emerald-500`;
+        return `${baseStyles} ${readStateStyles}`;
     } 
     
     if (status === 'rejected') {
-        // Premium Error: Light red background with Rose accent
-        return `${!n.read ? 'bg-rose-50/80' : 'bg-rose-50/30'} border-y border-r border-rose-100 border-l-[3px] border-l-rose-500 transition-all duration-300 hover:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.1)]`;
+        return `${baseStyles} ${!n.read ? 'bg-rose-50/40' : 'bg-rose-50/20'} !border-rose-100/50`;
     }
 
-    // Default/Neutral
-    return `${baseStyles} border border-slate-100 hover:border-slate-300`;
+    return `${baseStyles} ${readStateStyles}`;
+  };
+
+  const getStatusIndicator = (n: any) => {
+    const status = getNotificationStatus(n);
+    if (status === 'approved') return 'bg-emerald-500';
+    if (status === 'rejected') return 'bg-rose-500';
+    return !n.read ? 'bg-blue-500' : 'bg-slate-200';
   };
 
   const getIcon = (n: any) => {
@@ -968,33 +983,36 @@ const Notifications: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-1">
           {/* Tabs Clean - Desktop Only */}
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden md:flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl">
             <button
               onClick={() => setFilter('all')}
-              className={`pb-3 text-sm font-medium transition-all relative ${
-                filter === 'all' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              className={`px-4 py-2 text-xs font-bold transition-all rounded-lg ${
+                filter === 'all' 
+                  ? 'bg-white text-slate-900 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
               }`}
             >
               Todas
-              {filter === 'all' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
             </button>
             <button
               onClick={() => setFilter('unread')}
-              className={`pb-3 text-sm font-medium transition-all relative ${
-                filter === 'unread' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              className={`px-4 py-2 text-xs font-bold transition-all rounded-lg ${
+                filter === 'unread' 
+                  ? 'bg-white text-slate-900 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
               }`}
             >
               Não lidas
-              {filter === 'unread' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
             </button>
             <button
               onClick={() => setFilter('actions')}
-              className={`pb-3 text-sm font-medium transition-all relative ${
-                filter === 'actions' ? 'text-slate-900' : 'text-slate-500 hover:text-slate-700'
+              className={`px-4 py-2 text-xs font-bold transition-all rounded-lg ${
+                filter === 'actions' 
+                  ? 'bg-white text-slate-900 shadow-sm' 
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
               }`}
             >
               Pendentes
-              {filter === 'actions' && <span className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-full"></span>}
             </button>
           </div>
 
@@ -1055,42 +1073,46 @@ const Notifications: React.FC = () => {
                               onClick={() => {
                                 if (notification.event) handleViewEvent(notification);
                               }}
-                              className={`group relative flex gap-3 md:gap-5 p-3 md:p-5 rounded-xl transition-all duration-200 z-10 
+                              className={`group relative flex gap-4 md:gap-6 p-4 md:p-6 rounded-2xl transition-all duration-300 z-10 
                                 ${getStatusContainerStyles(notification)} 
-                                ${notification.event ? 'cursor-pointer hover:shadow-md' : ''}
+                                ${notification.event ? 'cursor-pointer' : ''}
                                 z-20
                               `}
                             >
-              <div className="absolute top-3 md:top-5 right-3 md:right-5 flex items-center gap-2 z-30">
+                              {/* Status Indicator Bar */}
+                              <div className={`absolute left-0 top-0 bottom-0 w-1 ${getStatusIndicator(notification)} opacity-80`} />
+
+              <div className="absolute top-4 md:top-6 right-4 md:right-6 flex items-center gap-2 z-30">
                 {!notification.read && (
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       markAsRead(notification.id);
                     }}
-                    className="p-1.5 text-blue-500 hover:bg-blue-100 rounded-full transition-colors"
+                    className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-full transition-all duration-200"
                     title="Marcar como lida"
                   >
-                    <span className="material-symbols-outlined text-[18px] md:text-[20px]">mark_chat_read</span>
+                    <span className="material-symbols-outlined text-[14px]">check</span>
+                    Lida
                   </button>
                 )}
               </div>
 
-              <div className={`flex-shrink-0 size-9 md:size-12 rounded-2xl flex items-center justify-center mt-0.5 ${getIconStyles(notification)} z-10 relative bg-white`}>
-                <span className="material-symbols-outlined text-[18px] md:text-[24px]">
+              <div className={`flex-shrink-0 size-10 md:size-12 rounded-xl flex items-center justify-center mt-0.5 shadow-sm border border-white/50 ${getIconStyles(notification)} z-10 relative`}>
+                <span className="material-symbols-outlined text-[20px] md:text-[24px]">
                   {getIcon(notification)}
                 </span>
               </div>
 
-              <div className="flex-1 min-w-0 pt-0 md:pt-1">
-                <div className={`flex items-center justify-between gap-2 mb-1 ${!notification.read ? 'pr-10 md:pr-14' : 'pr-4 md:pr-6'}`}>
-                  <h4 className={`text-[13px] md:text-[15px] font-semibold tracking-tight 
-                    ${getNotificationStatus(notification) === 'rejected' ? 'text-rose-600' : 
+              <div className="flex-1 min-w-0">
+                <div className={`flex items-center justify-between gap-2 mb-1.5 ${!notification.read ? 'pr-16' : 'pr-4'}`}>
+                  <h4 className={`text-sm md:text-base font-bold tracking-tight 
+                    ${getNotificationStatus(notification) === 'rejected' ? 'text-rose-700' : 
                       (notification.read ? 'text-slate-600' : 'text-slate-900')}
                   `}>
                     {notification.title}
                   </h4>
-                  <span className="text-[10px] md:text-[11px] text-slate-400 whitespace-nowrap font-medium">
+                  <span className="text-[10px] md:text-[11px] text-slate-400 whitespace-nowrap font-medium tabular-nums">
                     {(() => {
                         try {
                             const d = new Date(notification.created);
@@ -1101,50 +1123,54 @@ const Notifications: React.FC = () => {
                   </span>
                 </div>
                 
-                {/* Event Creator */}
-                {creatorName && (
-                    <div className="flex items-center gap-1.5 mb-1.5 text-[10px] md:text-[11px] text-slate-500 font-medium">
-                        <span className="material-symbols-outlined text-[12px] md:text-[14px]">event_note</span>
-                        <span>Evento criado por {creatorName}</span>
-                    </div>
-                )}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mb-2.5">
+                  {/* Event Creator */}
+                  {creatorName && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold">
+                          <span className="material-symbols-outlined text-[14px] opacity-70">event</span>
+                          <span>{creatorName}</span>
+                      </div>
+                  )}
 
-                {/* Notification Author (The person who performed the action) */}
-                {(() => {
-                    const data = getData(notification);
-                    let authorName = null;
-                    
-                    if (data.is_decider_copy) authorName = 'Você';
-                    else if (data.rejected_by_name) authorName = data.rejected_by_name;
-                    else if (data.approved_by_name) authorName = data.approved_by_name;
-                    else if (notification.type === 'refusal' && !data.guest_id) authorName = 'Você';
-                    
-                    if (authorName) {
-                        return (
-                            <div className="flex items-center gap-1.5 mb-1.5 text-[10px] md:text-[11px] text-slate-500 font-medium">
-                                <span className="material-symbols-outlined text-[12px] md:text-[14px]">person</span>
-                                <span>{authorName === user?.name ? 'Você' : authorName}</span>
-                            </div>
-                        );
-                    }
-                    return null;
-                })()}
+                  {/* Notification Author */}
+                  {(() => {
+                      const data = getData(notification);
+                      let authorName = null;
+                      
+                      if (data.is_decider_copy) authorName = 'Você';
+                      else if (data.rejected_by_name) authorName = data.rejected_by_name;
+                      else if (data.approved_by_name) authorName = data.approved_by_name;
+                      else if (notification.type === 'refusal' && !data.guest_id) authorName = 'Você';
+                      
+                      if (authorName) {
+                          return (
+                              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-semibold">
+                                  <span className="material-symbols-outlined text-[14px] opacity-70">person</span>
+                                  <span>{authorName === user?.name ? 'Você' : authorName}</span>
+                              </div>
+                          );
+                      }
+                      return null;
+                  })()}
+                </div>
                 
-                <p className={`text-[12px] md:text-[14px] leading-relaxed mb-3 md:mb-4 ${notification.read ? 'text-slate-400' : 'text-slate-500'}`}>
+                <p className={`text-[13px] md:text-[14px] leading-relaxed mb-4 ${notification.read ? 'text-slate-400' : 'text-slate-600 font-medium'}`}>
                   {getNotificationMessage(notification)}
                 </p>
 
                 {/* Metadata Tags */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-2">
                   {getData(notification).quantity !== undefined && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 text-[11px] font-medium rounded-md">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/50 text-slate-600 text-[11px] font-bold rounded-lg border border-slate-200/50">
+                       <span className="material-symbols-outlined text-[14px] opacity-70">inventory_2</span>
                        Qtd: {getData(notification).quantity}
                     </span>
                   )}
                   {notification.type === 'transport_request' && getData(notification) && (
                      <>
                         {getData(notification).horario_levar && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-50 text-slate-600 text-[11px] font-medium rounded-md">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-50/50 text-blue-700 text-[11px] font-bold rounded-lg border border-blue-100/50">
+                                <span className="material-symbols-outlined text-[14px] opacity-70">schedule</span>
                                 Ida: {getData(notification).horario_levar}
                             </span>
                         )}
@@ -1236,12 +1262,15 @@ const Notifications: React.FC = () => {
                         });
                     }
 
-                    // 3. Construct Virtual History for Event Invites / Responses
+                    // 3. Construct Virtual History for Event Invites / Responses / Participation Requests
                     const isEventInviteFlow = notification.type === 'event_invite' || 
                                               (notification.type === 'refusal' && getData(notification).kind === 'event_invite_response') || 
                                               getData(notification).kind === 'event_invite_response';
 
-                    if (isEventInviteFlow) {
+                    const isParticipationFlow = notification.type === 'event_participation_request' ||
+                                                getData(notification).kind === 'participation_request_response';
+
+                    if (isEventInviteFlow || isParticipationFlow) {
                         // 3a. Try to recover accumulated history from the notification payload (Guest View)
                         const notifData = getData(notification);
                         if (notifData.history_context && Array.isArray(notifData.history_context.full_history) && notifData.history_context.full_history.length > 0) {
@@ -1261,45 +1290,68 @@ const Notifications: React.FC = () => {
                              return !(data.action === prev.action && item.type === self[idx-1].type && data.justification === prev.justification);
                         });
                         
-                        // Initial Event (Creation) - Only if history is empty
+                        // Initial Event (Creation or Request) - Only if history is empty
                         const event = notification.expand?.event;
                         if (history.length === 0 && event) {
-                            history.push({
-                                action: 'invite_created',
-                                timestamp: event.created,
-                                user: event.user, // Creator
-                                user_name: notification.expand?.created_by?.name || 'Organizador',
-                                message: `Convite para evento "${event.title}"`
-                            });
+                            if (isParticipationFlow) {
+                                // Find the initial request notification in the group
+                                const initialRequest = uniqueGroupItems.find(i => i.type === 'event_participation_request');
+                                if (initialRequest) {
+                                    const reqData = getData(initialRequest);
+                                    history.push({
+                                        action: 'request_created',
+                                        timestamp: initialRequest.created,
+                                        user: reqData.requester_id || initialRequest.user,
+                                        user_name: (reqData.requester_id === user?.id || initialRequest.user === user?.id) ? 'Você' : (reqData.requester_name || 'Solicitante'),
+                                        message: `Solicitação de participação enviada`
+                                    });
+                                }
+                            } else {
+                                history.push({
+                                    action: 'invite_created',
+                                    timestamp: event.created,
+                                    user: event.user, // Creator
+                                    user_name: (event.user === user?.id) ? 'Você' : (notification.expand?.created_by?.name || 'Organizador'),
+                                    message: `Convite para evento "${event.title}"`
+                                });
+                            }
                         }
 
                         // Process group items to build/update history
                         uniqueGroupItems.forEach((item, idx) => {
                              const itemData = getData(item);
                              
-                             // 1. Refusal / Response
-                             if (item.type === 'refusal' || itemData.kind === 'event_invite_response' || itemData.action === 'rejected') {
+                             // 1. Refusal / Response / Decision
+                             if (item.type === 'refusal' || 
+                                 itemData.kind === 'event_invite_response' || 
+                                 itemData.kind === 'participation_request_response' ||
+                                 itemData.action === 'rejected' || 
+                                 itemData.action === 'accepted' ||
+                                 itemData.action === 'approved') {
+                                 
                                  const itemTimestamp = new Date(item.created).getTime();
-                                 const isNew = !history.some(h => new Date(h.timestamp || 0).getTime() === itemTimestamp && (h.action === 'invite_rejected' || h.action === 'invite_accepted'));
+                                 const isNew = !history.some(h => Math.abs(new Date(h.timestamp || 0).getTime() - itemTimestamp) < 2000);
 
                                  if (isNew) {
-                                     if ((itemData.kind === 'event_invite_response' || itemData.action === 'accepted' || item.invite_status === 'accepted') && 
-                                         (itemData.action !== 'rejected' && item.invite_status !== 'rejected')) {
+                                     const isAcceptance = itemData.action === 'accepted' || itemData.action === 'approved' || item.invite_status === 'accepted' || item.invite_status === 'approved';
+                                     
+                                     if (isAcceptance) {
                                           history.push({
-                                             action: 'invite_accepted',
+                                             action: isParticipationFlow ? 'request_approved' : 'invite_accepted',
                                              timestamp: item.created,
-                                             user: itemData.guest_id || item.user || '',
-                                             user_name: itemData.guest_name || (item.user === user?.id ? 'Você' : 'Convidado'),
-                                             message: 'Convite aceito'
+                                             user: itemData.guest_id || itemData.approver_id || item.user || '',
+                                             user_name: itemData.guest_name || itemData.approver_name || (item.user === user?.id ? 'Você' : (isParticipationFlow ? 'Organizador' : 'Convidado')),
+                                             message: isParticipationFlow ? 'Solicitação aprovada' : 'Convite aceito'
                                          });
                                      } else {
                                          // Is Rejection
                                          history.push({
-                                             action: 'invite_rejected',
+                                             action: isParticipationFlow ? 'request_rejected' : 'invite_rejected',
                                              timestamp: item.created,
-                                             user: itemData.guest_id || item.user || '',
-                                             user_name: itemData.guest_name || (item.user === user?.id ? 'Você' : 'Convidado'),
-                                             justification: itemData.justification || item.message
+                                             user: itemData.guest_id || itemData.rejected_by || item.user || '',
+                                             user_name: itemData.guest_name || itemData.rejected_by_name || (item.user === user?.id ? 'Você' : (isParticipationFlow ? 'Organizador' : 'Convidado')),
+                                             justification: itemData.justification || item.message,
+                                             message: isParticipationFlow ? 'Solicitação recusada' : 'Convite recusado'
                                          });
                                      }
                                  }
@@ -1307,33 +1359,45 @@ const Notifications: React.FC = () => {
                                  // Check for Organizer Replied (Re-invited) - Persisted in refusal notification data
                                  if (itemData.re_invited && itemData.re_invite_info) {
                                      const resentTimestamp = new Date(itemData.re_invite_info.timestamp).getTime();
-                                     if (!history.some(h => new Date(h.timestamp || 0).getTime() === resentTimestamp && h.action === 'invite_resent')) {
+                                     if (!history.some(h => Math.abs(new Date(h.timestamp || 0).getTime() - resentTimestamp) < 2000)) {
                                          history.push({
                                              action: 'invite_resent',
                                              timestamp: itemData.re_invite_info.timestamp,
                                              user: event?.user || '', 
-                                             user_name: notification.expand?.created_by?.name || 'Organizador',
+                                             user_name: (event?.user === user?.id) ? 'Você' : (notification.expand?.created_by?.name || 'Organizador'),
                                              message: itemData.re_invite_info.message || 'Convite reenviado'
                                          });
                                      }
                                  }
                              }
-                             // 2. Re-invite (Sent by Organizer)
-                             else if (item.type === 'event_invite') {
-                                 // Only add 'invite_resent' if there was a rejection before it.
-                                 const hasPriorRejection = history.some(h => h.action === 'invite_rejected' && new Date(h.timestamp!).getTime() < new Date(item.created).getTime());
+                             // 2. Re-invite or Re-request
+                             else if (item.type === 'event_invite' || itemData.is_rerequest) {
                                  const itemTimestamp = new Date(item.created).getTime();
-                                 const isNew = !history.some(h => new Date(h.timestamp || 0).getTime() === itemTimestamp && h.action === 'invite_resent');
-                                 
-                                 if (hasPriorRejection && isNew) {
-                                     const customMsg = itemData.invite_message;
-                                     history.push({
-                                         action: 'invite_resent',
-                                         timestamp: item.created,
-                                         user: event?.user || '',
-                                         user_name: notification.expand?.created_by?.name || 'Organizador',
-                                         message: customMsg || item.message || 'Convite reenviado'
-                                     });
+                                 const isNew = !history.some(h => Math.abs(new Date(h.timestamp || 0).getTime() - itemTimestamp) < 2000);
+
+                                 if (isNew) {
+                                     if (itemData.is_rerequest) {
+                                         history.push({
+                                             action: isParticipationFlow ? 'request_resent' : 're_requested',
+                                             timestamp: item.created,
+                                             user: item.user,
+                                             user_name: (item.user === user?.id) ? 'Você' : (itemData.user_name || itemData.requester_name || 'Solicitante'),
+                                             message: isParticipationFlow ? 'Solicitação de participação reaberta' : 'Solicitação reenviada'
+                                         });
+                                     } else {
+                                         // Only add 'invite_resent' if there was a rejection before it.
+                                         const hasPriorRejection = history.some(h => (h.action === 'invite_rejected' || h.action === 'request_rejected') && new Date(h.timestamp!).getTime() < new Date(item.created).getTime());
+                                         if (hasPriorRejection) {
+                                             const customMsg = itemData.invite_message;
+                                             history.push({
+                                                 action: 'invite_resent',
+                                                 timestamp: item.created,
+                                                 user: event?.user || '',
+                                                 user_name: (event?.user === user?.id) ? 'Você' : (notification.expand?.created_by?.name || 'Organizador'),
+                                                 message: customMsg || item.message || 'Convite reenviado'
+                                             });
+                                         }
+                                     }
                                  }
                              }
                         });
@@ -1342,23 +1406,31 @@ const Notifications: React.FC = () => {
                         const currentTimestamp = new Date(notification.created).getTime();
                         if (!history.some(h => new Date(h.timestamp || 0).getTime() === currentTimestamp)) {
                              const notifData = getData(notification);
-                             if (notification.type === 'refusal' || notifData.kind === 'event_invite_response' || (notification.invite_status && notification.invite_status !== 'pending')) {
-                                 if (notification.invite_status === 'accepted' || (notifData.kind === 'event_invite_response' && notifData.action === 'accepted')) {
+                             const isParticipationDecision = notification.type === 'event_participation_request' || notifData.kind === 'participation_request_response';
+
+                             if (notification.type === 'refusal' || notifData.kind === 'event_invite_response' || notifData.kind === 'participation_request_response' || (notification.invite_status && notification.invite_status !== 'pending')) {
+                                 const isAcceptance = notification.invite_status === 'accepted' || notification.invite_status === 'approved' || (notifData.kind === 'event_invite_response' && notifData.action === 'accepted') || (notifData.kind === 'participation_request_response' && notifData.action === 'accepted');
+                                 
+                                 if (isAcceptance) {
                                      history.push({
-                                         action: 'invite_accepted',
+                                         action: isParticipationDecision ? 'request_approved' : 'invite_accepted',
                                          timestamp: notification.created,
-                                         user: notifData.guest_id || notification.user || '',
-                                         user_name: notifData.guest_name || (notification.user === user?.id ? 'Você' : 'Convidado'),
-                                         message: 'Convite aceito'
+                                         user: notifData.guest_id || notifData.approver_id || notification.user || '',
+                                         user_name: notifData.guest_name || notifData.approver_name || (notification.user === user?.id ? 'Você' : (isParticipationDecision ? 'Organizador' : 'Convidado')),
+                                         message: isParticipationDecision ? 'Solicitação aprovada' : 'Convite aceito'
                                      });
-                                 } else if (notification.invite_status === 'rejected' || notification.type === 'refusal' || notifData.action === 'rejected') {
-                                     history.push({
-                                         action: 'invite_rejected',
-                                         timestamp: notification.created,
-                                         user: notifData.guest_id || notification.user || '',
-                                         user_name: notifData.guest_name || (notification.user === user?.id ? 'Você' : 'Convidado'),
-                                         justification: notifData.justification || notification.message
-                                     });
+                                 } else {
+                                     const isRejection = notification.invite_status === 'rejected' || notification.type === 'refusal' || notifData.action === 'rejected';
+                                     if (isRejection) {
+                                         history.push({
+                                             action: isParticipationDecision ? 'request_rejected' : 'invite_rejected',
+                                             timestamp: notification.created,
+                                             user: notifData.guest_id || notifData.rejected_by || notification.user || '',
+                                             user_name: notifData.guest_name || notifData.rejected_by_name || (notification.user === user?.id ? 'Você' : (isParticipationDecision ? 'Organizador' : 'Convidado')),
+                                             justification: notifData.justification || notification.message,
+                                             message: isParticipationDecision ? 'Solicitação recusada' : 'Convite recusado'
+                                         });
+                                     }
                                  }
                              }
                         }
@@ -1411,6 +1483,7 @@ const Notifications: React.FC = () => {
                         let sectorName = 'setor responsável';
                         const itemCategory = safeReq?.expand?.item?.category;
                         const notifKind = getData(notification).kind;
+                        const isParticipationDecision = notification.type === 'event_participation_request' || notifKind === 'participation_request_response';
 
                         // 1. Prioridade para Item se houver request associado ou tipo de item
                         if (safeReq || notification.type === 'almc_item_request' || notification.type === 'request_decision' || notifKind === 'almc_item_decision') {
@@ -1431,6 +1504,10 @@ const Notifications: React.FC = () => {
                             (safeEvent?.transporte_status === 'pending')) {
                             sectorName = 'Transporte';
                         }
+                        // 3. Se for participação, o responsável é o criador do evento
+                        else if (isParticipationDecision) {
+                            sectorName = 'Criador do Evento';
+                        }
                         
                         // Check if current user is a SECTOR user
                         // If user is ALMC, DCA, or TRA, they don't need to see "Pending in Sector X" message
@@ -1445,6 +1522,12 @@ const Notifications: React.FC = () => {
                             showPendingMessage = false;
                         } else if (user?.role === 'TRA' && sectorName === 'Transporte') {
                             showPendingMessage = false;
+                        } else if (isParticipationDecision) {
+                            // Se for participação, o criador do evento (que é quem decide) não precisa ver a mensagem de pendência dele mesmo
+                            const creatorId = safeEvent?.user || safeEvent?.expand?.user?.id;
+                            if (creatorId === user?.id) {
+                                showPendingMessage = false;
+                            }
                         }
 
                         return (
@@ -1452,13 +1535,15 @@ const Notifications: React.FC = () => {
                                 <HistoryChain 
                                     history={history} 
                                     currentUserId={user?.id} 
-                                    type={sectorName === 'Transporte' ? 'transport' : 'item'} 
+                                    type={sectorName === 'Transporte' ? 'transport' : sectorName === 'Criador do Evento' ? 'participation' : 'item'} 
                                 />
                                 {showPendingMessage && (
-                                    <div className="ml-10 mt-2 px-3 py-2 bg-amber-50 text-amber-800 border border-amber-100 rounded-lg text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2 relative z-0">
-                                        <div className="absolute -left-[21px] top-1/2 -translate-y-1/2 w-4 h-px bg-slate-200"></div>
-                                        <span className="material-symbols-outlined text-[18px]">hourglass_top</span>
-                                        <span>O pedido se encontra pendente no setor <strong>{sectorName}</strong>.</span>
+                                    <div className="ml-10 mt-3 px-3 py-2 bg-slate-50 text-slate-600 border border-slate-200/60 rounded-xl text-[11px] font-bold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 relative z-0">
+                                        <div className="absolute -left-[21px] top-1/2 -translate-y-1/2 w-4 h-[1px] bg-slate-200"></div>
+                                        <span className="material-symbols-outlined text-[16px] text-amber-500 font-bold">hourglass_top</span>
+                                        <span className="uppercase tracking-tight">
+                                            Pendente de análise {isParticipationDecision ? 'pelo' : 'no'} <span className="text-slate-900">{sectorName}</span>
+                                        </span>
                                     </div>
                                 )}
                             </div>
@@ -1572,9 +1657,11 @@ const Notifications: React.FC = () => {
                    )}
 
                    {/* Decision Buttons */}
-                   {(notification.invite_status === 'pending' || (notification.type === 'event_invite' && !notification.invite_status)) && 
+                   {(notification.invite_status === 'pending' || (notification.type === 'event_invite' && !notification.invite_status) || (notification.type === 'event_participation_request' && !notification.invite_status)) && 
                     // Exclude participation request responses (informational only)
                     getData(notification).kind !== 'participation_request_response' &&
+                    // Exclude organizer invite sent (it's an info notification for the creator)
+                    getData(notification).kind !== 'organizer_invite_sent' &&
                     // For sector requests, only show actions if it's the latest notification in the chain
                     !((notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') && !isLatest) && (
                     // Check Permissions:
@@ -1582,6 +1669,7 @@ const Notifications: React.FC = () => {
                     // 2. Regular users (USER, CE) can only accept/reject event invites
                     (() => {
                         const isSectorRequest = notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision';
+                        const isParticipationRequest = notification.type === 'event_participation_request';
                         
                         // If it's a sector request, check if user has permission
                         if (isSectorRequest) {
@@ -1605,17 +1693,29 @@ const Notifications: React.FC = () => {
                              }
                         }
 
+                        // For participation requests, ensure the current user is the event creator
+                        if (isParticipationRequest) {
+                            const rawEvent = notification.expand?.event || notification.expand?.related_event;
+                            const safeEvent = Array.isArray(rawEvent) ? rawEvent[0] : rawEvent;
+                            const creatorId = safeEvent?.user || safeEvent?.expand?.user?.id;
+                            
+                            if (creatorId !== user?.id && user?.role !== 'ADMIN') {
+                                return null;
+                            }
+                        }
+
                         return (
                             <div className="flex items-center gap-2">
                             <button
                                 disabled={processingId === notification.id}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') ? 'approved' : 'accepted');
+                                    const action = (isSectorRequest || isParticipationRequest) ? 'approved' : 'accepted';
+                                    onHandleAction(notification, action);
                                 }}
                                 className="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
                             >
-                                {(notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') ? 'Aprovar' : 'Aceitar'}
+                                {(isSectorRequest || isParticipationRequest) ? 'Aprovar' : 'Aceitar'}
                             </button>
                             <button
                                 disabled={processingId === notification.id}
@@ -1634,7 +1734,7 @@ const Notifications: React.FC = () => {
 
                   {/* Mensagem de Respondido */}
                   {notification.invite_status && notification.invite_status !== 'pending' && 
-                   (notification.type === 'event_invite' || notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') && (
+                   (notification.type === 'event_invite' || notification.type === 'event_participation_request' || notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') && (
                       <div className="px-3 py-1.5 bg-slate-50 text-slate-500 border border-slate-100 text-xs font-medium rounded-lg flex items-center gap-1.5 italic">
                         <span className="material-symbols-outlined text-[16px]">done_all</span>
                         Esta solicitação já foi respondida
@@ -1644,9 +1744,10 @@ const Notifications: React.FC = () => {
                   {/* Re-request Button */}
                   {(
                     isLatest && (
-                        (notification.type === 'refusal' && (getData(notification).kind === 'almc_item_decision' || getData(notification).kind === 'transport_decision')) ||
+                        (notification.type === 'refusal' && (getData(notification).kind === 'almc_item_decision' || getData(notification).kind === 'transport_decision' || getData(notification).kind === 'event_invite_response')) ||
                         (notification.type === 'request_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitada') || getData(notification).action === 'rejected')) ||
-                        (notification.type === 'transport_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitad') || (notification.title?.toLowerCase() || '').includes('recusad') || getData(notification).action === 'rejected'))
+                        (notification.type === 'transport_decision' && ((notification.title?.toLowerCase() || '').includes('rejeitad') || (notification.title?.toLowerCase() || '').includes('recusad') || getData(notification).action === 'rejected')) ||
+                        (getData(notification).kind === 'participation_request_response' && (getData(notification).action === 'rejected' || notification.type === 'refusal'))
                     )
                   ) && (
                     // Check if the underlying request/event is still rejected before showing the button
@@ -1660,20 +1761,19 @@ const Notifications: React.FC = () => {
                                 (relatedReq?.status === 'pending') || 
                                 (relatedEvent?.transporte_status === 'pending');
 
+                            const notifKind = getData(notification).kind;
+                            const isParticipationDecision = notification.type === 'event_participation_request' || notifKind === 'participation_request_response';
+                            const responsibleName = isParticipationDecision ? 'criador do evento' : 'setor responsável';
+
                             if (isCurrentlyPending) {
-                                return (
-                                    <div className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default animate-in fade-in" title="Esta solicitação já encontra-se em análise no setor responsável">
-                                        <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
-                                        Re-solicitação em análise
-                                    </div>
-                                );
+                                return null; // Já mostrado no history chain acima (Elemento A)
                             }
                             
                             // Se não está pendente, mostra apenas status histórico
                             return (
-                                <div className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default" title="Solicitação enviada novamente e em análise">
+                                <div className="px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default" title={`Solicitação enviada novamente e em análise ${isParticipationDecision ? 'pelo' : 'com o'} ${responsibleName}`}>
                                     <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
-                                    Re-solicitado: Em análise no setor responsável
+                                    Re-solicitado: Em análise {isParticipationDecision ? 'pelo' : 'com o'} {responsibleName}
                                 </div>
                             );
                         }
@@ -1731,7 +1831,33 @@ const Notifications: React.FC = () => {
                              isPending = relatedEvent.transporte_status === 'pending';
                         }
                         
-                        if (isApproved) {
+                        // Event Participation Request Logic
+                        const isParticipationDecision = notification.type === 'event_participation_request' || getData(notification).kind === 'participation_request_response';
+                        if (isParticipationDecision && relatedEvent) {
+                            // Check the status of the request in the event's participants_status
+                            const participantStatus = relatedEvent.participants_status?.[user?.id || ''] || '';
+                            isApproved = participantStatus === 'accepted';
+                            isPending = participantStatus === 'pending' || (notification.invite_status === 'pending');
+                        }
+
+                        // Determine the responsible entity name for display
+                        let responsibleName = 'setor responsável';
+                        if (isParticipationDecision) {
+                            responsibleName = 'criador do evento';
+                        } else if (notification.type === 'transport_request' || notification.type === 'transport_decision' || (relatedEvent?.transporte_status === 'pending')) {
+                            responsibleName = 'setor de transporte';
+                        } else {
+                            const itemCategory = relatedReq?.expand?.item?.category;
+                            if (itemCategory === 'INFORMATICA') {
+                                responsibleName = 'setor de informática';
+                            } else if (itemCategory === 'COPA') {
+                                responsibleName = 'setor da copa';
+                            } else if (itemCategory === 'ALMOXARIFADO') {
+                                responsibleName = 'setor de almoxarifado';
+                            }
+                        }
+
+                        if (isApproved || getData(notification).is_decider_copy) {
                              return null;
                         }
 
@@ -1747,12 +1873,7 @@ const Notifications: React.FC = () => {
                         }
 
                         if (isPending) {
-                             return (
-                                <div className="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-100 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default" title="Esta solicitação já encontra-se em análise no setor responsável">
-                                    <span className="material-symbols-outlined text-[16px]">hourglass_top</span>
-                                    Já solicitado novamente. Aguardando resposta do setor responsável.
-                                </div>
-                             );
+                             return null; // Já mostrado no history chain acima (Elemento A)
                         }
 
                         return (
@@ -1773,9 +1894,8 @@ const Notifications: React.FC = () => {
                   {/* Re-Invite Button (Event Invites) */}
                   {(
                     isLatest && 
-                    notification.type === 'refusal' && 
-                    getData(notification).kind === 'event_invite_response' &&
-                    getData(notification).action === 'rejected'
+                    (notification.type === 'refusal' || getData(notification).kind === 'organizer_invite_sent') && 
+                    (getData(notification).kind === 'event_invite_response' || getData(notification).kind === 'organizer_invite_sent')
                   ) && (
                     (() => {
                         // Check if already re-invited (check history order)
@@ -1794,20 +1914,34 @@ const Notifications: React.FC = () => {
                         // We must ensure this rejection is accounted for in the timeline.
                         // If it's not in the history yet, we assume it comes AFTER the existing history.
                         const isRefusalInHistory = effectiveHistory.some((h: any) => 
-                            h.action === 'invite_rejected' && 
+                            (h.action === 'invite_rejected' || h.action === 'invite_accepted') && 
                             (h.timestamp === notification.created || Math.abs(new Date(h.timestamp).getTime() - new Date(notification.created).getTime()) < 1000)
                         );
 
                         if (!isRefusalInHistory) {
-                             effectiveHistory.push({
-                                 action: 'invite_rejected',
-                                 timestamp: notification.created
-                             });
+                             if (notification.type === 'refusal' || notifData.action === 'rejected') {
+                                 effectiveHistory.push({
+                                     action: 'invite_rejected',
+                                     timestamp: notification.created
+                                 });
+                             } else if (notifData.kind === 'event_invite_response' && notifData.action === 'accepted') {
+                                 effectiveHistory.push({
+                                     action: 'invite_accepted',
+                                     timestamp: notification.created
+                                 });
+                             }
                         }
 
-                        let isPendingDecision = false;
+                        // Also check if this is the original 'organizer_invite_sent' and we have NO history of re-invites/rejections
+                        // In this case, it should show 'Aguardando decisão'
+                        const hasResponses = effectiveHistory.some((h: any) => 
+                            h.action === 'invite_rejected' || h.action === 'invite_accepted' || h.action === 'invite_resent'
+                        );
 
-                        if (effectiveHistory.length > 0) {
+                        let isPendingDecision = false;
+                        let isAccepted = false;
+
+                        if (hasResponses) {
                              // Sort history chronologically
                              const sortedHistory = effectiveHistory.sort((a: any, b: any) => 
                                  new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
@@ -1824,6 +1958,14 @@ const Notifications: React.FC = () => {
                              else if (lastAction.action === 'invite_rejected') {
                                  isPendingDecision = false;
                              }
+                             // If the last action was an acceptance (from guest), we are NOT pending and flow is complete
+                             else if (lastAction.action === 'invite_accepted') {
+                                 isPendingDecision = false;
+                                 isAccepted = true;
+                             }
+                        } else if (notifData.kind === 'organizer_invite_sent') {
+                             // New organizer notification with no responses yet
+                             isPendingDecision = true;
                         } else {
                              // Fallback to flag if no history (legacy behavior)
                              isPendingDecision = notifData.re_invited === true;
@@ -1838,18 +1980,31 @@ const Notifications: React.FC = () => {
                              );
                         }
 
-                        return (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setReInviteNotification(notification);
-                              }}
-                              className="px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1.5"
-                            >
-                              <span className="material-symbols-outlined text-[16px]">person_add</span>
-                              Convidar Novamente
-                            </button>
-                        );
+                        if (isAccepted) {
+                            return null;
+                        }
+
+                        // Only show "Convidar Novamente" if it was a rejection flow
+                        if (notifData.kind === 'event_invite_response' || notifData.kind === 'organizer_invite_sent') {
+                             // For 'organizer_invite_sent' without responses, we already showed 'pending' above.
+                             // If it's a rejection, show re-invite.
+                             if (notifData.action === 'rejected' || effectiveHistory.some(h => h.action === 'invite_rejected')) {
+                                 return (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setReInviteNotification(notification);
+                                      }}
+                                      className="px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold rounded-lg hover:bg-slate-200 transition-all flex items-center gap-1.5"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px]">person_add</span>
+                                      Convidar Novamente
+                                    </button>
+                                 );
+                             }
+                        }
+
+                        return null;
                     })()
                   )}
 
@@ -1915,6 +2070,9 @@ const Notifications: React.FC = () => {
               (getData(reRequestNotification).kind === 'transport_decision') ||
               (reRequestNotification.title && reRequestNotification.title.toLowerCase().includes('transporte')))
               ? 'transport' 
+              : (reRequestNotification.type === 'event_participation_request' || 
+                 getData(reRequestNotification).kind === 'participation_request_response')
+              ? 'participation'
               : 'item'
           }
           onClose={() => setReRequestNotification(null)}

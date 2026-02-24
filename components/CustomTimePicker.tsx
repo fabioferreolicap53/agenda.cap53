@@ -157,7 +157,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
       {isOpen && (
         <>
           {/* Mobile Center Wrapper */}
-          <div className="fixed inset-0 z-[100] md:hidden flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[1200] md:hidden flex items-center justify-center p-4">
             <div 
               className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
               onClick={() => setIsOpen(false)}

@@ -17,8 +17,8 @@ const ReInviteModal: React.FC<ReInviteModalProps> = ({ notification, onClose, on
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden transform transition-all scale-100">
+    <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-blue-50/50">
           <h3 className="font-bold text-blue-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-blue-600">person_add</span>

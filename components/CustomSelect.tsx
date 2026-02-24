@@ -32,8 +32,14 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const optionsContainerRef = useRef<HTMLDivElement>(null);
+
+  const filteredOptions = options.filter(option => 
+    option.label.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const isSelected = (optionValue: string) => {
     if (multiSelect && Array.isArray(value)) {
@@ -57,13 +63,36 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   };
 
   useEffect(() => {
-    if (isOpen && searchable && searchInputRef.current) {
-      searchInputRef.current.focus();
-    }
-    if (!isOpen) {
-        setSearchTerm('');
+    if (isOpen) {
+      if (searchable && searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+      // Set initial highlighted index to the currently selected option or the first one
+      const currentIndex = filteredOptions.findIndex(opt => isSelected(opt.value));
+      setHighlightedIndex(currentIndex !== -1 ? currentIndex : 0);
+    } else {
+      setSearchTerm('');
+      setHighlightedIndex(-1);
     }
   }, [isOpen, searchable]);
+
+  // Scroll highlighted option into view
+  useEffect(() => {
+    if (isOpen && highlightedIndex >= 0 && optionsContainerRef.current) {
+      const container = optionsContainerRef.current;
+      const highlightedElement = container.children[highlightedIndex] as HTMLElement;
+      if (highlightedElement) {
+        const containerRect = container.getBoundingClientRect();
+        const elementRect = highlightedElement.getBoundingClientRect();
+
+        if (elementRect.bottom > containerRect.bottom) {
+          container.scrollTop += elementRect.bottom - containerRect.bottom;
+        } else if (elementRect.top < containerRect.top) {
+          container.scrollTop -= containerRect.top - elementRect.top;
+        }
+      }
+    }
+  }, [highlightedIndex, isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -77,21 +106,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled) return;
-    
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      setIsOpen(!isOpen);
-    } else if (e.key === 'Escape') {
-      setIsOpen(false);
-    }
-  };
-
-  const filteredOptions = options.filter(option => 
-    option.label.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   const handleSelect = (optionValue: string) => {
     if (multiSelect && Array.isArray(value)) {
@@ -110,6 +124,55 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       onChange(newValue);
     } else {
       onChange(optionValue);
+      setIsOpen(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled) return;
+    
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (isOpen && highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
+        handleSelect(filteredOptions[highlightedIndex].value);
+      } else {
+        setIsOpen(!isOpen);
+      }
+    } else if (e.key === ' ') {
+      // Only toggle if not searching
+      if (!searchable || !isOpen) {
+        e.preventDefault();
+        setIsOpen(!isOpen);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    } else if (e.key === 'ArrowDown') {
+       e.preventDefault();
+       if (!isOpen) {
+         if (!multiSelect && options.length > 0) {
+           const currentIndex = options.findIndex(opt => opt.value === value);
+           const nextIndex = (currentIndex + 1) % options.length;
+           onChange(options[nextIndex].value);
+         } else {
+           setIsOpen(true);
+         }
+       } else {
+         setHighlightedIndex(prev => (prev + 1) % filteredOptions.length);
+       }
+     } else if (e.key === 'ArrowUp') {
+       e.preventDefault();
+       if (!isOpen) {
+         if (!multiSelect && options.length > 0) {
+           const currentIndex = options.findIndex(opt => opt.value === value);
+           const nextIndex = (currentIndex - 1 + options.length) % options.length;
+           onChange(options[nextIndex].value);
+         } else {
+           setIsOpen(true);
+         }
+       } else {
+         setHighlightedIndex(prev => (prev - 1 + filteredOptions.length) % filteredOptions.length);
+       }
+    } else if (e.key === 'Tab' && isOpen) {
       setIsOpen(false);
     }
   };
@@ -175,23 +238,32 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     className="w-full py-2 pl-10 pr-4 text-sm text-gray-700 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-transparent transition-all"
                     placeholder="Buscar..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setHighlightedIndex(0);
+                    }}
+                    onKeyDown={handleKeyDown}
                     onClick={(e) => e.stopPropagation()} 
                   />
                 </div>
              </div>
           )}
-          <div className="max-h-[280px] overflow-y-auto custom-scrollbar p-2 space-y-1">
-            {filteredOptions.map((option) => (
+          <div 
+            ref={optionsContainerRef}
+            className="max-h-[280px] overflow-y-auto custom-scrollbar p-2 space-y-1"
+          >
+            {filteredOptions.map((option, index) => (
               <div
                 key={option.value}
                 onClick={() => handleSelect(option.value)}
+                onMouseEnter={() => setHighlightedIndex(index)}
                 className={`
                   px-4 py-2 rounded-lg cursor-pointer transition-colors duration-200
                   flex items-center justify-between
+                  ${index === highlightedIndex ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : ''}
                   ${isSelected(option.value) 
                     ? 'bg-primary/5 text-primary' 
-                    : 'text-slate-600 hover:bg-gray-50 hover:text-primary'}
+                    : index !== highlightedIndex ? 'text-slate-600 hover:bg-gray-50 hover:text-primary' : ''}
                 `}
               >
                 <span className="text-sm font-medium">

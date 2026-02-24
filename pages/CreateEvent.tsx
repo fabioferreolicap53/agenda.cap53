@@ -381,6 +381,25 @@ const CreateEvent: React.FC = () => {
                     type: 'event_invite',
                     event: editingEventId
                 });
+
+                // Notificar organizador sobre novos convites na edição
+                const newParticipantNames = newParticipants
+                  .map(pId => availableUsers.find(u => u.id === pId)?.name)
+                  .filter(Boolean)
+                  .join(', ');
+
+                await notificationService.createNotification({
+                    user: user?.id || '',
+                    title: 'Novos Convites Enviados',
+                    message: `Convite para evento "${title}" enviado para: ${newParticipantNames}.`,
+                    type: 'system',
+                    event: editingEventId || undefined,
+                    data: {
+                        kind: 'organizer_invite_sent',
+                        participants_count: newParticipants.length,
+                        participants_names: newParticipantNames
+                    }
+                });
             } catch (notifErr) {
                 console.error("Falha ao criar registros/notificações para novos participantes:", notifErr);
             }
@@ -410,6 +429,25 @@ const CreateEvent: React.FC = () => {
               event: eventId || undefined
             }
           );
+
+          // Criar notificação para o organizador sobre o envio dos convites
+          const participantNames = selectedParticipants
+            .map(pId => availableUsers.find(u => u.id === pId)?.name)
+            .filter(Boolean)
+            .join(', ');
+
+          await notificationService.createNotification({
+            user: user?.id || '',
+            title: 'Convites Enviados',
+            message: `Convite para evento "${title}" enviado para: ${participantNames}.`,
+            type: 'system',
+            event: eventId || undefined,
+            data: {
+              kind: 'organizer_invite_sent',
+              participants_count: selectedParticipants.length,
+              participants_names: participantNames
+            }
+          });
          }
       }
 

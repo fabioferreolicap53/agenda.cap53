@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
+import CustomSelect from '../CustomSelect';
 
 interface FilterBarProps {
   searchTerm: string;
@@ -18,65 +19,6 @@ interface FilterBarProps {
   eventTypes: string[];
   locations: string[];
 }
-
-interface CustomSelectProps {
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  placeholder: string;
-}
-
-const CustomSelect: React.FC<CustomSelectProps> = ({ value, onChange, options, placeholder }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selectedLabel = options.find(opt => opt.value === value)?.label || placeholder;
-
-  return (
-    <div className="relative group" ref={containerRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-slate-50/50 hover:bg-white border border-transparent hover:border-indigo-100 rounded-2xl h-11 px-4 flex items-center justify-between text-sm font-bold uppercase tracking-wide text-slate-600 hover:text-indigo-600 focus:ring-2 focus:ring-indigo-50 focus:border-indigo-200 outline-none transition-all shadow-sm hover:shadow-md ${isOpen ? 'ring-2 ring-indigo-50 border-indigo-200 bg-white' : ''}`}
-      >
-        <span className="truncate">{selectedLabel}</span>
-        <span className={`material-symbols-outlined text-slate-400 group-hover:text-indigo-400 text-xl transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>expand_more</span>
-      </button>
-
-      {isOpen && (
-        <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-          <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
-            {options.map((opt) => (
-              <div
-                key={opt.value}
-                onClick={() => {
-                  onChange(opt.value);
-                  setIsOpen(false);
-                }}
-                className={`px-4 py-3 text-sm font-bold uppercase tracking-wide cursor-pointer transition-colors rounded-xl mx-1 my-0.5
-                  ${value === opt.value 
-                    ? 'bg-indigo-50 text-indigo-700' 
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-              >
-                {opt.label}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
 
 export const FilterBar: React.FC<FilterBarProps> = ({ 
   searchTerm, 
@@ -166,36 +108,44 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {/* Bottom Row: Filters */}
       <div className={`${showFilters ? 'grid' : 'hidden'} lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-300 ease-in-out`}>
         {/* Month */}
-        <CustomSelect 
-            value={selectedMonth} 
-            onChange={onMonthChange} 
-            options={months} 
-            placeholder="Todos os Meses" 
-        />
+        <div className="h-11">
+          <CustomSelect 
+              value={selectedMonth} 
+              onChange={onMonthChange} 
+              options={months} 
+              placeholder="Todos os Meses" 
+          />
+        </div>
 
         {/* Year */}
-        <CustomSelect 
-            value={selectedYear} 
-            onChange={onYearChange} 
-            options={years} 
-            placeholder="Todos os Anos" 
-        />
+        <div className="h-11">
+          <CustomSelect 
+              value={selectedYear} 
+              onChange={onYearChange} 
+              options={years} 
+              placeholder="Todos os Anos" 
+          />
+        </div>
 
         {/* Type */}
-        <CustomSelect 
-            value={selectedType} 
-            onChange={onTypeChange} 
-            options={typeOptions} 
-            placeholder="Todos os Tipos" 
-        />
+        <div className="h-11">
+          <CustomSelect 
+              value={selectedType} 
+              onChange={onTypeChange} 
+              options={typeOptions} 
+              placeholder="Todos os Tipos" 
+          />
+        </div>
 
         {/* Location */}
-        <CustomSelect 
-            value={selectedLocation} 
-            onChange={onLocationChange} 
-            options={locationOptions} 
-            placeholder="Todos os Locais" 
-        />
+        <div className="h-11">
+          <CustomSelect 
+              value={selectedLocation} 
+              onChange={onLocationChange} 
+              options={locationOptions} 
+              placeholder="Todos os Locais" 
+          />
+        </div>
       </div>
     </div>
   );

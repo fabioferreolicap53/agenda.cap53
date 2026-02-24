@@ -32,27 +32,32 @@ export const notifyEventStatusChange = async (
     
     const recipients = new Set<string>();
 
-    // 1. Participantes (inclui coorganizadores se estiverem na lista de participantes)
+    // Participantes e Co-organizadores via agenda_cap53_participantes
+    try {
+        const participantsList = await pb.collection('agenda_cap53_participantes').getFullList({
+            filter: `event = "${event.id}"`,
+            fields: 'user'
+        });
+        participantsList.forEach((p: any) => recipients.add(p.user));
+    } catch (err) {
+        console.error('[NotificationUtils] Erro ao buscar participantes do evento:', err);
+    }
+
+    // Participantes diretos do objeto do evento (fallback/legado)
     if (event.participants && Array.isArray(event.participants)) {
         event.participants.forEach((p: string) => recipients.add(p));
     }
     
-    // 2. Criador do evento (se não for quem está cancelando)
+    // Criador do evento (Organizador)
     if (event.user && event.user !== actorId) {
         recipients.add(event.user);
     }
 
-    // 3. Setores com solicitações APROVADAS
+    // Setores aprovados (ALMC, DCA, TRA)
     const sectorRoles = new Set<string>();
 
     try {
-        // Verificar itens confirmados nos campos JSON (Fallback/Robustez)
-        if (event.almoxarifado_confirmed_items && Object.keys(event.almoxarifado_confirmed_items).length > 0) sectorRoles.add('ALMC');
-        if (event.copa_confirmed_items && Object.keys(event.copa_confirmed_items).length > 0) sectorRoles.add('ALMC');
-        if (event.informatica_confirmed_items && Object.keys(event.informatica_confirmed_items).length > 0) sectorRoles.add('DCA');
-
-        // ALMC e DCA (Informática) via Requests
-        // Busca solicitações aprovadas para este evento na coleção unificada de requisições
+        // Busca solicitações de itens/serviços (ALMC e DCA)
         const requestFilter = `event = "${event.id}" && status = "approved"`;
         const almacRequests = await pb.collection('agenda_cap53_almac_requests').getFullList({
             filter: requestFilter,
@@ -65,45 +70,28 @@ export const notifyEventStatusChange = async (
         if (hasAlmcRequest) sectorRoles.add('ALMC');
         if (hasDcaRequest) sectorRoles.add('DCA');
 
-        // Transporte (TRA)
-        // 1. Baseado no status do transporte no próprio evento
-        if (event.transporte_status === 'confirmed') {
+        // Busca solicitações de transporte (TRA)
+        const transportRequests = await pb.collection('agenda_cap53_transport_requests').getList(1, 1, {
+            filter: `evento = "${event.id}" && status = "APPROVED"`,
+            fields: 'id'
+        });
+
+        if (transportRequests.totalItems > 0) {
             sectorRoles.add('TRA');
-        } else {
-            // 2. Baseado na coleção de requisições de transporte (verificando status APPROVED)
-            // Nota: O campo de relacionamento chama-se 'evento' e o status é 'APPROVED' (uppercase)
-            try {
-                const transportRequests = await pb.collection('agenda_cap53_transport_requests').getList(1, 1, {
-                    filter: `evento = "${event.id}" && status = "APPROVED"`,
-                    fields: 'id'
-                });
-                
-                if (transportRequests.totalItems > 0) {
-                    sectorRoles.add('TRA');
-                }
-            } catch (tErr) {
-                console.warn('[NotificationUtils] Erro ao verificar requests de transporte:', tErr);
-            }
         }
 
-        console.log(`[NotificationUtils] Setores a notificar:`, Array.from(sectorRoles));
-
-        // Buscar usuários dos setores identificados
+        // Adiciona os usuários dos setores identificados
         if (sectorRoles.size > 0) {
             const roleFilter = Array.from(sectorRoles).map(role => `role = "${role}"`).join(' || ');
-            
-            // Busca usuários que têm essas roles
             const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
                 filter: roleFilter,
                 fields: 'id'
             });
-            
             sectorUsers.forEach((u: any) => recipients.add(u.id));
         }
 
     } catch (err) {
         console.error('[NotificationUtils] Erro ao buscar setores para notificação:', err);
-        // Não interrompe o fluxo, notifica pelo menos os participantes
     }
 
     // Remover o autor da ação da lista de destinatários

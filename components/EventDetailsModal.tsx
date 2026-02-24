@@ -32,10 +32,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const [isChatOpen, setIsChatOpen] = React.useState(initialChatOpen);
   const [isRequesting, setIsRequesting] = React.useState(false);
   const [requestMessage, setRequestMessage] = React.useState('');
-  const [showRequestForm, setShowRequestForm] = React.useState(false);
+  const [showRequestForm, setShowRequestForm] = React.useState(() => {
+    if (!user || !initialEvent) return false;
+    const isCreator = initialEvent.user === user.id;
+    const isSector = ['TRA', 'ALMC', 'DCA'].includes(user.role);
+    const isParticipant = initialEvent.participants?.includes(user.id);
+    const hasStatus = initialEvent.participants_status && initialEvent.participants_status[user.id];
+    return !isCreator && !isSector && !isParticipant && !hasStatus;
+  });
   const [requestRoles, setRequestRoles] = React.useState<Record<string, string>>({});
   const [messageCount, setMessageCount] = React.useState(0);
-  const [reRequestTarget, setReRequestTarget] = React.useState<{type: 'item' | 'transport', data: any} | null>(null);
+  const [reRequestTarget, setReRequestTarget] = React.useState<{type: 'item' | 'transport' | 'participation', data: any} | null>(null);
   const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
   const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'transport' | 'participation', data?: any } | null>(null);
   const [refusalModalProps, setRefusalModalProps] = React.useState<{title?: string, description?: string}>({});
@@ -959,7 +966,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         {(() => {
                             const participants = event.expand?.participants?.filter((p: any) => p.id !== event.user) || [];
                             
-                            if (participants.length === 0 && !event.expand?.user) {
+                            // Get users from pending participation requests
+                            const pendingRequesters = eventParticipationRequests
+                                .filter(r => r.status === 'pending' && !participants.some(p => p.id === r.user))
+                                .map(r => r.expand?.user)
+                                .filter(Boolean);
+
+                            if (participants.length === 0 && pendingRequesters.length === 0 && !event.expand?.user) {
                                 return (
                                     <div className="py-12 flex flex-col items-center justify-center text-slate-400 bg-slate-50/50 rounded-[2rem] border border-dashed border-slate-200">
                                         <span className="material-symbols-outlined text-4xl mb-2">group_off</span>
@@ -969,7 +982,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             }
 
                             const confirmed = participants.filter((p: any) => participantStatus[p.id] === 'accepted');
-                            const pending = participants.filter((p: any) => !participantStatus[p.id] || participantStatus[p.id] === 'pending');
+                            const pending = [
+                                ...participants.filter((p: any) => !participantStatus[p.id] || participantStatus[p.id] === 'pending'),
+                                ...pendingRequesters
+                            ];
                             const rejected = participants.filter((p: any) => participantStatus[p.id] === 'rejected');
 
                             return (
@@ -1295,7 +1311,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 <div className="space-y-4">
                                     {[
                                         { label: 'Confirmados', color: 'bg-green-500', count: Object.values(participantStatus).filter(s => s === 'accepted').length + 1 },
-                                        { label: 'Pendentes', color: 'bg-yellow-500', count: Object.values(participantStatus).filter(s => s === 'pending').length },
+                                        { 
+                                            label: 'Pendentes', 
+                                            color: 'bg-yellow-500', 
+                                            count: Object.values(participantStatus).filter(s => s === 'pending').length + 
+                                                   eventParticipationRequests.filter(r => r.status === 'pending').length 
+                                        },
                                         { label: 'Recusados', color: 'bg-red-500', count: Object.values(participantStatus).filter(s => s === 'rejected').length }
                                     ].map(item => (
                                         <div key={item.label} className="flex items-center justify-between">
