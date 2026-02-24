@@ -7,10 +7,12 @@ import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
 import { pb } from '../lib/pocketbase';
 
 // Novos componentes modularizados
+import ConfirmationModal from '../components/ConfirmationModal';
 import { StatsCards } from '../components/MySpace/StatsCards';
 import { EventList } from '../components/MySpace/EventList';
 import { FilterBar } from '../components/MySpace/FilterBar';
 import { AnalyticsSection } from '../components/MySpace/AnalyticsSection';
+import RefusalModal from '../components/RefusalModal';
 
 const MyInvolvement: React.FC = () => {
   const { user } = useAuth();
@@ -23,6 +25,19 @@ const MyInvolvement: React.FC = () => {
   // Local state
   const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected'>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
+
+  const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+    title: string;
+    description: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+    confirmText?: string;
+  }>({
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
   
   // Inicializa busca com parâmetro da URL se existir, mas gerencia localmente
   const [searchTerm, setSearchTerm] = useState(() => {
@@ -38,6 +53,11 @@ const MyInvolvement: React.FC = () => {
   
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+
+  // Refusal Modal State for Event Cancellation
+  const [refusalModalOpen, setRefusalModalOpen] = useState(false);
+  const [eventToCancel, setEventToCancel] = useState<MySpaceEvent | null>(null);
+  const [processingCancellation, setProcessingCancellation] = useState(false);
 
   // Carregar opções de filtro
   React.useEffect(() => {
@@ -57,47 +77,62 @@ const MyInvolvement: React.FC = () => {
 
   // Handlers
   const handleCancelEvent = async (event: MySpaceEvent) => {
-    const reason = prompt('Por que deseja cancelar este evento?');
-    if (reason === null) return;
+    setEventToCancel(event);
+    setRefusalModalOpen(true);
+  };
 
+  const handleConfirmCancellation = async (justification: string) => {
+    if (!eventToCancel) return;
+    
+    setProcessingCancellation(true);
     try {
       // 1. Atualizar status
-      await pb.collection('agenda_cap53_eventos').update(event.id, {
+      await pb.collection('agenda_cap53_eventos').update(eventToCancel.id, {
         status: 'cancelled',
-        cancel_reason: reason
+        cancel_reason: justification
       });
 
       // 2. Notificar envolvidos
       try {
-        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(event.id);
+        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventToCancel.id);
         if (user) {
-          await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', reason, user.id);
+          await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', justification, user.id);
         }
       } catch (notifErr) {
         console.error('Erro ao enviar notificações de cancelamento:', notifErr);
       }
 
-      alert('Evento cancelado com sucesso.');
+      // alert('Evento cancelado com sucesso.'); // Removed alert for better UX, or could replace with toast
       refresh();
     } catch (error) {
       console.error('Error cancelling event:', error);
       alert('Erro ao cancelar evento.');
+    } finally {
+      setProcessingCancellation(false);
+      setRefusalModalOpen(false);
+      setEventToCancel(null);
     }
   };
 
   const handleDeleteEvent = async (event: MySpaceEvent) => {
-    if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"?`)) return;
-
-    try {
-        await deleteEventWithCleanup(event.id, user?.id);
-        
-        alert('Evento excluído com sucesso.');
-        refresh();
-    } catch (error: any) {
-        console.error('Error deleting event:', error);
-        const msg = error.data?.message || error.message || 'Erro desconhecido';
-        alert(`Erro ao excluir evento: ${msg}`);
-    }
+    setConfirmationModalConfig({
+      title: 'Excluir Evento',
+      description: `Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"? Esta ação não pode ser desfeita e removerá todas as notificações vinculadas aos participantes.`,
+      confirmText: 'Excluir',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteEventWithCleanup(event.id, user?.id);
+          refresh();
+          setConfirmationModalOpen(false);
+        } catch (error: any) {
+          console.error('Error deleting event:', error);
+          const msg = error.data?.message || error.message || 'Erro desconhecido';
+          alert(`Erro ao excluir evento: ${msg}`);
+        }
+      }
+    });
+    setConfirmationModalOpen(true);
   };
 
   const handleOpenEventInCalendar = (event: MySpaceEvent) => {
@@ -266,6 +301,29 @@ const MyInvolvement: React.FC = () => {
           </>
         )}
       </div>
+
+      {refusalModalOpen && (
+        <RefusalModal
+          onClose={() => {
+            setRefusalModalOpen(false);
+            setEventToCancel(null);
+          }}
+          onConfirm={handleConfirmCancellation}
+          loading={processingCancellation}
+          title="Cancelar Evento"
+          description="Por favor, informe o motivo do cancelamento deste evento. Esta ação notificará todos os participantes."
+        />
+      )}
+
+      <ConfirmationModal
+        isOpen={confirmationModalOpen}
+        onClose={() => setConfirmationModalOpen(false)}
+        onConfirm={confirmationModalConfig.onConfirm}
+        title={confirmationModalConfig.title}
+        description={confirmationModalConfig.description}
+        confirmText={confirmationModalConfig.confirmText}
+        variant={confirmationModalConfig.variant}
+      />
     </div>
   );
 };

@@ -4,9 +4,11 @@ interface RefusalModalProps {
   onClose: () => void;
   onConfirm: (justification: string) => void;
   loading?: boolean;
+  title?: string;
+  description?: string;
 }
 
-const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading }) => {
+const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading, title = 'Recusar Solicitação', description }) => {
   const [justification, setJustification] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -20,7 +22,7 @@ const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-red-50/50">
           <h3 className="font-bold text-red-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-red-600">block</span>
-            Recusar Solicitação
+            {title}
           </h3>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
             <span className="material-symbols-outlined">close</span>
@@ -29,8 +31,13 @@ const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
+            {description && (
+              <p className="text-sm text-slate-600 mb-4 leading-relaxed">
+                {description}
+              </p>
+            )}
             <label className="block text-sm font-semibold text-slate-700 mb-2">
-              Motivo da Recusa <span className="text-slate-400 font-normal">(Opcional)</span>
+              Motivo <span className="text-slate-400 font-normal">(Opcional)</span>
             </label>
             <textarea
               value={justification}

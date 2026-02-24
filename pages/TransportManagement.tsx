@@ -3,6 +3,7 @@ import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import RefusalModal from '../components/RefusalModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const TransportManagement: React.FC = () => {
     const { user } = useAuth();
@@ -22,8 +23,22 @@ const TransportManagement: React.FC = () => {
     const [actionMessage, setActionMessage] = useState<string | null>(null);
     const [rerequestIds, setRerequestIds] = useState<Set<string>>(new Set());
     const [refusalModalOpen, setRefusalModalOpen] = useState(false);
+    const [refusalModalProps, setRefusalModalProps] = useState<{title?: string, description?: string}>({});
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
     const [processingDecision, setProcessingDecision] = useState(false);
+
+    const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+    const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+        title: string;
+        description: string;
+        onConfirm: () => void;
+        variant?: 'danger' | 'warning' | 'info';
+        confirmText?: string;
+    }>({
+        title: '',
+        description: '',
+        onConfirm: () => {},
+    });
 
     const fetchRerequestNotifications = useCallback(async () => {
         try {
@@ -45,6 +60,10 @@ const TransportManagement: React.FC = () => {
     const handleTransportDecision = async (eventId: string, status: 'confirmed' | 'rejected') => {
         if (status === 'rejected') {
             setSelectedEventId(eventId);
+            setRefusalModalProps({
+                title: 'Recusar Solicitação de Transporte',
+                description: 'Por favor, informe o motivo da recusa para o solicitante. Esta justificativa será enviada por e-mail.'
+            });
             setRefusalModalOpen(true);
             return;
         }
@@ -496,18 +515,27 @@ const TransportManagement: React.FC = () => {
                                                 </>
                                             ) : (
                                                 <button 
-                                                    onClick={async () => {
-                                                        if (!confirm('Remover do histórico?')) return;
-                                                        try {
-                                                            await pb.collection('agenda_cap53_eventos').update(event.id, {
-                                                                transporte_suporte: false
-                                                            });
-                                                            setActionMessage('Removido');
-                                                            setTimeout(() => setActionMessage(null), 3000);
-                                                            fetchTransportRequests();
-                                                        } catch (err) {
-                                                            alert('Erro ao remover');
-                                                        }
+                                                    onClick={() => {
+                                                        setConfirmationModalConfig({
+                                                            title: 'Remover do Histórico',
+                                                            description: 'Deseja remover esta solicitação do histórico? Esta ação não afetará o evento, apenas a visualização de transporte.',
+                                                            confirmText: 'Remover',
+                                                            variant: 'danger',
+                                                            onConfirm: async () => {
+                                                                try {
+                                                                    await pb.collection('agenda_cap53_eventos').update(event.id, {
+                                                                        transporte_suporte: false
+                                                                    });
+                                                                    setActionMessage('Removido');
+                                                                    setTimeout(() => setActionMessage(null), 3000);
+                                                                    fetchTransportRequests();
+                                                                    setConfirmationModalOpen(false);
+                                                                } catch (err) {
+                                                                    alert('Erro ao remover');
+                                                                }
+                                                            }
+                                                        });
+                                                        setConfirmationModalOpen(true);
                                                     }}
                                                     className="size-11 rounded-xl bg-slate-50 text-slate-300 hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center active:scale-95"
                                                     title="Remover do histórico"
@@ -562,6 +590,7 @@ const TransportManagement: React.FC = () => {
                     onClose={() => {
                         setRefusalModalOpen(false);
                         setSelectedEventId(null);
+                        setRefusalModalProps({});
                     }}
                     onConfirm={(justification) => {
                         if (selectedEventId) {
@@ -569,8 +598,19 @@ const TransportManagement: React.FC = () => {
                         }
                     }}
                     loading={processingDecision}
+                    title={refusalModalProps.title}
+                    description={refusalModalProps.description}
                 />
             )}
+            <ConfirmationModal
+                isOpen={confirmationModalOpen}
+                onClose={() => setConfirmationModalOpen(false)}
+                onConfirm={confirmationModalConfig.onConfirm}
+                title={confirmationModalConfig.title}
+                description={confirmationModalConfig.description}
+                confirmText={confirmationModalConfig.confirmText}
+                variant={confirmationModalConfig.variant}
+            />
         </div>
     );
 };

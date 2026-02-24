@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const LocationManagement: React.FC = () => {
     const { user } = useAuth();
@@ -20,6 +21,19 @@ const LocationManagement: React.FC = () => {
     const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
     const [editTypeName, setEditTypeName] = useState('');
+
+    const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+    const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+        title: string;
+        description: string;
+        onConfirm: () => void;
+        variant?: 'danger' | 'warning' | 'info';
+        confirmText?: string;
+    }>({
+        title: '',
+        description: '',
+        onConfirm: () => {},
+    });
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -299,12 +313,21 @@ const LocationManagement: React.FC = () => {
     };
 
     const handleDeleteType = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir este tipo de evento?')) return;
-        try {
-            await pb.collection('agenda_cap53_tipos_evento').delete(id);
-        } catch (error) {
-            console.error('Error deleting event type:', error);
-        }
+        setConfirmationModalConfig({
+            title: 'Excluir Tipo de Evento',
+            description: 'Tem certeza que deseja excluir este tipo de evento? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    await pb.collection('agenda_cap53_tipos_evento').delete(id);
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error deleting event type:', error);
+                }
+            }
+        });
+        setConfirmationModalOpen(true);
     };
 
     const toggleConflictControl = async (id: string) => {
@@ -413,13 +436,22 @@ const LocationManagement: React.FC = () => {
     };
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir este local?')) return;
-        try {
-            await pb.collection('agenda_cap53_locais').delete(id);
-            fetchData();
-        } catch (error) {
-            console.error('Error deleting location:', error);
-        }
+        setConfirmationModalConfig({
+            title: 'Excluir Local',
+            description: 'Tem certeza que deseja excluir este local? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    await pb.collection('agenda_cap53_locais').delete(id);
+                    fetchData();
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error deleting location:', error);
+                }
+            }
+        });
+        setConfirmationModalOpen(true);
     };
 
     if (!user || (user.role !== 'ADMIN' && user.role !== 'CE')) {
@@ -774,6 +806,16 @@ const LocationManagement: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <ConfirmationModal
+                isOpen={confirmationModalOpen}
+                onClose={() => setConfirmationModalOpen(false)}
+                onConfirm={confirmationModalConfig.onConfirm}
+                title={confirmationModalConfig.title}
+                description={confirmationModalConfig.description}
+                confirmText={confirmationModalConfig.confirmText}
+                variant={confirmationModalConfig.variant}
+            />
         </div>
     );
 };

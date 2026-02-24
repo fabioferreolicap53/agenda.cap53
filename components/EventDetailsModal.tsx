@@ -37,6 +37,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const [messageCount, setMessageCount] = React.useState(0);
   const [reRequestTarget, setReRequestTarget] = React.useState<{type: 'item' | 'transport', data: any} | null>(null);
   const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
+  const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'transport' | 'participation', data?: any } | null>(null);
+  const [refusalModalProps, setRefusalModalProps] = React.useState<{title?: string, description?: string}>({});
   const [processingTransport, setProcessingTransport] = React.useState(false);
 
   // Touch/Swipe logic
@@ -151,7 +153,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     }
   };
 
-  const handleRequestAction = async (requestId: string, action: 'approve' | 'reject') => {
+  const handleRequestAction = async (requestId: string, action: 'approve' | 'reject', justification?: string) => {
       try {
           const request = eventParticipationRequests.find(r => r.id === requestId);
           if (!request) return;
@@ -217,7 +219,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
               title: action === 'approve' ? 'Solicitação Aprovada' : 'Solicitação Recusada',
               message: action === 'approve' 
                   ? `Sua solicitação para participar do evento "${event.title}" foi aprovada!${originalMessage ? `\n\nSua mensagem: "${originalMessage}"` : ''}`
-                  : `Sua solicitação para participar do evento "${event.title}" foi recusada pelo criador.${originalMessage ? `\n\nSua mensagem: "${originalMessage}"` : ''}`,
+                  : `Sua solicitação para participar do evento "${event.title}" foi recusada pelo criador.${justification ? `\n\nJustificativa: "${justification}"` : ''}${originalMessage ? `\n\nSua mensagem: "${originalMessage}"` : ''}`,
               type: action === 'approve' ? 'event_invite' : 'system',
               event: event.id,
               data: {
@@ -225,7 +227,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                   action: action === 'approve' ? 'accepted' : 'rejected',
                   role: action === 'approve' ? selectedRole : undefined,
                   requester_message: originalMessage,
-                  original_message: originalMessage
+                  original_message: originalMessage,
+                  justification: justification
               }
           });
 
@@ -269,6 +272,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           console.error('Error handling request action:', err);
           alert('Erro ao processar ação.');
       }
+  };
+
+  const handleRefusalConfirm = async (justification: string) => {
+    if (!refusalTarget) return;
+
+    if (refusalTarget.type === 'transport') {
+      await processTransportDecision('rejected', justification);
+    } else if (refusalTarget.type === 'participation') {
+      await handleRequestAction(refusalTarget.data, 'reject', justification);
+    }
+    setRefusalModalOpen(false);
+    setRefusalTarget(null);
   };
 
   const handleRequestParticipation = async () => {
@@ -658,10 +673,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   }, [initialEvent.id]);
 
   const handleCancelClick = () => {
-     if (confirm(`Deseja cancelar o evento "${event.title}"?`)) {
-        onCancel(event.id, event.title, event.participants);
-        onClose();
-     }
+    onCancel(event.id, event.title, event.participants);
+    onClose();
   };
 
   const handleShare = () => {
@@ -1175,7 +1188,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                             {user?.role === 'TRA' && event.transporte_status === 'pending' && (
                                                 <div className="flex gap-2">
                                                     <button 
-                                                        onClick={() => setRefusalModalOpen(true)}
+                                                        onClick={() => {
+                                                            setRefusalTarget({ type: 'transport' });
+                                                            setRefusalModalProps({
+                                                                title: 'Recusar Solicitação de Transporte',
+                                                                description: 'Por favor, informe o motivo da recusa da solicitação de transporte para o evento.'
+                                                            });
+                                                            setRefusalModalOpen(true);
+                                                        }}
                                                         disabled={processingTransport}
                                                         className="px-3 py-1.5 rounded-lg border border-red-100 bg-white text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 transition-colors disabled:opacity-50"
                                                     >
@@ -1447,7 +1467,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     />
                                                     <div className="flex items-center gap-2">
                                                         <button 
-                                                            onClick={() => handleRequestAction(request.id, 'reject')}
+                                                            onClick={() => {
+                                                                setRefusalTarget({ type: 'participation', data: request.id });
+                                                                setRefusalModalProps({
+                                                                    title: 'Recusar Participação',
+                                                                    description: 'Por favor, informe o motivo da recusa para o usuário.'
+                                                                });
+                                                                setRefusalModalOpen(true);
+                                                            }}
                                                             className="size-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
                                                             title="Recusar"
                                                         >
@@ -1560,9 +1587,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
             {refusalModalOpen && (
                 <RefusalModal 
-                    onClose={() => setRefusalModalOpen(false)}
-                    onConfirm={(justification) => processTransportDecision('rejected', justification)}
-                    loading={processingTransport}
+                    onClose={() => {
+                        setRefusalModalOpen(false);
+                        setRefusalTarget(null);
+                        setRefusalModalProps({});
+                    }}
+                    onConfirm={handleRefusalConfirm}
+                    loading={processingTransport || loadingRequests}
+                    title={refusalModalProps.title}
+                    description={refusalModalProps.description}
                 />
             )}
         </div>

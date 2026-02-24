@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const Chat: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -22,6 +23,19 @@ const Chat: React.FC = () => {
   const [showChatMobile, setShowChatMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+      title: string;
+      description: string;
+      onConfirm: () => void;
+      variant?: 'danger' | 'warning' | 'info';
+      confirmText?: string;
+  }>({
+      title: '',
+      description: '',
+      onConfirm: () => {},
+  });
 
   // Sync with global search
   useEffect(() => {
@@ -271,51 +285,77 @@ const Chat: React.FC = () => {
     const isMe = msg.sender === currentUser.id;
 
     if (isMe) {
-      if (!confirm('Deseja excluir esta mensagem para todos?')) return;
-      try {
-        await pb.collection('agenda_cap53_mensagens').update(msg.id, {
-          is_deleted: true,
-          content: 'Esta mensagem foi excluída'
-        });
-      } catch (error) {
-        console.error("Error deleting message:", error);
-      }
+      setConfirmationModalConfig({
+        title: 'Excluir Mensagem',
+        description: 'Deseja excluir esta mensagem para todos?',
+        confirmText: 'Excluir',
+        variant: 'danger',
+        onConfirm: async () => {
+          try {
+            await pb.collection('agenda_cap53_mensagens').update(msg.id, {
+              is_deleted: true,
+              content: 'Esta mensagem foi excluída'
+            });
+            setConfirmationModalOpen(false);
+          } catch (error) {
+            console.error("Error deleting message:", error);
+          }
+        }
+      });
     } else {
-      if (!confirm('Deseja excluir sua cópia desta mensagem?')) return;
-      try {
-        await pb.collection('agenda_cap53_mensagens').update(msg.id, {
-          deleted_by_receiver: true
-        });
-        // Optimistic update
-        setMessages(prev => prev.filter(m => m.id !== msg.id));
-      } catch (error) {
-        console.error("Error hiding received message:", error);
-      }
+      setConfirmationModalConfig({
+        title: 'Excluir Mensagem',
+        description: 'Deseja excluir sua cópia desta mensagem?',
+        confirmText: 'Excluir',
+        variant: 'danger',
+        onConfirm: async () => {
+          try {
+            await pb.collection('agenda_cap53_mensagens').update(msg.id, {
+              deleted_by_receiver: true
+            });
+            // Optimistic update
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+            setConfirmationModalOpen(false);
+          } catch (error) {
+            console.error("Error hiding received message:", error);
+          }
+        }
+      });
     }
+    setConfirmationModalOpen(true);
   };
 
   const handleDeleteConversation = async () => {
     if (!userId || !messages.length || !currentUser) return;
-    if (!confirm('Deseja realmente excluir sua cópia desta conversa? O outro usuário ainda poderá ver as mensagens.')) return;
-
-    setLoading(true);
-    try {
-      // Mark each message as deleted for the current user
-      const updatePromises = messages.map(msg => {
-        const isSender = msg.sender === currentUser.id;
-        return pb.collection('agenda_cap53_mensagens').update(msg.id, {
-          [isSender ? 'deleted_by_sender' : 'deleted_by_receiver']: true
-        });
-      });
-      
-      await Promise.all(updatePromises);
-      setMessages([]);
-    } catch (error) {
-      console.error("Error hiding conversation:", error);
-      alert("Erro ao excluir conversa. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+    
+    setConfirmationModalConfig({
+      title: 'Excluir Conversa',
+      description: 'Deseja realmente excluir sua cópia desta conversa? O outro usuário ainda poderá ver as mensagens.',
+      confirmText: 'Excluir',
+      variant: 'danger',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          // Mark each message as deleted for the current user
+          const updatePromises = messages.map(msg => {
+            const isSender = msg.sender === currentUser.id;
+            return pb.collection('agenda_cap53_mensagens').update(msg.id, {
+              [isSender ? 'deleted_by_sender' : 'deleted_by_receiver']: true
+            });
+          });
+          
+          await Promise.all(updatePromises);
+          setMessages([]);
+          setConfirmationModalOpen(false);
+        } catch (error) {
+          console.error("Error hiding conversation:", error);
+          alert("Erro ao excluir conversa. Tente novamente.");
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+    setConfirmationModalOpen(true);
   };
 
   const getStatusColor = (status?: string) => {
@@ -628,6 +668,16 @@ const Chat: React.FC = () => {
             </div>
           )}
       </div>
+
+      <ConfirmationModal
+          isOpen={confirmationModalOpen}
+          onClose={() => setConfirmationModalOpen(false)}
+          onConfirm={confirmationModalConfig.onConfirm}
+          title={confirmationModalConfig.title}
+          description={confirmationModalConfig.description}
+          confirmText={confirmationModalConfig.confirmText}
+          variant={confirmationModalConfig.variant}
+      />
     </div>
   );
 };

@@ -12,7 +12,16 @@ export const useNotificationActions = (
 
   const markAsRead = async (id: string) => {
     try {
-      await pb.collection('agenda_cap53_notifications').update(id, { read: true });
+      if (id.startsWith('req_')) {
+        // Handle virtual notification marking as read
+        const readVirtual = JSON.parse(localStorage.getItem('virtual_notifications_read') || '[]');
+        if (!readVirtual.includes(id)) {
+          readVirtual.push(id);
+          localStorage.setItem('virtual_notifications_read', JSON.stringify(readVirtual));
+        }
+      } else {
+        await pb.collection('agenda_cap53_notifications').update(id, { read: true });
+      }
       
       setNotifications(prev => 
         prev.map(n => n.id === id ? { ...n, read: true } : n)
@@ -34,17 +43,28 @@ export const useNotificationActions = (
     if (!user) return;
     
     try {
-      const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+      const unread = notifications.filter(n => !n.read);
+      if (unread.length === 0) return;
       
-      if (unreadIds.length === 0) return;
-      
-      // Process in batches of 20 to avoid timeouts
-      const batchSize = 20;
-      for (let i = 0; i < unreadIds.length; i += batchSize) {
-        const batch = unreadIds.slice(i, i + batchSize);
-        await Promise.all(
-          batch.map(id => pb.collection('agenda_cap53_notifications').update(id, { read: true }))
-        );
+      const realUnreadIds = unread.filter(n => !n.id.startsWith('req_')).map(n => n.id);
+      const virtualUnreadIds = unread.filter(n => n.id.startsWith('req_')).map(n => n.id);
+
+      // 1. Handle Real Notifications
+      if (realUnreadIds.length > 0) {
+        const batchSize = 20;
+        for (let i = 0; i < realUnreadIds.length; i += batchSize) {
+          const batch = realUnreadIds.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(id => pb.collection('agenda_cap53_notifications').update(id, { read: true }))
+          );
+        }
+      }
+
+      // 2. Handle Virtual Notifications
+      if (virtualUnreadIds.length > 0) {
+        const readVirtual = JSON.parse(localStorage.getItem('virtual_notifications_read') || '[]');
+        const newReadVirtual = [...new Set([...readVirtual, ...virtualUnreadIds])];
+        localStorage.setItem('virtual_notifications_read', JSON.stringify(newReadVirtual));
       }
       
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -68,10 +88,17 @@ export const useNotificationActions = (
       return;
     }
 
-    if (!confirm('Tem certeza que deseja excluir esta notificação?')) return;
-
     try {
-      await pb.collection('agenda_cap53_notifications').delete(id);
+      if (id.startsWith('req_')) {
+        // Handle virtual notification deletion (ignoring)
+        const ignored = JSON.parse(localStorage.getItem('ignored_notifications') || '[]');
+        if (!ignored.includes(id)) {
+          ignored.push(id);
+          localStorage.setItem('ignored_notifications', JSON.stringify(ignored));
+        }
+      } else {
+        await pb.collection('agenda_cap53_notifications').delete(id);
+      }
       
       setNotifications(prev => prev.filter(n => n.id !== id));
       if (!notification.read) {
@@ -86,87 +113,303 @@ export const useNotificationActions = (
   const clearHistory = async () => {
     if (!user) return;
     
-    if (!confirm('Tem certeza que deseja limpar todo o histórico? Notificações pendentes não serão removidas.')) return;
-
     try {
       // Delete all notifications that are deletable (mostly read and history)
-      const deletableIds = notifications
-        .filter(n => isNotificationDeletable(n).canDelete)
-        .map(n => n.id);
+      const deletable = notifications.filter(n => isNotificationDeletable(n).canDelete);
       
-      if (deletableIds.length === 0) {
-        alert('Não há notificações no histórico para limpar.');
+      if (deletable.length === 0) {
         return;
       }
 
-      const batchSize = 20;
-      for (let i = 0; i < deletableIds.length; i += batchSize) {
-        const batch = deletableIds.slice(i, i + batchSize);
-        await Promise.all(
-          batch.map(id => pb.collection('agenda_cap53_notifications').delete(id))
-        );
+      const realIds = deletable.filter(n => !n.id.startsWith('req_')).map(n => n.id);
+      const virtualIds = deletable.filter(n => n.id.startsWith('req_')).map(n => n.id);
+
+      // 1. Handle Real
+      if (realIds.length > 0) {
+        const batchSize = 20;
+        for (let i = 0; i < realIds.length; i += batchSize) {
+          const batch = realIds.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(id => pb.collection('agenda_cap53_notifications').delete(id))
+          );
+        }
+      }
+
+      // 2. Handle Virtual
+      if (virtualIds.length > 0) {
+        const ignored = JSON.parse(localStorage.getItem('ignored_notifications') || '[]');
+        const newIgnored = [...new Set([...ignored, ...virtualIds])];
+        localStorage.setItem('ignored_notifications', JSON.stringify(newIgnored));
       }
       
-      refreshNotifications();
+      await refreshNotifications();
     } catch (error) {
       console.error('Error clearing history:', error);
-      alert('Erro ao limpar histórico.');
+      throw error;
     }
   };
 
   const clearAllNotifications = async () => {
     if (!user) return;
     
-    if (!confirm('ATENÇÃO: Isso excluirá TODAS as suas notificações possíveis de serem excluídas. Continuar?')) return;
-
     try {
-      const deletableIds = notifications
-        .filter(n => isNotificationDeletable(n).canDelete)
-        .map(n => n.id);
+      const deletable = notifications.filter(n => isNotificationDeletable(n).canDelete);
+      if (deletable.length === 0) return;
+
+      const realIds = deletable.filter(n => !n.id.startsWith('req_')).map(n => n.id);
+      const virtualIds = deletable.filter(n => n.id.startsWith('req_')).map(n => n.id);
         
-      const batchSize = 20;
-      for (let i = 0; i < deletableIds.length; i += batchSize) {
-        const batch = deletableIds.slice(i, i + batchSize);
-        await Promise.all(
-          batch.map(id => pb.collection('agenda_cap53_notifications').delete(id))
-        );
+      // 1. Handle Real
+      if (realIds.length > 0) {
+        const batchSize = 20;
+        for (let i = 0; i < realIds.length; i += batchSize) {
+          const batch = realIds.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(id => pb.collection('agenda_cap53_notifications').delete(id))
+          );
+        }
+      }
+
+      // 2. Handle Virtual
+      if (virtualIds.length > 0) {
+        const ignored = JSON.parse(localStorage.getItem('ignored_notifications') || '[]');
+        const newIgnored = [...new Set([...ignored, ...virtualIds])];
+        localStorage.setItem('ignored_notifications', JSON.stringify(newIgnored));
       }
       
-      refreshNotifications();
+      await refreshNotifications();
     } catch (error) {
       console.error('Error clearing all notifications:', error);
+      throw error;
     }
   };
 
   const handleDecision = async (notification: NotificationRecord, action: 'accepted' | 'rejected' | 'approved', justification?: string) => {
-    if (!notification.related_request && !notification.event) return;
+    // Basic validation
+    if (!notification) {
+        console.error('handleDecision: notification is null');
+        return;
+    }
 
     try {
-      // If it's a request decision
-      if (notification.type === 'request_decision') {
-        // Just mark as read and maybe update local state if needed
-        await markAsRead(notification.id);
-        return;
+      // 1. CASO: Decisão de Solicitação de Item (Almoxarifado/DCA)
+      if (notification.type === 'almc_item_request') {
+        const requestId = notification.related_request;
+        if (!requestId) {
+            console.error('handleDecision: requestId is missing for almc_item_request');
+            throw new Error('ID da solicitação não encontrado.');
+        }
+
+        // Atualiza o status do request no banco
+        await pb.collection('agenda_cap53_almac_requests').update(requestId, {
+            status: action,
+            justification: justification || '',
+        });
+
+        // Busca dados frescos do request para as notificações
+        let req;
+        try {
+            req = await pb.collection('agenda_cap53_almac_requests').getOne(requestId, { 
+                expand: 'created_by,item,event,event.user' 
+            });
+        } catch (e) {
+            console.warn('Could not fetch expanded request data, using notification data instead');
+        }
+
+        const itemName = req?.expand?.item?.name || notification.expand?.related_request?.expand?.item?.name || 'item';
+        const eventTitle = req?.expand?.event?.title || notification.expand?.event?.title || 'Evento';
+        const message = `O pedido de "${itemName}" para o evento "${eventTitle}" foi ${action === 'approved' ? 'aprovado' : 'reprovado'}.${action === 'rejected' && justification ? ` Justificativa: ${justification}` : ''}`;
+        const requesterId = req?.expand?.created_by?.id || req?.created_by || notification.expand?.related_request?.created_by;
+        const eventCreatorId = req?.expand?.event?.user || req?.event_creator_id || notification.expand?.event?.user;
+
+        // Notifica o solicitante (se não for o próprio usuário logado decidindo)
+        if (requesterId && requesterId !== user?.id) {
+            await pb.collection('agenda_cap53_notifications').create({
+                user: requesterId,
+                title: `Solicitação ${action === 'approved' ? 'Aprovada' : 'Reprovada'}`,
+                message: message,
+                type: action === 'rejected' ? 'refusal' : 'system',
+                read: false,
+                related_request: requestId,
+                event: req?.event || notification.event,
+                data: {
+                    kind: 'almc_item_decision',
+                    action: action,
+                    rejected_by: action === 'rejected' ? user?.id : undefined,
+                    rejected_by_name: action === 'rejected' ? user?.name : undefined,
+                    approved_by: action === 'approved' ? user?.id : undefined,
+                    approved_by_name: action === 'approved' ? user?.name : undefined,
+                    justification: justification,
+                    item_name: itemName,
+                    event_title: eventTitle
+                },
+                acknowledged: false
+            });
+        }
+
+        // Notifica o criador do evento (se for diferente do solicitante e do decider)
+        if (eventCreatorId && eventCreatorId !== user?.id && eventCreatorId !== requesterId) {
+            await pb.collection('agenda_cap53_notifications').create({
+                user: eventCreatorId,
+                title: `Ciência: Item ${action === 'approved' ? 'Aprovado' : 'Reprovada'}`,
+                message: message,
+                type: action === 'rejected' ? 'refusal' : 'system',
+                read: false,
+                related_request: requestId,
+                event: req?.event || notification.event,
+                data: {
+                    kind: 'almc_item_decision',
+                    action: action,
+                    justification: justification,
+                    item_name: itemName,
+                    event_title: eventTitle
+                },
+                acknowledged: false
+            });
+        }
+
+        // Notifica o próprio decider (Setor) para manter no histórico dele
+        if (user?.id) {
+            await pb.collection('agenda_cap53_notifications').create({
+                user: user.id,
+                title: `Solicitação ${action === 'approved' ? 'Aprovada' : 'Recusada'}`,
+                message: `Você ${action === 'approved' ? 'aprovou' : 'recusou'} o pedido de "${itemName}" para o evento "${eventTitle}".${action === 'rejected' && justification ? ` Motivo: ${justification}` : ''}`,
+                type: action === 'rejected' ? 'refusal' : 'system',
+                read: true, // Já nasce lida para o decider
+                related_request: requestId,
+                event: req?.event || notification.event,
+                data: {
+                    kind: 'almc_item_decision',
+                    action: action,
+                    justification: justification,
+                    is_decider_copy: true,
+                    item_name: itemName,
+                    event_title: eventTitle
+                },
+                acknowledged: true
+            });
+        }
+      }
+      // 2. CASO: Decisão de Transporte
+      else if (notification.type === 'transport_request') {
+        const eventId = notification.event;
+        if (!eventId) {
+            console.error('handleDecision: eventId is missing for transport_request');
+            throw new Error('ID do evento não encontrado.');
+        }
+
+        // Atualiza o status do transporte no evento
+        await pb.collection('agenda_cap53_eventos').update(eventId, {
+            transporte_status: action === 'approved' ? 'confirmed' : 'rejected',
+            transporte_justification: justification || '',
+        });
+
+        // Notifica os interessados
+        const event = await pb.collection('agenda_cap53_eventos').getOne(eventId, { expand: 'user' });
+        const eventCreatorId = event.expand?.user?.id || event.user;
+        const eventTitle = event.title || 'Evento';
+        const message = `O transporte para o evento "${eventTitle}" foi ${action === 'approved' ? 'confirmado' : 'recusado'}.${action === 'rejected' && justification ? ` Justificativa: ${justification}` : ''}`;
+
+        if (eventCreatorId && eventCreatorId !== user?.id) {
+            await pb.collection('agenda_cap53_notifications').create({
+                user: eventCreatorId,
+                title: `Transporte ${action === 'approved' ? 'Confirmado' : 'Recusado'}`,
+                message: message,
+                type: action === 'rejected' ? 'refusal' : 'system',
+                read: false,
+                event: eventId,
+                data: {
+                    kind: 'transport_decision',
+                    action: action === 'approved' ? 'confirmed' : 'rejected',
+                    justification: justification,
+                    event_title: eventTitle
+                },
+                acknowledged: false
+            });
+        }
+
+        // Cópia para o decider
+        if (user?.id) {
+            await pb.collection('agenda_cap53_notifications').create({
+                user: user.id,
+                title: `Transporte ${action === 'approved' ? 'Confirmado' : 'Recusado'}`,
+                message: `Você ${action === 'approved' ? 'confirmou' : 'recusou'} o transporte para o evento "${eventTitle}".${action === 'rejected' && justification ? ` Motivo: ${justification}` : ''}`,
+                type: action === 'rejected' ? 'refusal' : 'system',
+                read: true,
+                event: eventId,
+                data: {
+                    kind: 'transport_decision',
+                    action: action === 'approved' ? 'confirmed' : 'rejected',
+                    justification: justification,
+                    is_decider_copy: true,
+                    event_title: eventTitle
+                },
+                acknowledged: true
+            });
+        }
+      }
+      // 3. CASO: Convite de Evento (Aceitar/Recusar)
+      else if (notification.type === 'event_invite') {
+        const eventId = notification.event;
+        if (!eventId) {
+            console.error('handleDecision: eventId is missing for event_invite');
+            throw new Error('ID do evento não encontrado.');
+        }
+
+        // Atualiza status do participante
+        const participants = await pb.collection('agenda_cap53_participantes').getFullList({
+            filter: `event = "${eventId}" && user = "${user?.id}"`
+        });
+
+        if (participants.length > 0) {
+            await pb.collection('agenda_cap53_participantes').update(participants[0].id, {
+                status: action === 'accepted' ? 'accepted' : 'rejected'
+            });
+        } else if (action === 'accepted') {
+            await pb.collection('agenda_cap53_participantes').create({
+                event: eventId,
+                user: user?.id,
+                status: 'accepted',
+                role: 'PARTICIPANTE'
+            });
+        }
+
+        // Se recusou, cria notificação de recusa para o organizador
+        if (action === 'rejected') {
+            const event = await pb.collection('agenda_cap53_eventos').getOne(eventId, { expand: 'user' });
+            const organizerId = event.expand?.user?.id || event.user;
+            
+            if (organizerId && organizerId !== user?.id) {
+                await pb.collection('agenda_cap53_notifications').create({
+                    user: organizerId,
+                    title: 'Convite Recusado',
+                    message: `${user?.name} recusou o convite para o evento "${event.title}".${justification ? ` Motivo: ${justification}` : ''}`,
+                    type: 'refusal',
+                    read: false,
+                    event: eventId,
+                    data: {
+                        kind: 'event_invite_response',
+                        action: 'rejected',
+                        guest_id: user?.id,
+                        guest_name: user?.name,
+                        justification: justification,
+                        event_title: event.title
+                    },
+                    acknowledged: false
+                });
+            }
+        }
       }
 
-      // If it's an invite or request needing action
-      // Logic depends on the type. Assuming this function is called from a component that knows what to do,
-      // or we implement the logic here.
-      // For now, let's just log. The actual logic is likely in the component or needs to be moved here.
-      console.log('Handling decision:', { id: notification.id, action, justification });
-      
-      // Example: Update invite status
-      if (notification.type === 'event_invite') {
-         // Call API to update invite
-      }
-      
-      // After successful action, mark notification as processed/read
+      // Marca a notificação original como lida após a decisão
       await markAsRead(notification.id);
-      refreshNotifications();
       
+      // Refresh local
+      await refreshNotifications();
+
     } catch (error) {
-      console.error('Error handling decision:', error);
-      alert('Erro ao processar decisão.');
+      console.error('Error in handleDecision:', error);
+      throw error;
     }
   };
 

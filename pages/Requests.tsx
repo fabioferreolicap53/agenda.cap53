@@ -4,6 +4,8 @@ import { useAuth } from '../components/AuthContext';
 import { pb } from '../lib/pocketbase';
 import { isNotificationDeletable } from '../lib/notifications';
 import CustomSelect from '../components/CustomSelect';
+import RefusalModal from '../components/RefusalModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const INVOLVEMENT_LEVELS = [
     { value: 'PARTICIPANTE', label: 'Participante' },
@@ -27,6 +29,23 @@ const Requests: React.FC = () => {
     const [activeTab, setActiveTab] = React.useState<'notifications' | 'almac'>('notifications');
     const [notificationsTab, setNotificationsTab] = React.useState<'pending' | 'history'>('pending');
     const [searchTerm, setSearchTerm] = React.useState('');
+    const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
+    const [refusalModalProps, setRefusalModalProps] = React.useState<{title?: string, description?: string}>({});
+    const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'notification' | 'request', data: any } | null>(null);
+    const [processingRefusal, setProcessingRefusal] = React.useState(false);
+
+    const [confirmationModalOpen, setConfirmationModalOpen] = React.useState(false);
+    const [confirmationModalConfig, setConfirmationModalConfig] = React.useState<{
+        title: string;
+        description: string;
+        onConfirm: () => void;
+        variant?: 'danger' | 'warning' | 'info';
+        confirmText?: string;
+    }>({
+        title: '',
+        description: '',
+        onConfirm: () => {},
+    });
 
     React.useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -350,13 +369,18 @@ const Requests: React.FC = () => {
 
             let justification: string | undefined;
             if (action === 'rejected') {
-                justification = prompt('Motivo da recusa:') || '';
-                if (!justification) return;
+                setRefusalTarget({ type: 'notification', data: notification });
+                setRefusalModalProps({
+                    title: 'Recusar Solicitação',
+                    description: 'Por favor, informe o motivo da recusa. Esta justificativa será enviada ao solicitante.'
+                });
+                setRefusalModalOpen(true);
+                return;
             }
 
             await pb.collection('agenda_cap53_almac_requests').update(requestId, {
                 status: action,
-                justification: action === 'rejected' ? justification : '',
+                justification: '',
             });
 
             // Notification logic is now handled by backend hooks (notifications.pb.js)
@@ -373,6 +397,49 @@ const Requests: React.FC = () => {
         }
     };
 
+    const handleConfirmRefusal = async (justification: string) => {
+        if (!refusalTarget) return;
+        setProcessingRefusal(true);
+
+        try {
+            if (refusalTarget.type === 'notification') {
+                const notification = refusalTarget.data;
+                const requestId = notification.related_request || notification.expand?.related_request?.id;
+                
+                if (!requestId) {
+                    throw new Error('Solicitação vinculada não encontrada.');
+                }
+
+                await pb.collection('agenda_cap53_almac_requests').update(requestId, {
+                    status: 'rejected',
+                    justification: justification,
+                });
+
+                await pb.collection('agenda_cap53_notifications').update(notification.id, { read: true });
+            } else if (refusalTarget.type === 'request') {
+                const requestId = refusalTarget.data;
+                
+                // Reutilizando a lógica existente de handleAlmacRequestAction mas agora com a justificativa
+                await handleAlmacRequestAction(requestId, 'rejected', undefined, justification);
+            }
+
+            if (refusalTarget.type === 'notification') {
+                setActionMessage('Solicitação reprovada com sucesso.');
+                setTimeout(() => setActionMessage(null), 5000);
+                await fetchPendingNotifications();
+                await fetchHistoryNotifications(1, false);
+            }
+            
+            setRefusalModalOpen(false);
+            setRefusalTarget(null);
+        } catch (error) {
+            console.error('Error confirming refusal:', error);
+            alert('Erro ao confirmar recusa.');
+        } finally {
+            setProcessingRefusal(false);
+        }
+    };
+
     const handleDeleteNotification = async (notificationId: string) => {
         const notification = [...notifications, ...historyNotifications].find(n => n.id === notificationId);
         
@@ -384,43 +451,60 @@ const Requests: React.FC = () => {
             }
         }
 
-        if (!confirm('Deseja excluir esta notificação do seu histórico?')) return;
-        try {
-            await pb.collection('agenda_cap53_notifications').delete(notificationId);
-            setHistoryNotifications(prev => prev.filter(n => n.id !== notificationId));
-            setActionMessage('Notificação excluída.');
-            setTimeout(() => setActionMessage(null), 3000);
-        } catch (error) {
-            console.error('Error deleting notification:', error);
-            alert('Erro ao excluir a notificação.');
-        }
+        setConfirmationModalConfig({
+            title: 'Excluir Notificação',
+            description: 'Deseja excluir esta notificação do seu histórico? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    await pb.collection('agenda_cap53_notifications').delete(notificationId);
+                    setHistoryNotifications(prev => prev.filter(n => n.id !== notificationId));
+                    setActionMessage('Notificação excluída.');
+                    setTimeout(() => setActionMessage(null), 3000);
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error deleting notification:', error);
+                    alert('Erro ao excluir a notificação.');
+                }
+            }
+        });
+        setConfirmationModalOpen(true);
     };
 
     const handleClearAllHistory = async () => {
         if (!user) return;
         
-        if (!confirm('Deseja realmente limpar todas as notificações do seu histórico?')) return;
-        
-        setHistoryLoading(true);
-        try {
-            // Use the safe backend endpoint
-            const result = await pb.send('/api/notifications/clear_safe?read_only=true', { method: 'POST' });
+        setConfirmationModalConfig({
+            title: 'Limpar Histórico',
+            description: 'Deseja realmente limpar todas as notificações do seu histórico? Apenas notificações de eventos futuros serão mantidas.',
+            confirmText: 'Limpar Tudo',
+            variant: 'danger',
+            onConfirm: async () => {
+                setHistoryLoading(true);
+                try {
+                    // Use the safe backend endpoint
+                    const result = await pb.send('/api/notifications/clear_safe?read_only=true', { method: 'POST' });
 
-            if (result.skipped > 0) {
-                alert(`Histórico limpo parcialmente. ${result.skipped} notificações não foram excluídas pois estão vinculadas a eventos futuros.`);
-            } else {
-                setActionMessage('Todo o histórico foi limpo.');
-                setTimeout(() => setActionMessage(null), 5000);
+                    if (result.skipped > 0) {
+                        alert(`Histórico limpo parcialmente. ${result.skipped} notificações não foram excluídas pois estão vinculadas a eventos futuros.`);
+                    } else {
+                        setActionMessage('Todo o histórico foi limpo.');
+                        setTimeout(() => setActionMessage(null), 5000);
+                    }
+                    
+                    // Recarregar histórico
+                    fetchHistoryNotifications(1, false);
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error clearing history:', error);
+                    alert('Erro ao limpar o histórico.');
+                } finally {
+                    setHistoryLoading(false);
+                }
             }
-            
-            // Recarregar histórico
-            fetchHistoryNotifications(1, false);
-        } catch (error) {
-            console.error('Error clearing history:', error);
-            alert('Erro ao limpar o histórico.');
-        } finally {
-            setHistoryLoading(false);
-        }
+        });
+        setConfirmationModalOpen(true);
     };
 
     const handleAcknowledgement = async (notification: any) => {
@@ -568,8 +652,13 @@ const Requests: React.FC = () => {
 
         let justification = currentJustification;
         if (action === 'rejected' && !justification) {
-            justification = prompt('Motivo da reprovação:') || '';
-            if (!justification) return; 
+            setRefusalTarget({ type: 'request', data: requestId });
+            setRefusalModalProps({
+                title: 'Recusar Solicitação',
+                description: 'Por favor, informe o motivo da recusa. Esta justificativa será enviada ao solicitante.'
+            });
+            setRefusalModalOpen(true);
+            return; 
         }
 
         try {
@@ -1446,6 +1535,28 @@ const Requests: React.FC = () => {
                     )}
                 </>
             )}
+            {refusalModalOpen && (
+                <RefusalModal
+                    onClose={() => {
+                        setRefusalModalOpen(false);
+                        setRefusalTarget(null);
+                        setRefusalModalProps({});
+                    }}
+                    onConfirm={handleConfirmRefusal}
+                    loading={processingRefusal}
+                    title={refusalModalProps.title}
+                    description={refusalModalProps.description}
+                />
+            )}
+            <ConfirmationModal
+                isOpen={confirmationModalOpen}
+                onClose={() => setConfirmationModalOpen(false)}
+                onConfirm={confirmationModalConfig.onConfirm}
+                title={confirmationModalConfig.title}
+                description={confirmationModalConfig.description}
+                confirmText={confirmationModalConfig.confirmText}
+                variant={confirmationModalConfig.variant}
+            />
         </div>
     );
 };

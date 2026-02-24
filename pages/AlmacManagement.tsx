@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { Navigate, useLocation } from 'react-router-dom';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const AlmacManagement: React.FC = () => {
     const { user, loading: authLoading } = useAuth();
@@ -19,6 +20,19 @@ const AlmacManagement: React.FC = () => {
     const [activeView, setActiveView] = useState<'inventory' | 'history'>('inventory');
     const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
+
+    const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+    const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+        title: string;
+        description: string;
+        onConfirm: () => void;
+        variant?: 'danger' | 'warning' | 'info';
+        confirmText?: string;
+    }>({
+        title: '',
+        description: '',
+        onConfirm: () => {},
+    });
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -237,40 +251,67 @@ const AlmacManagement: React.FC = () => {
     };
 
     const handleDeleteItem = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir este item?')) return;
-        try {
-            await pb.collection('agenda_cap53_itens_servico').delete(id);
-        } catch (error) {
-            console.error('Error deleting item:', error);
-        }
+        setConfirmationModalConfig({
+            title: 'Excluir Item',
+            description: 'Tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    await pb.collection('agenda_cap53_itens_servico').delete(id);
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error deleting item:', error);
+                }
+            }
+        });
+        setConfirmationModalOpen(true);
     };
 
     const handleDeleteHistory = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir este registro do histórico?')) return;
-        try {
-            await pb.collection('agenda_cap53_almac_requests').delete(id);
-            setHistory(prev => prev.filter(req => req.id !== id));
-        } catch (error) {
-            console.error('Error deleting history record:', error);
-            alert('Erro ao excluir registro do histórico.');
-        }
+        setConfirmationModalConfig({
+            title: 'Excluir Histórico',
+            description: 'Tem certeza que deseja excluir este registro do histórico?',
+            confirmText: 'Excluir',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    await pb.collection('agenda_cap53_almac_requests').delete(id);
+                    setHistory(prev => prev.filter(req => req.id !== id));
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error deleting history record:', error);
+                    alert('Erro ao excluir registro do histórico.');
+                }
+            }
+        });
+        setConfirmationModalOpen(true);
     };
 
     const handleClearAllHistory = async () => {
         if (!history || history.length === 0) return;
-        if (!confirm(`Deseja realmente limpar todo o histórico (${history.length} registros)?`)) return;
         
-        setLoading(true);
-        try {
-            await Promise.all(history.map(req => pb.collection('agenda_cap53_almac_requests').delete(req.id)));
-            setHistory([]);
-            alert('Histórico limpo com sucesso.');
-        } catch (error) {
-            console.error('Error clearing history:', error);
-            alert('Erro ao limpar o histórico.');
-        } finally {
-            setLoading(false);
-        }
+        setConfirmationModalConfig({
+            title: 'Limpar Todo o Histórico',
+            description: `Deseja realmente limpar todo o histórico (${history.length} registros)? Esta ação é irreversível.`,
+            confirmText: 'Limpar Tudo',
+            variant: 'danger',
+            onConfirm: async () => {
+                setLoading(true);
+                try {
+                    await Promise.all(history.map(req => pb.collection('agenda_cap53_almac_requests').delete(req.id)));
+                    setHistory([]);
+                    // alert('Histórico limpo com sucesso.'); // Removed alert for smoother UX
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error clearing history:', error);
+                    alert('Erro ao limpar o histórico.');
+                } finally {
+                    setLoading(false);
+                }
+            }
+        });
+        setConfirmationModalOpen(true);
     };
 
     if (authLoading) return null;
@@ -725,6 +766,16 @@ const AlmacManagement: React.FC = () => {
                 </div>
             </div>
             )}
+            
+            <ConfirmationModal
+                isOpen={confirmationModalOpen}
+                onClose={() => setConfirmationModalOpen(false)}
+                onConfirm={confirmationModalConfig.onConfirm}
+                title={confirmationModalConfig.title}
+                description={confirmationModalConfig.description}
+                confirmText={confirmationModalConfig.confirmText}
+                variant={confirmationModalConfig.variant}
+            />
         </div>
     );
 };

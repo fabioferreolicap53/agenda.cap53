@@ -7,6 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import ReRequestModal from '../components/ReRequestModal';
 import RefusalModal from '../components/RefusalModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 import ReInviteModal from '../components/ReInviteModal';
 import HistoryChain, { HistoryEntry } from '../components/HistoryChain';
 
@@ -38,6 +39,19 @@ const Notifications: React.FC = () => {
   const [reRequestNotification, setReRequestNotification] = useState<any | null>(null);
   const [rejectingNotification, setRejectingNotification] = useState<any | null>(null);
   const [reInviteNotification, setReInviteNotification] = useState<any | null>(null);
+
+  const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+      title: string;
+      description: string;
+      onConfirm: () => void;
+      variant?: 'danger' | 'warning' | 'info';
+      confirmText?: string;
+  }>({
+      title: '',
+      description: '',
+      onConfirm: () => {},
+  });
 
   const getData = (n: any): any => {
     let result: any = {};
@@ -298,14 +312,15 @@ const Notifications: React.FC = () => {
     const result: Array<{ id: string, items: typeof notifications, latest: Date }> = [];
 
     groups.forEach((items, key) => {
-        // Ordena por data (mais recente primeiro)
+        // Ordena por data (mais antiga primeiro para mostrar o fluxo como conversa)
         items.sort((a, b) => {
             const timeA = new Date(a.created).getTime();
             const timeB = new Date(b.created).getTime();
-            return (isNaN(timeB) ? 0 : timeB) - (isNaN(timeA) ? 0 : timeA);
+            return (isNaN(timeA) ? 0 : timeA) - (isNaN(timeB) ? 0 : timeB);
         });
         
-        const latestItem = items[0];
+        // A data de referência do grupo continua sendo a do item mais RECENTE
+        const latestItem = items[items.length - 1];
         const latestDate = latestItem ? new Date(latestItem.created) : new Date();
 
         result.push({
@@ -345,8 +360,8 @@ const Notifications: React.FC = () => {
     } 
     
     if (status === 'rejected') {
-        // Premium Error: Clean white with Rose accent
-        return `${baseStyles} border-y border-r border-slate-100 border-l-[3px] border-l-rose-500`;
+        // Premium Error: Light red background with Rose accent
+        return `${!n.read ? 'bg-rose-50/80' : 'bg-rose-50/30'} border-y border-r border-rose-100 border-l-[3px] border-l-rose-500 transition-all duration-300 hover:shadow-[0_4px_20px_-4px_rgba(225,29,72,0.1)]`;
     }
 
     // Default/Neutral
@@ -669,15 +684,31 @@ const Notifications: React.FC = () => {
   };
 
   const onClearHistory = async () => {
-    if (confirm('Deseja limpar as notificações lidas?')) {
-      await clearHistory();
-    }
+    setConfirmationModalConfig({
+        title: 'Limpar Notificações Lidas',
+        description: 'Deseja limpar as notificações lidas? Esta ação não pode ser desfeita.',
+        confirmText: 'Limpar',
+        variant: 'warning',
+        onConfirm: async () => {
+            await clearHistory();
+            setConfirmationModalOpen(false);
+        }
+    });
+    setConfirmationModalOpen(true);
   };
 
   const onClearAll = async () => {
-    if (confirm('ATENÇÃO: Isso apagará TODAS as notificações do sistema. Deseja continuar?')) {
-      await clearAllNotifications();
-    }
+    setConfirmationModalConfig({
+        title: 'Limpar TUDO',
+        description: 'ATENÇÃO: Isso apagará TODAS as notificações do sistema. Deseja continuar?',
+        confirmText: 'Limpar TUDO',
+        variant: 'danger',
+        onConfirm: async () => {
+            await clearAllNotifications();
+            setConfirmationModalOpen(false);
+        }
+    });
+    setConfirmationModalOpen(true);
   };
 
   const handleViewEvent = (notification: any) => {
@@ -757,8 +788,21 @@ const Notifications: React.FC = () => {
     return msg.split(' Motivo: ')[0];
   };
 
-  const onFixNotifications = async (silent = false) => {
-    if (!silent && !confirm('Isso irá processar as notificações no seu navegador para corrigir os nomes. Pode levar alguns instantes. Continuar?')) return;
+  const onFixNotifications = async (silent = false, confirmed = false) => {
+    if (!silent && !confirmed) {
+        setConfirmationModalConfig({
+            title: 'Corrigir Notificações',
+            description: 'Isso irá processar as notificações no seu navegador para corrigir os nomes. Pode levar alguns instantes. Continuar?',
+            confirmText: 'Corrigir',
+            variant: 'info',
+            onConfirm: () => {
+                setConfirmationModalOpen(false);
+                onFixNotifications(false, true);
+            }
+        });
+        setConfirmationModalOpen(true);
+        return;
+    }
     
     let count = 0;
     let errors = 0;
@@ -978,9 +1022,16 @@ const Notifications: React.FC = () => {
             <div key={group.id} className="relative group-container">
                 {/* Connecting Line for Groups - REMOVED to avoid repetition, showing only latest card */}
                 
-                <div className="space-y-1">
-                    {group.items.slice(0, 1).map((notification, index) => {
-                         const isLatest = index === 0;
+                <div className="space-y-3 md:space-y-4 relative">
+                    {/* Linha conectora para o grupo */}
+                    {group.items.length > 1 && (
+                        <div className="absolute left-[17px] md:left-[23px] top-6 bottom-6 w-0.5 bg-slate-100 z-0"></div>
+                    )}
+
+                    {group.items.slice(-1).map((notification, index) => {
+                         const isLatest = true;
+                         const isFirst = true;
+                         const isLast = true;
                          const isPenultimate = false;
                          const isOld = false;
                          
@@ -994,8 +1045,8 @@ const Notifications: React.FC = () => {
                               }}
                               className={`group relative flex gap-3 md:gap-5 p-3 md:p-5 rounded-xl transition-all duration-200 z-10 
                                 ${getStatusContainerStyles(notification)} 
+                                ${notification.event ? 'cursor-pointer hover:shadow-md' : ''}
                                 z-20
-                                ${notification.event ? 'cursor-pointer hover:bg-slate-50/50' : ''}
                               `}
                             >
               <div className="absolute top-3 md:top-5 right-3 md:right-5 flex items-center gap-2 z-30">
@@ -1021,7 +1072,10 @@ const Notifications: React.FC = () => {
 
               <div className="flex-1 min-w-0 pt-0 md:pt-1">
                 <div className={`flex items-center justify-between gap-2 mb-1 ${!notification.read ? 'pr-10 md:pr-14' : 'pr-4 md:pr-6'}`}>
-                  <h4 className={`text-[13px] md:text-[15px] font-semibold tracking-tight ${notification.read ? 'text-slate-600' : 'text-slate-900'}`}>
+                  <h4 className={`text-[13px] md:text-[15px] font-semibold tracking-tight 
+                    ${getNotificationStatus(notification) === 'rejected' ? 'text-rose-600' : 
+                      (notification.read ? 'text-slate-600' : 'text-slate-900')}
+                  `}>
                     {notification.title}
                   </h4>
                   <span className="text-[10px] md:text-[11px] text-slate-400 whitespace-nowrap font-medium">
@@ -1038,10 +1092,31 @@ const Notifications: React.FC = () => {
                 {/* Event Creator */}
                 {creatorName && (
                     <div className="flex items-center gap-1.5 mb-1.5 text-[10px] md:text-[11px] text-slate-500 font-medium">
-                        <span className="material-symbols-outlined text-[12px] md:text-[14px]">person</span>
+                        <span className="material-symbols-outlined text-[12px] md:text-[14px]">event_note</span>
                         <span>Evento criado por {creatorName}</span>
                     </div>
                 )}
+
+                {/* Notification Author (The person who performed the action) */}
+                {(() => {
+                    const data = getData(notification);
+                    let authorName = null;
+                    
+                    if (data.is_decider_copy) authorName = 'Você';
+                    else if (data.rejected_by_name) authorName = data.rejected_by_name;
+                    else if (data.approved_by_name) authorName = data.approved_by_name;
+                    else if (notification.type === 'refusal' && !data.guest_id) authorName = 'Você';
+                    
+                    if (authorName) {
+                        return (
+                            <div className="flex items-center gap-1.5 mb-1.5 text-[10px] md:text-[11px] text-slate-500 font-medium">
+                                <span className="material-symbols-outlined text-[12px] md:text-[14px]">person</span>
+                                <span>{authorName === user?.name ? 'Você' : authorName}</span>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
                 
                 <p className={`text-[12px] md:text-[14px] leading-relaxed mb-3 md:mb-4 ${notification.read ? 'text-slate-400' : 'text-slate-500'}`}>
                   {getNotificationMessage(notification)}
@@ -1087,13 +1162,50 @@ const Notifications: React.FC = () => {
                         history = reqHistory;
                     }
 
+                    // NOVO: Adicionar notificações do próprio grupo como histórico se for Item/Almoxarifado
+                    if (notification.related_request) {
+                        group.items.forEach(item => {
+                            const itemData = getData(item);
+                            // Evitar duplicar se já estiver no history do request (compara timestamps aproximados)
+                            const exists = history.some(h => Math.abs(new Date(h.timestamp).getTime() - new Date(item.created).getTime()) < 2000);
+                            
+                            if (!exists) {
+                                history.push({
+                                    action: itemData.action === 'approved' ? 'approved' : 'rejected',
+                                    timestamp: item.created,
+                                    user: item.user,
+                                    user_name: itemData.is_decider_copy ? 'Você' : (itemData.approved_by_name || itemData.rejected_by_name || 'Setor'),
+                                    justification: itemData.justification || item.message,
+                                    message: item.message
+                                });
+                            }
+                        });
+                    }
+
                     // 2. Get history from event (Transport) - ONLY for Transport notifications
-                    if (history.length === 0 && (notification.type === 'transport_request' || notification.type === 'transport_decision' || (notification.type === 'history_log' && getData(notification).icon === 'local_shipping'))) {
+                    if (notification.type === 'transport_request' || notification.type === 'transport_decision' || (notification.type === 'history_log' && getData(notification).icon === 'local_shipping')) {
                         const eventData = notification.expand?.event || notification.expand?.related_event;
                         const evtHistory = Array.isArray(eventData) ? eventData[0]?.transport_history : eventData?.transport_history;
                         if (Array.isArray(evtHistory) && evtHistory.length > 0) {
-                            history = evtHistory;
+                            history = [...evtHistory];
                         }
+
+                        // NOVO: Adicionar notificações do próprio grupo como histórico se for Transporte
+                        group.items.forEach(item => {
+                            const itemData = getData(item);
+                            const exists = history.some(h => Math.abs(new Date(h.timestamp).getTime() - new Date(item.created).getTime()) < 2000);
+                            
+                            if (!exists) {
+                                history.push({
+                                    action: itemData.action === 'confirmed' || itemData.action === 'approved' ? 'transport_confirmed' : 'transport_rejected',
+                                    timestamp: item.created,
+                                    user: item.user,
+                                    user_name: itemData.is_decider_copy ? 'Você' : (itemData.approved_by_name || itemData.rejected_by_name || 'Transporte'),
+                                    justification: itemData.justification || item.message,
+                                    message: item.message
+                                });
+                            }
+                        });
                     }
 
                     // 3. Construct Virtual History for Event Invites / Responses
@@ -1107,6 +1219,15 @@ const Notifications: React.FC = () => {
                         // 3b. Construct from group items (Append to payload history or start fresh)
                         // Sort items chronologically (oldest first)
                         const sortedItems = [...group.items].sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
+                        
+                        // Deduplicate items that represent the same state change within the group
+                        const uniqueGroupItems = sortedItems.filter((item, idx, self) => {
+                             const data = getData(item);
+                             const prev = idx > 0 ? getData(self[idx-1]) : null;
+                             if (!prev) return true;
+                             // If same action and same type, it's likely a duplicate record for different users
+                             return !(data.action === prev.action && item.type === self[idx-1].type && data.justification === prev.justification);
+                        });
                         
                         // Initial Event (Creation) - Only if history is empty
                         const event = notification.expand?.event;
@@ -1124,7 +1245,7 @@ const Notifications: React.FC = () => {
                         // OR if we need to append specific current items that might be missing from payload (e.g. current refusal)
                         if (history.length === 0) {
                              // Process each notification in the group (Legacy or clean build)
-                             sortedItems.forEach((item, idx) => {
+                             uniqueGroupItems.forEach((item, idx) => {
                                   const itemData = getData(item);
                                   const isMe = itemData.guest_id === user?.id; // Guest perspective
                                   
@@ -1214,13 +1335,31 @@ const Notifications: React.FC = () => {
                              }
                         }
                         
-                        // Deduplicate history based on timestamp and action to prevent loops
-                        history = history.filter((entry, index, self) =>
-                            index === self.findIndex((t) => (
-                                t.timestamp === entry.timestamp && t.action === entry.action
-                            ))
-                        );
-                    }
+                    // 5. Deduplicate history based on timestamp and action to prevent loops
+                    history = history.filter((entry, index, self) =>
+                        index === self.findIndex((t) => (
+                            (t.timestamp === entry.timestamp && t.action === entry.action) ||
+                            // Deduplicar ações idênticas consecutivas do mesmo tipo (ex: duas recusas seguidas)
+                            (index > 0 && t.action === self[index-1].action && t.action === entry.action)
+                        ))
+                    );
+
+                    // NOVO: Garantir que apenas a ÚLTIMA ação de cada tipo relevante apareça se forem redundantes
+                    // Por exemplo, se houver múltiplas recusas, manter apenas a mais recente do fluxo atual
+                    const finalHistory: HistoryEntry[] = [];
+                    history.forEach((entry, idx) => {
+                        const nextEntry = history[idx + 1];
+                        // Se a próxima entrada for do mesmo tipo e não houver uma ação de "solicitação criada" entre elas,
+                        // podemos considerar a atual como redundante (superada pela próxima)
+                        if (nextEntry && 
+                            nextEntry.action === entry.action && 
+                            entry.action.includes('rejected')) {
+                            return; // Pula a entrada redundante
+                        }
+                        finalHistory.push(entry);
+                    });
+                    
+                    history = finalHistory;
 
                     // 4. Render History Chain if available
                     if (history.length > 0) {

@@ -4,6 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth, SECTORS } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
+import ConfirmationModal from '../components/ConfirmationModal';
+import RefusalModal from '../components/RefusalModal';
 
 import EventDetailsModal from '../components/EventDetailsModal';
 import CustomSelect from '../components/CustomSelect';
@@ -308,6 +310,23 @@ const Calendar: React.FC = () => {
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
   const [animDirection, setAnimDirection] = useState<'next' | 'prev'>('next');
 
+  // Refusal Modal State for Event Cancellation
+  const [refusalModalOpen, setRefusalModalOpen] = useState(false);
+  const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+  const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+      title: string;
+      description: string;
+      onConfirm: () => void;
+      variant?: 'danger' | 'warning' | 'info';
+      confirmText?: string;
+  }>({
+      title: '',
+      description: '',
+      onConfirm: () => {},
+  });
+  const [eventToCancel, setEventToCancel] = useState<{ id: string, title: string } | null>(null);
+  const [processingCancellation, setProcessingCancellation] = useState(false);
+
   // Function to scroll to today on mobile
   const scrollToToday = () => {
     setTimeout(() => {
@@ -457,50 +476,69 @@ const Calendar: React.FC = () => {
   };
 
   const handleCancelEvent = async (eventId: string, title: string, participants: string[]) => {
-    const reason = prompt('Por que deseja cancelar este evento?');
-    if (reason === null) return;
+    setEventToCancel({ id: eventId, title });
+    setRefusalModalOpen(true);
+  };
 
+  const handleConfirmCancellation = async (justification: string) => {
+    if (!eventToCancel) return;
+
+    setProcessingCancellation(true);
     try {
       // 1. Atualizar status
-      await pb.collection('agenda_cap53_eventos').update(eventId, {
+      await pb.collection('agenda_cap53_eventos').update(eventToCancel.id, {
         status: 'cancelled',
-        cancel_reason: reason
+        cancel_reason: justification
       });
 
       // 2. Buscar evento atualizado e notificar todos os envolvidos
       try {
-        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+        const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventToCancel.id);
         if (user) {
-            await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', reason, user.id);
+            await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', justification, user.id);
         }
       } catch (notifErr) {
         console.error('Erro ao enviar notificações de cancelamento:', notifErr);
       }
 
-      alert('Evento cancelado com sucesso.');
+      // alert('Evento cancelado com sucesso.');
       fetchEvents();
+      if (selectedEvent?.id === eventToCancel.id) {
+          setSelectedEvent(null);
+      }
     } catch (error) {
       console.error('Error cancelling event:', error);
       alert('Erro ao cancelar evento.');
+    } finally {
+        setProcessingCancellation(false);
+        setRefusalModalOpen(false);
+        setEventToCancel(null);
     }
   };
 
   const handleDeleteEvent = async (event: any) => {
-    if (!confirm(`Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"?`)) return;
+    setConfirmationModalConfig({
+        title: 'Excluir Evento',
+        description: `Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"? Esta ação não pode ser desfeita e removerá todas as notificações vinculadas.`,
+        confirmText: 'Excluir',
+        variant: 'danger',
+        onConfirm: async () => {
+            try {
+                // Use client-side cleanup utility to delete notifications first,
+                // then delete the event. This provides redundancy to the server-side hook.
+                await deleteEventWithCleanup(event.id, user?.id);
 
-    try {
-        // Use client-side cleanup utility to delete notifications first,
-        // then delete the event. This provides redundancy to the server-side hook.
-        await deleteEventWithCleanup(event.id, user?.id);
-
-        alert('Evento excluído com sucesso.');
-        setSelectedEvent(null);
-        fetchEvents();
-    } catch (error: any) {
-        console.error('Error deleting event:', error);
-        const msg = error.data?.message || error.message || 'Erro desconhecido';
-        alert(`Erro ao excluir evento: ${msg}`);
-    }
+                setSelectedEvent(null);
+                fetchEvents();
+                setConfirmationModalOpen(false);
+            } catch (error: any) {
+                console.error('Error deleting event:', error);
+                const msg = error.data?.message || error.message || 'Erro desconhecido';
+                alert(`Erro ao excluir evento: ${msg}`);
+            }
+        }
+    });
+    setConfirmationModalOpen(true);
   };
 
   const handleDayClick = (date: Date) => {
@@ -1261,6 +1299,29 @@ const Calendar: React.FC = () => {
           initialTab={initialTab}
         />
       )}
+
+      {refusalModalOpen && (
+        <RefusalModal
+          onClose={() => {
+            setRefusalModalOpen(false);
+            setEventToCancel(null);
+          }}
+          onConfirm={handleConfirmCancellation}
+          loading={processingCancellation}
+          title="Cancelar Evento"
+          description={`Por favor, informe o motivo do cancelamento do evento "${eventToCancel?.title}". Esta ação notificará todos os participantes.`}
+        />
+      )}
+
+      <ConfirmationModal
+          isOpen={confirmationModalOpen}
+          onClose={() => setConfirmationModalOpen(false)}
+          onConfirm={confirmationModalConfig.onConfirm}
+          title={confirmationModalConfig.title}
+          description={confirmationModalConfig.description}
+          confirmText={confirmationModalConfig.confirmText}
+          variant={confirmationModalConfig.variant}
+      />
     </div>
   </div>
 );
