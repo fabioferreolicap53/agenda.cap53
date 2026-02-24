@@ -415,8 +415,11 @@ export const useNotificationActions = (
         }
       }
 
-      // Marca a notificação original como lida após a decisão
-      await markAsRead(notification.id);
+      // Marca a notificação original como lida e atualiza o status após a decisão
+      await pb.collection('agenda_cap53_notifications').update(notification.id, { 
+        read: true,
+        invite_status: action === 'approved' ? 'approved' : (action === 'accepted' ? 'accepted' : 'rejected')
+      });
       
       // Refresh local
       await refreshNotifications();

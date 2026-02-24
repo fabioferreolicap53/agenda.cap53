@@ -1241,7 +1241,7 @@ const Notifications: React.FC = () => {
                                               (notification.type === 'refusal' && getData(notification).kind === 'event_invite_response') || 
                                               getData(notification).kind === 'event_invite_response';
 
-                    if (history.length === 0 && isEventInviteFlow) {
+                    if (isEventInviteFlow) {
                         // 3a. Try to recover accumulated history from the notification payload (Guest View)
                         const notifData = getData(notification);
                         if (notifData.history_context && Array.isArray(notifData.history_context.full_history) && notifData.history_context.full_history.length > 0) {
@@ -1273,95 +1273,92 @@ const Notifications: React.FC = () => {
                             });
                         }
 
-                        // Only process group items if we DON'T have a payload history (to avoid duplication)
-                        // OR if we need to append specific current items that might be missing from payload (e.g. current refusal)
-                        if (history.length === 0) {
-                             // Process each notification in the group (Legacy or clean build)
-                             uniqueGroupItems.forEach((item, idx) => {
-                                  const itemData = getData(item);
-                                  
-                                  // 1. Refusal / Response
-                                  if (item.type === 'refusal' || itemData.kind === 'event_invite_response' || itemData.action === 'rejected') {
-                                      // Handle Acceptance explicitly if kind is response
-                                      if (itemData.kind === 'event_invite_response' && (itemData.action === 'accepted' || itemData.action === 'approved')) {
-                                           history.push({
-                                              action: 'invite_accepted',
-                                              timestamp: item.created,
-                                              user: itemData.guest_id || '',
-                                              user_name: itemData.guest_name || 'Convidado',
-                                              message: 'Convite aceito'
-                                          });
-                                      } else {
-                                          // Is Rejection
+                        // Process group items to build/update history
+                        uniqueGroupItems.forEach((item, idx) => {
+                             const itemData = getData(item);
+                             
+                             // 1. Refusal / Response
+                             if (item.type === 'refusal' || itemData.kind === 'event_invite_response' || itemData.action === 'rejected') {
+                                 const itemTimestamp = new Date(item.created).getTime();
+                                 const isNew = !history.some(h => new Date(h.timestamp || 0).getTime() === itemTimestamp && (h.action === 'invite_rejected' || h.action === 'invite_accepted'));
+
+                                 if (isNew) {
+                                     if ((itemData.kind === 'event_invite_response' || itemData.action === 'accepted' || item.invite_status === 'accepted') && 
+                                         (itemData.action !== 'rejected' && item.invite_status !== 'rejected')) {
                                           history.push({
-                                              action: 'invite_rejected',
-                                              timestamp: item.created,
-                                              user: itemData.guest_id || '',
-                                              user_name: itemData.guest_name || 'Convidado',
-                                              justification: itemData.justification || item.message
-                                          });
-     
-                                          // Check if Organizer Replied (Re-invited) - Persisted in refusal notification data
-                                          if (itemData.re_invited && itemData.re_invite_info) {
-                                              history.push({
-                                                  action: 'invite_resent',
-                                                  timestamp: itemData.re_invite_info.timestamp,
-                                                  user: user?.id || '', 
-                                                  user_name: 'Você',
-                                                  message: itemData.re_invite_info.message || 'Convite reenviado'
-                                              });
-                                          }
-                                      }
-                                  }
-                                  // 2. Re-invite (Sent by Organizer)
-                                  else if (item.type === 'event_invite') {
-                                      // Only add 'invite_resent' if there was a rejection before it.
-                                      const hasPriorRejection = history.some(h => h.action === 'invite_rejected' && new Date(h.timestamp!).getTime() < new Date(item.created).getTime());
-                                      
-                                      if (hasPriorRejection) {
-                                          const customMsg = itemData.invite_message;
-                                          history.push({
-                                              action: 'invite_resent',
-                                              timestamp: item.created,
-                                              user: event?.user || '',
-                                              user_name: notification.expand?.created_by?.name || 'Organizador',
-                                              message: customMsg || item.message || 'Convite reenviado'
-                                          });
-                                      }
-                                  }
-                             });
-                        } else {
-                             // If we HAVE history from payload, we might need to append the CURRENT Refusal
-                             // because the payload comes from the Invite (previous step), not including the current refusal itself.
-                             if (notification.type === 'refusal' || getData(notification).kind === 'event_invite_response' || notification.invite_status === 'rejected') {
-                                 const notifData = getData(notification);
-                                 // Check if the latest history entry is already a rejection or a response to it
-                                 // We use timestamp comparison to ensure we only append NEW refusals that happened AFTER the last history entry.
-                                 // This prevents duplication when the history already contains the refusal or a subsequent re-invite.
-                                 const lastEntry = history.length > 0 ? history[history.length - 1] : null;
-                                 const lastTimestamp = lastEntry ? new Date(lastEntry.timestamp || '').getTime() : 0;
-                                 const currentRefusalTimestamp = new Date(notification.created).getTime();
+                                             action: 'invite_accepted',
+                                             timestamp: item.created,
+                                             user: itemData.guest_id || item.user || '',
+                                             user_name: itemData.guest_name || (item.user === user?.id ? 'Você' : 'Convidado'),
+                                             message: 'Convite aceito'
+                                         });
+                                     } else {
+                                         // Is Rejection
+                                         history.push({
+                                             action: 'invite_rejected',
+                                             timestamp: item.created,
+                                             user: itemData.guest_id || item.user || '',
+                                             user_name: itemData.guest_name || (item.user === user?.id ? 'Você' : 'Convidado'),
+                                             justification: itemData.justification || item.message
+                                         });
+                                     }
+                                 }
                                  
-                                 // Only add if the refusal is strictly newer than the last recorded action
-                                 if (currentRefusalTimestamp > lastTimestamp) {
-                                      history.push({
-                                          action: 'invite_rejected',
-                                          timestamp: notification.created,
-                                          user: notifData.guest_id || '',
-                                          user_name: notifData.guest_name || 'Convidado',
-                                          justification: notifData.justification || notification.message
-                                      });
-                                      
-                                      // If Organizer already replied to THIS refusal (re-invited again), add it too
-                                      if (notifData.re_invited && notifData.re_invite_info) {
-                                          history.push({
-                                              action: 'invite_resent',
-                                              timestamp: notifData.re_invite_info.timestamp,
-                                              user: user?.id || '', 
-                                              user_name: 'Você',
-                                              message: notifData.re_invite_info.message || 'Convite reenviado'
-                                          });
-                                      }
+                                 // Check for Organizer Replied (Re-invited) - Persisted in refusal notification data
+                                 if (itemData.re_invited && itemData.re_invite_info) {
+                                     const resentTimestamp = new Date(itemData.re_invite_info.timestamp).getTime();
+                                     if (!history.some(h => new Date(h.timestamp || 0).getTime() === resentTimestamp && h.action === 'invite_resent')) {
+                                         history.push({
+                                             action: 'invite_resent',
+                                             timestamp: itemData.re_invite_info.timestamp,
+                                             user: event?.user || '', 
+                                             user_name: notification.expand?.created_by?.name || 'Organizador',
+                                             message: itemData.re_invite_info.message || 'Convite reenviado'
+                                         });
+                                     }
+                                 }
+                             }
+                             // 2. Re-invite (Sent by Organizer)
+                             else if (item.type === 'event_invite') {
+                                 // Only add 'invite_resent' if there was a rejection before it.
+                                 const hasPriorRejection = history.some(h => h.action === 'invite_rejected' && new Date(h.timestamp!).getTime() < new Date(item.created).getTime());
+                                 const itemTimestamp = new Date(item.created).getTime();
+                                 const isNew = !history.some(h => new Date(h.timestamp || 0).getTime() === itemTimestamp && h.action === 'invite_resent');
+                                 
+                                 if (hasPriorRejection && isNew) {
+                                     const customMsg = itemData.invite_message;
+                                     history.push({
+                                         action: 'invite_resent',
+                                         timestamp: item.created,
+                                         user: event?.user || '',
+                                         user_name: notification.expand?.created_by?.name || 'Organizador',
+                                         message: customMsg || item.message || 'Convite reenviado'
+                                     });
+                                 }
+                             }
+                        });
+
+                        // Special Case: If the notification ITSELF is a rejection/acceptance and not in history yet
+                        const currentTimestamp = new Date(notification.created).getTime();
+                        if (!history.some(h => new Date(h.timestamp || 0).getTime() === currentTimestamp)) {
+                             const notifData = getData(notification);
+                             if (notification.type === 'refusal' || notifData.kind === 'event_invite_response' || (notification.invite_status && notification.invite_status !== 'pending')) {
+                                 if (notification.invite_status === 'accepted' || (notifData.kind === 'event_invite_response' && notifData.action === 'accepted')) {
+                                     history.push({
+                                         action: 'invite_accepted',
+                                         timestamp: notification.created,
+                                         user: notifData.guest_id || notification.user || '',
+                                         user_name: notifData.guest_name || (notification.user === user?.id ? 'Você' : 'Convidado'),
+                                         message: 'Convite aceito'
+                                     });
+                                 } else if (notification.invite_status === 'rejected' || notification.type === 'refusal' || notifData.action === 'rejected') {
+                                     history.push({
+                                         action: 'invite_rejected',
+                                         timestamp: notification.created,
+                                         user: notifData.guest_id || notification.user || '',
+                                         user_name: notifData.guest_name || (notification.user === user?.id ? 'Você' : 'Convidado'),
+                                         justification: notifData.justification || notification.message
+                                     });
                                  }
                              }
                         }
@@ -1633,6 +1630,15 @@ const Notifications: React.FC = () => {
                             </div>
                         );
                     })()
+                  )}
+
+                  {/* Mensagem de Respondido */}
+                  {notification.invite_status && notification.invite_status !== 'pending' && 
+                   (notification.type === 'event_invite' || notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') && (
+                      <div className="px-3 py-1.5 bg-slate-50 text-slate-500 border border-slate-100 text-xs font-medium rounded-lg flex items-center gap-1.5 italic">
+                        <span className="material-symbols-outlined text-[16px]">done_all</span>
+                        Esta solicitação já foi respondida
+                      </div>
                   )}
 
                   {/* Re-request Button */}
