@@ -564,10 +564,12 @@ const CreateEvent: React.FC = () => {
                   filter: 'role = "TRA"' 
                 });
                 
+                // Lista de destinatários para o setor de transporte (TRA)
                 const traIds = traUsers
                   .filter((traUser: any) => traUser.id !== user?.id && !selectedParticipants.includes(traUser.id))
                   .map((traUser: any) => traUser.id);
 
+                // 1. Notifica o Setor de Transporte (TRA)
                 if (traIds.length > 0) {
                   await notificationService.bulkCreateNotifications(
                     traIds,
@@ -585,6 +587,26 @@ const CreateEvent: React.FC = () => {
                       }
                     }
                   );
+                }
+
+                // 2. Notifica o próprio criador (para histórico na Timeline)
+                if (user?.id) {
+                    await pb.collection(Collections.AgendaCap53Notifications).create({
+                        user: user.id,
+                        title: 'Solicitação de Transporte',
+                        message: `Você solicitou suporte de transporte para o evento "${title}".`,
+                        type: 'transport_request',
+                        event: eventId || undefined,
+                        read: true, // Já lida para o criador
+                        data: { 
+                            kind: 'transport_request',
+                            origem: transporteOrigem,
+                            destino: transporteDestino,
+                            horario_levar: transporteHorarioLevar,
+                            horario_buscar: transporteHorarioBuscar,
+                            is_creator_copy: true
+                        }
+                    });
                 }
               } catch (err) {
                 console.error('Error creating TRA notifications:', err);
@@ -793,7 +815,7 @@ const CreateEvent: React.FC = () => {
 
   useEffect(() => {
     const dateParam = searchParams.get('date');
-    const eventIdParam = searchParams.get('eventId') || searchParams.get('edit');
+    const eventIdParam = searchParams.get('eventId') || searchParams.get('edit') || searchParams.get('edit_from');
     const duplicateIdParam = searchParams.get('duplicate_from');
     const participantsParam = searchParams.get('participants');
 

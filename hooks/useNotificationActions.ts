@@ -292,7 +292,9 @@ export const useNotificationActions = (
       }
       // 2. CASO: Decisão de Transporte
       else if (notification.type === 'transport_request') {
-        const eventId = notification.event;
+        const rawEventId = notification.event;
+        const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+        
         if (!eventId) {
             console.error('handleDecision: eventId is missing for transport_request');
             throw new Error('ID do evento não encontrado.');
@@ -308,33 +310,40 @@ export const useNotificationActions = (
         const event = await pb.collection('agenda_cap53_eventos').getOne(eventId, { expand: 'user' });
         const eventCreatorId = event.expand?.user?.id || event.user;
         const eventTitle = event.title || 'Evento';
-        const message = `O transporte para o evento "${eventTitle}" foi ${action === 'approved' ? 'confirmado' : 'recusado'}.${action === 'rejected' && justification ? ` Justificativa: ${justification}` : ''}`;
+        const actionText = action === 'approved' ? 'confirmado' : 'recusado';
+        const message = `O transporte para o evento "${eventTitle}" foi ${actionText}.${action === 'rejected' && justification ? ` Justificativa: ${justification}` : ''}`;
 
+        // 1. Notifica o criador do evento (se não for o próprio decider)
         if (eventCreatorId && eventCreatorId !== user?.id) {
             await pb.collection('agenda_cap53_notifications').create({
                 user: eventCreatorId,
                 title: `Transporte ${action === 'approved' ? 'Confirmado' : 'Recusado'}`,
                 message: message,
-                type: action === 'rejected' ? 'refusal' : 'system',
+                type: action === 'rejected' ? 'refusal' : 'transport_decision',
                 read: false,
                 event: eventId,
                 data: {
                     kind: 'transport_decision',
                     action: action === 'approved' ? 'confirmed' : 'rejected',
                     justification: justification,
-                    event_title: eventTitle
+                    event_title: eventTitle,
+                    status: action === 'approved' ? 'confirmed' : 'rejected',
+                    approved_by: action === 'approved' ? user?.id : undefined,
+                    approved_by_name: action === 'approved' ? user?.name : undefined,
+                    rejected_by: action === 'rejected' ? user?.id : undefined,
+                    rejected_by_name: action === 'rejected' ? user?.name : undefined
                 },
                 acknowledged: false
             });
         }
 
-        // Cópia para o decider
-        if (user?.id) {
+        // 2. Cópia para o decider (para histórico) - APENAS se não for o criador do evento (evita duplicação)
+        if (user?.id && user.id !== eventCreatorId) {
             await pb.collection('agenda_cap53_notifications').create({
                 user: user.id,
-                title: `Transporte ${action === 'approved' ? 'Confirmado' : 'Recusado'}`,
+                title: `Transporte ${action === 'approved' ? 'Confirmado' : 'Recusada'}`,
                 message: `Você ${action === 'approved' ? 'confirmou' : 'recusou'} o transporte para o evento "${eventTitle}".${action === 'rejected' && justification ? ` Motivo: ${justification}` : ''}`,
-                type: action === 'rejected' ? 'refusal' : 'system',
+                type: action === 'rejected' ? 'refusal' : 'transport_decision',
                 read: true,
                 event: eventId,
                 data: {
@@ -342,7 +351,12 @@ export const useNotificationActions = (
                     action: action === 'approved' ? 'confirmed' : 'rejected',
                     justification: justification,
                     is_decider_copy: true,
-                    event_title: eventTitle
+                    event_title: eventTitle,
+                    status: action === 'approved' ? 'confirmed' : 'rejected',
+                    approved_by: action === 'approved' ? user?.id : undefined,
+                    approved_by_name: action === 'approved' ? user?.name : undefined,
+                    rejected_by: action === 'rejected' ? user?.id : undefined,
+                    rejected_by_name: action === 'rejected' ? user?.name : undefined
                 },
                 acknowledged: true
             });

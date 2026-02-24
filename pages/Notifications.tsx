@@ -271,21 +271,33 @@ const Notifications: React.FC = () => {
 
     filteredNotifications.forEach(n => {
         let key = null;
+        const data = getData(n);
         
         // 1. Agrupa por related_request (Item específico)
-        if (n.related_request) {
-            key = n.related_request;
+        if (n.related_request && (
+            n.type === 'almc_item_request' || 
+            n.type === 'request_decision' || 
+            n.type === 'history_log' ||
+            (n.type === 'refusal' && data.kind === 'almc_item_decision')
+        )) {
+            const rawReqId = n.related_request;
+            const requestId = typeof rawReqId === 'object' ? rawReqId.id : rawReqId;
+            key = `item_${requestId}`;
         } 
         // 2. Agrupa Transportes do mesmo evento
-        else if ((n.type === 'transport_request' || n.type === 'transport_decision' || (n.type === 'history_log' && getData(n).icon === 'local_shipping')) && n.event) {
-            key = `transport_${n.event}`;
+        else if ((n.type === 'transport_request' || n.type === 'transport_decision' || 
+                 (n.type === 'refusal' && data.kind === 'transport_decision') || 
+                 (n.type === 'history_log' && data.icon === 'local_shipping') ||
+                 (n.type === 're_requested' && data.kind === 'transport_request')) && n.event) {
+            const rawEventId = n.event;
+            const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+            key = `transport_${eventId}`;
         }
         // 3. Agrupa Recusas de Convite do mesmo usuário para o mesmo evento
-        else if ((n.type === 'refusal' || n.type === 'event_invite' || getData(n).kind === 'event_invite_response') && n.event) {
-             const data = getData(n);
-             
+        else if ((n.type === 'refusal' || n.type === 'event_invite' || data.kind === 'event_invite_response') && n.event) {
              // Event ID pode ser objeto ou string
-             const eventId = typeof n.event === 'object' ? n.event.id : n.event;
+             const rawEventId = n.event;
+             const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
              
              // Guest ID pode estar no data (recusa/resposta) ou ser o usuário (convite para o convidado)
              const guestId = data.guest_id || (n.type === 'event_invite' ? n.user : null);
@@ -380,7 +392,7 @@ const Notifications: React.FC = () => {
       case 'almc_item_request': return 'inventory_2';
       case 'transport_request': return 'local_shipping';
       case 'request_decision': return 'fact_check';
-      case 'transport_decision': return 'commute';
+      case 'transport_decision': return 'local_shipping';
       case 'refusal': return 'cancel';
       case 'acknowledgment': return 'check_circle';
       case 'system': return 'info';
@@ -401,7 +413,7 @@ const Notifications: React.FC = () => {
       case 'almc_item_request': return 'text-indigo-600 bg-indigo-50';
       case 'transport_request': return 'text-cyan-600 bg-cyan-50';
       case 'request_decision': return 'text-teal-600 bg-teal-50';
-      case 'transport_decision': return 'text-teal-600 bg-teal-50';
+      case 'transport_decision': return 'text-cyan-600 bg-cyan-50';
       case 'refusal': return 'text-rose-600 bg-rose-50';
       case 'acknowledgment': return 'text-emerald-600 bg-emerald-50';
       case 'system': return 'text-slate-600 bg-slate-100';
@@ -1170,8 +1182,16 @@ const Notifications: React.FC = () => {
                             const exists = history.some(h => Math.abs(new Date(h.timestamp).getTime() - new Date(item.created).getTime()) < 2000);
                             
                             if (!exists) {
+                                // Se não houver ação explícita e for do tipo transport_request ou item_request, é uma criação
+                                let action: HistoryEntry['action'] = 'created'; // Padrão agora é 'created' para segurança
+                                if (itemData.action === 'approved') action = 'approved';
+                                else if (itemData.action === 'rejected') action = 'rejected';
+                                else if (itemData.is_rerequest) action = 're_requested';
+                                else if (item.type === 'transport_request' || item.type === 'item_request' || item.type === 'inventory_request' || item.type === 'request_item' || item.type === 'request_decision') action = 'created';
+                                else if (item.type === 'refusal') action = 'rejected';
+
                                 history.push({
-                                    action: itemData.action === 'approved' ? 'approved' : 'rejected',
+                                    action,
                                     timestamp: item.created,
                                     user: item.user,
                                     user_name: itemData.is_decider_copy ? 'Você' : (itemData.approved_by_name || itemData.rejected_by_name || 'Setor'),
@@ -1183,7 +1203,7 @@ const Notifications: React.FC = () => {
                     }
 
                     // 2. Get history from event (Transport) - ONLY for Transport notifications
-                    if (notification.type === 'transport_request' || notification.type === 'transport_decision' || (notification.type === 'history_log' && getData(notification).icon === 'local_shipping')) {
+                    if (notification.type === 'transport_request' || notification.type === 'transport_decision' || (notification.type === 'history_log' && getData(notification).icon === 'local_shipping') || (notification.type === 'refusal' && getData(notification).kind === 'transport_decision')) {
                         const eventData = notification.expand?.event || notification.expand?.related_event;
                         const evtHistory = Array.isArray(eventData) ? eventData[0]?.transport_history : eventData?.transport_history;
                         if (Array.isArray(evtHistory) && evtHistory.length > 0) {
@@ -1196,20 +1216,32 @@ const Notifications: React.FC = () => {
                             const exists = history.some(h => Math.abs(new Date(h.timestamp).getTime() - new Date(item.created).getTime()) < 2000);
                             
                             if (!exists) {
+                                // Se não houver ação explícita e for do tipo transport_request, é uma criação
+                                let action: HistoryEntry['action'] = 'created'; // Padrão agora é 'created' para segurança
+                                if (itemData.action === 'confirmed' || itemData.action === 'approved') action = 'transport_confirmed';
+                                else if (itemData.action === 'rejected') action = 'transport_rejected';
+                                else if (itemData.is_rerequest || itemData.action === 're_requested' || item.type === 're_requested') action = 're_requested';
+                                else if (item.type === 'transport_request') action = 'created';
+
                                 history.push({
-                                    action: itemData.action === 'confirmed' || itemData.action === 'approved' ? 'transport_confirmed' : 'transport_rejected',
+                                    action,
                                     timestamp: item.created,
                                     user: item.user,
-                                    user_name: itemData.is_decider_copy ? 'Você' : (itemData.approved_by_name || itemData.rejected_by_name || 'Transporte'),
+                                    user_name: itemData.is_decider_copy ? 'Você' : (itemData.approved_by_name || itemData.rejected_by_name || (action === 're_requested' ? (itemData.user_name || 'Solicitante') : 'Transporte')),
                                     justification: itemData.justification || item.message,
-                                    message: item.message
+                                    message: item.message,
+                                    kind: 'transport'
                                 });
                             }
                         });
                     }
 
                     // 3. Construct Virtual History for Event Invites / Responses
-                    if (history.length === 0 && (notification.type === 'event_invite' || notification.type === 'refusal' || getData(notification).kind === 'event_invite_response')) {
+                    const isEventInviteFlow = notification.type === 'event_invite' || 
+                                              (notification.type === 'refusal' && getData(notification).kind === 'event_invite_response') || 
+                                              getData(notification).kind === 'event_invite_response';
+
+                    if (history.length === 0 && isEventInviteFlow) {
                         // 3a. Try to recover accumulated history from the notification payload (Guest View)
                         const notifData = getData(notification);
                         if (notifData.history_context && Array.isArray(notifData.history_context.full_history) && notifData.history_context.full_history.length > 0) {
@@ -1247,7 +1279,6 @@ const Notifications: React.FC = () => {
                              // Process each notification in the group (Legacy or clean build)
                              uniqueGroupItems.forEach((item, idx) => {
                                   const itemData = getData(item);
-                                  const isMe = itemData.guest_id === user?.id; // Guest perspective
                                   
                                   // 1. Refusal / Response
                                   if (item.type === 'refusal' || itemData.kind === 'event_invite_response' || itemData.action === 'rejected') {
@@ -1334,7 +1365,15 @@ const Notifications: React.FC = () => {
                                  }
                              }
                         }
-                        
+                    }
+
+                     // Final Sort: Garantir que todo o histórico esteja em ordem cronológica
+                     history = history.sort((a, b) => {
+                         const timeA = new Date(a.timestamp || 0).getTime();
+                         const timeB = new Date(b.timestamp || 0).getTime();
+                         return timeA - timeB;
+                     });
+
                     // 5. Deduplicate history based on timestamp and action to prevent loops
                     history = history.filter((entry, index, self) =>
                         index === self.findIndex((t) => (
@@ -1373,14 +1412,27 @@ const Notifications: React.FC = () => {
 
                         // Determine Sector Name for clearer feedback
                         let sectorName = 'setor responsável';
-                        if (safeEvent?.transporte_status === 'pending') {
+                        const itemCategory = safeReq?.expand?.item?.category;
+                        const notifKind = getData(notification).kind;
+
+                        // 1. Prioridade para Item se houver request associado ou tipo de item
+                        if (safeReq || notification.type === 'almc_item_request' || notification.type === 'request_decision' || notifKind === 'almc_item_decision') {
+                            if (itemCategory === 'INFORMATICA') {
+                                sectorName = 'Informática';
+                            } else if (itemCategory === 'COPA') {
+                                sectorName = 'Copa';
+                            } else {
+                                // Default para Almoxarifado para outros itens ou se categoria estiver ausente
+                                sectorName = 'Almoxarifado';
+                            }
+                        } 
+                        // 2. Se não for item, verifica se é transporte
+                        else if (notification.type === 'transport_request' || 
+                            notification.type === 'transport_decision' || 
+                            notifKind === 'transport_decision' ||
+                            (notification.type === 'history_log' && getData(notification).icon === 'local_shipping') ||
+                            (safeEvent?.transporte_status === 'pending')) {
                             sectorName = 'Transporte';
-                        } else if (safeReq?.expand?.item?.category === 'INFORMATICA') {
-                            sectorName = 'Informática';
-                        } else if (safeReq?.expand?.item?.category === 'ALMOXARIFADO') {
-                            sectorName = 'Almoxarifado';
-                        } else if (safeReq?.expand?.item?.category === 'COPA') {
-                            sectorName = 'Copa';
                         }
                         
                         // Check if current user is a SECTOR user
@@ -1400,7 +1452,11 @@ const Notifications: React.FC = () => {
 
                         return (
                             <div className="mt-4">
-                                <HistoryChain history={history} currentUserId={user?.id} />
+                                <HistoryChain 
+                                    history={history} 
+                                    currentUserId={user?.id} 
+                                    type={sectorName === 'Transporte' ? 'transport' : 'item'} 
+                                />
                                 {showPendingMessage && (
                                     <div className="ml-10 mt-2 px-3 py-2 bg-amber-50 text-amber-800 border border-amber-100 rounded-lg text-xs font-medium flex items-center gap-2 animate-in fade-in slide-in-from-top-2 relative z-0">
                                         <div className="absolute -left-[21px] top-1/2 -translate-y-1/2 w-4 h-px bg-slate-200"></div>
@@ -1523,24 +1579,25 @@ const Notifications: React.FC = () => {
                     // Exclude participation request responses (informational only)
                     getData(notification).kind !== 'participation_request_response' &&
                     // For sector requests, only show actions if it's the latest notification in the chain
-                    !((notification.type === 'almc_item_request' || notification.type === 'transport_request') && !isLatest) && (
+                    !((notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') && !isLatest) && (
                     // Check Permissions:
                     // 1. Only SECTOR users (ALMC, DCA, TRA, ADMIN) can approve/reject sector requests
                     // 2. Regular users (USER, CE) can only accept/reject event invites
                     (() => {
-                        const isSectorRequest = notification.type === 'almc_item_request' || notification.type === 'transport_request';
+                        const isSectorRequest = notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision';
                         
                         // If it's a sector request, check if user has permission
                         if (isSectorRequest) {
                              const itemCategory = notification.expand?.related_request?.expand?.item?.category;
                              const isTransport = notification.type === 'transport_request';
+                             const isITRequest = notification.type === 'request_decision' || itemCategory === 'INFORMATICA';
                              
                              // Check for ALMC (Almoxarifado/Copa)
                              const canDecideAlmac = (user?.role === 'ALMC' || user?.role === 'ADMIN') && 
-                                                    (itemCategory === 'ALMOXARIFADO' || itemCategory === 'COPA' || (!itemCategory && !isTransport));
+                                                    (itemCategory === 'ALMOXARIFADO' || itemCategory === 'COPA' || (!itemCategory && !isTransport && !isITRequest));
                              
                              // Check for DCA (Informática)
-                             const canDecideDca = (user?.role === 'DCA' || user?.role === 'ADMIN') && itemCategory === 'INFORMATICA';
+                             const canDecideDca = (user?.role === 'DCA' || user?.role === 'ADMIN') && isITRequest;
                              
                              // Check for TRA (Transporte)
                              const canDecideTransport = (user?.role === 'TRA' || user?.role === 'ADMIN') && isTransport;
@@ -1557,11 +1614,11 @@ const Notifications: React.FC = () => {
                                 disabled={processingId === notification.id}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'approved' : 'accepted');
+                                    onHandleAction(notification, (notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') ? 'approved' : 'accepted');
                                 }}
                                 className="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
                             >
-                                {(notification.type === 'almc_item_request' || notification.type === 'transport_request') ? 'Aprovar' : 'Aceitar'}
+                                {(notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') ? 'Aprovar' : 'Aceitar'}
                             </button>
                             <button
                                 disabled={processingId === notification.id}
@@ -1670,6 +1727,17 @@ const Notifications: React.FC = () => {
                         
                         if (isApproved) {
                              return null;
+                        }
+
+                        // Se o usuário for de setor, ele não deve ver o botão de solicitar novamente após responder
+                        const isSectorUser = user?.role === 'ALMC' || user?.role === 'DCA' || user?.role === 'TRA' || user?.role === 'ADMIN';
+                        if (isSectorUser && (notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision' || notification.type === 'transport_decision' || notification.type === 'refusal')) {
+                            return (
+                                <div className="px-3 py-1.5 bg-slate-50 text-slate-500 border border-slate-200 text-xs font-bold rounded-lg flex items-center gap-1.5 cursor-default italic">
+                                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                                    Solicitação já respondida pelo setor
+                                </div>
+                            );
                         }
 
                         if (isPending) {

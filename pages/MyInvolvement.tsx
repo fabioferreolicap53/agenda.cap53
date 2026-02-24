@@ -145,6 +145,10 @@ const MyInvolvement: React.FC = () => {
     navigate(`/create-event?duplicate_from=${event.id}`);
   };
 
+  const handleEditEvent = (event: MySpaceEvent) => {
+    navigate(`/create-event?edit_from=${event.id}`);
+  };
+
   // Filtragem
   const filteredEvents = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -297,6 +301,7 @@ const MyInvolvement: React.FC = () => {
               onCancel={handleCancelEvent}
               onDelete={handleDeleteEvent}
               onDuplicate={handleDuplicateEvent}
+              onEdit={handleEditEvent}
             />
           </>
         )}

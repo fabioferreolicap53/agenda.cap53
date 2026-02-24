@@ -9,6 +9,7 @@ interface EventListProps {
   onCancel: (event: MySpaceEvent) => void;
   onDelete: (event: MySpaceEvent) => void;
   onDuplicate: (event: MySpaceEvent) => void;
+  onEdit: (event: MySpaceEvent) => void;
 }
 
 export const EventList: React.FC<EventListProps> = ({ 
@@ -17,7 +18,8 @@ export const EventList: React.FC<EventListProps> = ({
   onOpenCalendar, 
   onCancel, 
   onDelete,
-  onDuplicate
+  onDuplicate,
+  onEdit
 }) => {
   if (loading) {
     return (
@@ -52,6 +54,7 @@ export const EventList: React.FC<EventListProps> = ({
           onCancel={onCancel}
           onDelete={onDelete}
           onDuplicate={onDuplicate}
+          onEdit={onEdit}
         />
       ))}
     </div>

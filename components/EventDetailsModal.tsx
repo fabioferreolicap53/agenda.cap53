@@ -1274,7 +1274,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 
                                 <div className="relative">
                                     <div className="absolute inset-0 bg-slate-100 rounded-full scale-150 blur-2xl opacity-40 group-hover:opacity-60 transition-opacity" />
-                                    <span className="material-symbols-outlined text-4xl mb-4 text-slate-300 relative z-10">no_transport</span>
+                                    <span className="material-symbols-outlined text-4xl mb-4 text-slate-300 relative z-10">block</span>
                                 </div>
                                 
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] relative z-10">Transporte não solicitado</p>

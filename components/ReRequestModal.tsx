@@ -166,7 +166,10 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
         }
 
       } else if (isTransportRequest) {
-        if (!eventId) throw new Error('ID do evento não encontrado.');
+        const rawEventId = eventId;
+        const targetEventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+        
+        if (!targetEventId) throw new Error('ID do evento não encontrado.');
 
         // Validation for CustomTimePicker (as it doesn't support native 'required')
         if (!transportData.horario_levar || !transportData.horario_buscar) {
@@ -176,7 +179,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
         }
 
         // 1. Fetch current history
-        const currentEvent = await pb.collection('agenda_cap53_eventos').getOne(eventId);
+        const currentEvent = await pb.collection('agenda_cap53_eventos').getOne(targetEventId);
         const history = currentEvent.transport_history || [];
         
         history.push({
@@ -185,7 +188,8 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
             user: pb.authStore.model?.id,
             user_name: pb.authStore.model?.name,
             message: observation,
-            quantity: transportData.qtd_pessoas
+            quantity: transportData.qtd_pessoas,
+            kind: 'transport'
         });
 
         // 2. Update status and history
@@ -201,7 +205,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
           transport_history: history
         };
 
-        await pb.collection('agenda_cap53_eventos').update(eventId, updatePayload);
+        await pb.collection('agenda_cap53_eventos').update(targetEventId, updatePayload);
 
         // 3. Notify Transport Sector
         try {
@@ -219,7 +223,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
                     title: 'Transporte Reaberto',
                     message: `${pb.authStore.model?.name || 'Um usuário'} solicitou novamente transporte para o evento "${eventTitle}".`,
                     type: 'transport_request',
-                    event: eventId,
+                    event: targetEventId,
                     read: false,
                     invite_status: 'pending',
                     data: { 
@@ -230,7 +234,8 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
                         qtd_pessoas: transportData.qtd_pessoas,
                         justification: observation,
                         is_rerequest: true,
-                        previous_refusal_id: notification?.id
+                        previous_refusal_id: notification?.id,
+                        user_name: pb.authStore.model?.name
                     }
                 })
             ));

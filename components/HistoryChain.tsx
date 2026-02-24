@@ -6,20 +6,22 @@ import { ptBR } from 'date-fns/locale';
 export interface HistoryEntry {
   timestamp?: string;
   date?: string;
-  action: 'created' | 'approved' | 'rejected' | 're_requested' | 'comment' | 'invite_created' | 'invite_accepted' | 'invite_rejected' | 'invite_resent';
+  action: 'created' | 'approved' | 'rejected' | 're_requested' | 'comment' | 'invite_created' | 'invite_accepted' | 'invite_rejected' | 'invite_resent' | 'transport_confirmed' | 'transport_rejected';
   user: string;
   user_name?: string;
   message?: string;
   justification?: string;
   quantity?: number;
+  kind?: 'item' | 'transport';
 }
 
 interface HistoryChainProps {
   history: HistoryEntry[];
   currentUserId?: string;
+  type?: 'item' | 'transport';
 }
 
-const HistoryChain: React.FC<HistoryChainProps> = ({ history, currentUserId }) => {
+const HistoryChain: React.FC<HistoryChainProps> = ({ history, currentUserId, type }) => {
   if (!history || history.length === 0) return null;
 
   const getDate = (entry: any) => {
@@ -92,6 +94,16 @@ const HistoryChain: React.FC<HistoryChainProps> = ({ history, currentUserId }) =
             bgClass = 'bg-red-50 text-red-700 border-red-100';
             title = 'Convite Recusado';
             break;
+          case 'transport_confirmed':
+            icon = 'local_shipping';
+            bgClass = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+            title = 'Transporte Confirmado';
+            break;
+          case 'transport_rejected':
+            icon = 'cancel';
+            bgClass = 'bg-red-50 text-red-700 border-red-100';
+            title = 'Transporte Recusado';
+            break;
         }
 
         return (
@@ -99,8 +111,8 @@ const HistoryChain: React.FC<HistoryChainProps> = ({ history, currentUserId }) =
             {/* Ícone na linha do tempo */}
             <div className={`absolute left-0 top-0 w-10 h-10 flex items-center justify-center z-10`}>
                <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center bg-white ${
-                 entry.action === 'rejected' || entry.action === 'invite_rejected' ? 'border-red-100 text-red-500' :
-                 entry.action === 'approved' || entry.action === 'invite_accepted' ? 'border-emerald-100 text-emerald-500' :
+                 entry.action === 'rejected' || entry.action === 'invite_rejected' || entry.action === 'transport_rejected' ? 'border-red-100 text-red-500' :
+                 entry.action === 'approved' || entry.action === 'invite_accepted' || entry.action === 'transport_confirmed' ? 'border-emerald-100 text-emerald-500' :
                  entry.action === 're_requested' ? 'border-blue-100 text-blue-500' :
                  'border-slate-100 text-slate-400'
                }`}>
@@ -128,7 +140,11 @@ const HistoryChain: React.FC<HistoryChainProps> = ({ history, currentUserId }) =
 
               {entry.quantity !== undefined && (
                 <div className="mt-2 mb-2 inline-flex items-center gap-2 pl-2.5 pr-3 py-1 rounded-md bg-white/50 border border-white/60 shadow-sm transition-all hover:bg-white/80 hover:shadow-md cursor-default">
-                   <span className="text-[9px] font-black uppercase tracking-wider opacity-60">Nova Qtd</span>
+                   <span className="text-[9px] font-black uppercase tracking-wider opacity-60">
+                     {type === 'transport' || entry.kind === 'transport' || entry.action === 'transport_confirmed' || entry.action === 'transport_rejected' 
+                        ? 'Passageiros' 
+                        : 'Nova Qtd'}
+                   </span>
                    <div className="w-px h-3 bg-current opacity-20"></div>
                    <span className="text-sm font-bold tabular-nums tracking-tight">{entry.quantity}</span>
                 </div>

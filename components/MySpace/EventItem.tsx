@@ -9,9 +9,10 @@ interface EventItemProps {
   onCancel: (event: MySpaceEvent) => void;
   onDelete: (event: MySpaceEvent) => void;
   onDuplicate: (event: MySpaceEvent) => void;
+  onEdit: (event: MySpaceEvent) => void;
 }
 
-export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onCancel, onDelete, onDuplicate }) => {
+export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onCancel, onDelete, onDuplicate, onEdit }) => {
   const getSafeDate = (dateStr: string | undefined) => {
     if (!dateStr) return new Date();
     const date = new Date(dateStr);
@@ -122,6 +123,13 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
               
               {isCreator && (
                 <>
+                  <button 
+                    onClick={() => onEdit(event)}
+                    className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    title="Editar Evento"
+                  >
+                    <span className="material-symbols-outlined text-xl">edit</span>
+                  </button>
                   <button 
                     onClick={() => onDuplicate(event)}
                     className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"

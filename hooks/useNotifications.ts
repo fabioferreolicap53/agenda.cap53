@@ -315,13 +315,16 @@ export const useNotifications = () => {
                           collectionName: 'virtual_history',
                           created: evt.created, // Proxy: data do evento
                           updated: evt.created,
-                          user: user.id,
+                          user: evt.user, // Criador do evento é o autor da solicitação
                           title: 'Transporte Solicitado',
                           message: `Solicitação de transporte iniciada com o evento.`,
                           type: 'history_log',
                           read: true,
                           event: n.event,
-                          expand: { event: evt },
+                          expand: { 
+                            event: evt,
+                            created_by: evt.expand?.user // Expandir o criador se disponível
+                          },
                           data: { icon: 'local_shipping', is_history: true }
                        });
                        processedHistory.add(`trans_${n.event}`);
@@ -395,14 +398,39 @@ export const useNotifications = () => {
 
       allNotifications.forEach(n => {
           let key = null;
+          const data = getData(n);
           
-          // 1. Group by related_request
-          if (n.related_request) {
-              key = n.related_request;
+          // 1. Group by related_request (Item específico)
+          if (n.related_request && (
+              n.type === 'almc_item_request' || 
+              n.type === 'request_decision' || 
+              n.type === 'history_log' ||
+              (n.type === 'refusal' && data.kind === 'almc_item_decision')
+          )) {
+              const rawReqId = n.related_request;
+              const requestId = typeof rawReqId === 'object' ? rawReqId.id : rawReqId;
+              key = `item_${requestId}`;
           } 
           // 2. Group Transport events
-          else if ((n.type === 'transport_request' || n.type === 'transport_decision' || (n.type === 'history_log' && getData(n).icon === 'local_shipping')) && n.event) {
-              key = `transport_${n.event}`;
+          else if ((n.type === 'transport_request' || n.type === 'transport_decision' || 
+                   (n.type === 'refusal' && data.kind === 'transport_decision') || 
+                   (n.type === 'history_log' && data.icon === 'local_shipping') ||
+                   (n.type === 're_requested' && data.kind === 'transport_request')) && n.event) {
+              const rawEventId = n.event;
+              const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+              key = `transport_${eventId}`;
+          }
+          // 3. Group Invite Flow
+          else if ((n.type === 'refusal' || n.type === 'event_invite' || data.kind === 'event_invite_response') && n.event) {
+               const rawEventId = n.event;
+               const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+               const guestId = data.guest_id || (n.type === 'event_invite' ? n.user : null);
+               
+               if (guestId && (data.guest_id || data.kind === 'event_invite_response')) {
+                   key = `invite_flow_${eventId}_${guestId}`;
+               } else if (n.type === 'event_invite' && !data.guest_id) {
+                    key = `invite_flow_${eventId}_${user?.id}`; 
+               }
           }
           
           if (key) {
