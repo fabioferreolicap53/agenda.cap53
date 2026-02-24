@@ -1201,8 +1201,8 @@ const Calendar: React.FC = () => {
             
             <div ref={agendaViewRef} className="p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full scroll-mt-[180px]">
               {(() => {
-                 // Filter events for the current month and year
-                 const monthEvents = events.filter(e => {
+                 // Filter events for the current month and year using filteredEvents instead of events
+                 const monthEvents = filteredEvents.filter(e => {
                     const eDate = new Date(e.date_start || e.date);
                     return eDate.getMonth() === currentDate.getMonth() &&
                            eDate.getFullYear() === currentDate.getFullYear();
