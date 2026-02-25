@@ -84,7 +84,7 @@ export const notifyEventStatusChange = async (
         if (sectorRoles.size > 0) {
             const roleFilter = Array.from(sectorRoles).map(role => `role = "${role}"`).join(' || ');
             const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
-                filter: roleFilter,
+                filter: `(${roleFilter}) && hidden != true`,
                 fields: 'id'
             });
             sectorUsers.forEach((u: any) => recipients.add(u.id));

@@ -74,7 +74,11 @@ const Calendar: React.FC = () => {
 
   // Load users
    useEffect(() => {
-       pb.collection('agenda_cap53_usuarios').getFullList({ sort: 'name', fields: 'id,name,sector' })
+       pb.collection('agenda_cap53_usuarios').getFullList({ 
+           sort: 'name', 
+           fields: 'id,name,sector',
+           filter: 'hidden != true'
+       })
            .then(setUsers)
            .catch(console.error);
    }, []);
