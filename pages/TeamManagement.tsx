@@ -246,7 +246,7 @@ const TeamManagement: React.FC = () => {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
                     {/* Always show current user first if they match the filters */}
                     {currentUser && (
                         // Check if current user matches filters (simple client-side check for the pinned card)

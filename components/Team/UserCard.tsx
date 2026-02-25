@@ -194,21 +194,26 @@ export const UserCard: React.FC<UserCardProps> = ({
 
     return (
         <div 
-            className={`group relative bg-white rounded-2xl border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full flex flex-col ${
+            className={`group relative bg-white rounded-[2rem] border transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-2 h-full flex flex-col overflow-hidden ${
                 isSelected 
-                    ? 'border-primary ring-2 ring-primary/20 shadow-lg shadow-primary/10' 
-                    : 'border-slate-100 shadow-sm hover:border-slate-200'
+                    ? 'border-primary ring-4 ring-primary/10 shadow-xl shadow-primary/5' 
+                    : 'border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:border-primary/20'
             }`}
         >
+            {/* Background Decorative Element */}
+            <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br transition-opacity duration-500 opacity-0 group-hover:opacity-10 pointer-events-none ${
+                isMe ? 'from-primary to-transparent' : 'from-slate-400 to-transparent'
+            }`} style={{ clipPath: 'circle(50% at 100% 0%)' }}></div>
+
             {/* Header com Avatar e Ações Principais */}
-            <div className="p-4 border-b border-slate-50 min-h-[104px] flex flex-col justify-center">
-                <div className="flex items-start justify-between gap-3">
+            <div className="p-5 border-b border-slate-50 min-h-[110px] flex flex-col justify-center relative z-10">
+                <div className="flex items-start justify-between gap-4">
                     {/* Avatar Area */}
                     <div className="relative shrink-0">
                         <div 
                             onClick={isMe ? onAvatarClick : undefined}
-                            className={`relative w-14 h-14 rounded-2xl overflow-hidden border-2 transition-all ${
-                                isMe ? 'cursor-pointer border-primary group-hover:shadow-lg group-hover:shadow-primary/20' : 'border-slate-100'
+                            className={`relative w-16 h-16 rounded-[1.25rem] overflow-hidden border-2 transition-all duration-300 shadow-sm ${
+                                isMe ? 'cursor-pointer border-primary group-hover:shadow-lg group-hover:shadow-primary/30 group-hover:scale-105' : 'border-slate-100 group-hover:border-primary/30 group-hover:scale-105'
                             }`}
                         >
                             <img 
@@ -218,15 +223,15 @@ export const UserCard: React.FC<UserCardProps> = ({
                                 onError={handleImageError}
                             />
                             {isMe && (
-                                <div className="absolute inset-0 bg-black/20 hover:bg-black/40 flex items-center justify-center transition-colors">
-                                    <span className="material-symbols-outlined text-white text-lg drop-shadow-md">edit</span>
+                                <div className="absolute inset-0 bg-black/20 hover:bg-black/40 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100">
+                                    <span className="material-symbols-outlined text-white text-xl drop-shadow-md">photo_camera</span>
                                 </div>
                             )}
                         </div>
                         {/* Status Indicator */}
-                        <div className="absolute -bottom-1 -right-1 bg-white p-0.5 rounded-full">
-                            <span className={`block w-3 h-3 rounded-full border-2 border-white ${
-                                user.status === 'Online' ? 'bg-green-500' :
+                        <div className="absolute -bottom-1.5 -right-1.5 bg-white p-1 rounded-full shadow-sm ring-2 ring-white">
+                            <span className={`block w-3.5 h-3.5 rounded-full ${
+                                user.status === 'Online' ? 'bg-green-500 animate-pulse' :
                                 user.status === 'Ausente' ? 'bg-amber-500' :
                                 user.status === 'Ocupado' ? 'bg-red-500' :
                                 'bg-slate-300'
@@ -236,32 +241,32 @@ export const UserCard: React.FC<UserCardProps> = ({
 
                     {/* Name and Role */}
                     <div className="flex-1 min-w-0 pt-1 flex flex-col h-full">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-slate-800 text-sm truncate pr-2" title={user.name}>
+                        <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-extrabold text-slate-800 text-base leading-tight group-hover:text-primary transition-colors" title={user.name}>
                                 {user.name}
                             </h3>
                             {/* Checkbox de Seleção */}
                             {!isMe && (
                                 <button
                                     onClick={() => onToggleSelection(user.id)}
-                                    className={`w-5 h-5 rounded-md border flex items-center justify-center transition-all ${
+                                    className={`shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${
                                         isSelected 
-                                            ? 'bg-primary border-primary text-white' 
-                                            : 'border-slate-200 text-transparent hover:border-primary/50'
+                                            ? 'bg-primary border-primary text-white shadow-lg shadow-primary/30 scale-110' 
+                                            : 'border-slate-200 text-transparent hover:border-primary/50 hover:scale-105'
                                     }`}
                                 >
-                                    <span className="material-symbols-outlined text-sm font-bold">check</span>
+                                    <span className="material-symbols-outlined text-xs font-black">check</span>
                                 </button>
                             )}
                         </div>
                         {/* Bio Display */}
-                        <div className="h-[40px]">
+                        <div className="min-h-[40px] mt-1.5">
                             {!isEditing && user.observations ? (
-                                <p className="text-xs text-slate-600 mt-1.5 line-clamp-2 leading-snug">
-                                    {user.observations}
+                                <p className="text-[11px] text-slate-500 italic line-clamp-2 leading-relaxed">
+                                    "{user.observations}"
                                 </p>
                             ) : (
-                                <div className="h-full"></div> // Spacer to keep height consistent
+                                <div className="h-full"></div>
                             )}
                         </div>
                     </div>
@@ -269,71 +274,68 @@ export const UserCard: React.FC<UserCardProps> = ({
             </div>
 
             {/* Tabs Navigation */}
-            <div className="flex border-b border-slate-50 px-2 shrink-0">
+            <div className="flex bg-slate-50/50 p-1 mx-4 mt-4 rounded-xl shrink-0 border border-slate-100/50">
                 {(['identity', 'contact'] as const).map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider transition-colors relative ${
+                        className={`flex-1 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 rounded-lg relative ${
                             activeTab === tab 
-                                ? 'text-primary' 
+                                ? 'bg-white text-primary shadow-sm' 
                                 : 'text-slate-400 hover:text-slate-600'
                         }`}
                     >
                         {tab === 'identity' && 'Perfil'}
                         {tab === 'contact' && 'Contato'}
-                        
-                        {activeTab === tab && (
-                            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-t-full"></div>
-                        )}
                     </button>
                 ))}
             </div>
 
             {/* Tab Content Area */}
-            <div className="p-4 h-[180px] overflow-y-auto custom-scrollbar flex-1">
+            <div className="px-5 py-4 h-[160px] overflow-y-auto custom-scrollbar flex-1 relative z-10">
                 {renderTabContent()}
             </div>
 
             {/* Footer Actions */}
-            <div className="p-3 border-t border-slate-50 bg-slate-50/50 rounded-b-2xl flex items-center justify-between gap-2 mt-auto shrink-0">
+            <div className="p-4 bg-white border-t border-slate-50 flex items-center justify-between gap-3 mt-auto shrink-0 relative z-10">
                 {isMe ? (
                     isEditing ? (
                         <>
                             <button 
                                 onClick={handleCancel}
-                                className="flex-1 py-1.5 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
+                                className="flex-1 py-2.5 px-4 rounded-2xl border border-slate-200 text-xs font-bold text-slate-500 hover:bg-slate-50 transition-all active:scale-95"
                                 disabled={isSaving}
                             >
                                 Cancelar
                             </button>
                             <button 
                                 onClick={handleSave}
-                                className="flex-1 py-1.5 px-3 rounded-xl bg-primary text-white text-xs font-bold shadow-sm shadow-primary/20 hover:bg-primary-dark transition-colors flex items-center justify-center gap-2"
+                                className="flex-1 py-2.5 px-4 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-xl shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2"
                                 disabled={isSaving}
                             >
-                                {isSaving ? <span className="animate-spin w-3 h-3 border-2 border-white/30 border-t-white rounded-full"></span> : 'Salvar'}
+                                {isSaving ? <span className="animate-spin w-3 h-3 border-2 border-white/30 border-t-white rounded-full"></span> : 'Confirmar'}
                             </button>
                         </>
                     ) : (
                         <button 
                             onClick={startEditing}
-                            className="w-full py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-white hover:border-primary hover:text-primary hover:shadow-sm transition-all flex items-center justify-center gap-2"
+                            className="w-full py-3 rounded-2xl bg-indigo-50 border border-indigo-100 text-xs font-black text-indigo-600 hover:bg-indigo-600 hover:text-white hover:shadow-xl hover:shadow-indigo-200 transition-all duration-300 flex items-center justify-center gap-2 group/edit"
                         >
-                            <span className="material-symbols-outlined text-sm">edit_square</span>
-                            Editar Perfil
+                            <span className="material-symbols-outlined text-lg transition-transform group-hover:rotate-12">edit_square</span>
+                            CONFIGURAR PERFIL
                         </button>
                     )
                 ) : (
                     <>
                         <button 
                             onClick={() => onChatClick(user.id)}
-                            className="flex-1 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:border-primary hover:text-primary hover:shadow-sm transition-all flex items-center justify-center gap-2 relative group/btn"
+                            className="flex-[2] py-3 rounded-2xl bg-white border-2 border-slate-100 text-slate-700 hover:border-primary hover:text-primary hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 flex items-center justify-center gap-3 relative group/btn overflow-hidden"
                         >
-                            <span className="material-symbols-outlined text-lg">chat_bubble</span>
-                            <span className="text-xs font-bold">Chat</span>
+                            <div className="absolute inset-0 bg-primary opacity-0 group-hover/btn:opacity-[0.03] transition-opacity"></div>
+                            <span className="material-symbols-outlined text-xl transition-transform group-hover/btn:-translate-y-1 group-hover/btn:translate-x-1">send</span>
+                            <span className="text-xs font-black uppercase tracking-wider">Enviar Mensagem</span>
                             {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold flex items-center justify-center rounded-full shadow-sm">
+                                <span className="absolute top-2 right-2 w-5 h-5 bg-red-500 text-white text-[10px] font-black flex items-center justify-center rounded-lg shadow-lg animate-bounce">
                                     {unreadCount}
                                 </span>
                             )}
@@ -343,15 +345,15 @@ export const UserCard: React.FC<UserCardProps> = ({
                                 e.stopPropagation();
                                 onToggleFavorite?.();
                             }}
-                            className={`relative z-10 w-10 h-10 rounded-xl bg-white border flex items-center justify-center transition-all cursor-pointer ${
+                            className={`relative z-10 w-12 h-12 rounded-2xl border-2 flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm active:scale-90 ${
                                 isFavorite 
-                                    ? 'border-rose-200 text-rose-500 bg-rose-50' 
-                                    : 'border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200'
+                                    ? 'border-rose-100 text-rose-500 bg-rose-50 shadow-rose-100' 
+                                    : 'border-slate-100 text-slate-300 bg-white hover:text-rose-500 hover:border-rose-100 hover:bg-rose-50/30'
                             }`}
                         >
                             <span 
-                                className="material-symbols-outlined transition-transform active:scale-90"
-                                style={isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                                className="material-symbols-outlined text-2xl transition-all duration-300"
+                                style={isFavorite ? { fontVariationSettings: "'FILL' 1", transform: 'scale(1.1)' } : undefined}
                             >
                                 favorite
                             </span>
