@@ -147,7 +147,7 @@ const App: React.FC = () => {
         <AuthProvider>
           <LayoutContent>
             <Routes>
-              <Route path="/" element={<Navigate to="/create-event" replace />} />
+              <Route path="/" element={<Navigate to="/calendar" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
               {/* Rotas de contingência para capturar variações de links malformados ou encodados */}

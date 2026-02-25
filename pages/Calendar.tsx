@@ -298,6 +298,29 @@ const Calendar: React.FC = () => {
         }
       }
     }, [searchParams]);
+
+    // Check for mobile/tablet breakpoint
+    const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobileOrTablet(window.innerWidth < 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    // Enforce initial view if no view parameter is present
+    useEffect(() => {
+        if (!searchParams.get('view')) {
+            const defaultView = isMobileOrTablet ? 'agenda' : 'month';
+            updateURL(defaultView, currentDate, true);
+        }
+    }, [isMobileOrTablet]);
+
+    // Check if we are on the initial default view
+    const isInitialView = useMemo(() => {
+        const defaultView = isMobileOrTablet ? 'agenda' : 'month';
+        return viewType === defaultView;
+    }, [viewType, isMobileOrTablet]);
   const [tooltipData, setTooltipData] = useState<{ event: any, x: number, y: number, height: number } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -609,6 +632,17 @@ const Calendar: React.FC = () => {
               {/* Navigation Group */}
               <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-start xl:order-1">
                 <div className="flex items-center gap-2 flex-1 md:flex-none">
+                  {/* Botão Voltar */}
+                  {!isInitialView && (
+                    <button
+                      onClick={() => navigate(-1)}
+                      className="size-[38px] flex items-center justify-center rounded-full bg-white border border-slate-200/60 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group"
+                      title="Voltar para visualização anterior"
+                    >
+                      <span className="material-symbols-outlined text-[20px] font-light group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => {
                       const today = new Date();
@@ -795,12 +829,19 @@ const Calendar: React.FC = () => {
                           {dateObj.date.getDate()}
                         </button>
                         {dayEvents.length > 0 && (
-                          <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200/50 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateURL('day', dateObj.date);
+                            }}
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200/50 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 active:scale-95"
+                            title="Ver eventos deste dia"
+                          >
                             <span className="material-symbols-outlined text-[10px] text-text-secondary/50 group-hover/badge:text-primary transition-colors">calendar_today</span>
                             <span className="text-[9px] font-black text-text-secondary group-hover/badge:text-primary transition-colors">
                               {dayEvents.length}
                             </span>
-                          </div>
+                          </button>
                         )}
                       </div>
 
@@ -917,12 +958,19 @@ const Calendar: React.FC = () => {
                         {date.getDate()}
                       </button>
                       {(eventsByDate[date.toDateString()] || []).length > 0 && (
-                        <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-white/50 border border-slate-200/50">
-                          <span className="material-symbols-outlined text-[10px] text-text-secondary/50">calendar_month</span>
-                          <span className="text-[9px] font-black text-text-secondary">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateURL('day', date);
+                          }}
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-white/50 border border-slate-200/50 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 active:scale-95"
+                          title="Ver eventos deste dia"
+                        >
+                          <span className="material-symbols-outlined text-[10px] text-text-secondary/50 group-hover/badge:text-primary transition-colors">calendar_today</span>
+                          <span className="text-[9px] font-black text-text-secondary group-hover/badge:text-primary transition-colors">
                             {(eventsByDate[date.toDateString()] || []).length}
                           </span>
-                        </div>
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1278,6 +1326,7 @@ const Calendar: React.FC = () => {
         x={tooltipData?.x || 0}
         y={tooltipData?.y || 0}
         height={tooltipData?.height || 0}
+        isMobileOrTablet={isMobileOrTablet}
       />
 
       {selectedEvent && (
@@ -1327,7 +1376,14 @@ const Calendar: React.FC = () => {
 );
 };
 
-const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: number, height: number }> = ({ event: propEvent, visible, x, y, height }) => {
+const CalendarTooltip: React.FC<{ 
+  event: any, 
+  visible: boolean, 
+  x: number, 
+  y: number, 
+  height: number,
+  isMobileOrTablet: boolean
+}> = ({ event: propEvent, visible, x, y, height, isMobileOrTablet }) => {
   const tooltipRef = React.useRef<HTMLDivElement>(null);
   const [position, setPosition] = React.useState({ top: 0, left: 0 });
   const [isRendered, setIsRendered] = React.useState(false);
@@ -1397,7 +1453,7 @@ const CalendarTooltip: React.FC<{ event: any, visible: boolean, x: number, y: nu
   if (!isRendered || !event) return null;
 
   // Mobile/Tablet Check: Don't render tooltip on small screens
-  if (window.innerWidth < 1024) return null;
+  if (isMobileOrTablet) return null;
 
   const startDate = new Date(event.date_start || event.date);
   const endDate = new Date(event.date_end || event.date_start || event.date);

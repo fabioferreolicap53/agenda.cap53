@@ -88,12 +88,12 @@ const TeamManagement: React.FC = () => {
         try {
             const filterParts: string[] = [];
 
-            // 1. Exclude restricted roles
-            // Note: If you want to show these roles to admins, add a check for currentUser.role
+            // 1. Exclude restricted roles and hidden users
             const restrictedRoles = ['ALMC', 'TRA', 'DCA'];
             restrictedRoles.forEach(role => {
                 filterParts.push(`role != "${role}"`);
             });
+            filterParts.push('hidden != true');
 
             // 2. Search
             if (debouncedSearch) {
@@ -162,11 +162,11 @@ const TeamManagement: React.FC = () => {
         const setupSubscriptions = async () => {
             try {
                 // Only update existing users in the list to avoid messing up pagination
-                const unsubUsersFunc = await pb.collection('agenda_cap53_usuarios').subscribe('*', (e) => {
+                const unsubUsersFunc = await pb.collection('agenda_cap53_usuarios').subscribe<UsersResponse>('*', (e) => {
                     if (!isMounted) return;
                     
                     if (e.action === 'update') {
-                        setUsers(prev => prev.map(u => u.id === e.record.id ? { ...u, ...e.record } : u));
+                        setUsers(prev => prev.map(u => u.id === e.record.id ? e.record : u));
                     } else if (e.action === 'delete') {
                         setUsers(prev => prev.filter(u => u.id !== e.record.id));
                     }
@@ -261,14 +261,15 @@ const TeamManagement: React.FC = () => {
                             <div className="h-full">
                                 <UserCard
                                     key={currentUser.id}
-                                    user={currentUser}
+                                    user={currentUser as unknown as UsersResponse}
+                                    currentUser={currentUser}
                                     isMe={true}
                                     unreadCount={unreadCounts[currentUser.id] || 0}
                                     isSelected={false}
                                     onToggleSelection={() => {}}
                                     onUpdateProfile={handleUpdateProfile}
                                     isFavorite={false} // Cannot favorite self
-                                    onToggleFavorite={async () => {}}
+                                    onToggleFavorite={() => {}}
                                     onChatClick={(userId) => navigate(`/chat?userId=${userId}`)}
                                     onAvatarClick={() => setShowAvatarModal(true)}
                                 />
@@ -284,6 +285,7 @@ const TeamManagement: React.FC = () => {
                             <div key={user.id} ref={isLastElement ? lastUserElementRef : null} className="h-full">
                                 <UserCard
                                     user={user}
+                                    currentUser={currentUser}
                                     isMe={false}
                                     unreadCount={unreadCounts[user.id] || 0}
                                     isSelected={selectedUsers.includes(user.id)}

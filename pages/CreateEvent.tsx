@@ -878,7 +878,7 @@ const CreateEvent: React.FC = () => {
           const event = await pb.collection(Collections.AgendaCap53Eventos).getOne(duplicateIdParam);
           
           // Copiar apenas Dados Essenciais
-          setTitle(event.title ? `${event.title} (Cópia)` : '');
+          setTitle(event.title || '');
           setType(event.type || '');
           setInvolvementLevel(event.creator_role || 'PARTICIPANTE');
           setObservacoes(event.observacoes || event.description || '');
@@ -1114,7 +1114,8 @@ const CreateEvent: React.FC = () => {
           setLoadingUsers(true);
           const users = await pb.collection(Collections.AgendaCap53Usuarios).getFullList<UsersResponse>({
             sort: 'name',
-            fields: 'id,name,role,sector,avatar,email,collectionId,collectionName',
+            fields: 'id,name,role,sector,avatar,email,collectionId,collectionName,hidden',
+            filter: 'hidden != true',
             requestKey: null
           });
           console.log('--- DEBUG: Usuários do Evento ---', users.length);
