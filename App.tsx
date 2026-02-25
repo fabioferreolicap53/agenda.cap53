@@ -60,6 +60,21 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
+const ScrollToTop: React.FC = () => {
+  const { pathname, search } = useLocation();
+  
+  React.useEffect(() => {
+    // Se houver um eventId na URL, não scrollamos para o topo pois o sistema 
+    // está tentando focar no evento ou abrir o modal
+    const params = new URLSearchParams(search);
+    if (!params.get('eventId') && !params.get('openChat')) {
+      window.scrollTo(0, 0);
+    }
+  }, [pathname, search]);
+
+  return null;
+};
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[] }> = ({ children, roles }) => {
   const { user, loading } = useAuth();
 
@@ -144,6 +159,7 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <HashRouter>
+        <ScrollToTop />
         <AuthProvider>
           <LayoutContent>
             <Routes>

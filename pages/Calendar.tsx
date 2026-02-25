@@ -9,13 +9,15 @@ import {
   UsersResponse, 
   LocaisResponse, 
   AlmacRequestsResponse, 
-  ItensServicoResponse 
+  ItensServicoResponse,
+  TiposEventoResponse
 } from '../lib/pocketbase-types';
 
 interface CalendarExpand {
   user?: UsersResponse;
   location?: LocaisResponse;
   participants?: UsersResponse[];
+  type?: TiposEventoResponse;
   agenda_cap53_almac_requests_via_event?: AlmacRequestsResponse<{
     item: ItensServicoResponse;
   }>[];
@@ -32,6 +34,7 @@ import RefusalModal from '../components/RefusalModal';
 
 import EventDetailsModal from '../components/EventDetailsModal';
 import CustomSelect from '../components/CustomSelect';
+import CustomDayPicker from '../components/CustomDayPicker';
 import { INVOLVEMENT_LEVELS } from '../lib/constants';
 
 import { deleteEventWithCleanup } from '../lib/eventUtils';
@@ -332,7 +335,7 @@ const Calendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [initialChatOpen, setInitialChatOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests'>('details');
-  const [returnToNotifications, setReturnToNotifications] = useState(false);
+  const [returnPath, setReturnPath] = useState<string | null>(null);
   const todayRef = useRef<HTMLDivElement>(null);
   const firstEventRef = useRef<HTMLDivElement>(null);
 
@@ -398,9 +401,23 @@ const Calendar: React.FC = () => {
     const fromParam = searchParams.get('from');
     const targetEventId = chatEventId || viewEventId;
 
-    if (targetEventId && events.length > 0) {
-      const event = events.find(e => e.id === targetEventId);
-      if (event) {
+    if (targetEventId) {
+      if (import.meta.env.DEV) {
+        console.log('Calendar: targetEventId found in URL:', targetEventId);
+      }
+
+      // Se já estivermos com este evento selecionado, não fazemos nada
+      if (selectedEvent?.id === targetEventId) {
+        if (import.meta.env.DEV) {
+          console.log('Calendar: event already selected, skipping');
+        }
+        return;
+      }
+
+      const openModal = (event: CalendarEvent) => {
+        if (import.meta.env.DEV) {
+          console.log('Calendar: Opening modal for event:', event.id);
+        }
         setSelectedEvent(event);
         setInitialChatOpen(!!chatEventId);
         
@@ -410,20 +427,53 @@ const Calendar: React.FC = () => {
           setInitialTab('details');
         }
 
-        if (fromParam === 'notifications') {
-          setReturnToNotifications(true);
+        if (fromParam) {
+          if (fromParam === 'notifications') {
+            setReturnPath('/notifications');
+          } else if (fromParam !== location.pathname) {
+            setReturnPath(fromParam);
+          }
         }
+      };
 
-        // Clean up the URL
-        const newParams = new URLSearchParams(searchParams);
-        if (chatEventId) newParams.delete('openChat');
-        if (viewEventId) newParams.delete('eventId');
-        if (tabParam) newParams.delete('tab');
-        if (fromParam) newParams.delete('from');
-        setSearchParams(newParams, { replace: true });
+      // Tenta encontrar o evento na lista local primeiro
+      const event = events.find(e => e.id === targetEventId);
+      if (event) {
+        if (import.meta.env.DEV) {
+          console.log('Calendar: Event found in local list');
+        }
+        openModal(event);
+      } else {
+        if (import.meta.env.DEV) {
+          console.log('Calendar: Event not found in local list, fetching from PB');
+        }
+        // Se não encontrou localmente, busca no PocketBase
+        pb.collection('agenda_cap53_eventos').getOne<CalendarEvent>(targetEventId, {
+          expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item'
+        })
+        .then((record) => {
+          if (import.meta.env.DEV) {
+            console.log('Calendar: Event fetched from PB successfully');
+          }
+          const eventWithRequests: CalendarEvent = {
+            ...record,
+            almac_requests: record.expand?.agenda_cap53_almac_requests_via_event || []
+          };
+          openModal(eventWithRequests);
+        })
+        .catch(err => {
+          console.error('Calendar: Erro ao buscar evento para o modal:', err);
+          // Se o evento não existir, removemos o parâmetro da URL
+          if (err.status === 404) {
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('eventId');
+            newParams.delete('openChat');
+            setSearchParams(newParams, { replace: true });
+          }
+        });
       }
     }
-  }, [searchParams, events]);
+  }, [searchParams, events]); // Removido selectedEvent?.id dos dependentes para evitar re-abertura do modal no fechamento
 
   const daysLabels = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
@@ -509,7 +559,7 @@ const Calendar: React.FC = () => {
 
       const res = await pb.collection('agenda_cap53_eventos').getFullList({
         filter,
-        expand: 'user,location,participants,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item',
+        expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item',
         fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,expand',
         requestKey: null
       });
@@ -558,6 +608,13 @@ const Calendar: React.FC = () => {
       fetchEvents();
       if (selectedEvent?.id === eventToCancel.id) {
           setSelectedEvent(null);
+          // Limpar parâmetros de URL ao fechar o modal por cancelamento
+          const newParams = new URLSearchParams(searchParams);
+          newParams.delete('eventId');
+          newParams.delete('openChat');
+          newParams.delete('tab');
+          newParams.delete('from');
+          setSearchParams(newParams, { replace: true });
       }
     } catch (error) {
       console.error('Error cancelling event:', error);
@@ -582,6 +639,14 @@ const Calendar: React.FC = () => {
                 await deleteEventWithCleanup(event.id, user?.id);
 
                 setSelectedEvent(null);
+                // Limpar parâmetros de URL ao fechar o modal por exclusão
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('eventId');
+                newParams.delete('openChat');
+                newParams.delete('tab');
+                newParams.delete('from');
+                setSearchParams(newParams, { replace: true });
+                
                 fetchEvents();
                 setConfirmationModalOpen(false);
             } catch (error) {
@@ -614,7 +679,18 @@ const Calendar: React.FC = () => {
     const day = String(newDate.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
     
-    setSearchParams({ view: newView, date: dateStr }, { replace });
+    // Preservar parâmetros existentes (como eventId ou openChat)
+    const newParams = new URLSearchParams(searchParams);
+    
+    // Evitar atualizar se nada mudou
+    if (newParams.get('view') === newView && newParams.get('date') === dateStr) {
+      return;
+    }
+
+    newParams.set('view', newView);
+    newParams.set('date', dateStr);
+    
+    setSearchParams(newParams, { replace });
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
@@ -695,11 +771,20 @@ const Calendar: React.FC = () => {
                     >
                       <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                     </button>
-                    <span className="h-full flex items-center justify-center px-2 text-xs md:text-sm font-black text-text-main w-full md:w-auto md:min-w-[140px] text-center uppercase tracking-widest truncate">
-                      {viewType === 'day'
-                        ? currentDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })
-                        : currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
-                    </span>
+                    
+                    {/* Data Picker Agil */}
+                    <div className="h-full px-2 flex items-center">
+                      <CustomDayPicker 
+                        value={currentDate}
+                        onChange={(newDate) => {
+                          setCurrentDate(newDate);
+                          updateURL('day', newDate, true);
+                        }}
+                        eventsByDate={eventsByDate}
+                        className="h-[32px]"
+                      />
+                    </div>
+
                     <button
                       onClick={() => handleNavigate('next')}
                       className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300 shrink-0"
@@ -1422,9 +1507,22 @@ const Calendar: React.FC = () => {
             setSelectedEvent(null);
             setInitialChatOpen(false);
             setInitialTab('details');
-            if (returnToNotifications) {
-              setReturnToNotifications(false);
-              navigate('/notifications');
+
+            // Limpar parâmetros de URL ao fechar o modal
+            const newParams = new URLSearchParams(searchParams);
+            newParams.delete('eventId');
+            newParams.delete('openChat');
+            newParams.delete('tab');
+            newParams.delete('from');
+            setSearchParams(newParams, { replace: true });
+
+            // Scroll para o topo da página (especialmente se veio da busca global)
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (returnPath) {
+              const path = returnPath;
+              setReturnPath(null);
+              navigate(path);
             }
           }}
           onCancel={handleCancelEvent}

@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { pb } from '../lib/pocketbase';
 import { useNotifications } from '../hooks/useNotifications';
+import { EventsResponse, UsersResponse } from '../lib/pocketbase-types';
+
+type SearchResult = EventsResponse<{
+  user: UsersResponse;
+}>;
 
 const Header: React.FC = () => {
   const location = useLocation();
@@ -10,15 +16,111 @@ const Header: React.FC = () => {
   const { user, setSidebarOpen } = useAuth();
   const { unreadCount } = useNotifications();
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
+
+  const updatePosition = () => {
+    if (searchRef.current) {
+      const rect = searchRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: Math.max(rect.width, 350)
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (showResults) {
+      updatePosition();
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+    }
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [showResults]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     setSearchTerm(params.get('search') || '');
   }, [location.search]);
 
+  // Global search logic
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchTerm.trim().length < 2) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        let filter = `(title ~ "${searchTerm}" || description ~ "${searchTerm}" || user.name ~ "${searchTerm}")`;
+        
+        // Check if it looks like a date (DD/MM/YYYY, DD/MM, or DD/)
+        const dateMatch = searchTerm.match(/^(\d{1,2})\/(\d{1,2})?(\/(\d{2,4}))?$/);
+        if (dateMatch) {
+          const day = dateMatch[1].padStart(2, '0');
+          const month = dateMatch[2] ? dateMatch[2].padStart(2, '0') : String(new Date().getMonth() + 1).padStart(2, '0');
+          const year = dateMatch[4] ? (dateMatch[4].length === 2 ? `20${dateMatch[4]}` : dateMatch[4]) : new Date().getFullYear();
+          const dateStr = `${year}-${month}-${day}`;
+          // Prioritize searching in date_start as requested
+          filter = `(date_start ~ "${dateStr}" || title ~ "${searchTerm}" || user.name ~ "${searchTerm}")`;
+        }
+
+        const records = await pb.collection('agenda_cap53_eventos').getList<SearchResult>(1, 5, {
+          filter,
+          expand: 'user',
+          sort: '-date_start',
+        });
+        setSearchResults(records.items);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Click outside to close results
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const isInsideSearch = searchRef.current && searchRef.current.contains(event.target as Node);
+      const isInsideDropdown = dropdownRef.current && dropdownRef.current.contains(event.target as Node);
+      
+      if (!isInsideSearch && !isInsideDropdown) {
+        setShowResults(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleClearSearch = () => {
+    setSearchTerm('');
+    setShowResults(false);
+    setSearchResults([]);
+    const params = new URLSearchParams(location.search);
+    params.delete('search');
+    navigate({
+      pathname: location.pathname,
+      search: params.toString()
+    }, { replace: true });
+  };
+
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
+    setShowResults(true);
 
     const params = new URLSearchParams(location.search);
     if (value) {
@@ -30,6 +132,45 @@ const Header: React.FC = () => {
     navigate({
       pathname: location.pathname,
       search: params.toString()
+    }, { replace: true });
+  };
+
+  const handleResultClick = (eventId: string, date?: string) => {
+    // 1. Limpar estados de busca IMEDIATAMENTE
+    setShowResults(false);
+    setSearchTerm('');
+    setSearchResults([]);
+    
+    // 2. Formatar a data para a URL (YYYY-MM-DD) de forma segura (local date)
+    let dateStr = '';
+    if (date) {
+      const eventDate = new Date(date.replace(' ', 'T')); // Garantir formato ISO para consistência
+      const year = eventDate.getFullYear();
+      const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+      const day = String(eventDate.getDate()).padStart(2, '0');
+      dateStr = `${year}-${month}-${day}`;
+    } else {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      dateStr = `${year}-${month}-${day}`;
+    }
+    
+    // 3. Navegar para o calendário com o eventId para abrir o modal. 
+    // Usamos um novo objeto URLSearchParams para garantir que o 'search' foi removido.
+    // Passamos a página atual no parâmetro 'from' para podermos retornar se necessário.
+    const newParams = new URLSearchParams();
+    newParams.set('view', 'day');
+    newParams.set('date', dateStr);
+    newParams.set('eventId', eventId);
+    newParams.set('from', location.pathname);
+    
+    // Se estivermos em outra página que não o calendário, o Header será remontado ou atualizado.
+    // Garantimos que o parâmetro de busca seja removido do histórico também.
+    navigate({
+      pathname: '/calendar',
+      search: newParams.toString()
     }, { replace: true });
   };
 
@@ -128,15 +269,97 @@ const Header: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden lg:flex items-center bg-white rounded-lg px-3 py-2 border border-border-light w-64 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all shadow-sm">
-            <span className="material-symbols-outlined text-text-secondary text-[20px]">search</span>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearch}
-              placeholder={location.pathname === '/meu-envolvimento' ? "Buscar evento..." : "Buscar..."}
-              className="bg-transparent border-none outline-none text-sm ml-2 w-full text-text-main placeholder-gray-400 focus:ring-0"
-            />
+          <div ref={searchRef} className="relative hidden lg:block">
+            <div className="flex items-center bg-white rounded-lg px-3 py-2 border border-border-light w-64 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all shadow-sm">
+              <span className="material-symbols-outlined text-text-secondary text-[20px]">
+                {isSearching ? 'sync' : 'search'}
+              </span>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={handleSearch}
+                onFocus={() => setShowResults(true)}
+                placeholder={location.pathname === '/meu-envolvimento' ? "Buscar evento..." : "Buscar por título, data ou criador..."}
+                className={`bg-transparent border-none outline-none text-sm ml-2 w-full text-text-main placeholder-gray-400 focus:ring-0 ${isSearching ? 'animate-pulse' : ''}`}
+              />
+              {searchTerm && (
+                <button
+                  onClick={handleClearSearch}
+                  className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600 ml-1"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown de Resultados via Portal */}
+            {showResults && searchTerm.trim().length >= 2 && createPortal(
+              <div 
+                ref={dropdownRef}
+                style={{ 
+                  position: 'fixed', 
+                  top: `${dropdownPos.top + 8}px`, 
+                  left: `${dropdownPos.left + dropdownPos.width - 350}px`, 
+                  width: '350px' 
+                }}
+                className="bg-white rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-slate-100 overflow-hidden z-[99999] animate-in fade-in slide-in-from-top-2 duration-200"
+              >
+                <div className="p-2 border-b border-slate-50 bg-slate-50/50 flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Resultados</span>
+                  {isSearching && <div className="size-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin"></div>}
+                </div>
+                
+                <div className="max-h-[400px] overflow-y-auto p-1">
+                  {searchResults.length > 0 ? (
+                    searchResults.map((event) => (
+                      <button
+                        key={event.id}
+                        onClick={() => handleResultClick(event.id, event.date_start || event.date)}
+                        className="w-full text-left p-3 hover:bg-slate-50 rounded-lg transition-all group border-b border-slate-50 last:border-none"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary group-hover:text-white transition-colors">
+                            <span className="material-symbols-outlined text-sm">event</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-700 truncate group-hover:text-primary transition-colors">
+                              {event.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[9px] font-medium text-slate-400 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[12px]">calendar_today</span>
+                                {new Date(event.date_start || event.date).toLocaleDateString('pt-BR')}
+                              </span>
+                              <span className="text-[9px] font-medium text-slate-400 flex items-center gap-1 truncate">
+                                <span className="material-symbols-outlined text-[12px]">person</span>
+                                {event.expand?.user?.name || 'Sistema'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : !isSearching ? (
+                    <div className="p-8 text-center">
+                      <span className="material-symbols-outlined text-slate-200 text-3xl">search_off</span>
+                      <p className="text-xs text-slate-400 mt-2 font-medium">Nenhum evento encontrado</p>
+                    </div>
+                  ) : null}
+                </div>
+
+                {searchTerm.trim().length >= 2 && (
+                  <div className="p-2 bg-slate-50 border-t border-slate-100">
+                    <button 
+                      onClick={() => setShowResults(false)}
+                      className="w-full py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-primary transition-colors"
+                    >
+                      Pressione Esc para fechar
+                    </button>
+                  </div>
+                )}
+              </div>,
+              document.body
+            )}
           </div>
         </div>
       </div>

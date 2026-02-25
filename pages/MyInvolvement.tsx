@@ -138,7 +138,7 @@ const MyInvolvement: React.FC = () => {
   const handleOpenEventInCalendar = (event: MySpaceEvent) => {
     const eventDate = new Date(event.date_start);
     const dateStr = eventDate.toISOString().split('T')[0];
-    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=details`);
+    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=details&from=${location.pathname}`);
   };
 
   const handleDuplicateEvent = (event: MySpaceEvent) => {
