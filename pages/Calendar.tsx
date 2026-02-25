@@ -336,6 +336,7 @@ const Calendar: React.FC = () => {
   // Animation States
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
   const [animDirection, setAnimDirection] = useState<'next' | 'prev'>('next');
+  const [animAxis, setAnimAxis] = useState<'x' | 'y'>('x');
 
   // Refusal Modal State for Event Cancellation
   const [refusalModalOpen, setRefusalModalOpen] = useState(false);
@@ -591,10 +592,11 @@ const Calendar: React.FC = () => {
     setSearchParams({ view: newView, date: dateStr }, { replace });
   };
 
-  const handleNavigate = (direction: 'prev' | 'next') => {
+  const handleNavigate = (direction: 'prev' | 'next', axis: 'x' | 'y' = 'x') => {
     if (animStage !== 'idle') return; // Prevent spamming
 
     setAnimDirection(direction);
+    setAnimAxis(axis);
     setAnimStage('exiting');
 
     setTimeout(() => {
@@ -625,8 +627,31 @@ const Calendar: React.FC = () => {
     onSwipeRight: () => handleNavigate('prev')
   });
 
+  // Continuous scroll for month view
+  const lastScrollTime = useRef(0);
+  const scrollAccumulator = useRef(0);
+  const SCROLL_THRESHOLD = 50; // Sensibilidade do scroll
+  const SCROLL_COOLDOWN = 500; // Tempo de espera entre trocas (ms)
+
+  const handleWheel = (e: React.WheelEvent) => {
+    // Enable for Month, Week and Day views.
+    if (!['month', 'week', 'day'].includes(viewType) || animStage !== 'idle') return;
+
+    const now = Date.now();
+    if (now - lastScrollTime.current < SCROLL_COOLDOWN) return;
+
+    scrollAccumulator.current += e.deltaY;
+
+    if (Math.abs(scrollAccumulator.current) > SCROLL_THRESHOLD) {
+      const direction = scrollAccumulator.current > 0 ? 'next' : 'prev';
+      handleNavigate(direction, 'y'); // Use 'y' axis for wheel scroll
+      scrollAccumulator.current = 0;
+      lastScrollTime.current = now;
+    }
+  };
+
   return (
-    <div className="flex flex-col min-h-screen w-full">
+    <div className="flex flex-col min-h-screen w-full" onWheel={handleWheel}>
       {/* Filters Bar - Fixed Top of Page */}
       <div className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-border-light shadow-sm w-full">
         <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-2">
@@ -785,10 +810,14 @@ const Calendar: React.FC = () => {
           {...swipeHandlers} 
           className={`bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative transition-all duration-300 ease-in-out transform ${
             animStage === 'exiting' 
-              ? (animDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
+              ? (animAxis === 'x' 
+                  ? (animDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
+                  : (animDirection === 'next' ? '-translate-y-10 opacity-0' : 'translate-y-10 opacity-0'))
               : animStage === 'entering'
-                ? (animDirection === 'next' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0')
-                : 'translate-x-0 opacity-100'
+                ? (animAxis === 'x'
+                    ? (animDirection === 'next' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0')
+                    : (animDirection === 'next' ? 'translate-y-10 opacity-0' : '-translate-y-10 opacity-0'))
+                : 'translate-x-0 translate-y-0 opacity-100'
           }`}
         >
           {viewType === 'month' && (
@@ -817,9 +846,13 @@ const Calendar: React.FC = () => {
                       className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
                         dateObj.type === 'current' 
                           ? (isToday ? 'bg-primary/[0.06] shadow-inner ring-1 ring-inset ring-primary/10' : 'bg-white hover:bg-slate-50/50') 
-                          : 'bg-slate-50/30 text-text-secondary/40'
+                          : 'bg-slate-100/70 text-text-secondary/40'
                       }`}
                     >
+                      {/* Subtil pattern for out-of-month days */}
+                      {dateObj.type !== 'current' && (
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
+                      )}
                       <div className="flex items-center justify-between mb-1.5">
                         <button
                           onClick={(e) => {
@@ -983,15 +1016,24 @@ const Calendar: React.FC = () => {
               <div className="grid grid-cols-7 flex-1 divide-x divide-border-light bg-white">
                 {getDatesForWeek(currentDate).map((date, idx) => {
                   const isToday = date.toDateString() === new Date().toDateString();
+                  const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                   const dayEvents = eventsByDate[date.toDateString()] || [];
                   return (
                     <div
                       key={idx}
                       onDoubleClick={() => handleDayDoubleClick(date)}
-                      className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 ${
-                        isToday ? 'bg-primary/[0.06] shadow-inner' : 'hover:bg-slate-50/30'
+                      className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${
+                        isToday 
+                          ? 'bg-primary/[0.06] shadow-inner' 
+                          : isCurrentMonth 
+                            ? 'hover:bg-slate-50/30' 
+                            : 'bg-slate-100/70'
                       }`}
                     >
+                      {/* Subtil pattern for out-of-month days */}
+                      {!isCurrentMonth && (
+                        <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
+                      )}
                       <div className="flex flex-col gap-1.5 flex-1 group">
                         {dayEvents.length > 0 ? (
                           dayEvents.map(event => (
@@ -1280,19 +1322,26 @@ const Calendar: React.FC = () => {
                  return Object.entries(groupedEventsByDate).map(([dateStr, dayEvents]) => {
                     const date = new Date(dayEvents[0].date_start || dayEvents[0].date);
                     const isToday = new Date().toDateString() === date.toDateString();
+                    const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                     
                     return (
                         <div 
                             key={dateStr} 
                             ref={isToday ? todayRef : null}
-                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 -mx-4 rounded-2xl transition-all ${
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 -mx-4 rounded-2xl transition-all relative overflow-hidden ${
                                 isToday 
                                     ? 'bg-primary/[0.03] border border-primary/10 relative shadow-sm' 
-                                    : 'opacity-80 hover:opacity-100 hover:bg-slate-50/50'
+                                    : isCurrentMonth 
+                                        ? 'hover:bg-slate-50/50'
+                                        : 'bg-slate-100/70 opacity-80'
                             }`}
                         >
+                            {/* Subtil pattern for out-of-month days */}
+                            {!isCurrentMonth && (
+                                <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
+                            )}
                             <div className="flex md:flex-col items-center md:items-start gap-3 md:gap-0 md:w-32 shrink-0">
-                                <span className={`text-4xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>{String(date.getDate()).padStart(2, '0')}</span>
+                                <span className={`text-4xl font-black ${isToday ? 'text-primary' : isCurrentMonth ? 'text-text-main opacity-30' : 'text-slate-400'}`}>{String(date.getDate()).padStart(2, '0')}</span>
                                 <div className="flex flex-col leading-tight">
                                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>{date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
                                     <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
