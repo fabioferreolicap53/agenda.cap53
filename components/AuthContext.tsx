@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
 
 export type UserRole = 'USER' | 'ADMIN' | 'ALMC' | 'TRA' | 'CE' | 'DCA';
@@ -42,7 +42,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const translateError = (error: any): string => {
+export const translateError = (error: any): string => {
     const message = error?.message || '';
     const status = error?.status;
     const data = error?.data?.data || {};
@@ -120,6 +120,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const lastActiveUpdateRef = React.useRef<number>(Date.now());
     const idleTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
+    // Sync user state with PocketBase auth store
+    const syncUser = useCallback(() => {
+        try {
+            if (pb.authStore.isValid && pb.authStore.model) {
+                const model = pb.authStore.model;
+                
+                // Validate that the user belongs to the correct collection
+                if (model.collectionName !== 'agenda_cap53_usuarios') {
+                    console.warn('User logged in with wrong collection (' + model.collectionName + '). Logging out.');
+                    pb.authStore.clear();
+                    setUser(null);
+                    setDevRoleOverride(null);
+                    setLoading(false);
+                    return;
+                }
+
+                console.log('AuthContext: Setting user state for:', model.email, 'Favorites:', model.favorites);
+                setUser({
+                    id: model.id,
+                    name: model.name || '',
+                    email: model.email,
+                    role: devRoleOverride || (model.role as UserRole),
+                    avatar: model.avatar ? pb.files.getUrl(model, model.avatar) : null,
+                    status: model.status,
+                    context_status: model.context_status,
+                    last_active: model.last_active,
+                    phone: model.phone,
+                    sector: model.sector,
+                    observations: model.observations,
+                    bio: model.bio,
+                    favorites: model.favorites,
+                });
+            } else {
+                console.log('AuthContext: No valid session found');
+                setUser(null);
+                setDevRoleOverride(null); // Reset override on logout
+            }
+        } catch (error) {
+            console.error('AuthContext: Error during syncUser:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [devRoleOverride]);
+
     // Auto-Away and Activity Tracking
     useEffect(() => {
         if (!user) return;
@@ -195,50 +239,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             collection: pb.authStore.model?.collectionName 
         });
         
-        // Sync user state with PocketBase auth store
-        const syncUser = () => {
-            try {
-                if (pb.authStore.isValid && pb.authStore.model) {
-                    const model = pb.authStore.model;
-                    
-                    // Validate that the user belongs to the correct collection
-                    if (model.collectionName !== 'agenda_cap53_usuarios') {
-                        console.warn('User logged in with wrong collection (' + model.collectionName + '). Logging out.');
-                        pb.authStore.clear();
-                        setUser(null);
-                        setDevRoleOverride(null);
-                        setLoading(false);
-                        return;
-                    }
-
-                    console.log('AuthContext: Setting user state for:', model.email, 'Favorites:', model.favorites);
-                    setUser({
-                        id: model.id,
-                        name: model.name || '',
-                        email: model.email,
-                        role: devRoleOverride || (model.role as UserRole),
-                        avatar: model.avatar ? pb.files.getUrl(model, model.avatar) : undefined,
-                        status: model.status,
-                        context_status: model.context_status,
-                        last_active: model.last_active,
-                        phone: model.phone,
-                        sector: model.sector,
-                        observations: model.observations,
-                        bio: model.bio,
-                        favorites: model.favorites,
-                    });
-                } else {
-                    console.log('AuthContext: No valid session found');
-                    setUser(null);
-                    setDevRoleOverride(null); // Reset override on logout
-                }
-            } catch (error) {
-                console.error('AuthContext: Error during syncUser:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         syncUser();
 
         // Listen to auth changes
@@ -250,7 +250,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => {
             unsubscribe();
         };
-    }, [devRoleOverride]);
+    }, [syncUser]);
 
     // Real-time subscription for current user data
     useEffect(() => {
@@ -270,7 +270,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                     name: e.record.name || prev.name,
                                     email: e.record.email || prev.email,
                                     role: (e.record.role as UserRole) || prev.role,
-                                    avatar: e.record.avatar ? pb.files.getUrl(e.record, e.record.avatar) : prev.avatar,
+                                    avatar: e.record.avatar ? `${pb.files.getUrl(e.record, e.record.avatar)}?t=${Date.now()}` : null,
                                     status: e.record.status || prev.status,
                                     context_status: e.record.context_status, // can be empty string
                                     last_active: e.record.last_active || prev.last_active,
@@ -407,20 +407,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const updateAvatar = async (file: File) => {
-        if (!user || !pb.authStore.model) return;
+        if (!user) {
+            console.error('UpdateAvatar: No user session found');
+            throw new Error('Você precisa estar logado para alterar o avatar.');
+        }
         
-        const collectionName = pb.authStore.model.collectionName;
-        console.log('Updating avatar for user ID:', user.id, 'in collection:', collectionName);
+        // Prefer collection from model, fallback to known user collection
+        const collectionName = pb.authStore.model?.collectionName || 'agenda_cap53_usuarios';
+        
+        if (import.meta.env.DEV) {
+            console.log('UpdateAvatar: Starting upload...', {
+                userId: user.id,
+                collection: collectionName,
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type
+            });
+        }
 
         try {
             const formData = new FormData();
             formData.append('avatar', file);
 
-            await pb.collection(collectionName).update(user.id, formData);
-            // Refresh auth store to ensure local model is updated and onChange fires
-            await pb.collection(collectionName).authRefresh();
-        } catch (error) {
-            console.error('Avatar update error details:', error);
+            const updatedRecord = await pb.collection(collectionName).update(user.id, formData);
+            
+            if (import.meta.env.DEV) {
+                console.log('UpdateAvatar: Upload success, record updated:', updatedRecord.id);
+            }
+
+            // Refresh auth store to ensure local model is updated and sync state
+            try {
+                await pb.collection(collectionName).authRefresh();
+                if (import.meta.env.DEV) console.log('UpdateAvatar: Auth refresh success');
+            } catch (refreshErr) {
+                console.warn('UpdateAvatar: Auth refresh failed, but upload succeeded:', refreshErr);
+                // We don't throw here because the upload was successful
+            }
+
+            // Force local state sync
+            syncUser();
+        } catch (error: any) {
+            console.error('UpdateAvatar: Critical error during upload:', error);
+            // Re-throw with translated message or the error object itself
             throw error;
         }
     };

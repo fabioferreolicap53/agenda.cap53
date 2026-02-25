@@ -20,15 +20,23 @@ export const pb = new PocketBase(PB_URL) as TypedPocketBase;
  * Helper para obter a URL completa do avatar do usuário.
  * Retorna uma URL padrão da UI Avatars se não houver avatar definido.
  */
-export const getAvatarUrl = (record: any) => {
-    if (!record) return '';
+export const getAvatarUrl = (record: any): string | null => {
+    if (!record) return null;
     
-    // Se já tiver um avatar definido
-    if (record.avatar) {
-        return pb.files.getUrl(record, record.avatar);
+    // Se o record for o objeto de usuário do AuthContext e já tiver a URL completa
+    if (typeof record.avatar === 'string' && (record.avatar.startsWith('http') || record.avatar.startsWith('blob:'))) {
+        return record.avatar;
+    }
+
+    // Se tiver o nome do arquivo do avatar (formato padrão do PocketBase record)
+    if (record.avatar && typeof record.avatar === 'string') {
+        // Se o record tiver um ID (é um model do PB), gera a URL
+        if (record.id && record.collectionId || record.collectionName) {
+            return pb.files.getUrl(record, record.avatar);
+        }
     }
     
-    // Fallback para UI Avatars
+    // Fallback para UI Avatars se não houver avatar
     const name = record.name || 'User';
     return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&size=128`;
 };

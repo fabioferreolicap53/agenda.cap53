@@ -331,7 +331,13 @@ const TeamManagement: React.FC = () => {
                                 const user = users.find(u => u.id === id);
                                 return (
                                     <div key={id} className="size-4.5 md:size-6 rounded-lg border-2 border-primary bg-white overflow-hidden shadow-lg">
-                                        <img src={getAvatarUrl(user)} alt="" className="w-full h-full object-cover" />
+                                        {getAvatarUrl(user) ? (
+                                            <img src={getAvatarUrl(user)!} alt="" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-slate-100 flex items-center justify-center text-[6px] text-slate-400">
+                                                {user?.name?.charAt(0) || '?'}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}

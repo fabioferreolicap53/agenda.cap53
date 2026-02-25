@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { getAvatarUrl } from '../lib/pocketbase';
-import { useAuth } from './AuthContext';
+import { useAuth, translateError } from './AuthContext';
 
 interface AvatarUploadModalProps {
     isOpen: boolean;
@@ -32,6 +32,7 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({ isOpen, onClose }
             }
 
             setSelectedFile(file);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
             setPreviewUrl(URL.createObjectURL(file));
             setError(null);
         }
@@ -52,6 +53,7 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({ isOpen, onClose }
             }
 
             setSelectedFile(file);
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
             setPreviewUrl(URL.createObjectURL(file));
             setError(null);
         }
@@ -65,16 +67,18 @@ const AvatarUploadModal: React.FC<AvatarUploadModalProps> = ({ isOpen, onClose }
 
         try {
             await updateAvatar(selectedFile);
-            onClose();
+            handleClose();
         } catch (err: any) {
-            console.error('Error uploading avatar:', err);
-            setError('Erro ao atualizar avatar. Tente novamente.');
+            console.error('Error in AvatarUploadModal:', err);
+            const friendlyError = translateError(err);
+            setError(friendlyError);
         } finally {
             setLoading(false);
         }
     };
 
     const handleClose = () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
         setSelectedFile(null);
         setPreviewUrl(null);
         setError(null);
