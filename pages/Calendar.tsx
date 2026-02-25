@@ -336,7 +336,6 @@ const Calendar: React.FC = () => {
   // Animation States
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
   const [animDirection, setAnimDirection] = useState<'next' | 'prev'>('next');
-  const [animAxis, setAnimAxis] = useState<'x' | 'y'>('x');
 
   // Refusal Modal State for Event Cancellation
   const [refusalModalOpen, setRefusalModalOpen] = useState(false);
@@ -592,11 +591,10 @@ const Calendar: React.FC = () => {
     setSearchParams({ view: newView, date: dateStr }, { replace });
   };
 
-  const handleNavigate = (direction: 'prev' | 'next', axis: 'x' | 'y' = 'x') => {
+  const handleNavigate = (direction: 'prev' | 'next') => {
     if (animStage !== 'idle') return; // Prevent spamming
 
     setAnimDirection(direction);
-    setAnimAxis(axis);
     setAnimStage('exiting');
 
     setTimeout(() => {
@@ -627,31 +625,8 @@ const Calendar: React.FC = () => {
     onSwipeRight: () => handleNavigate('prev')
   });
 
-  // Continuous scroll for month view
-  const lastScrollTime = useRef(0);
-  const scrollAccumulator = useRef(0);
-  const SCROLL_THRESHOLD = 50; // Sensibilidade do scroll
-  const SCROLL_COOLDOWN = 500; // Tempo de espera entre trocas (ms)
-
-  const handleWheel = (e: React.WheelEvent) => {
-    // Enable for Month, Week and Day views.
-    if (!['month', 'week', 'day'].includes(viewType) || animStage !== 'idle') return;
-
-    const now = Date.now();
-    if (now - lastScrollTime.current < SCROLL_COOLDOWN) return;
-
-    scrollAccumulator.current += e.deltaY;
-
-    if (Math.abs(scrollAccumulator.current) > SCROLL_THRESHOLD) {
-      const direction = scrollAccumulator.current > 0 ? 'next' : 'prev';
-      handleNavigate(direction, 'y'); // Use 'y' axis for wheel scroll
-      scrollAccumulator.current = 0;
-      lastScrollTime.current = now;
-    }
-  };
-
   return (
-    <div className="flex flex-col min-h-screen w-full" onWheel={handleWheel}>
+    <div className="flex flex-col min-h-screen w-full">
       {/* Filters Bar - Fixed Top of Page */}
       <div className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-border-light shadow-sm w-full">
         <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-2">
@@ -810,14 +785,10 @@ const Calendar: React.FC = () => {
           {...swipeHandlers} 
           className={`bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative transition-all duration-300 ease-in-out transform ${
             animStage === 'exiting' 
-              ? (animAxis === 'x' 
-                  ? (animDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
-                  : (animDirection === 'next' ? '-translate-y-10 opacity-0' : 'translate-y-10 opacity-0'))
+              ? (animDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
               : animStage === 'entering'
-                ? (animAxis === 'x'
-                    ? (animDirection === 'next' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0')
-                    : (animDirection === 'next' ? 'translate-y-10 opacity-0' : '-translate-y-10 opacity-0'))
-                : 'translate-x-0 translate-y-0 opacity-100'
+                ? (animDirection === 'next' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0')
+                : 'translate-x-0 opacity-100'
           }`}
         >
           {viewType === 'month' && (
@@ -845,7 +816,7 @@ const Calendar: React.FC = () => {
                       onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
                       className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
                         dateObj.type === 'current' 
-                          ? (isToday ? 'bg-primary/[0.06] shadow-inner ring-1 ring-inset ring-primary/10' : 'bg-white hover:bg-slate-50/50') 
+                          ? (isToday ? 'bg-primary/[0.04] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.05)] ring-1 ring-inset ring-primary/20' : 'bg-white hover:bg-slate-50/50') 
                           : 'bg-slate-100/70 text-text-secondary/40'
                       }`}
                     >
@@ -853,14 +824,20 @@ const Calendar: React.FC = () => {
                       {dateObj.type !== 'current' && (
                         <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
                       )}
-                      <div className="flex items-center justify-between mb-1.5">
+                      {/* Glow effect for today */}
+                      {isToday && (
+                        <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/[0.08] to-transparent"></div>
+                      )}
+                      <div className="flex items-center justify-between mb-1.5 relative z-10">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             updateURL('day', dateObj.date);
                           }}
-                          className={`text-[11px] md:text-xs font-black size-6 md:size-7 flex items-center justify-center transition-all duration-300 rounded-full hover:bg-primary hover:text-white ${
-                            isToday ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-text-secondary group-hover:text-primary'
+                          className={`text-[11px] md:text-xs font-black size-6 md:size-7 flex items-center justify-center transition-all duration-300 rounded-full ${
+                            isToday 
+                              ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110 ring-2 ring-white' 
+                              : 'text-text-secondary group-hover:text-primary hover:bg-primary/10'
                           }`}
                         >
                           {dateObj.date.getDate()}
@@ -882,7 +859,7 @@ const Calendar: React.FC = () => {
                         )}
                       </div>
 
-                      <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 max-h-[100px]">
+                      <div className={`flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 max-h-[100px] transition-all duration-300 ${dateObj.type !== 'current' ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                         {dayEvents.map(event => (
                           <CalendarEventCard
                             key={event.id}
@@ -907,6 +884,7 @@ const Calendar: React.FC = () => {
                 const dateKey = date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
                 const isToday = dateKey === new Date().toDateString();
+                const isCurrentMonth = date.getMonth() === currentDate.getMonth();
 
                 return (
                   <div 
@@ -943,7 +921,7 @@ const Calendar: React.FC = () => {
                         <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                       </button>
                     </div>
-                    <div className="p-2 flex flex-col gap-1.5">
+                    <div className={`p-2 flex flex-col gap-1.5 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -1034,7 +1012,7 @@ const Calendar: React.FC = () => {
                       {!isCurrentMonth && (
                         <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
                       )}
-                      <div className="flex flex-col gap-1.5 flex-1 group">
+                      <div className={`flex flex-col gap-1.5 flex-1 group transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                         {dayEvents.length > 0 ? (
                           dayEvents.map(event => (
                             <CalendarEventCard
@@ -1064,23 +1042,38 @@ const Calendar: React.FC = () => {
                 const dateKey = date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
                 const isToday = dateKey === new Date().toDateString();
+                const isCurrentMonth = date.getMonth() === currentDate.getMonth();
 
                 return (
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-1 ring-primary/20 border-primary/20' : 'bg-white'}`}
+                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${
+                      isToday 
+                        ? 'bg-primary/[0.04] ring-2 ring-primary/30 border-primary/20 shadow-lg shadow-primary/5' 
+                        : isCurrentMonth 
+                          ? 'bg-white' 
+                          : 'bg-slate-100/70'
+                    }`}
                   >
-                    <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                    {/* Subtil pattern for out-of-month days */}
+                    {!isCurrentMonth && !isToday && (
+                      <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
+                    )}
+                    {/* Glow effect for today mobile */}
+                    {isToday && (
+                      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.08] to-transparent"></div>
+                    )}
+                    <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/[0.05]' : isCurrentMonth ? 'bg-slate-50/50' : 'bg-transparent'}`}>
                       <div className="flex items-center gap-2">
-                        <span className={`text-xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                        <span className={`text-xl font-black ${isToday ? 'text-primary scale-110 drop-shadow-sm' : isCurrentMonth ? 'text-text-main opacity-30' : 'text-slate-400'}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                          <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : isCurrentMonth ? 'text-text-secondary' : 'text-text-secondary/60'}`}>
                             {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
                           </span>
-                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-px rounded-full uppercase tracking-widest mt-0.5 w-fit">Hoje</span>}
+                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-0.5 w-fit shadow-md shadow-primary/20">Hoje</span>}
                         </div>
                       </div>
                       <button 
@@ -1090,7 +1083,7 @@ const Calendar: React.FC = () => {
                         <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                       </button>
                     </div>
-                    <div className="p-2 flex flex-col gap-1.5">
+                    <div className={`p-2 flex flex-col gap-1.5 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -1328,9 +1321,9 @@ const Calendar: React.FC = () => {
                         <div 
                             key={dateStr} 
                             ref={isToday ? todayRef : null}
-                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-4 -mx-4 rounded-2xl transition-all relative overflow-hidden ${
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden ${
                                 isToday 
-                                    ? 'bg-primary/[0.03] border border-primary/10 relative shadow-sm' 
+                                    ? 'bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
                                     : isCurrentMonth 
                                         ? 'hover:bg-slate-50/50'
                                         : 'bg-slate-100/70 opacity-80'
@@ -1340,17 +1333,21 @@ const Calendar: React.FC = () => {
                             {!isCurrentMonth && (
                                 <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
                             )}
-                            <div className="flex md:flex-col items-center md:items-start gap-3 md:gap-0 md:w-32 shrink-0">
-                                <span className={`text-4xl font-black ${isToday ? 'text-primary' : isCurrentMonth ? 'text-text-main opacity-30' : 'text-slate-400'}`}>{String(date.getDate()).padStart(2, '0')}</span>
+                            {/* Glow effect for today agenda */}
+                            {isToday && (
+                              <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
+                            )}
+                            <div className="flex md:flex-col items-center md:items-start gap-3 md:gap-0 md:w-32 shrink-0 relative z-10">
+                                <span className={`text-5xl font-black transition-transform duration-500 ${isToday ? 'text-primary scale-110 drop-shadow-md' : isCurrentMonth ? 'text-text-main opacity-30' : 'text-slate-400'}`}>{String(date.getDate()).padStart(2, '0')}</span>
                                 <div className="flex flex-col leading-tight">
-                                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>{date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
+                                    <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>{date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
                                     <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
                                       {date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')}
                                     </span>
                                     {isToday && <span className="text-[9px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
                                 </div>
                             </div>
-                            <div className="flex-1 flex flex-col gap-4 border-l-2 border-slate-50 pl-6 md:pl-12 pb-8">
+                            <div className={`flex-1 flex flex-col gap-4 border-l-2 border-slate-50 pl-6 md:pl-12 pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                                 {dayEvents.map(event => (
                                     <div key={event.id} className="hover:translate-x-1 transition-transform duration-300">
                                         <CalendarEventCard
@@ -1726,6 +1723,7 @@ const CalendarEventCard: React.FC<{
   onSelect: (event: any) => void
 }> = ({ event, user, onCancel, setTooltipData, detailed, onSelect }) => {
   const isCancelled = event.status === 'cancelled';
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const getCategoryStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
     // Priority 1: Check actual requests (real-time data)
@@ -1768,12 +1766,28 @@ const CalendarEventCard: React.FC<{
 
   const handleMouseEnter = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    setTooltipData({
-      event,
-      x: rect.left + rect.width / 2,
-      y: rect.top,
-      height: rect.height
-    });
+    
+    // Clear any existing timeout
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    // Set a delay of 600ms before showing the tooltip
+    timeoutRef.current = setTimeout(() => {
+      setTooltipData({
+        event,
+        x: rect.left + rect.width / 2,
+        y: rect.top,
+        height: rect.height
+      });
+    }, 600);
+  };
+
+  const handleMouseLeave = () => {
+    // Clear timeout if mouse leaves before it triggers
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setTooltipData(null);
   };
 
   const almcStatus = getCategoryStatus('ALMOXARIFADO');
@@ -1806,9 +1820,13 @@ const CalendarEventCard: React.FC<{
   return (
     <div
       onMouseEnter={handleMouseEnter}
-      onMouseLeave={() => setTooltipData(null)}
+      onMouseLeave={handleMouseLeave}
       onClick={(e) => {
         e.stopPropagation();
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         setTooltipData(null);
         onSelect(event);
       }}
