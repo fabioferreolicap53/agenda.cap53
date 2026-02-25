@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { NotificationRecord } from '../lib/notifications';
 import { pb } from '../lib/pocketbase';
-import { AlmacRequest, EventRecord } from '../lib/types';
+import { 
+  AlmacRequestsResponse, 
+  EventsResponse, 
+  ItensServicoResponse,
+  NotificationsResponse
+} from '../lib/pocketbase-types';
 import CustomTimePicker from './CustomTimePicker';
 
 interface ReRequestModalProps {
-  notification?: NotificationRecord;
-  request?: AlmacRequest; // Direct request object (for items)
-  event?: EventRecord;   // Direct event object (for transport)
+  notification?: NotificationsResponse;
+  request?: AlmacRequestsResponse<{ item: ItensServicoResponse }>; // Direct request object (for items)
+  event?: EventsResponse;   // Direct event object (for transport)
   type?: 'item' | 'transport' | 'participation';
   onClose: () => void;
   onSuccess: () => void;
@@ -17,7 +21,18 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
   const [loading, setLoading] = useState(false);
   
   // Determine mode and initial data
-  let initialData: any = {};
+  let initialData: {
+    quantity?: number;
+    item_name?: string;
+    destination?: string;
+    horario_levar?: string;
+    horario_buscar?: string;
+    qtd_pessoas?: number;
+    event_title?: string;
+    kind?: string;
+    event_id?: string;
+    event?: string;
+  } = {};
   let isItemRequest = false;
   let isTransportRequest = false;
   let isParticipationRequest = false;
@@ -108,7 +123,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
     try {
       if (isParticipationRequest) {
         const rawEventId = eventId;
-        targetEventId = (rawEventId && typeof rawEventId === 'object') ? (rawEventId as any).id : rawEventId;
+        targetEventId = (rawEventId && typeof rawEventId === 'object' && 'id' in (rawEventId as object)) ? (rawEventId as {id: string}).id : rawEventId as string;
         
         console.log('ReRequestModal: Início do reenvio de participação', { targetEventId, observation });
 
@@ -163,7 +178,14 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
 
             if (eventCreatorId && eventCreatorId !== user.id) {
                 // Recuperar histórico anterior se houver
-                let history: any[] = [];
+                let history: {
+                    action: string;
+                    timestamp: string;
+                    user: string;
+                    user_name: string;
+                    justification?: string;
+                    message: string;
+                }[] = [];
                 const prevData = notification?.data || {};
                 
                 if (prevData.history_context?.full_history) {
@@ -227,7 +249,14 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
 
         // 1. Fetch current history
         const currentRequest = await pb.collection('agenda_cap53_almac_requests').getOne(requestId);
-        const history = currentRequest.history || [];
+        let history: {
+            timestamp: string;
+            action: string;
+            user: string;
+            user_name: string;
+            message: string;
+            quantity: number;
+        }[] = currentRequest.history || [];
         
         history.push({
             timestamp: new Date().toISOString(),

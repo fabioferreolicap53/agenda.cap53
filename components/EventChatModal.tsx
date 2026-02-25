@@ -1,18 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
+import { 
+  EventsResponse, 
+  UsersResponse, 
+  SalasBatepapoResponse, 
+  MensagensSalasResponse 
+} from '../lib/pocketbase-types';
 
 interface EventChatModalProps {
-    event: any;
-    user: any;
+    event: EventsResponse;
+    user: UsersResponse | null;
     isAccepted?: boolean;
     onClose: () => void;
 }
 
 const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted, onClose }) => {
-    const [messages, setMessages] = useState<any[]>([]);
+    const [messages, setMessages] = useState<MensagensSalasResponse<{ sender: UsersResponse }>[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
-    const [room, setRoom] = useState<any>(null);
+    const [room, setRoom] = useState<SalasBatepapoResponse | null>(null);
     const [participantsCount, setParticipantsCount] = useState(0);
     const [isParticipant, setIsParticipant] = useState<boolean | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -92,7 +98,7 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                 setRoom(existingRoom);
 
                 // Load messages
-                const messageRecords = await pb.collection('agenda_cap53_mensagens_salas').getFullList({
+                const messageRecords = await pb.collection('agenda_cap53_mensagens_salas').getFullList<MensagensSalasResponse<{ sender: UsersResponse }>>({
                     filter: `room = "${existingRoom.id}"`,
                     sort: 'created',
                     expand: 'sender'
@@ -100,15 +106,19 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                 setMessages(messageRecords);
 
                 // Subscribe to real-time messages
-                pb.collection('agenda_cap53_mensagens_salas').subscribe('*', (data) => {
+                pb.collection('agenda_cap53_mensagens_salas').subscribe<MensagensSalasResponse<{ sender: UsersResponse }>>('*', (data) => {
                     if (data.action === 'create' && data.record.room === existingRoom.id) {
                         // We need to expand the sender for the new message
-                        pb.collection('agenda_cap53_mensagens_salas').getOne(data.record.id, { expand: 'sender' })
+                        pb.collection('agenda_cap53_mensagens_salas').getOne<MensagensSalasResponse<{ sender: UsersResponse }>>(data.record.id, { expand: 'sender' })
                             .then(fullMsg => {
                                 setMessages(prev => [...prev, fullMsg]);
                             });
                     } else if (data.action === 'update' && data.record.room === existingRoom.id) {
-                        setMessages(prev => prev.map(m => m.id === data.record.id ? { ...m, ...data.record } : m));
+                        // We need to expand the sender for the updated message
+                        pb.collection('agenda_cap53_mensagens_salas').getOne<MensagensSalasResponse<{ sender: UsersResponse }>>(data.record.id, { expand: 'sender' })
+                            .then(fullMsg => {
+                                setMessages(prev => prev.map(m => m.id === data.record.id ? fullMsg : m));
+                            });
                     } else if (data.action === 'delete' && data.record.room === existingRoom.id) {
                         setMessages(prev => prev.filter(m => m.id !== data.record.id));
                     }

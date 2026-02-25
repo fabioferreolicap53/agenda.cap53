@@ -11,6 +11,9 @@ export enum Collections {
 	AgendaCap53Locais = "agenda_cap53_locais",
 	AgendaCap53TiposEvento = "agenda_cap53_tipos_evento",
 	AgendaCap53ItensServico = "agenda_cap53_itens_servico",
+	AgendaCap53SolicitacoesEvento = "agenda_cap53_solicitacoes_evento",
+	AgendaCap53SalasBatepapo = "agenda_cap53_salas_batepapo",
+	AgendaCap53MensagensSalas = "agenda_cap53_mensagens_salas",
   AgendaAuditLogs = "agenda_audit_logs",
 }
 
@@ -132,6 +135,28 @@ export interface ItensServicoRecord {
     image?: string
 }
 
+// Solicitacoes Evento
+export interface SolicitacoesEventoRecord {
+    event: string
+    user: string
+    status?: 'pending' | 'approved' | 'rejected'
+    message?: string
+}
+
+// Salas Batepapo
+export interface SalasBatepapoRecord {
+    event: string
+    created_by: string
+    status?: 'active' | 'archived'
+}
+
+// Mensagens Salas
+export interface MensagensSalasRecord {
+    room: string
+    sender: string
+    content: string
+}
+
 // Response Types
 export type UsersResponse<Texpand = unknown> = UsersRecord & AuthSystemFields<Texpand>
 export type EventsResponse<Texpand = unknown> = EventsRecord & BaseSystemFields<Texpand>
@@ -141,6 +166,9 @@ export type NotificationsResponse<Texpand = unknown> = NotificationsRecord & Bas
 export type LocaisResponse<Texpand = unknown> = LocaisRecord & BaseSystemFields<Texpand>
 export type TiposEventoResponse<Texpand = unknown> = TiposEventoRecord & BaseSystemFields<Texpand>
 export type ItensServicoResponse<Texpand = unknown> = ItensServicoRecord & BaseSystemFields<Texpand>
+export type SolicitacoesEventoResponse<Texpand = unknown> = SolicitacoesEventoRecord & BaseSystemFields<Texpand>
+export type SalasBatepapoResponse<Texpand = unknown> = SalasBatepapoRecord & BaseSystemFields<Texpand>
+export type MensagensSalasResponse<Texpand = unknown> = MensagensSalasRecord & BaseSystemFields<Texpand>
 
 // Schema Map
 export type CollectionRecords = {
@@ -152,6 +180,9 @@ export type CollectionRecords = {
     [Collections.AgendaCap53Locais]: LocaisRecord
     [Collections.AgendaCap53TiposEvento]: TiposEventoRecord
     [Collections.AgendaCap53ItensServico]: ItensServicoRecord
+    [Collections.AgendaCap53SolicitacoesEvento]: SolicitacoesEventoRecord
+    [Collections.AgendaCap53SalasBatepapo]: SalasBatepapoRecord
+    [Collections.AgendaCap53MensagensSalas]: MensagensSalasRecord
 }
 
 export type CollectionResponses = {
@@ -163,4 +194,7 @@ export type CollectionResponses = {
     [Collections.AgendaCap53Locais]: LocaisResponse
     [Collections.AgendaCap53TiposEvento]: TiposEventoResponse
     [Collections.AgendaCap53ItensServico]: ItensServicoResponse
+    [Collections.AgendaCap53SolicitacoesEvento]: SolicitacoesEventoResponse
+    [Collections.AgendaCap53SalasBatepapo]: SalasBatepapoResponse
+    [Collections.AgendaCap53MensagensSalas]: MensagensSalasResponse
 }

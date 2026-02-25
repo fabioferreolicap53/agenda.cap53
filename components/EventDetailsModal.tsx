@@ -1,29 +1,45 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
+import { 
+  EventsResponse, 
+  UsersResponse, 
+  LocaisResponse,
+  SolicitacoesEventoResponse,
+  AlmacRequestsResponse,
+  ItensServicoResponse,
+  TiposEventoResponse
+} from '../lib/pocketbase-types';
 import { notificationService } from '../lib/notifications';
+import { INVOLVEMENT_LEVELS } from '../lib/constants';
+import CustomSelect from './CustomSelect';
 import EventChatModal from './EventChatModal';
 import ReRequestModal from './ReRequestModal';
 import RefusalModal from './RefusalModal';
-import CustomSelect from './CustomSelect';
-import { INVOLVEMENT_LEVELS } from '../lib/constants';
+
+interface EventExpand {
+  user?: UsersResponse;
+  location?: LocaisResponse;
+  participants?: UsersResponse[];
+  type?: TiposEventoResponse;
+}
 
 interface EventDetailsModalProps {
-  event: any;
+  event: EventsResponse<EventExpand>;
   onClose: () => void;
   onCancel: (id: string, title: string, participants: string[]) => void;
-  onDelete: (event: any) => void;
-  user: any;
+  onDelete: (event: EventsResponse<EventExpand>) => void;
+  user: UsersResponse | null;
   initialChatOpen?: boolean;
   initialTab?: 'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests';
 }
 
 const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEvent, onClose, onCancel, onDelete, user, initialChatOpen = false, initialTab = 'details' }) => {
   const navigate = useNavigate();
-  const [event, setEvent] = React.useState(initialEvent);
-  const [requests, setRequests] = React.useState<any[]>([]);
+  const [event, setEvent] = React.useState<EventsResponse<EventExpand>>(initialEvent);
+  const [requests, setRequests] = React.useState<AlmacRequestsResponse<{ item: ItensServicoResponse }>[]>([]);
   const [loadingRequests, setLoadingRequests] = React.useState(false);
-  const [eventParticipationRequests, setEventParticipationRequests] = React.useState<any[]>([]);
+  const [eventParticipationRequests, setEventParticipationRequests] = React.useState<SolicitacoesEventoResponse<{ user: UsersResponse }>[]>([]);
   const [hasRequestedParticipation, setHasRequestedParticipation] = React.useState(false);
   const [refusalAckByRequest, setRefusalAckByRequest] = React.useState<Record<string, boolean>>({});
   const [transportRefusalAck, setTransportRefusalAck] = React.useState<boolean | null>(null);
@@ -42,9 +58,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   });
   const [requestRoles, setRequestRoles] = React.useState<Record<string, string>>({});
   const [messageCount, setMessageCount] = React.useState(0);
-  const [reRequestTarget, setReRequestTarget] = React.useState<{type: 'item' | 'transport' | 'participation', data: any} | null>(null);
+  const [reRequestTarget, setReRequestTarget] = React.useState<{
+    type: 'item' | 'transport' | 'participation', 
+    data: AlmacRequestsResponse<{ item: ItensServicoResponse }> | EventsResponse<EventExpand>
+  } | null>(null);
   const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
-  const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'transport' | 'participation', data?: any } | null>(null);
+  const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'transport' | 'participation', data?: string } | null>(null);
   const [refusalModalProps, setRefusalModalProps] = React.useState<{title?: string, description?: string}>({});
   const [processingTransport, setProcessingTransport] = React.useState(false);
 
@@ -59,8 +78,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     { id: 'resources', label: 'Recursos', icon: 'inventory_2' },
     { id: 'transport', label: 'Transporte', icon: 'directions_car' },
     { id: 'dashboard', label: 'Painel', icon: 'monitoring' },
-    ...(event.user === user?.id ? [{ id: 'requests', label: 'Solicitações', icon: 'person_add' }] : [])
-  ], [event.user, user?.id]);
+    ...(event.user === user?.id ? [{ id: 'requests', label: 'Solicitações', icon: 'person_add' } as const] : [])
+  ] as const, [event.user, user?.id]);
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -80,18 +99,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     if (isLeftSwipe || isRightSwipe) {
         const currentIndex = tabs.findIndex(t => t.id === activeTab);
         if (isLeftSwipe && currentIndex < tabs.length - 1) {
-            setActiveTab(tabs[currentIndex + 1].id as any);
+            setActiveTab(tabs[currentIndex + 1].id);
         } else if (isRightSwipe && currentIndex > 0) {
-            setActiveTab(tabs[currentIndex - 1].id as any);
+            setActiveTab(tabs[currentIndex - 1].id);
         }
     }
   };
 
-  const getRoleLabel = (role: string) => {
+  const getRoleLabel = (role: string | undefined) => {
     return INVOLVEMENT_LEVELS.find(l => l.value === (role || 'PARTICIPANTE').toUpperCase())?.label || 'PARTICIPANTE';
   };
 
-  const renderParticipantRow = (p: any) => {
+  const renderParticipantRow = (p: UsersResponse) => {
     const isCreator = event.user === p.id;
     const status = isCreator ? 'accepted' : (participantStatus[p.id] || 'pending');
     const role = isCreator ? (event.creator_role || (event.participants_roles && event.participants_roles[p.id])) : (event.participants_roles && event.participants_roles[p.id]);
@@ -102,7 +121,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           <div className="size-8 shrink-0 rounded-full bg-cover bg-center border border-gray-100" style={{ backgroundImage: `url(${getAvatarUrl(p)})` }} />
           <div className="flex flex-col min-w-0">
             <span className="text-xs font-bold text-text-main truncate">{p.name || 'Convidado'}</span>
-            <span className="text-[10px] text-text-secondary truncate">{getRoleLabel(role)}</span>
+            <span className="text-[10px] text-text-secondary truncate">{getRoleLabel(role as string)}</span>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -121,12 +140,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     );
   };
   
-  const isCancelled = event.status === 'cancelled';
+  const isCancelled = event.transporte_status === 'cancelled' || (event as any).status === 'cancelled';
 
   // Fetch participation requests
   const fetchParticipationRequests = async () => {
       try {
-          const res = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
+          const res = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList<SolicitacoesEventoResponse<{ user: UsersResponse }>>({
               filter: `event = "${event.id}"`,
               expand: 'user',
               sort: '-created'
@@ -241,27 +260,28 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
           // 4. Update the Creator's Notification(s)
           try {
-              // Find all notifications of type 'event_participation_request' for this event and user (creator)
-              // that match the requester
-              const notifications = await pb.collection('agenda_cap53_notifications').getFullList({
-                  filter: `event = "${event.id}" && type = "event_participation_request" && user = "${user.id}"`,
-                  requestKey: null
-              });
+              if (user) {
+                  // Find all notifications of type 'event_participation_request' for this event and user (creator)
+                  // that match the requester
+                  const notifications = await pb.collection('agenda_cap53_notifications').getFullList({
+                      filter: `event = "${event.id}" && type = "event_participation_request" && user = "${user.id}"`,
+                      requestKey: null
+                  });
 
-              // Filter notifications where the requester matches the approved/rejected user
-              const targetNotifications = notifications.filter(n => {
-                  const data = n.data || {};
-                  return data.requester_id === request.user;
-              });
+                  // Filter notifications where the requester matches the approved/rejected user
+                  const targetNotifications = notifications.filter(n => {
+                      const data = n.data || {};
+                      return data.requester_id === request.user;
+                  });
 
-              // Update all matching notifications
-              await Promise.all(targetNotifications.map(n => 
-                   pb.collection('agenda_cap53_notifications').update(n.id, {
-                       invite_status: action === 'approve' ? 'accepted' : 'rejected',
-                       read: true
-                   })
-              ));
-              
+                  // Update all matching notifications
+                  await Promise.all(targetNotifications.map(n => 
+                      pb.collection('agenda_cap53_notifications').update(n.id, {
+                          invite_status: action === 'approve' ? 'accepted' : 'rejected',
+                          read: true
+                      })
+                  ));
+              }
           } catch (notifErr) {
               console.warn('Error syncing creator notification:', notifErr);
           }
@@ -271,7 +291,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           // Refresh event to show new participant
           const freshEvent = await pb.collection('agenda_cap53_eventos').getOne(event.id, {
               expand: 'user,location,participants'
-          });
+          }) as EventsResponse<EventExpand>;
           setEvent(freshEvent);
 
           alert(action === 'approve' ? 'Solicitação aprovada com sucesso!' : 'Solicitação recusada.');
@@ -352,8 +372,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   // Ensure ALMC cannot edit even if they created the event (though they shouldn't be able to create)
   // CE role also restricted to edit only their own events
   const canEdit = !isCancelled && user?.role !== 'ALMC' && (user?.role === 'ADMIN' || event.user === user?.id);
-  const startDate = new Date(event.date_start || event.date);
-  const endDate = new Date(event.date_end);
+  const startDate = new Date(event.date_start || (event as any).date);
+  const endDate = new Date(event.date_end || '');
 
   const refreshEvent = async () => {
     if (!event?.id) return;
@@ -361,7 +381,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         // Fetch the freshest version of the event
         const freshEvent = await pb.collection('agenda_cap53_eventos').getOne(event.id, {
             expand: 'user,location,participants'
-        });
+        }) as EventsResponse<EventExpand>;
         setEvent(freshEvent);
         
         // Refresh science statuses (refusals and acknowledgments)
@@ -369,14 +389,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             filter: `event = "${event.id}" && (type = "refusal" || type = "acknowledgment" || type = "system")`,
             requestKey: null
         })
-        .then((notifs: any[]) => {
+        .then((notifs) => {
             const map: Record<string, boolean> = {};
             let transportAck: boolean | null = null;
             
-            notifs.forEach((n: any) => {
+            notifs.forEach((n) => {
                 const isAck = n.type === 'acknowledgment';
                 const isRefusal = n.type === 'refusal';
-                const isSystem = n.type === 'system';
+                // const isSystem = n.type === 'system';
                 const title = (n.title || '').toLowerCase();
                 const kind = (n.data?.kind || '').toLowerCase();
                 const message = (n.message || '').toLowerCase();
@@ -433,16 +453,17 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
              if (!statusMap[pId]) statusMap[pId] = 'pending';
         });
 
+        // Overwrite with collection data
         participantsRes.forEach(p => {
             statusMap[p.user] = p.status;
         });
-        
+
         setParticipantStatus(statusMap);
         
         // Also refresh message count
         await fetchMessageCount();
-    } catch (err: any) {
-        if (err.status !== 404) {
+    } catch (err) {
+        if (err instanceof Error && (err as any).status !== 404) {
           console.error('Error refreshing event details:', err);
         }
         setParticipantStatus(event.participants_status || {});
@@ -526,9 +547,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       // Refresh event data to update UI
       await refreshEvent();
       alert(status === 'accepted' ? 'Convite aceito!' : 'Convite recusado.');
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error responding to invitation:', err);
-      const msg = err.data?.message || err.message || 'Erro desconhecido';
+      const msg = (err as any).data?.message || (err as Error).message || 'Erro desconhecido';
       alert(`Erro ao processar resposta: ${msg}`);
     }
   };
@@ -569,7 +590,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         }
         
         alert(decision === 'confirmed' ? 'Transporte confirmado!' : 'Transporte recusado!');
-    } catch (err: any) {
+    } catch (err) {
         console.error('Error processing transport decision:', err);
         alert('Erro ao processar decisão de transporte.');
     } finally {
@@ -606,7 +627,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             // Subscribe to almac requests updates
             const unsubRequests = await pb.collection('agenda_cap53_almac_requests').subscribe('*', (data) => {
                 if (data.record.event === event.id) {
-                    pb.collection('agenda_cap53_almac_requests').getFullList({
+                    pb.collection('agenda_cap53_almac_requests').getFullList<AlmacRequestsResponse<{ item: ItensServicoResponse }>>({
                         filter: `event = "${event.id}"`,
                         expand: 'item'
                     })
@@ -650,7 +671,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     setupSubscription();
 
     setLoadingRequests(true);
-    pb.collection('agenda_cap53_almac_requests').getFullList({
+    pb.collection('agenda_cap53_almac_requests').getFullList<AlmacRequestsResponse<{ item: ItensServicoResponse }>>({
         filter: `event = "${event.id}"`,
         expand: 'item'
     })
@@ -755,7 +776,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2 flex-wrap">
                             <span className="px-1.5 md:px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                {event.nature || event.type || 'Evento'}
+                                {event.expand?.type?.name || (event as any).nature || event.type || 'Evento'}
                             </span>
                             {isCancelled && (
                                 <span className="px-1.5 md:px-2 py-0.5 rounded-full bg-red-50 border border-red-100 text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-red-500">
@@ -796,7 +817,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
+                            onClick={() => setActiveTab(tab.id)}
                             className={`flex flex-1 items-center justify-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-lg sm:rounded-xl text-[9px] sm:text-[11px] font-black uppercase tracking-tight transition-all duration-300 whitespace-nowrap ${
                                 activeTab === tab.id 
                                 ? 'bg-white text-primary shadow-sm border border-slate-100' 
@@ -964,13 +985,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                         {/* Participants Grouping */}
                         {(() => {
-                            const participants = event.expand?.participants?.filter((p: any) => p.id !== event.user) || [];
+                            const participants = event.expand?.participants?.filter((p: UsersResponse) => p.id !== event.user) || [];
                             
                             // Get users from pending participation requests
                             const pendingRequesters = eventParticipationRequests
                                 .filter(r => r.status === 'pending' && !participants.some(p => p.id === r.user))
                                 .map(r => r.expand?.user)
-                                .filter(Boolean);
+                                .filter((u): u is UsersResponse => !!u);
 
                             if (participants.length === 0 && pendingRequesters.length === 0 && !event.expand?.user) {
                                 return (
@@ -981,12 +1002,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 );
                             }
 
-                            const confirmed = participants.filter((p: any) => participantStatus[p.id] === 'accepted');
+                            const confirmed = participants.filter((p: UsersResponse) => participantStatus[p.id] === 'accepted');
                             const pending = [
-                                ...participants.filter((p: any) => !participantStatus[p.id] || participantStatus[p.id] === 'pending'),
+                                ...participants.filter((p: UsersResponse) => !participantStatus[p.id] || participantStatus[p.id] === 'pending'),
                                 ...pendingRequesters
                             ];
-                            const rejected = participants.filter((p: any) => participantStatus[p.id] === 'rejected');
+                            const rejected = participants.filter((p: UsersResponse) => participantStatus[p.id] === 'rejected');
 
                             return (
                                 <div className="space-y-6">
@@ -997,7 +1018,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Confirmados ({confirmed.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
-                                                {confirmed.map((p: any) => renderParticipantRow(p))}
+                                                {confirmed.map((p: UsersResponse) => renderParticipantRow(p))}
                                              </div>
                                         </div>
                                     )}
@@ -1009,7 +1030,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pendentes ({pending.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
-                                                {pending.map((p: any) => renderParticipantRow(p))}
+                                                {pending.map((p: UsersResponse) => renderParticipantRow(p))}
                                              </div>
                                         </div>
                                     )}
@@ -1021,7 +1042,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Recusados ({rejected.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
-                                                {rejected.map((p: any) => renderParticipantRow(p))}
+                                                {rejected.map((p: UsersResponse) => renderParticipantRow(p))}
                                              </div>
                                         </div>
                                     )}
@@ -1048,7 +1069,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             <div className="space-y-6">
                                 {['ALMOXARIFADO', 'COPA', 'INFORMATICA'].map(category => {
                                     const categoryRequests = requests.filter(req => {
-                                        const cat = req.expand?.item?.category || req.type;
+                                        const cat = req.expand?.item?.category || (req as any).type;
                                         return cat === category || 
                                                (category === 'ALMOXARIFADO' && cat === 'ALMC') ||
                                                (category === 'INFORMATICA' && cat === 'INFO');
@@ -1587,14 +1608,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             {reRequestTarget && (
                 <ReRequestModal
                     type={reRequestTarget.type}
-                    request={reRequestTarget.type === 'item' ? reRequestTarget.data : undefined}
-                    event={reRequestTarget.type === 'transport' ? reRequestTarget.data : undefined}
+                    request={reRequestTarget.type === 'item' ? (reRequestTarget.data as AlmacRequestsResponse<{ item: ItensServicoResponse }>) : undefined}
+                    event={reRequestTarget.type === 'transport' ? (reRequestTarget.data as EventsResponse) : undefined}
                     onClose={() => setReRequestTarget(null)}
                     onSuccess={() => {
                         refreshEvent();
                         if (reRequestTarget.type === 'item') {
                             setLoadingRequests(true);
-                            pb.collection('agenda_cap53_almac_requests').getFullList({
+                            pb.collection('agenda_cap53_almac_requests').getFullList<AlmacRequestsResponse<{ item: ItensServicoResponse }>>({
                                 filter: `event = "${event.id}"`,
                                 expand: 'item'
                             })

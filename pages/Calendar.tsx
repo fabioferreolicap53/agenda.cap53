@@ -2,8 +2,31 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
-import { useAuth, SECTORS } from '../components/AuthContext';
+import { useAuth, SECTORS, UserRole } from '../components/AuthContext';
 import { notificationService } from '../lib/notifications';
+import { 
+  EventsResponse, 
+  UsersResponse, 
+  LocaisResponse, 
+  AlmacRequestsResponse, 
+  ItensServicoResponse 
+} from '../lib/pocketbase-types';
+
+interface CalendarExpand {
+  user?: UsersResponse;
+  location?: LocaisResponse;
+  participants?: UsersResponse[];
+  agenda_cap53_almac_requests_via_event?: AlmacRequestsResponse<{
+    item: ItensServicoResponse;
+  }>[];
+}
+
+type CalendarEvent = EventsResponse<CalendarExpand> & {
+  almac_requests?: AlmacRequestsResponse<{
+    item: ItensServicoResponse;
+  }>[];
+};
+
 import ConfirmationModal from '../components/ConfirmationModal';
 import RefusalModal from '../components/RefusalModal';
 
@@ -21,10 +44,10 @@ const Calendar: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const searchTerm = (searchParams.get('search') || '').toLowerCase();
   
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UsersResponse[]>([]);
 
   // Filters state with lazy initialization from localStorage to prevent race conditions
   // Helper to get storage keys based on current user
@@ -194,7 +217,7 @@ const Calendar: React.FC = () => {
                 // 2. Check Participants Roles
                 if (e.participants_roles) {
                     const rolesInEvent = Object.values(e.participants_roles);
-                    if (rolesInEvent.some((r: any) => filterRoles.includes(r))) return true;
+                    if (rolesInEvent.some((r: string) => filterRoles.includes(r))) return true;
                 }
                 
                 // 3. Check generic 'PARTICIPANTE'
@@ -226,7 +249,7 @@ const Calendar: React.FC = () => {
 
   // Group events by date for efficient lookup
   const eventsByDate = useMemo(() => {
-    const grouped: Record<string, any[]> = {};
+    const grouped: Record<string, CalendarEvent[]> = {};
     filteredEvents.forEach(event => {
       const date = new Date(event.date_start || event.date);
       const key = date.toDateString();
@@ -262,32 +285,11 @@ const Calendar: React.FC = () => {
      return 'month';
     });
 
-  // Auto-scroll to day view content on mobile when switching to day view
+  // Handle browser back/forward buttons
   useEffect(() => {
-    if (window.innerWidth < 768) {
-        if (viewType === 'day' && dayViewRef.current) {
-            setTimeout(() => {
-                dayViewRef.current?.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start' 
-                });
-            }, 100);
-        } else if (viewType === 'agenda' && agendaViewRef.current) {
-            setTimeout(() => {
-                agendaViewRef.current?.scrollIntoView({ 
-                    behavior: 'smooth', 
-                    block: 'start' 
-                });
-            }, 100);
-        }
-    }
-  }, [viewType, currentDate]);
-  
-    // Handle browser back/forward buttons
-    useEffect(() => {
       const view = searchParams.get('view');
       if (view && view !== viewType && (view === 'month' || view === 'week' || view === 'day' || view === 'agenda')) {
-        setViewType(view as any);
+        setViewType(view as 'month' | 'week' | 'day' | 'agenda');
       }
       
       const dateParam = searchParams.get('date');
@@ -325,13 +327,14 @@ const Calendar: React.FC = () => {
         const defaultView = isMobileOrTablet ? 'agenda' : 'month';
         return viewType === defaultView;
     }, [viewType, isMobileOrTablet]);
-  const [tooltipData, setTooltipData] = useState<{ event: any, x: number, y: number, height: number } | null>(null);
-  const [selectedEvent, setSelectedEvent] = useState<any>(null);
+  const [tooltipData, setTooltipData] = useState<{ event: CalendarEvent, x: number, y: number, height: number } | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [initialChatOpen, setInitialChatOpen] = useState(false);
   const [initialTab, setInitialTab] = useState<'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests'>('details');
   const [returnToNotifications, setReturnToNotifications] = useState(false);
   const todayRef = useRef<HTMLDivElement>(null);
+  const firstEventRef = useRef<HTMLDivElement>(null);
 
   // Animation States
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
@@ -354,13 +357,37 @@ const Calendar: React.FC = () => {
   const [eventToCancel, setEventToCancel] = useState<{ id: string, title: string } | null>(null);
   const [processingCancellation, setProcessingCancellation] = useState(false);
 
-  // Function to scroll to today on mobile
+  // Function to scroll to today and center it
   const scrollToToday = () => {
     setTimeout(() => {
-      if (todayRef.current) {
-        todayRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Prioritize focusing on the first event if it exists (DIA and AGE views)
+      if (firstEventRef.current) {
+        firstEventRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'center'
+        });
+        return;
       }
-    }, 100);
+
+      if (todayRef.current) {
+        todayRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center',
+          inline: 'center'
+        });
+      } else if (viewType === 'day' && dayViewRef.current) {
+        dayViewRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      } else if (viewType === 'agenda' && agendaViewRef.current) {
+        agendaViewRef.current.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start' 
+        });
+      }
+    }, 300); // Increased timeout for better reliability with animations
   };
 
   // Handle openChat or eventId from URL
@@ -378,7 +405,7 @@ const Calendar: React.FC = () => {
         setInitialChatOpen(!!chatEventId);
         
         if (tabParam && ['details', 'dashboard', 'transport', 'resources', 'professionals', 'requests'].includes(tabParam)) {
-          setInitialTab(tabParam as any);
+          setInitialTab(tabParam as 'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests');
         } else {
           setInitialTab('details');
         }
@@ -457,9 +484,8 @@ const Calendar: React.FC = () => {
   }, [currentDate]);
 
   useEffect(() => {
-    if (currentDate.toDateString() === new Date().toDateString()) {
-      scrollToToday();
-    }
+    // Scroll whenever viewType or currentDate changes to ensure focus
+    scrollToToday();
   }, [currentDate, viewType]);
 
   const fetchEvents = async () => {
@@ -543,7 +569,7 @@ const Calendar: React.FC = () => {
     }
   };
 
-  const handleDeleteEvent = async (event: any) => {
+  const handleDeleteEvent = async (event: CalendarEvent) => {
     setConfirmationModalConfig({
         title: 'Excluir Evento',
         description: `Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"? Esta ação não pode ser desfeita e removerá todas as notificações vinculadas.`,
@@ -558,9 +584,9 @@ const Calendar: React.FC = () => {
                 setSelectedEvent(null);
                 fetchEvents();
                 setConfirmationModalOpen(false);
-            } catch (error: any) {
+            } catch (error) {
                 console.error('Error deleting event:', error);
-                const msg = error.data?.message || error.message || 'Erro desconhecido';
+                const msg = error instanceof Error ? error.message : 'Erro desconhecido';
                 alert(`Erro ao excluir evento: ${msg}`);
             }
         }
@@ -813,6 +839,7 @@ const Calendar: React.FC = () => {
                   return (
                     <div
                       key={idx}
+                      ref={isToday ? todayRef : null}
                       onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
                       className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
                         dateObj.type === 'current' 
@@ -999,6 +1026,7 @@ const Calendar: React.FC = () => {
                   return (
                     <div
                       key={idx}
+                      ref={isToday ? todayRef : null}
                       onDoubleClick={() => handleDayDoubleClick(date)}
                       className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${
                         isToday 
@@ -1110,14 +1138,19 @@ const Calendar: React.FC = () => {
 
         {viewType === 'day' && (
           <div 
+            ref={currentDate.toDateString() === new Date().toDateString() ? todayRef : dayViewRef}
             onDoubleClick={() => handleDayDoubleClick(currentDate)}
-            className={`flex-1 flex flex-col cursor-default relative ${
+            className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${
               currentDate.toDateString() === new Date().toDateString() 
-                ? 'bg-primary/[0.02]' 
+                ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
                 : 'bg-white'
             }`}
             title="Clique duplo para novo evento"
           >
+            {/* Glow effect for today day view */}
+            {currentDate.toDateString() === new Date().toDateString() && (
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent"></div>
+            )}
           <div className="hidden md:block sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-100 px-3 md:px-8 py-1.5 md:py-3 shadow-sm">
               <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
                 <div className="flex flex-col md:gap-1">
@@ -1162,8 +1195,12 @@ const Calendar: React.FC = () => {
                       </div>
                     );
                   }
-                return dayEvents.map(event => (
-                    <div key={event.id} className="hover:translate-x-1 transition-transform duration-300">
+                return dayEvents.map((event, index) => (
+                    <div 
+                      key={event.id} 
+                      ref={index === 0 ? firstEventRef : null}
+                      className="hover:translate-x-1 transition-transform duration-300"
+                    >
                       {/* Desktop View */}
                       <div className="hidden md:block">
                         <CalendarEventCard
@@ -1195,7 +1232,7 @@ const Calendar: React.FC = () => {
                         </div>
 
                         {/* Content Column */}
-                        <div className="flex-1 flex flex-col justify-center gap-1 overflow-hidden">
+                        <div className="flex-1 flex flex-col justify-center gap-1">
                           <h4 className={`text-sm font-bold leading-tight ${event.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                             {event.title}
                           </h4>
@@ -1204,7 +1241,7 @@ const Calendar: React.FC = () => {
                             {(event.expand?.location?.name || event.custom_location) && (
                               <div className="flex items-center gap-1 truncate">
                                 <span className="material-symbols-outlined text-[14px] text-slate-400">location_on</span>
-                                <span className="truncate max-w-[120px]">
+                                <span className="truncate">
                                   {event.expand?.location?.name || event.custom_location}
                                 </span>
                               </div>
@@ -1305,7 +1342,7 @@ const Calendar: React.FC = () => {
                  }
 
                  // Group the filtered and sorted events by date
-                 const groupedEventsByDate: { [key: string]: any[] } = {};
+                 const groupedEventsByDate: { [key: string]: CalendarEvent[] } = {};
                  monthEvents.forEach(event => {
                     const dateKey = new Date(event.date_start || event.date).toDateString();
                     if (!groupedEventsByDate[dateKey]) groupedEventsByDate[dateKey] = [];
@@ -1348,8 +1385,12 @@ const Calendar: React.FC = () => {
                                 </div>
                             </div>
                             <div className={`flex-1 flex flex-col gap-4 border-l-2 border-slate-50 pl-6 md:pl-12 pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
-                                {dayEvents.map(event => (
-                                    <div key={event.id} className="hover:translate-x-1 transition-transform duration-300">
+                                {dayEvents.map((event, index) => (
+                                    <div 
+                                        key={event.id} 
+                                        ref={isToday && index === 0 ? firstEventRef : null}
+                                        className="hover:translate-x-1 transition-transform duration-300"
+                                    >
                                         <CalendarEventCard
                                             event={event}
                                             user={user}
@@ -1427,7 +1468,7 @@ const Calendar: React.FC = () => {
 };
 
 const CalendarTooltip: React.FC<{ 
-  event: any, 
+  event: CalendarEvent | undefined, 
   visible: boolean, 
   x: number, 
   y: number, 
@@ -1438,7 +1479,7 @@ const CalendarTooltip: React.FC<{
   const [position, setPosition] = React.useState({ top: 0, left: 0 });
   const [isRendered, setIsRendered] = React.useState(false);
   const [opacity, setOpacity] = React.useState(0);
-  const [event, setEvent] = React.useState<any>(null);
+  const [event, setEvent] = React.useState<CalendarEvent | null>(null);
 
   // Sync internal event state with propEvent, but keep it while fading out
   React.useEffect(() => {
@@ -1512,11 +1553,11 @@ const CalendarTooltip: React.FC<{
   // Helper to determine status for Almc/Copa/Inf
   const getRequestStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
     // Priority 1: Check actual requests (real-time data passed from parent)
-    const categoryRequests = event.almac_requests?.filter((r: any) => r.expand?.item?.category === category) || [];
+    const categoryRequests = event.almac_requests?.filter((r) => r.expand?.item?.category === category) || [];
     
     if (categoryRequests.length > 0) {
-      const allConfirmed = categoryRequests.every((r: any) => r.status === 'approved');
-      const anyRejected = categoryRequests.some((r: any) => r.status === 'rejected');
+      const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
+      const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
 
       if (anyRejected) return 'rejected';
       if (allConfirmed) return 'confirmed';
@@ -1714,20 +1755,29 @@ const CalendarTooltip: React.FC<{
   );
 };
 
-const CalendarEventCard: React.FC<{
-  event: any,
-  user: any,
-  onCancel: any,
-  setTooltipData: (data: { event: any, x: number, y: number, height: number } | null) => void,
-  detailed?: boolean,
-  onSelect: (event: any) => void
-}> = ({ event, user, onCancel, setTooltipData, detailed, onSelect }) => {
+interface CalendarEventCardProps {
+  event: CalendarEvent;
+  user: UsersResponse | null;
+  onCancel: (id: string, title: string, participants: string[]) => void;
+  setTooltipData: (data: { event: CalendarEvent, x: number, y: number, height: number } | null) => void;
+  detailed?: boolean;
+  onSelect: (event: CalendarEvent) => void;
+}
+
+const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, onSelect }) => {
   const isCancelled = event.status === 'cancelled';
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
   
   const getCategoryStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
     // Priority 1: Check actual requests (real-time data)
-    const categoryRequests = event.almac_requests?.filter((r: any) => {
+    const categoryRequests = event.almac_requests?.filter((r) => {
         let cat = r.expand?.item?.category;
         // Normalize categories
         if (cat === 'ALMC') cat = 'ALMOXARIFADO';
@@ -1736,8 +1786,8 @@ const CalendarEventCard: React.FC<{
     }) || [];
     
     if (categoryRequests.length > 0) {
-      const allConfirmed = categoryRequests.every((r: any) => r.status === 'approved');
-      const anyRejected = categoryRequests.some((r: any) => r.status === 'rejected');
+      const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
+      const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
 
       if (anyRejected) return 'rejected';
       if (allConfirmed) return 'confirmed';
@@ -1796,13 +1846,26 @@ const CalendarEventCard: React.FC<{
 
   // Helper to determine involvement level
   const getInvolvementLevel = () => {
-    if (event.user === user?.id) return { label: 'Criador', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' };
+    if (!user?.id) return null;
+    if (event.user === user.id) return { label: 'Criador', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' };
     
-    const participant = event.expand?.participants?.find((p: any) => p.user === user?.id);
-    if (participant) {
-        if (participant.role === 'coordenador') return { label: 'Coordenação', color: 'bg-purple-50 text-purple-700 border-purple-100' };
-        if (participant.role === 'convidado') return { label: 'Convidado', color: 'bg-blue-50 text-blue-700 border-blue-100' };
-        if (participant.role === 'apoio') return { label: 'Apoio', color: 'bg-slate-50 text-slate-700 border-slate-100' };
+    // Check role in participants_roles first
+    const roleValue = (event.participants_roles?.[user.id] || '').toUpperCase();
+    if (roleValue) {
+        if (roleValue === 'ORGANIZADOR') return { label: 'Organizador', color: 'bg-blue-50 text-blue-700 border-blue-100' };
+        if (roleValue === 'COORGANIZADOR') return { label: 'Coorganizador', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+        if (roleValue === 'PARTICIPANTE') return { label: 'Participante', color: 'bg-slate-50 text-slate-700 border-slate-100' };
+        
+        // Legacy or specific roles
+        if (roleValue === 'COORDENADOR') return { label: 'Coordenação', color: 'bg-purple-50 text-purple-700 border-purple-100' };
+        if (roleValue === 'CONVIDADO') return { label: 'Convidado', color: 'bg-blue-50 text-blue-700 border-blue-100' };
+        if (roleValue === 'APOIO') return { label: 'Apoio', color: 'bg-slate-50 text-slate-700 border-slate-100' };
+    }
+    
+    // Check if user is in participants list
+    const isParticipant = event.participants?.includes(user.id);
+    if (isParticipant) {
+        return { label: 'Participante', color: 'bg-slate-50 text-slate-700 border-slate-100' };
     }
     
     // Check specific roles based on sector
@@ -1884,9 +1947,23 @@ const CalendarEventCard: React.FC<{
                  </div>
                  <div className="flex items-center gap-1.5">
                    <span className="material-symbols-outlined text-base text-primary/70">location_on</span>
-                   <span>{event.expand?.location?.name || event.custom_location || 'Local não definido'}</span>
+                   <span className="break-words">{event.expand?.location?.name || event.custom_location || 'Local não definido'}</span>
                  </div>
              </div>
+
+             {event.description && (
+               <div className="mt-2 text-xs text-slate-600 leading-relaxed bg-slate-50/50 p-2.5 rounded-lg border border-slate-100/50">
+                 <p className="font-bold text-[10px] uppercase tracking-wider text-slate-400 mb-1">Descrição</p>
+                 <div className="whitespace-pre-wrap break-words">{event.description}</div>
+               </div>
+             )}
+
+             {event.observacoes && event.observacoes !== event.description && (
+               <div className="mt-2 text-xs text-amber-700/80 leading-relaxed bg-amber-50/30 p-2.5 rounded-lg border border-amber-100/50">
+                 <p className="font-bold text-[10px] uppercase tracking-wider text-amber-500/60 mb-1">Observações Internas</p>
+                 <div className="whitespace-pre-wrap break-words">{event.observacoes}</div>
+               </div>
+             )}
 
              <div className="flex flex-wrap items-center gap-3 pt-3 mt-1 border-t border-slate-50">
                 <div className="flex items-center gap-2">
@@ -1895,7 +1972,7 @@ const CalendarEventCard: React.FC<{
                     </div>
                     <div className="flex flex-col">
                         <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-0.5">Criado por</span>
-                        <span className="text-[10px] font-bold text-slate-700 leading-none truncate max-w-[140px]">{creatorName}</span>
+                        <span className="text-[10px] font-bold text-slate-700 leading-none">{creatorName}</span>
                     </div>
                 </div>
 
