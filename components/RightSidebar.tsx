@@ -140,8 +140,8 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
 
 
 
-    // Show all users (exclude current user)
-    const allUsers = users.filter(u => u.id !== currentUser?.id);
+    // Show all users (exclude current user and hidden users)
+    const allUsers = users.filter(u => u.id !== currentUser?.id && u.hidden !== true);
 
     return (
         <>

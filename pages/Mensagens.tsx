@@ -79,7 +79,7 @@ const Chat: React.FC = () => {
         setLoadingUsers(true);
         const userRecords = await pb.collection('agenda_cap53_usuarios').getFullList({
           sort: 'name',
-          filter: `id != "${currentUser.id}"`
+          filter: `id != "${currentUser.id}" && hidden != true`
         });
         setUsers(userRecords);
 
@@ -108,9 +108,21 @@ const Chat: React.FC = () => {
       try {
         unsubscribe = await pb.collection('agenda_cap53_usuarios').subscribe('*', (e) => {
           if (e.action === 'update') {
-            setUsers(prev => prev.map(u => u.id === e.record.id ? e.record : u));
+            if (e.record.hidden === true) {
+              setUsers(prev => prev.filter(u => u.id !== e.record.id));
+            } else {
+              setUsers(prev => {
+                const exists = prev.find(u => u.id === e.record.id);
+                if (exists) {
+                  return prev.map(u => u.id === e.record.id ? e.record : u);
+                } else if (e.record.id !== currentUser.id) {
+                  return [...prev, e.record].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                }
+                return prev;
+              });
+            }
           } else if (e.action === 'create') {
-            if (e.record.id !== currentUser.id) {
+            if (e.record.id !== currentUser.id && e.record.hidden !== true) {
               setUsers(prev => [e.record, ...prev].sort((a, b) => (a.name || '').localeCompare(b.name || '')));
             }
           } else if (e.action === 'delete') {
