@@ -795,7 +795,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             <button 
                                 onClick={() => setIsChatOpen(true)}
                                 className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-primary/5 hover:bg-primary/10 text-primary transition-all duration-200 border border-primary/10 group relative"
-                                title="Discussões para Alinhamento"
                             >
                                 <span className="material-symbols-outlined text-base sm:text-lg group-hover:scale-110 transition-transform">forum</span>
                                 <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider hidden sm:inline">Discussões</span>
@@ -1119,7 +1118,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                                 <button
                                                                     onClick={() => setReRequestTarget({ type: 'item', data: req })}
                                                                     className="size-8 flex items-center justify-center text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors group/btn relative"
-                                                                    title="Solicitar Novamente"
                                                                 >
                                                                     <span className="material-symbols-outlined text-lg">restart_alt</span>
                                                                 </button>
@@ -1140,7 +1138,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                                         ? 'bg-green-50 text-green-600 hover:bg-green-100' 
                                                                         : 'bg-red-50 text-red-600 hover:bg-red-100'
                                                                     }`}
-                                                                    title={req.expand.item.is_available ? 'Marcar como Indisponível' : 'Marcar como Disponível'}
                                                                 >
                                                                     <span className="material-symbols-outlined text-lg">
                                                                         {req.expand.item.is_available ? 'check_circle' : 'cancel'}
@@ -1150,7 +1147,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                             
                                                             {/* Refusal notification check */}
                                                             {req.status === 'rejected' && refusalAckByRequest[req.id] === false && (
-                                                                <div className="size-8 flex items-center justify-center text-red-500 bg-red-50 rounded-lg border border-red-100 animate-pulse" title="Ciência Pendente">
+                                                                <div className="size-8 flex items-center justify-center text-red-500 bg-red-50 rounded-lg border border-red-100 animate-pulse">
                                                                     <span className="material-symbols-outlined text-lg">warning</span>
                                                                 </div>
                                                             )}
@@ -1191,7 +1188,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     <button
                                         onClick={() => setReRequestTarget({ type: 'transport', data: event })}
                                         className="p-1.5 text-primary bg-primary/5 hover:bg-primary/10 rounded-lg transition-colors group/btn relative"
-                                        title="Solicitar Novamente"
                                     >
                                         <span className="material-symbols-outlined text-lg">restart_alt</span>
                                         <span className="absolute bottom-full right-0 mb-2 px-2 py-1 text-[10px] text-white bg-slate-800 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
@@ -1518,14 +1514,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                                 setRefusalModalOpen(true);
                                                             }}
                                                             className="size-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
-                                                            title="Recusar"
                                                         >
                                                             <span className="material-symbols-outlined text-lg">close</span>
                                                         </button>
                                                         <button 
                                                             onClick={() => handleRequestAction(request.id, 'approve')}
                                                             className="size-9 rounded-xl bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm border border-green-100"
-                                                            title="Aprovar"
                                                         >
                                                             <span className="material-symbols-outlined text-lg">check</span>
                                                         </button>

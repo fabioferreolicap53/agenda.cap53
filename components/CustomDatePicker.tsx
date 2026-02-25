@@ -511,7 +511,6 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                     onChange('');
                 }}
                 className="p-1 rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all duration-200"
-                title="Limpar"
             >
                 <span className="material-symbols-outlined text-[17px]">close</span>
             </button>

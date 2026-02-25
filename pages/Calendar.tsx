@@ -667,7 +667,6 @@ const Calendar: React.FC = () => {
                     <button
                       onClick={() => navigate(-1)}
                       className="size-[38px] flex items-center justify-center rounded-full bg-white border border-slate-200/60 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group"
-                      title="Voltar para visualização anterior"
                     >
                       <span className="material-symbols-outlined text-[20px] font-light group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                     </button>
@@ -876,7 +875,6 @@ const Calendar: React.FC = () => {
                               updateURL('day', dateObj.date);
                             }}
                             className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200/50 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 active:scale-95"
-                            title="Ver eventos deste dia"
                           >
                             <span className="material-symbols-outlined text-[10px] text-text-secondary/50 group-hover/badge:text-primary transition-colors">calendar_today</span>
                             <span className="text-[9px] font-black text-text-secondary group-hover/badge:text-primary transition-colors">
@@ -1006,7 +1004,6 @@ const Calendar: React.FC = () => {
                             updateURL('day', date);
                           }}
                           className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-white/50 border border-slate-200/50 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 active:scale-95"
-                          title="Ver eventos deste dia"
                         >
                           <span className="material-symbols-outlined text-[10px] text-text-secondary/50 group-hover/badge:text-primary transition-colors">calendar_today</span>
                           <span className="text-[9px] font-black text-text-secondary group-hover/badge:text-primary transition-colors">
@@ -1145,7 +1142,6 @@ const Calendar: React.FC = () => {
                 ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
                 : 'bg-white'
             }`}
-            title="Clique duplo para novo evento"
           >
             {/* Glow effect for today day view */}
             {currentDate.toDateString() === new Date().toDateString() && (
@@ -1216,7 +1212,6 @@ const Calendar: React.FC = () => {
                       {/* Mobile View - Optimized Layout */}
                       <div 
                         className="md:hidden bg-white rounded-xl border border-slate-100 shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform"
-                        title={event.title}
                         onClick={() => setSelectedEvent(event)}
                       >
                         {/* Time Column */}
@@ -1256,7 +1251,7 @@ const Calendar: React.FC = () => {
                                   event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
                                   (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
                                   'bg-yellow-50 border-yellow-200 text-yellow-600'
-                               }`} title="Transporte">
+                               }`} >
                                  <span className="material-symbols-outlined text-[12px]">directions_car</span>
                                </div>
                              )}
@@ -1893,7 +1888,6 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
         setTooltipData(null);
         onSelect(event);
       }}
-      title={event.title}
       className={`w-full border-l-[3px] rounded-lg px-3 py-3 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
         ? 'bg-slate-50 border-slate-300 opacity-60'
         : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'
@@ -1982,7 +1976,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                     </div>
                 )}
 
-                <div className="flex items-center gap-1.5 ml-auto pl-3 border-l border-slate-100" title={`${participantCount} participantes`}>
+                <div className="flex items-center gap-1.5 ml-auto pl-3 border-l border-slate-100">
                     <span className="material-symbols-outlined text-[14px] text-slate-400">group</span>
                     <span className="text-[10px] font-bold text-slate-600">
                         {participantCount}
@@ -2000,24 +1994,24 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                 event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
                 (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
                 'bg-yellow-50 border-yellow-200 text-yellow-600'
-             }`} title="Transporte">
+             }`}>
                <span className="material-symbols-outlined text-[12px]">directions_car</span>
              </div>
            )}
 
            {/* Resources */}
            {almcStatus && (
-             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(almcStatus)}`} title="Almoxarifado">
+             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(almcStatus)}`}>
                <span className="material-symbols-outlined text-[12px]">inventory_2</span>
              </div>
            )}
            {copaStatus && (
-             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(copaStatus)}`} title="Copa">
+             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(copaStatus)}`}>
                <span className="material-symbols-outlined text-[12px]">local_cafe</span>
              </div>
            )}
            {infStatus && (
-             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(infStatus)}`} title="Informática">
+             <div className={`flex items-center justify-center size-5 rounded border ${getStatusColor(infStatus)}`}>
                <span className="material-symbols-outlined text-[12px]">laptop_mac</span>
              </div>
            )}

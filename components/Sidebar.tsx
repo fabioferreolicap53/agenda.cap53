@@ -309,7 +309,7 @@ const Sidebar: React.FC = () => {
                       )}
                   </p>
                   {user?.observations && (
-                    <p className="text-[10px] text-text-secondary/70 mt-1 italic leading-tight line-clamp-2" title={user.observations}>
+                    <p className="text-[10px] text-text-secondary/70 mt-1 italic leading-tight line-clamp-2">
                         {user.observations}
                     </p>
                   )}

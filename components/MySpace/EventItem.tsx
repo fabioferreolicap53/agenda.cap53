@@ -47,7 +47,7 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
     }
 
     return (
-      <div className="flex items-center gap-1.5" title={label}>
+      <div className="flex items-center gap-1.5">
         <span className={`h-2 w-2 rounded-full ${color}`} />
         <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500 hidden sm:inline-block">
           {label}
@@ -116,7 +116,6 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
               <button 
                 onClick={() => onOpenCalendar(event)}
                 className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                title="Ver no Calendário"
               >
                 <span className="material-symbols-outlined text-xl">calendar_month</span>
               </button>
@@ -126,28 +125,24 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
                   <button 
                     onClick={() => onEdit(event)}
                     className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                    title="Editar Evento"
                   >
                     <span className="material-symbols-outlined text-xl">edit</span>
                   </button>
                   <button 
                     onClick={() => onDuplicate(event)}
                     className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title="Duplicar Evento"
                   >
                     <span className="material-symbols-outlined text-xl">content_copy</span>
                   </button>
                   <button 
                     onClick={() => onCancel(event)}
                     className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
-                    title="Cancelar Evento"
                   >
                     <span className="material-symbols-outlined text-xl">block</span>
                   </button>
                   <button 
                     onClick={() => onDelete(event)}
                     className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Excluir Evento"
                   >
                     <span className="material-symbols-outlined text-xl">delete</span>
                   </button>

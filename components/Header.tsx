@@ -110,7 +110,6 @@ const Header: React.FC = () => {
             <button
               onClick={() => navigate(-1)}
               className="hidden md:flex items-center justify-center size-10 rounded-full bg-white border border-slate-200/60 text-slate-500 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 shadow-sm active:scale-90 group"
-              title="Voltar"
             >
               <span className="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
             </button>

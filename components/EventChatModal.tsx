@@ -237,7 +237,6 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                                         <div 
                                             className={`size-9 rounded-xl bg-cover bg-center border-2 border-white shadow-sm shrink-0 transition-transform hover:scale-110 ${!showSender ? 'opacity-0' : 'opacity-100'}`}
                                             style={{ backgroundImage: `url(${getAvatarUrl(isMe ? user : sender)})` }}
-                                            title={isMe ? 'Você' : (sender?.name || 'Membro')}
                                         />
                                         <div className={`group relative p-4 rounded-2xl text-[13px] font-medium transition-all duration-300 ${
                                             isMe 
@@ -253,7 +252,6 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                                                     <button 
                                                         onClick={() => handleDeleteMessage(msg.id)}
                                                         className="text-slate-300 hover:text-red-400 transition-colors flex items-center"
-                                                        title="Excluir mensagem"
                                                     >
                                                         <span className="material-symbols-outlined text-[12px]">delete</span>
                                                     </button>

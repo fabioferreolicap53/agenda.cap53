@@ -14,6 +14,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
     const [users, setUsers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+    const [searchTerm, setSearchTerm] = useState('');
 
     const fetchUnreadCounts = async () => {
         if (!currentUser?.id) return;
@@ -143,13 +144,34 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
     // Show all users (exclude current user and hidden users)
     const allUsers = users.filter(u => u.id !== currentUser?.id && u.hidden !== true);
 
+    const statusPriority: Record<string, number> = {
+        'Online': 1,
+        'Ausente': 2,
+        'Ocupado': 3,
+        'Offline': 4
+    };
+
+    const sortedAndFilteredUsers = allUsers
+        .filter(u => {
+            const searchLower = searchTerm.toLowerCase();
+            return (u.name || '').toLowerCase().includes(searchLower) || 
+                   (u.sector || '').toLowerCase().includes(searchLower);
+        })
+        .sort((a, b) => {
+            const priorityA = statusPriority[a.status] || 5;
+            const priorityB = statusPriority[b.status] || 5;
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            return (a.name || '').localeCompare(b.name || '');
+        });
+
     return (
         <>
             {/* Toggle Button - Minimalista e Profissional */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`fixed right-4 bottom-4 z-[100] size-12 rounded-2xl bg-white shadow-2xl border border-slate-100 hidden lg:flex items-center justify-center text-slate-600 transition-all duration-300 hover:scale-110 active:scale-95 group ${isOpen ? 'rotate-180 text-primary' : ''}`}
-                title={isOpen ? 'Ocultar Equipe' : 'Mostrar Equipe'}
             >
                 <span className="material-symbols-outlined text-[24px]">
                     {isOpen ? 'chevron_right' : 'groups'}
@@ -164,21 +186,45 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                     isOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0 pointer-events-none'
                 }`}
             >
-                <div className="p-5 border-b border-border-light flex items-center justify-between bg-white sticky top-0 z-10">
-                    <h2 className="text-sm font-bold text-text-main flex items-center gap-2">
-                        <span className="material-symbols-outlined text-primary text-xl">groups</span>
-                        Equipe Cap5.3
-                    </h2>
-                    <div className="flex items-center gap-3">
-                        <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full">
-                            {allUsers.length}
-                        </span>
-                        <button 
-                            onClick={() => setIsOpen(false)}
-                            className="material-symbols-outlined text-slate-300 hover:text-slate-600 transition-colors text-xl"
-                        >
-                            close
-                        </button>
+                <div className="p-5 border-b border-border-light bg-white sticky top-0 z-10 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-sm font-bold text-text-main flex items-center gap-2">
+                            <span className="material-symbols-outlined text-primary text-xl">groups</span>
+                            Equipe Cap5.3
+                        </h2>
+                        <div className="flex items-center gap-3">
+                            <span className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                {allUsers.length}
+                            </span>
+                            <button 
+                                onClick={() => setIsOpen(false)}
+                                className="material-symbols-outlined text-slate-300 hover:text-slate-600 transition-colors text-xl"
+                            >
+                                close
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Search Box - Moderna, Minimalista e Profissional */}
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                            <span className="material-symbols-outlined text-slate-400 text-lg group-focus-within:text-primary transition-colors">search</span>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Buscar contatos..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-100 rounded-xl py-2 pl-10 pr-4 text-xs font-medium text-slate-700 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary/20 transition-all outline-none"
+                        />
+                        {searchTerm && (
+                            <button 
+                                onClick={() => setSearchTerm('')}
+                                className="absolute inset-y-0 right-3 flex items-center text-slate-300 hover:text-slate-500 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-base">cancel</span>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -197,7 +243,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                         </div>
                     ) : (
                         <div className="flex flex-col gap-5">
-                            {allUsers.map((u) => (
+                            {sortedAndFilteredUsers.map((u) => (
                                 <div key={u.id} className="group cursor-pointer">
                                     <div className="flex items-start gap-3">
                                         <div className="relative flex-shrink-0">
@@ -250,10 +296,17 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                                 </div>
                             ))}
 
-                            {allUsers.length === 0 && (
+                            {sortedAndFilteredUsers.length === 0 && (
                                 <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-                                    <span className="material-symbols-outlined text-4xl text-primary/10 mb-2">person_off</span>
-                                    <p className="text-xs text-text-secondary">Nenhum outro membro encontrado.</p>
+                                    <span className="material-symbols-outlined text-4xl text-primary/10 mb-2">
+                                        {searchTerm ? 'search_off' : 'person_off'}
+                                    </span>
+                                    <p className="text-xs text-text-secondary">
+                                        {searchTerm 
+                                            ? `Nenhum contato encontrado para "${searchTerm}"`
+                                            : "Nenhum outro membro encontrado."
+                                        }
+                                    </p>
                                 </div>
                             )}
                         </div>
