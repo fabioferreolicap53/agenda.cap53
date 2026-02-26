@@ -362,6 +362,18 @@ const Calendar: React.FC = () => {
   const todayRef = useRef<HTMLDivElement>(null);
   const firstEventRef = useRef<HTMLDivElement>(null);
 
+  // Dynamic Scroll Margin based on sticky bars and filters state
+  const scrollMarginClass = useMemo(() => {
+    // Height of the sticky toolbar inside the scroll container
+    // Mobile: py-2(16) + Row1(42) + gap-3(12) + Row2(42) = 112px
+    // Desktop: py-2(16) + Row1(42) = 58px
+    if (showFilters) {
+      // Mobile filters: ~250px, Desktop filters: ~100px
+      return 'scroll-mt-[362px] md:scroll-mt-[158px]';
+    }
+    return 'scroll-mt-[112px] md:scroll-mt-[58px]';
+  }, [showFilters]);
+
   // Animation States
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
   const [animDirection, setAnimDirection] = useState<'next' | 'prev'>('next');
@@ -393,15 +405,19 @@ const Calendar: React.FC = () => {
         inline: 'center'
       };
 
-      // Prioritize focusing on the first event if it exists (DIA and AGE views)
-      if (firstEventRef.current) {
+      // Prioritize focusing on the first event if it exists (only for DIA view)
+      if (viewType === 'day' && firstEventRef.current) {
         firstEventRef.current.scrollIntoView(scrollConfig);
         return;
       }
 
+      // For Agenda and other views, scroll to the day container
       if (todayRef.current) {
         todayRef.current.scrollIntoView(scrollConfig);
-      } else if (viewType === 'day' && dayViewRef.current) {
+        return;
+      }
+
+      if (viewType === 'day' && dayViewRef.current) {
         dayViewRef.current.scrollIntoView({ 
           behavior: 'smooth', 
           block: 'start' 
@@ -412,7 +428,7 @@ const Calendar: React.FC = () => {
           block: 'start' 
         });
       }
-    }, 300); // Increased timeout for better reliability with animations
+    }, 600); // Aumentado para 600ms para garantir que animações de entrada terminaram
   };
 
   // Handle openChat or eventId from URL
@@ -972,6 +988,19 @@ const Calendar: React.FC = () => {
         >
           {viewType === 'month' && (
             <div className="flex-1 flex flex-col">
+              {/* Header Section for Month View */}
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[2.5rem] border border-slate-100 shadow-sm mx-4 md:mx-8 mt-4 md:mt-8">
+                <div className="flex items-center gap-6 md:gap-8">
+                  <div className="size-16 md:size-24 rounded-[1.5rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500">
+                    <span className="material-symbols-outlined text-[32px] md:text-[48px] text-primary font-light">calendar_month</span>
+                  </div>
+                  <div>
+                    <h3 className="text-sm md:text-2xl font-black text-text-main leading-tight">Visualização Mensal</h3>
+                    <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visão geral do mês selecionado</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Desktop Grid View */}
               <div className="hidden md:flex flex-col flex-1">
                 <div className="grid grid-cols-7 border-b border-border-light bg-slate-50 sticky top-[120px] md:top-[64px] z-[90] shadow-sm">
@@ -994,7 +1023,7 @@ const Calendar: React.FC = () => {
                       key={idx}
                       ref={isToday ? todayRef : null}
                       onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
-                      className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${
+                      className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${scrollMarginClass} ${
                         dateObj.type === 'current' 
                           ? (isToday ? 'bg-primary/[0.04] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.05)] ring-1 ring-inset ring-primary/20' : 'bg-white hover:bg-slate-50/50') 
                           : 'bg-slate-100/70 text-text-secondary/40'
@@ -1057,7 +1086,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Mobile List View */}
-            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-3">
+            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-4">
               {getDatesForMonth(currentDate).filter(d => d.type === 'current').map((dateObj, idx) => {
                 const date = dateObj.date;
                 const dateKey = date.toDateString();
@@ -1069,38 +1098,51 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 scroll-mt-[240px] md:scroll-mt-[260px] ${isToday ? 'bg-primary/[0.02] ring-1 ring-primary/20 border-primary/20' : 'bg-white'}`}
+                    className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
+                      isToday 
+                        ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
+                        : 'bg-white hover:bg-slate-50/50'
+                    }`}
                   >
-                    <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xl font-black ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                    {/* Glow effect for today */}
+                    {isToday && (
+                      <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
+                    )}
+                    
+                    <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                      <div className="flex items-center gap-4">
+                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
-                              {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
-                            </span>
-                            {dayEvents.length > 0 && (
-                              <div className="flex items-center gap-1 px-1 py-0.5 rounded bg-slate-50 border border-slate-200/50">
-                                <span className="material-symbols-outlined text-[10px] text-text-secondary/50">event</span>
-                                <span className="text-[9px] font-black text-text-secondary">
-                                  {dayEvents.length}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-px rounded-full uppercase tracking-widest mt-0.5 w-fit">Hoje</span>}
+                          <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                            {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                          </span>
+                          <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
+                            {date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                          </span>
+                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
                         </div>
                       </div>
-                      <button 
-                        onClick={() => updateURL('day', date)}
-                        className="size-7 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                      </button>
+
+                      <div className="flex items-center gap-3">
+                        {dayEvents.length > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-slate-200/50 shadow-sm">
+                            <span className="material-symbols-outlined text-[14px] text-primary/60">event</span>
+                            <span className="text-[11px] font-black text-text-secondary">
+                              {dayEvents.length}
+                            </span>
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => updateURL('day', date)}
+                          className="size-9 flex items-center justify-center rounded-xl bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-border-light hover:border-primary/20 active:scale-95"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className={`p-2 flex flex-col gap-1.5 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
+                    <div className={`p-3 flex flex-col gap-2 relative z-10 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -1127,6 +1169,19 @@ const Calendar: React.FC = () => {
 
         {viewType === 'week' && (
           <div className={`flex-1 flex flex-col ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
+            {/* Header Section for Week View */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[2.5rem] border border-slate-100 shadow-sm mx-4 md:mx-8 mt-4 md:mt-8">
+              <div className="flex items-center gap-6 md:gap-8">
+                <div className="size-16 md:size-24 rounded-[1.5rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500">
+                  <span className="material-symbols-outlined text-[32px] md:text-[48px] text-primary font-light">view_week</span>
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-2xl font-black text-text-main leading-tight">Visualização Semanal</h3>
+                  <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Confira os compromissos da semana</p>
+                </div>
+              </div>
+            </div>
+
             {/* Desktop Week View */}
             <div className="hidden md:flex flex-col flex-1">
               <div className="grid grid-cols-7 border-b border-border-light bg-slate-50 sticky top-[120px] md:top-[64px] z-[90] shadow-sm">
@@ -1179,7 +1234,7 @@ const Calendar: React.FC = () => {
                       key={idx}
                       ref={isToday ? todayRef : null}
                       onDoubleClick={() => handleDayDoubleClick(date)}
-                      className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${
+                      className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${scrollMarginClass} ${
                         isToday 
                           ? 'bg-primary/[0.06] shadow-inner' 
                           : isCurrentMonth 
@@ -1216,7 +1271,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Mobile Week List View */}
-            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-3">
+            <div className="flex md:hidden flex-col bg-slate-50/30 p-2 gap-4">
               {getDatesForWeek(currentDate).map((date, idx) => {
                 const dateKey = date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
@@ -1227,11 +1282,11 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative scroll-mt-[240px] md:scroll-mt-[260px] ${
+                    className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
                       isToday 
-                        ? 'bg-primary/[0.04] ring-2 ring-primary/30 border-primary/20 shadow-lg shadow-primary/5' 
+                        ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
                         : isCurrentMonth 
-                          ? 'bg-white' 
+                          ? 'bg-white hover:bg-slate-50/50' 
                           : 'bg-slate-100/70'
                     }`}
                   >
@@ -1241,28 +1296,42 @@ const Calendar: React.FC = () => {
                     )}
                     {/* Glow effect for today mobile */}
                     {isToday && (
-                      <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.08] to-transparent"></div>
+                      <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
                     )}
-                    <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/[0.05]' : isCurrentMonth ? 'bg-slate-50/50' : 'bg-transparent'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className={`text-xl font-black ${isToday ? 'text-primary scale-110 drop-shadow-sm' : isCurrentMonth ? 'text-text-main opacity-30' : 'text-slate-400'}`}>
+                    <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                      <div className="flex items-center gap-4">
+                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-[10px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : isCurrentMonth ? 'text-text-secondary' : 'text-text-secondary/60'}`}>
-                            {date.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                          <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                            {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
                           </span>
-                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-2 py-0.5 rounded-full uppercase tracking-widest mt-0.5 w-fit shadow-md shadow-primary/20">Hoje</span>}
+                          <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
+                            {date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                          </span>
+                          {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
                         </div>
                       </div>
-                      <button 
-                        onClick={() => updateURL('day', date)}
-                        className="size-7 flex items-center justify-center rounded-full hover:bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-transparent hover:border-border-light"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                      </button>
+
+                      <div className="flex items-center gap-3">
+                        {dayEvents.length > 0 && (
+                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-slate-200/50 shadow-sm">
+                            <span className="material-symbols-outlined text-[14px] text-primary/60">event</span>
+                            <span className="text-[11px] font-black text-text-secondary">
+                              {dayEvents.length}
+                            </span>
+                          </div>
+                        )}
+                        <button 
+                          onClick={() => updateURL('day', date)}
+                          className="size-9 flex items-center justify-center rounded-xl bg-white text-text-secondary hover:text-primary transition-all shadow-sm border border-border-light hover:border-primary/20 active:scale-95"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                        </button>
+                      </div>
                     </div>
-                    <div className={`p-2 flex flex-col gap-1.5 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
+                    <div className={`p-3 flex flex-col gap-2 relative z-10 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -1291,12 +1360,25 @@ const Calendar: React.FC = () => {
           <div 
             ref={currentDate.toDateString() === new Date().toDateString() ? todayRef : dayViewRef}
             onDoubleClick={() => handleDayDoubleClick(currentDate)}
-            className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 scroll-mt-[240px] md:scroll-mt-[260px] ${
+            className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${scrollMarginClass} ${
               currentDate.toDateString() === new Date().toDateString() 
                 ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
                 : 'bg-white'
             }`}
           >
+            {/* Header Section for Day View */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[2.5rem] border border-slate-100 shadow-sm mx-4 md:mx-8 mt-4 md:mt-8">
+              <div className="flex items-center gap-6 md:gap-8">
+                <div className="size-16 md:size-24 rounded-[1.5rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500">
+                  <span className="material-symbols-outlined text-[32px] md:text-[48px] text-primary font-light">today</span>
+                </div>
+                <div>
+                  <h3 className="text-sm md:text-2xl font-black text-text-main leading-tight">Compromissos do Dia</h3>
+                  <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize os agendamentos de hoje</p>
+                </div>
+              </div>
+            </div>
+
             {/* Glow effect for today day view */}
             {currentDate.toDateString() === new Date().toDateString() && (
               <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent"></div>
@@ -1329,7 +1411,7 @@ const Calendar: React.FC = () => {
                 )}
               </div>
             </div>
-            <div ref={dayViewRef} className="p-4 md:p-8 max-w-4xl mx-auto w-full scroll-mt-[240px] md:scroll-mt-[260px]">
+            <div ref={dayViewRef} className={`p-4 md:p-8 max-w-4xl mx-auto w-full ${scrollMarginClass}`}>
 
               <div className="space-y-4">
                 {(() => {
@@ -1349,7 +1431,7 @@ const Calendar: React.FC = () => {
                     <div 
                       key={event.id} 
                       ref={index === 0 ? firstEventRef : null}
-                      className="hover:translate-x-1 transition-transform duration-300 scroll-mt-[240px] md:scroll-mt-[260px]"
+                      className={`hover:translate-x-1 transition-transform duration-300 ${scrollMarginClass}`}
                     >
                       {/* Desktop View */}
                       <div className="hidden md:block">
@@ -1472,7 +1554,7 @@ const Calendar: React.FC = () => {
               </div>
             </div>
             
-            <div ref={agendaViewRef} className="p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full scroll-mt-[240px] md:scroll-mt-[260px]">
+            <div ref={agendaViewRef} className={`p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full ${scrollMarginClass}`}>
               {(() => {
                  // Filter events for the current month and year using filteredEvents instead of events
                  const monthEvents = filteredEvents.filter(e => {
@@ -1507,7 +1589,7 @@ const Calendar: React.FC = () => {
                         <div 
                             key={dateStr} 
                             ref={isToday ? todayRef : null}
-                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden scroll-mt-[240px] md:scroll-mt-[260px] ${
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden ${scrollMarginClass} ${
                                 isToday 
                                     ? 'bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
                                     : isCurrentMonth 
@@ -1538,7 +1620,7 @@ const Calendar: React.FC = () => {
                                     <div 
                                         key={event.id} 
                                         ref={isToday && index === 0 ? firstEventRef : null}
-                                        className="hover:translate-x-1 transition-transform duration-300 scroll-mt-[240px] md:scroll-mt-[260px]"
+                                        className={`hover:translate-x-1 transition-transform duration-300 ${scrollMarginClass}`}
                                     >
                                         <CalendarEventCard
                                             event={event}
