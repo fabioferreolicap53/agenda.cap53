@@ -22,7 +22,12 @@ const Chat: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showChatMobile, setShowChatMobile] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const COMMON_EMOJIS = ['😊', '😂', '🥰', '👍', '🙏', '❤️', '🔥', '✨', '👏', '✅', '❌', '👀', '🚀', '⭐', '📅', '📝'];
 
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
   const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
@@ -69,6 +74,33 @@ const Chat: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Handle click outside emoji picker
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+    }
+  }, [newMessage]);
+
+  const handleEmojiSelect = (emoji: string) => {
+    setNewMessage(prev => prev + emoji);
+    // Focus back to textarea
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
+  };
 
   // Fetch all users for the sidebar and their unread counts
   useEffect(() => {
@@ -633,15 +665,12 @@ const Chat: React.FC = () => {
                >
                   <div className="flex-1 relative group">
                     <textarea 
+                      ref={textareaRef}
                       className="w-full p-3 lg:p-4 pr-12 rounded-2xl bg-slate-50 border-none text-sm lg:text-[15px] focus:ring-2 focus:ring-primary/20 focus:bg-white transition-all placeholder:text-slate-400 resize-none min-h-[48px] max-h-32 custom-scrollbar"
                       placeholder="Escreva sua mensagem..."
                       rows={1}
                       value={newMessage}
-                      onChange={(e) => {
-                        setNewMessage(e.target.value);
-                        e.target.style.height = 'auto';
-                        e.target.style.height = e.target.scrollHeight + 'px';
-                      }}
+                      onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
@@ -649,9 +678,27 @@ const Chat: React.FC = () => {
                         }
                       }}
                     />
+                    {showEmojiPicker && (
+                      <div 
+                        ref={emojiPickerRef}
+                        className="absolute bottom-full right-0 mb-2 p-2 bg-white rounded-2xl shadow-2xl border border-slate-100 grid grid-cols-4 lg:grid-cols-8 gap-1 z-50 animate-in fade-in zoom-in-95 duration-200"
+                      >
+                        {COMMON_EMOJIS.map(emoji => (
+                          <button
+                            key={emoji}
+                            type="button"
+                            onClick={() => handleEmojiSelect(emoji)}
+                            className="size-9 flex items-center justify-center hover:bg-slate-50 rounded-lg transition-colors text-lg"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     <button 
                       type="button"
-                      className="absolute right-3 bottom-2.5 size-8 flex items-center justify-center text-slate-400 hover:text-primary transition-colors"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={`absolute right-3 bottom-2.5 size-8 flex items-center justify-center transition-colors ${showEmojiPicker ? 'text-primary' : 'text-slate-400 hover:text-primary'}`}
                     >
                       <span className="material-symbols-outlined text-[20px]">sentiment_satisfied</span>
                     </button>

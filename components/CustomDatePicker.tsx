@@ -602,8 +602,8 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
                   {/* Calendar Grid */}
                   <div className="grid grid-cols-7 gap-px mb-2">
-                    {DAYS_OF_WEEK.map(day => (
-                      <div key={day} className="text-center text-[10px] font-black text-slate-200 py-2 uppercase tracking-widest">
+                    {DAYS_OF_WEEK.map((day, index) => (
+                      <div key={`header-mobile-${index}`} className="text-center text-[10px] font-black text-slate-200 py-2 uppercase tracking-widest">
                         {day}
                       </div>
                     ))}
@@ -761,8 +761,8 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
                 {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-px mb-2">
-                  {DAYS_OF_WEEK.map(day => (
-                    <div key={day} className="text-center text-[11px] font-black text-slate-200 py-3 uppercase tracking-widest">
+                  {DAYS_OF_WEEK.map((day, index) => (
+                    <div key={`header-desktop-${index}`} className="text-center text-[11px] font-black text-slate-200 py-3 uppercase tracking-widest">
                       {day}
                     </div>
                   ))}

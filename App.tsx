@@ -68,7 +68,14 @@ const ScrollToTop: React.FC = () => {
     // está tentando focar no evento ou abrir o modal
     const params = new URLSearchParams(search);
     if (!params.get('eventId') && !params.get('openChat')) {
+      // Primeiro tentamos scrollar a window (caso haja scroll global)
       window.scrollTo(0, 0);
+      
+      // Depois tentamos encontrar e scrollar o container interno de scroll
+      const scrollContainer = document.getElementById('main-scroll-container');
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: 0, behavior: 'instant' });
+      }
     }
   }, [pathname, search]);
 
@@ -144,7 +151,10 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <Sidebar />
       <main className={`flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/30 transition-all duration-500 ease-in-out ${isRightSidebarOpen ? 'lg:mr-72' : 'mr-0'}`}>
         <Header />
-        <div className={`flex-1 overflow-y-auto custom-scrollbar ${location.pathname === '/calendar' ? '' : 'p-3 md:p-4 lg:p-6'}`}>
+        <div 
+          id="main-scroll-container"
+          className={`flex-1 overflow-y-auto custom-scrollbar ${location.pathname === '/calendar' ? '' : 'p-3 md:p-4 lg:p-6'}`}
+        >
           <div className={`${location.pathname === '/calendar' ? '' : 'max-w-[1600px] mx-auto w-full'}`}>
             {children}
           </div>

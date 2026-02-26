@@ -85,6 +85,7 @@ const Calendar: React.FC = () => {
   const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const dayViewRef = useRef<HTMLDivElement>(null);
   const agendaViewRef = useRef<HTMLDivElement>(null);
 
@@ -756,98 +757,110 @@ const Calendar: React.FC = () => {
       {/* Filters Bar - Fixed Top of Page */}
       <div className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-border-light shadow-sm w-full">
         <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-2">
-          <div className="flex flex-col xl:flex-row items-center gap-2 xl:gap-4">
-            
-            <div className="flex flex-col md:flex-row items-center justify-between w-full md:gap-4 xl:contents">
-              {/* Navigation Group */}
-              <div className="flex items-center gap-2 flex-shrink-0 w-full md:w-auto justify-between md:justify-start xl:order-1">
-                <div className="flex items-center gap-2 flex-1 md:flex-none">
+          <div className="flex flex-col gap-3">
+            {/* Barra Principal: Navegação + Tipos de View */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+              {/* Grupo de Navegação e Filtro (Esquerda/Centro) */}
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-0">
                   {/* Botão Voltar */}
                   {!isInitialView && (
                     <button
                       onClick={() => navigate(-1)}
-                      className="size-[38px] flex items-center justify-center rounded-full bg-white border border-slate-200/60 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group"
+                      className="size-[42px] flex items-center justify-center rounded-xl bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group"
                     >
                       <span className="material-symbols-outlined text-[20px] font-light group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                     </button>
                   )}
 
-                  <button
-                    onClick={() => {
-                      const today = new Date();
-                      const isAlreadyToday = currentDate.toDateString() === today.toDateString();
-                      setCurrentDate(today);
-                      updateURL(viewType, today, true);
-                      if (isAlreadyToday) {
-                        scrollToToday();
-                      }
-                    }}
-                    className="h-[38px] flex items-center gap-1.5 px-3 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg transition-all duration-300 active:scale-95 shrink-0"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">today</span>
-                    <span className="hidden sm:inline">Hoje</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const today = new Date();
+                        const isAlreadyToday = currentDate.toDateString() === today.toDateString();
+                        setCurrentDate(today);
+                        updateURL(viewType, today, true);
+                        if (isAlreadyToday) {
+                          scrollToToday();
+                        }
+                      }}
+                      className="h-[42px] flex items-center gap-2 px-3 sm:px-4 text-[10px] font-black uppercase tracking-widest text-primary bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-xl transition-all duration-300 active:scale-95 shrink-0"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">today</span>
+                      <span className="hidden min-[400px]:inline">Hoje</span>
+                    </button>
+                  </div>
 
-                  <div className="h-[42px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light flex-1 md:flex-none justify-center">
+                  <div className="h-[42px] flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 flex-1 sm:flex-none justify-center">
                     <button
                       onClick={() => handleNavigate('prev')}
-                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300 shrink-0"
+                      className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 shrink-0"
                     >
                       <span className="material-symbols-outlined text-[20px]">chevron_left</span>
                     </button>
                     
-                    {/* Data Picker Agil */}
-                    <div className="h-full px-2 flex items-center">
-                      <CustomDayPicker 
-                        value={currentDate}
-                        onChange={(newDate) => {
-                          setCurrentDate(newDate);
-                          updateURL('day', newDate, true);
-                        }}
-                        eventsByDate={eventsByDate}
-                        className="h-[34px]"
-                      />
+                    {/* Indicação de Mês e Ano */}
+                    <div className="h-full px-2 sm:px-4 flex items-center min-w-[120px] sm:min-w-[160px] justify-center">
+                      <span className="text-[11px] sm:text-[13px] font-black uppercase tracking-[0.05em] sm:tracking-[0.15em] text-slate-900 whitespace-nowrap">
+                        {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                      </span>
                     </div>
 
                     <button
                       onClick={() => handleNavigate('next')}
-                      className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300 shrink-0"
+                      className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 shrink-0"
                     >
                       <span className="material-symbols-outlined text-[20px]">chevron_right</span>
                     </button>
                   </div>
-                </div>
 
-                {/* Mobile Filter Toggle */}
-                <button
-                    onClick={() => setShowMobileFilters(!showMobileFilters)}
-                    className={`md:hidden size-[38px] flex items-center justify-center rounded-lg border transition-all duration-300 relative ${
-                        showMobileFilters || activeFiltersCount > 0
-                            ? 'bg-primary text-white border-primary shadow-sm' 
-                            : 'bg-white text-text-secondary border-gray-300 hover:border-primary/50'
+                  {/* Botão de Filtros - Moderno */}
+                  <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className={`h-[42px] flex items-center gap-2.5 px-3 sm:px-5 rounded-xl border transition-all duration-300 active:scale-95 shrink-0 relative ${
+                      showFilters || activeFiltersCount > 0
+                        ? 'bg-[#1e293b] text-white border-[#1e293b] shadow-lg shadow-slate-200' 
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:bg-slate-50'
                     }`}
-                >
-                    <span className="material-symbols-outlined text-[20px]">
-                        {showMobileFilters ? 'filter_list_off' : 'filter_list'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showFilters ? 'filter_list_off' : 'filter_alt'}
                     </span>
-                    {activeFiltersCount > 0 && !showMobileFilters && (
-                        <span className="absolute -top-1 -right-1 size-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white shadow-sm animate-in zoom-in">
-                            {activeFiltersCount}
-                        </span>
+                    <span className="text-[10px] font-black uppercase tracking-widest hidden min-[400px]:inline">
+                      Filtros
+                    </span>
+                    {activeFiltersCount > 0 && (
+                      <span className={`flex items-center justify-center size-5 rounded-full text-[10px] font-bold border-2 ${
+                        showFilters || activeFiltersCount > 0 ? 'bg-white text-[#1e293b] border-[#1e293b]' : 'bg-primary text-white border-white'
+                      }`}>
+                        {activeFiltersCount}
+                      </span>
                     )}
-                </button>
+                  </button>
+
+                  {/* CustomDayPicker - Disponível em Tablet e Desktop */}
+                  <div className="hidden sm:block">
+                    <CustomDayPicker 
+                        value={currentDate}
+                        onChange={(date) => {
+                          setCurrentDate(date);
+                          updateURL(viewType, date, true);
+                        }}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* View Type Group */}
-              <div className="h-[38px] flex bg-slate-100/50 p-0.5 rounded-lg border border-border-light flex-shrink-0 w-full md:w-auto justify-center xl:order-4">
+              <div className="h-[42px] flex bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0 w-full md:w-auto justify-center overflow-x-auto no-scrollbar">
                   {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
                     <button
                       key={view}
                       onClick={() => updateURL(view, currentDate)}
-                      className={`h-full px-3 text-[9px] font-black uppercase tracking-widest rounded-md transition-all duration-300 ${
+                      className={`h-full px-4 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 whitespace-nowrap ${
                         viewType === view 
                           ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
-                          : 'text-text-secondary hover:text-text-main'
+                          : 'text-slate-400 hover:text-slate-600'
                       }`}
                     >
                       {view === 'day' ? 'Dia' : view === 'week' ? 'Sem' : view === 'month' ? 'Mês' : 'Age'}
@@ -856,59 +869,92 @@ const Calendar: React.FC = () => {
               </div>
             </div>
 
-            {/* Separator (Desktop) */}
-            <div className="hidden xl:block w-px h-6 bg-slate-200 xl:order-2"></div>
+            {/* Painel de Filtros - Otimizado para ocupar apenas uma linha no desktop */}
+            <div className={`${showFilters ? 'flex flex-col lg:flex-row p-4 mt-2 border border-slate-100 bg-slate-50/80 rounded-2xl animate-in slide-in-from-top-2 fade-in duration-300 shadow-inner' : 'hidden'} items-center lg:items-end gap-6 w-full z-[101] relative transition-all`}>
+                <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-md md:max-w-none">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="flex items-center justify-center md:justify-start gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 md:ml-1">
+                      <span className="material-symbols-outlined text-[14px]">person</span>
+                      Usuários
+                    </label>
+                    <div className="h-[40px]">
+                      <CustomSelect
+                          value={filterUser}
+                          onChange={setFilterUser}
+                          options={userOptions}
+                          multiSelect={true}
+                          searchable={true}
+                          placeholder="Todos os Usuários"
+                          startIcon="group"
+                          className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="flex items-center justify-center md:justify-start gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 md:ml-1">
+                      <span className="material-symbols-outlined text-[14px]">apartment</span>
+                      Setores
+                    </label>
+                    <div className="h-[40px]">
+                      <CustomSelect
+                          value={filterSectors}
+                          onChange={setFilterSectors}
+                          options={sectorOptions}
+                          multiSelect={true}
+                          placeholder="Todos os Setores"
+                          startIcon="domain"
+                          className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="flex items-center justify-center md:justify-start gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 md:ml-1">
+                      <span className="material-symbols-outlined text-[14px]">badge</span>
+                      Papéis
+                    </label>
+                    <div className="h-[40px]">
+                      <CustomSelect
+                          value={filterRoles}
+                          onChange={setFilterRoles}
+                          options={roleOptions}
+                          multiSelect={true}
+                          placeholder="Todos os Papéis"
+                          startIcon="manage_accounts"
+                          className="w-full h-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center justify-center lg:justify-start gap-2 shrink-0 w-full lg:w-auto border-t lg:border-t-0 pt-4 lg:pt-0 border-slate-200/50">
+                  <button
+                    onClick={() => {
+                      setFilterUser(['Todos']);
+                      setFilterRoles(['Todos']);
+                      setFilterSectors(['Todos']);
+                    }}
+                    className="h-[40px] px-4 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-100 rounded-xl transition-all group"
+                  >
+                    <span className="material-symbols-outlined text-[18px] group-hover:rotate-180 transition-transform duration-500">filter_alt_off</span>
+                    <span className="hidden xl:inline">Limpar Filtros</span>
+                    <span className="xl:hidden">Limpar</span>
+                  </button>
 
-            {/* Filters Group */}
-            <div className={`${showMobileFilters ? 'flex animate-in slide-in-from-top-2 fade-in duration-300' : 'hidden'} md:flex flex-col md:flex-row items-center gap-2 w-full xl:flex-1 z-[101] relative min-w-0 transition-all xl:order-3`}>
-                <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
-                  <CustomSelect
-                      value={filterUser}
-                      onChange={setFilterUser}
-                      options={userOptions}
-                      multiSelect={true}
-                      searchable={true}
-                      placeholder="Usuário"
-                      startIcon="person"
-                      className="w-full h-full"
-                  />
+                  <label className={`flex items-center justify-center gap-2.5 text-[9px] font-black uppercase tracking-widest cursor-pointer select-none transition-all duration-300 px-6 rounded-xl border h-[40px] flex-1 lg:flex-none ${persistFilters ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-200' : 'bg-white text-slate-500 border-slate-200 hover:text-primary hover:border-primary/30 hover:shadow-md'}`}>
+                      <input 
+                        type="checkbox" 
+                        checked={persistFilters} 
+                        onChange={(e) => setPersistFilters(e.target.checked)}
+                        className="hidden"
+                      />
+                      <span className="material-symbols-outlined text-[18px]">
+                          {persistFilters ? 'bookmark_check' : 'bookmark'}
+                      </span>
+                      <span className="hidden xl:inline">{persistFilters ? 'Preferências Salvas' : 'Salvar Preferências'}</span>
+                      <span className="xl:hidden">{persistFilters ? 'Salvo' : 'Salvar'}</span>
+                  </label>
                 </div>
-                <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
-                  <CustomSelect
-                      value={filterSectors}
-                      onChange={setFilterSectors}
-                      options={sectorOptions}
-                      multiSelect={true}
-                      placeholder="Setor"
-                      startIcon="apartment"
-                      className="w-full h-full"
-                  />
-                </div>
-                <div className="h-[38px] w-full md:flex-1 min-w-[120px]">
-                  <CustomSelect
-                      value={filterRoles}
-                      onChange={setFilterRoles}
-                      options={roleOptions}
-                      multiSelect={true}
-                      placeholder="Papel"
-                      startIcon="badge"
-                      className="w-full h-full"
-                  />
-                </div>
-                 <label className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider cursor-pointer select-none transition-all duration-300 px-3 rounded-lg border whitespace-nowrap h-[38px] flex-shrink-0 ${persistFilters ? 'bg-primary text-white border-primary shadow-sm hover:bg-primary/90' : 'bg-slate-50 text-slate-500 border-slate-200 hover:text-primary hover:border-primary/30'}`}>
-                    <input 
-                      type="checkbox" 
-                      checked={persistFilters} 
-                      onChange={(e) => setPersistFilters(e.target.checked)}
-                      className="hidden"
-                    />
-                    <span className="material-symbols-outlined text-[16px]">
-                        {persistFilters ? 'bookmark_added' : 'bookmark_border'}
-                    </span>
-                    {persistFilters ? 'Salvo' : 'Salvar'}
-                </label>
             </div>
-
           </div>
         </div>
       </div>
