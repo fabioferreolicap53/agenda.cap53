@@ -386,22 +386,21 @@ const Calendar: React.FC = () => {
   // Function to scroll to today and center it
   const scrollToToday = () => {
     setTimeout(() => {
+      // Configuração base de scroll
+      const scrollConfig: ScrollIntoViewOptions = {
+        behavior: 'smooth',
+        block: viewType === 'agenda' || viewType === 'day' ? 'start' : 'center',
+        inline: 'center'
+      };
+
       // Prioritize focusing on the first event if it exists (DIA and AGE views)
       if (firstEventRef.current) {
-        firstEventRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'center'
-        });
+        firstEventRef.current.scrollIntoView(scrollConfig);
         return;
       }
 
       if (todayRef.current) {
-        todayRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'center',
-          inline: 'center'
-        });
+        todayRef.current.scrollIntoView(scrollConfig);
       } else if (viewType === 'day' && dayViewRef.current) {
         dayViewRef.current.scrollIntoView({ 
           behavior: 'smooth', 
@@ -1070,7 +1069,7 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 ${isToday ? 'bg-primary/[0.02] ring-1 ring-primary/20 border-primary/20' : 'bg-white'}`}
+                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 scroll-mt-[240px] md:scroll-mt-[260px] ${isToday ? 'bg-primary/[0.02] ring-1 ring-primary/20 border-primary/20' : 'bg-white'}`}
                   >
                     <div className={`px-3 py-2 flex items-center justify-between border-b border-slate-50 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
                       <div className="flex items-center gap-2">
@@ -1228,7 +1227,7 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={isToday ? todayRef : null}
-                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${
+                    className={`rounded-xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative scroll-mt-[240px] md:scroll-mt-[260px] ${
                       isToday 
                         ? 'bg-primary/[0.04] ring-2 ring-primary/30 border-primary/20 shadow-lg shadow-primary/5' 
                         : isCurrentMonth 
@@ -1292,7 +1291,7 @@ const Calendar: React.FC = () => {
           <div 
             ref={currentDate.toDateString() === new Date().toDateString() ? todayRef : dayViewRef}
             onDoubleClick={() => handleDayDoubleClick(currentDate)}
-            className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${
+            className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 scroll-mt-[240px] md:scroll-mt-[260px] ${
               currentDate.toDateString() === new Date().toDateString() 
                 ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
                 : 'bg-white'
@@ -1330,7 +1329,7 @@ const Calendar: React.FC = () => {
                 )}
               </div>
             </div>
-            <div ref={dayViewRef} className="p-4 md:p-8 max-w-4xl mx-auto w-full scroll-mt-[180px]">
+            <div ref={dayViewRef} className="p-4 md:p-8 max-w-4xl mx-auto w-full scroll-mt-[240px] md:scroll-mt-[260px]">
 
               <div className="space-y-4">
                 {(() => {
@@ -1350,7 +1349,7 @@ const Calendar: React.FC = () => {
                     <div 
                       key={event.id} 
                       ref={index === 0 ? firstEventRef : null}
-                      className="hover:translate-x-1 transition-transform duration-300"
+                      className="hover:translate-x-1 transition-transform duration-300 scroll-mt-[240px] md:scroll-mt-[260px]"
                     >
                       {/* Desktop View */}
                       <div className="hidden md:block">
@@ -1473,7 +1472,7 @@ const Calendar: React.FC = () => {
               </div>
             </div>
             
-            <div ref={agendaViewRef} className="p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full scroll-mt-[180px]">
+            <div ref={agendaViewRef} className="p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full scroll-mt-[240px] md:scroll-mt-[260px]">
               {(() => {
                  // Filter events for the current month and year using filteredEvents instead of events
                  const monthEvents = filteredEvents.filter(e => {
@@ -1508,7 +1507,7 @@ const Calendar: React.FC = () => {
                         <div 
                             key={dateStr} 
                             ref={isToday ? todayRef : null}
-                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden ${
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden scroll-mt-[240px] md:scroll-mt-[260px] ${
                                 isToday 
                                     ? 'bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
                                     : isCurrentMonth 
@@ -1539,7 +1538,7 @@ const Calendar: React.FC = () => {
                                     <div 
                                         key={event.id} 
                                         ref={isToday && index === 0 ? firstEventRef : null}
-                                        className="hover:translate-x-1 transition-transform duration-300"
+                                        className="hover:translate-x-1 transition-transform duration-300 scroll-mt-[240px] md:scroll-mt-[260px]"
                                     >
                                         <CalendarEventCard
                                             event={event}
