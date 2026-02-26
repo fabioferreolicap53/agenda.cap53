@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
 import { pb } from '../lib/pocketbase';
 import { isNotificationDeletable } from '../lib/notifications';
@@ -905,7 +905,19 @@ const Requests: React.FC = () => {
                                                 </span>
                                             </div>
                                             <div className="flex flex-col">
-                                                <h3 className="font-bold text-slate-800 text-lg">{group.event?.title || 'Evento Desconhecido (ou Deletado)'}</h3>
+                                                <h3 className="font-bold text-slate-800 text-lg">
+                                                    {group.event ? (
+                                                        <Link 
+                                                            to={`/calendar?date=${new Date(group.event.date_start).toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${location.pathname}`}
+                                                            className="hover:text-primary transition-colors flex items-center gap-1.5 group/link"
+                                                        >
+                                                            {group.event.title}
+                                                            <span className="material-symbols-outlined text-[16px] opacity-0 group-hover/link:opacity-100 transition-opacity">open_in_new</span>
+                                                        </Link>
+                                                    ) : (
+                                                        'Evento Desconhecido (ou Deletado)'
+                                                    )}
+                                                </h3>
                                                 <span className="text-xs text-slate-400">
                                                     Solicitante: <span className="font-bold text-slate-600">{group.requests[0]?.expand?.created_by?.name || 'Sistema'}</span> • 
                                                     Data: {group.event?.date_start ? new Date(group.event.date_start).toLocaleDateString('pt-BR') : 'Data N/A'}
@@ -970,20 +982,6 @@ const Requests: React.FC = () => {
                                                                 <span className="material-symbols-outlined text-[18px]">chat</span>
                                                             </button>
                                                         )}
-                                                        <button
-                                                            onClick={() => handleAlmacRequestAction(req.id, 'approved', req.status, req.justification)}
-                                                            className="flex-1 h-9 rounded-xl bg-slate-800 text-white text-[11px] font-bold hover:bg-slate-900 transition-all shadow-sm active:scale-[0.98] flex items-center justify-center gap-1.5"
-                                                        >
-                                                            <span className="material-symbols-outlined text-[16px]">check</span>
-                                                            Aprovar
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAlmacRequestAction(req.id, 'rejected', req.status, req.justification)}
-                                                            className="flex-1 h-9 rounded-xl bg-white border border-slate-200 text-slate-600 text-[11px] font-bold hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
-                                                        >
-                                                            <span className="material-symbols-outlined text-[16px]">close</span>
-                                                            Reprovar
-                                                        </button>
                                                     </div>
                                                 )}
                                                 

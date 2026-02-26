@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom';
 import RefusalModal from '../components/RefusalModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const TransportManagement: React.FC = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [searchParams] = useSearchParams();
     const highlightEventId = searchParams.get('eventId');
     const scrollRef = useRef<Record<string, HTMLDivElement | null>>({});
@@ -17,8 +18,16 @@ const TransportManagement: React.FC = () => {
     const [transportSearch, setTransportSearch] = useState('');
 
     useEffect(() => {
-        setTransportSearch(searchParams.get('search') || '');
-    }, [searchParams]);
+        const params = new URLSearchParams(location.search);
+        setTransportSearch(params.get('search') || '');
+        
+        const view = params.get('view');
+        if (view === 'history') {
+            setTransportSubTab('history');
+        } else if (view === 'pending') {
+            setTransportSubTab('pending');
+        }
+    }, [location.search]);
     const [transportFilterStatus, setTransportFilterStatus] = useState<'all' | 'confirmed' | 'rejected'>('all');
     const [actionMessage, setActionMessage] = useState<string | null>(null);
     const [rerequestIds, setRerequestIds] = useState<Set<string>>(new Set());
@@ -352,12 +361,9 @@ const TransportManagement: React.FC = () => {
                                     : 'Ainda não existem registros no histórico de transporte.')}
                         </p>
                         {transportSearch && (
-                            <button 
-                                onClick={() => setTransportSearch('')}
-                                className="mt-8 px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
-                            >
-                                Limpar busca
-                            </button>
+                            <div className="mt-8 text-slate-400 font-medium text-xs">
+                                Tente outros termos de busca.
+                            </div>
                         )}
                     </div>
                 ) : (
@@ -401,7 +407,13 @@ const TransportManagement: React.FC = () => {
                                                 </span>
                                             </div>
                                             <h3 className="font-black text-slate-900 text-lg leading-tight group-hover:text-primary transition-colors">
-                                                {event.title}
+                                                <Link 
+                                                    to={`/calendar?date=${new Date(event.date_start).toISOString().split('T')[0]}&view=day&eventId=${event.id}&tab=transport&from=transporte`}
+                                                    className="hover:text-primary transition-colors flex items-center gap-1.5 group/link"
+                                                >
+                                                    {event.title}
+                                                    <span className="material-symbols-outlined text-[16px] opacity-0 group-hover/link:opacity-100 transition-opacity">open_in_new</span>
+                                                </Link>
                                             </h3>
                                             <div className="flex items-center gap-2.5 text-slate-500">
                                                 <div className="size-7 rounded-full bg-slate-100 flex items-center justify-center border border-slate-200/50">
@@ -509,69 +521,21 @@ const TransportManagement: React.FC = () => {
                                         </div>
 
                                         {/* Action Sidebar - Optimized for alignment and size */}
-                                        <div className="flex flex-col items-center justify-center gap-3 w-full lg:w-[150px] shrink-0 self-stretch border-l border-slate-100/60 pl-8 ml-2">
-                                            {transportSubTab === 'pending' ? (
-                                                <div className="flex flex-col w-full gap-2">
-                                                    <button 
-                                                        onClick={() => handleTransportDecision(event.id, 'confirmed')}
-                                                        disabled={processingDecision}
-                                                        className="h-11 w-full bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 active:scale-[0.98] disabled:opacity-50"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                                                        Confirmar
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => handleTransportDecision(event.id, 'rejected')}
-                                                        disabled={processingDecision}
-                                                        className="h-11 w-full bg-white text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 hover:text-rose-600 hover:border-rose-100 transition-all active:scale-[0.98] disabled:opacity-50"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px]">cancel</span>
-                                                        Recusar
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <button 
-                                                    onClick={() => {
-                                                        setConfirmationModalConfig({
-                                                            title: 'Remover do Histórico',
-                                                            description: 'Deseja remover esta solicitação do histórico? Esta ação não afetará o evento, apenas a visualização de transporte.',
-                                                            confirmText: 'Remover',
-                                                            variant: 'danger',
-                                                            onConfirm: async () => {
-                                                                try {
-                                                                    await pb.collection('agenda_cap53_eventos').update(event.id, {
-                                                                        transporte_suporte: false
-                                                                    });
-                                                                    setActionMessage('Removido');
-                                                                    setTimeout(() => setActionMessage(null), 3000);
-                                                                    fetchTransportRequests();
-                                                                    setConfirmationModalOpen(false);
-                                                                } catch (err) {
-                                                                    alert('Erro ao remover');
-                                                                }
-                                                            }
-                                                        });
-                                                        setConfirmationModalOpen(true);
-                                                    }}
-                                                    className="size-11 rounded-xl bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 border border-slate-100 hover:border-rose-100 transition-all flex items-center justify-center active:scale-[0.98]"
-                                                    title="Remover do histórico"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px]">delete</span>
-                                                </button>
-                                            )}
-                                            
-                                            <div className="flex items-center justify-center gap-2 w-full">
-                                                <button
-                                                    onClick={() => {
-                                                        const eventDate = new Date(event.date_start);
-                                                        const dateStr = eventDate.toISOString().split('T')[0];
-                                                        navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=transport&from=transporte`);
-                                                    }}
-                                                    className="size-11 rounded-xl bg-slate-50 text-slate-500 hover:text-primary hover:bg-primary/5 border border-slate-100 hover:border-primary/20 transition-all flex items-center justify-center active:scale-[0.98]"
-                                                    title="Ver detalhes do evento"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px]">visibility</span>
-                                                </button>
+                                        <div className="flex flex-col items-center justify-center gap-3 w-full lg:w-[80px] shrink-0 self-stretch border-l border-slate-100/60 pl-4 ml-2">
+                                            <div className="flex flex-col items-center justify-center gap-3 w-full">
+                                                {(() => {
+                                                    const eventDate = new Date(event.date_start.replace(' ', 'T'));
+                                                    const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+                                                    return (
+                                                        <Link
+                                                            to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${location.pathname}`}
+                                                            className="size-11 rounded-xl bg-slate-50 text-slate-500 hover:text-primary hover:bg-primary/5 border border-slate-100 hover:border-primary/20 transition-all flex items-center justify-center active:scale-[0.98]"
+                                                            title="Ver detalhes do evento"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                                        </Link>
+                                                    );
+                                                })()}
 
                                                 {event.user && (
                                                     <button

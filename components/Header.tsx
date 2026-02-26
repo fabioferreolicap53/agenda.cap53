@@ -91,7 +91,7 @@ const Header: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Click outside to close results
+  // Click outside or ESC to close results
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const isInsideSearch = searchRef.current && searchRef.current.contains(event.target as Node);
@@ -101,8 +101,19 @@ const Header: React.FC = () => {
         setShowResults(false);
       }
     };
+
+    const handleEscKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowResults(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscKey);
+    };
   }, []);
 
   const handleClearSearch = () => {

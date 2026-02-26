@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, Link } from 'react-router-dom';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const AlmacManagement: React.FC = () => {
@@ -37,6 +37,13 @@ const AlmacManagement: React.FC = () => {
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         setSearchTerm(params.get('search') || '');
+        
+        const view = params.get('view');
+        if (view === 'history') {
+            setActiveView('history');
+        } else if (view === 'inventory') {
+            setActiveView('inventory');
+        }
     }, [location.search]);
 
     const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ALMOXARIFADO' | 'COPA'>('ALL');
@@ -394,112 +401,9 @@ const AlmacManagement: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                        {/* Add Item Form */}
-                        <div className="lg:col-span-4 bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden lg:sticky lg:top-8">
-                            <div className="p-6 md:p-8">
-                                <div className="flex items-center gap-4 mb-6 md:mb-8">
-                                    <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-200">
-                                        <span className="material-symbols-outlined text-2xl">
-                                            {editingId ? 'edit_note' : 'add_circle'}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                                            {editingId ? 'Editar Item' : 'Novo Item'}
-                                        </h2>
-                                        <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mt-0.5">Cadastro de Item</p>
-                                    </div>
-                                </div>
-                                
-                                <form onSubmit={handleAddItem} className="flex flex-col gap-6">
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Nome do Item</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={newItemName}
-                                            onChange={(e) => setNewItemName(e.target.value)}
-                                            className="rounded-xl border border-slate-100 bg-slate-50/50 h-12 px-4 focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900/20 outline-none transition-all text-sm font-medium"
-                                            placeholder="Ex: Água Mineral 500ml"
-                                        />
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Categoria</label>
-                                        <div className="grid grid-cols-2 gap-3 p-1 bg-slate-50 rounded-xl border border-slate-100">
-                                            <button
-                                                type="button"
-                                                onClick={() => setNewItemType('almoxarifado')}
-                                                className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${newItemType === 'almoxarifado' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                Almoxarifado
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setNewItemType('copa')}
-                                                className={`py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${newItemType === 'copa' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                Copa
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Unidade</label>
-                                        <input
-                                            type="text"
-                                            value={newItemUnit}
-                                            onChange={(e) => setNewItemUnit(e.target.value)}
-                                            className="rounded-xl border border-slate-100 bg-slate-50/50 h-12 px-4 focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900/20 outline-none transition-all text-sm font-medium"
-                                            placeholder="un, kg, pct..."
-                                        />
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Disponibilidade Imediata</label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setNewItemAvailable(!newItemAvailable)}
-                                            className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all duration-300 ${newItemAvailable ? 'bg-green-50/50 border-green-200' : 'bg-rose-50/50 border-rose-200'}`}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`size-8 rounded-lg flex items-center justify-center ${newItemAvailable ? 'bg-green-500 text-white' : 'bg-rose-500 text-white'}`}>
-                                                    <span className="material-symbols-outlined text-lg">{newItemAvailable ? 'check' : 'close'}</span>
-                                                </div>
-                                                <span className={`text-[10px] font-black uppercase tracking-widest ${newItemAvailable ? 'text-green-700' : 'text-rose-700'}`}>
-                                                    {newItemAvailable ? 'Disponível' : 'Indisponível'}
-                                                </span>
-                                            </div>
-                                            <div className={`size-5 rounded-full border-2 flex items-center justify-center ${newItemAvailable ? 'border-green-500 bg-green-500 text-white' : 'border-rose-500 bg-rose-500 text-white'}`}>
-                                                <span className="material-symbols-outlined text-[12px] font-bold">check</span>
-                                            </div>
-                                        </button>
-                                    </div>
-
-                                    <div className="flex gap-3 pt-4">
-                                        {editingId && (
-                                            <button
-                                                type="button"
-                                                onClick={handleCancelEdit}
-                                                className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-500 hover:bg-slate-50 transition-all border border-slate-100"
-                                            >
-                                                Cancelar
-                                            </button>
-                                        )}
-                                        <button
-                                            type="submit"
-                                            className="flex-[2] h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-white bg-slate-900 hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 active:scale-[0.98]"
-                                        >
-                                            {editingId ? 'Salvar Alterações' : 'Cadastrar Item'}
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-
+                    <div className="grid grid-cols-1 gap-8 items-start">
                         {/* Inventory Table */}
-                        <div className="lg:col-span-8 flex flex-col gap-6">
+                        <div className="flex flex-col gap-6">
                             {/* Search and Filters */}
                             <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-3 rounded-3xl border border-slate-100 shadow-sm">
                                 <div className="relative flex-1 w-full">
@@ -539,13 +443,12 @@ const AlmacManagement: React.FC = () => {
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidade</th>
-                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {loading ? (
                                                 <tr>
-                                                    <td colSpan={4} className="px-6 py-20 text-center">
+                                                    <td colSpan={3} className="px-6 py-20 text-center">
                                                         <div className="flex flex-col items-center gap-3">
                                                             <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
                                                             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando estoque...</p>
@@ -554,7 +457,7 @@ const AlmacManagement: React.FC = () => {
                                                 </tr>
                                             ) : filteredItems.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={4} className="px-6 py-32 text-center">
+                                                    <td colSpan={3} className="px-6 py-32 text-center">
                                                         <div className="flex flex-col items-center gap-4">
                                                             <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center">
                                                                 <span className="material-symbols-outlined text-3xl text-slate-200">inventory_2</span>
@@ -585,34 +488,13 @@ const AlmacManagement: React.FC = () => {
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-5">
-                                                            <button
-                                                                onClick={() => handleToggleAvailability(item.id)}
-                                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all ${
-                                                                    (item.is_available === true || String(item.is_available) === 'true')
-                                                                    ? 'bg-green-50 text-green-600 border border-green-100/50 hover:bg-green-100'
-                                                                    : 'bg-rose-50 text-rose-600 border border-rose-100/50 hover:bg-rose-100'
-                                                                } border text-[10px] font-black uppercase tracking-widest`}
-                                                            >
+                                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all ${
+                                                                (item.is_available === true || String(item.is_available) === 'true')
+                                                                ? 'bg-green-50 text-green-600 border border-green-100/50'
+                                                                : 'bg-rose-50 text-rose-600 border border-rose-100/50'
+                                                            } border text-[10px] font-black uppercase tracking-widest`}>
                                                                 <span className={`size-1.5 rounded-full ${(item.is_available === true || String(item.is_available) === 'true') ? 'bg-green-500' : 'bg-rose-500'} animate-pulse`}></span>
                                                                 {(item.is_available === true || String(item.is_available) === 'true') ? 'Disponível' : 'Indisponível'}
-                                                            </button>
-                                                        </td>
-                                                        <td className="px-6 py-5">
-                                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button
-                                                                    onClick={() => handleEditItem(item)}
-                                                                    className="size-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-900 transition-all"
-                                                                    title="Editar item"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-lg">edit</span>
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteItem(item.id)}
-                                                                    className="size-9 rounded-xl flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all"
-                                                                    title="Excluir item"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-lg">delete</span>
-                                                                </button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -657,15 +539,6 @@ const AlmacManagement: React.FC = () => {
                                         <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mt-0.5">Almoxarifado e Copa</p>
                                     </div>
                                 </div>
-
-                                <button
-                                    onClick={handleClearAllHistory}
-                                    disabled={history.length === 0 || loading}
-                                    className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest text-rose-600 hover:bg-rose-50 disabled:opacity-50 disabled:hover:bg-transparent transition-all border border-rose-100/50 w-full md:w-auto"
-                                >
-                                    <span className="material-symbols-outlined text-lg">delete_sweep</span>
-                                    Limpar Histórico
-                                </button>
                             </div>
 
                             <div className="overflow-x-auto -mx-4 md:mx-0">
@@ -677,13 +550,12 @@ const AlmacManagement: React.FC = () => {
                                         <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Evento / Solicitante</th>
                                         <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item / Qtd</th>
                                         <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                                        <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-20 text-center">
+                                            <td colSpan={4} className="px-6 py-20 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
                                                     <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando histórico...</p>
@@ -692,7 +564,7 @@ const AlmacManagement: React.FC = () => {
                                         </tr>
                                     ) : filteredHistory.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-6 py-32 text-center">
+                                            <td colSpan={4} className="px-6 py-32 text-center">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
                                                         <span className="material-symbols-outlined text-3xl text-slate-200">history_toggle_off</span>
@@ -713,7 +585,22 @@ const AlmacManagement: React.FC = () => {
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     <div className="flex flex-col">
-                                                        <span className="text-slate-900 font-bold">{req.expand?.event?.title || 'Evento não encontrado'}</span>
+                                                        {req.event ? (() => {
+                                                            const eventDate = req.expand?.event?.date_start ? new Date(req.expand.event.date_start.replace(' ', 'T')) : new Date();
+                                                            const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+                                                            return (
+                                                                <Link 
+                                                                    to={`/calendar?date=${dateStr}&view=day&eventId=${req.event}&tab=resources&from=${location.pathname}`}
+                                                                    className="text-slate-900 font-bold hover:text-primary transition-colors flex items-center gap-1 group/link"
+                                                                    title="Ver detalhes do evento na aba recursos"
+                                                                >
+                                                                    {req.expand?.event?.title || 'Evento não encontrado'}
+                                                                    <span className="material-symbols-outlined text-[14px] opacity-0 group-hover/link:opacity-100 transition-opacity">open_in_new</span>
+                                                                </Link>
+                                                            );
+                                                        })() : (
+                                                            <span className="text-slate-900 font-bold">{req.expand?.event?.title || 'Evento não encontrado'}</span>
+                                                        )}
                                                         <span className="text-slate-400 text-[10px] font-medium uppercase tracking-widest">{req.expand?.created_by?.name || req.expand?.created_by?.email || 'Solicitante desconhecido'}</span>
                                                     </div>
                                                 </td>
@@ -746,15 +633,6 @@ const AlmacManagement: React.FC = () => {
                                                             "{req.justification}"
                                                         </p>
                                                     )}
-                                                </td>
-                                                <td className="px-6 py-5 text-right">
-                                                    <button
-                                                        onClick={() => handleDeleteHistory(req.id)}
-                                                        className="size-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 ml-auto"
-                                                        title="Excluir do histórico"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">delete</span>
-                                                    </button>
                                                 </td>
                                             </tr>
                                         ))

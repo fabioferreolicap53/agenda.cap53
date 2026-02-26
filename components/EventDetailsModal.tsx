@@ -1216,33 +1216,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     <span className="text-[10px] font-bold uppercase">Ciência Pendente</span>
                                                 </div>
                                             )}
-
-                                            {/* Transport Management Actions */}
-                                            {user?.role === 'TRA' && event.transporte_status === 'pending' && (
-                                                <div className="flex gap-2">
-                                                    <button 
-                                                        onClick={() => {
-                                                            setRefusalTarget({ type: 'transport' });
-                                                            setRefusalModalProps({
-                                                                title: 'Recusar Solicitação de Transporte',
-                                                                description: 'Por favor, informe o motivo da recusa da solicitação de transporte para o evento.'
-                                                            });
-                                                            setRefusalModalOpen(true);
-                                                        }}
-                                                        disabled={processingTransport}
-                                                        className="px-3 py-1.5 rounded-lg border border-red-100 bg-white text-red-600 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 transition-colors disabled:opacity-50"
-                                                    >
-                                                        Recusar
-                                                    </button>
-                                                    <button 
-                                                        onClick={() => processTransportDecision('confirmed')}
-                                                        disabled={processingTransport}
-                                                        className="px-3 py-1.5 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors shadow-sm disabled:opacity-50"
-                                                    >
-                                                        Confirmar
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4 mb-4">

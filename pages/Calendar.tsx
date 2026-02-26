@@ -1312,16 +1312,16 @@ const Calendar: React.FC = () => {
                         </div>
 
                         {/* Content Column */}
-                        <div className="flex-1 flex flex-col justify-center gap-1">
-                          <h4 className={`text-sm font-bold leading-tight ${event.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                        <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
+                          <h4 className={`text-sm font-bold leading-tight break-words ${event.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                             {event.title}
                           </h4>
                           
-                          <div className="flex items-center gap-2 text-xs text-slate-500">
+                          <div className="flex items-start gap-2 text-xs text-slate-500 mt-0.5">
                             {(event.expand?.location?.name || event.custom_location) && (
-                              <div className="flex items-center gap-1 truncate">
-                                <span className="material-symbols-outlined text-[14px] text-slate-400">location_on</span>
-                                <span className="truncate">
+                              <div className="flex items-start gap-1 min-w-0">
+                                <span className="material-symbols-outlined text-[14px] text-slate-400 flex-shrink-0 mt-0.5">location_on</span>
+                                <span className="break-words leading-relaxed">
                                   {event.expand?.location?.name || event.custom_location}
                                 </span>
                               </div>
@@ -1522,7 +1522,17 @@ const Calendar: React.FC = () => {
             if (returnPath) {
               const path = returnPath;
               setReturnPath(null);
-              navigate(path);
+              
+              // Se o path tiver parâmetros, usá-los, senão tentar manter a aba histórico
+              if (path.includes('/almoxarifado')) {
+                navigate(`${path}${path.includes('?') ? '&' : '?'}view=history`);
+              } else if (path.includes('/informatica')) {
+                navigate(`${path}${path.includes('?') ? '&' : '?'}view=history`);
+              } else if (path.includes('/transporte')) {
+                navigate(`${path}${path.includes('?') ? '&' : '?'}view=history`);
+              } else {
+                navigate(path);
+              }
             }
           }}
           onCancel={handleCancelEvent}

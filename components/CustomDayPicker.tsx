@@ -144,7 +144,7 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
             </button>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-[200] animate-in fade-in zoom-in-95 duration-200 origin-top-left">
+                <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:absolute md:inset-auto md:top-full md:left-0 md:translate-y-0 mt-2 w-auto md:w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-[200] animate-in fade-in zoom-in-95 duration-200 origin-center md:origin-top-left">
                     <div className="flex items-center justify-between mb-4">
                         <button 
                             onClick={handlePrevMonth}
