@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useSwipe } from '../hooks/useSwipe';
 
 interface CustomDayPickerProps {
     value: Date;
@@ -20,14 +21,30 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
             if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
     }, []);
+
+    // Prevent body scroll when open on mobile
+    useEffect(() => {
+        if (isOpen && window.innerWidth < 1024) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
 
     // Update viewDate when value changes externally (if not open)
     useEffect(() => {
@@ -36,15 +53,19 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
         }
     }, [value, isOpen]);
 
-    const handlePrevMonth = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handlePrevMonth = () => {
         setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1));
     };
 
-    const handleNextMonth = (e: React.MouseEvent) => {
-        e.stopPropagation();
+    const handleNextMonth = () => {
         setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1));
     };
+
+    const swipeHandlers = useSwipe({
+        onSwipeLeft: handleNextMonth,
+        onSwipeRight: handlePrevMonth,
+        rangeOffset: 40
+    });
 
     const handleSelectDate = (date: Date) => {
         onChange(date);
@@ -144,22 +165,25 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
             </button>
 
             {isOpen && (
-                <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:absolute md:inset-auto md:top-full md:left-0 md:translate-y-0 mt-2 w-auto md:w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-[200] animate-in fade-in zoom-in-95 duration-200 origin-center md:origin-top-left">
+                <div 
+                    {...swipeHandlers}
+                    className="fixed inset-x-4 top-1/2 -translate-y-1/2 md:absolute md:inset-auto md:top-full md:left-0 md:translate-y-0 mt-2 w-auto md:w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-4 z-[200] animate-in fade-in zoom-in-95 duration-200 origin-center md:origin-top-left"
+                >
                     <div className="flex items-center justify-between mb-4">
                         <button 
-                            onClick={handlePrevMonth}
-                            className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); handlePrevMonth(); }}
+                            className="size-10 flex items-center justify-center hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-primary active:scale-90"
                         >
-                            <span className="material-symbols-outlined text-lg">chevron_left</span>
+                            <span className="material-symbols-outlined text-2xl">chevron_left</span>
                         </button>
                         <div className="text-[11px] font-black uppercase tracking-widest text-slate-700">
                             {MONTHS[viewDate.getMonth()]} {viewDate.getFullYear()}
                         </div>
                         <button 
-                            onClick={handleNextMonth}
-                            className="p-1 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-primary"
+                            onClick={(e) => { e.stopPropagation(); handleNextMonth(); }}
+                            className="size-10 flex items-center justify-center hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-primary active:scale-90"
                         >
-                            <span className="material-symbols-outlined text-lg">chevron_right</span>
+                            <span className="material-symbols-outlined text-2xl">chevron_right</span>
                         </button>
                     </div>
 

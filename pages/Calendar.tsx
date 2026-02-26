@@ -10,7 +10,8 @@ import {
   LocaisResponse, 
   AlmacRequestsResponse, 
   ItensServicoResponse,
-  TiposEventoResponse
+  TiposEventoResponse,
+  Collections
 } from '../lib/pocketbase-types';
 
 interface CalendarExpand {
@@ -23,11 +24,32 @@ interface CalendarExpand {
   }>[];
 }
 
-type CalendarEvent = EventsResponse<CalendarExpand> & {
+// Extended Event interface to include missing fields from typegen
+interface CalendarEvent extends EventsResponse<CalendarExpand> {
+  status?: string;
+  nature?: string;
+  category?: string;
+  date?: string;
+  almoxarifado_items?: string[];
+  copa_items?: string[];
+  informatica_items?: string[];
+  almoxarifado_confirmed_items?: string[];
+  copa_confirmed_items?: string[];
+  informatica_confirmed_items?: string[];
+  transporte_suporte?: boolean;
+  transporte_origem?: string;
+  transporte_destino?: string;
+  transporte_horario_levar?: string;
+  transporte_horario_buscar?: string;
+  transporte_obs?: string;
+  transporte_status?: string;
+  transporte_justification?: string;
+  cancel_reason?: string;
+  is_restricted?: boolean;
   almac_requests?: AlmacRequestsResponse<{
     item: ItensServicoResponse;
   }>[];
-};
+}
 
 import ConfirmationModal from '../components/ConfirmationModal';
 import RefusalModal from '../components/RefusalModal';
@@ -100,12 +122,12 @@ const Calendar: React.FC = () => {
 
   // Load users
    useEffect(() => {
-       pb.collection('agenda_cap53_usuarios').getFullList({ 
+       pb.collection(Collections.AgendaCap53Usuarios).getFullList({ 
            sort: 'name', 
            fields: 'id,name,sector',
            filter: 'hidden != true'
        })
-           .then(setUsers)
+           .then((res) => setUsers(res as unknown as UsersResponse[]))
            .catch(console.error);
    }, []);
 
@@ -254,7 +276,7 @@ const Calendar: React.FC = () => {
   const eventsByDate = useMemo(() => {
     const grouped: Record<string, CalendarEvent[]> = {};
     filteredEvents.forEach(event => {
-      const date = new Date(event.date_start || event.date);
+      const date = new Date(event.date_start || '');
       const key = date.toDateString();
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(event);
@@ -565,10 +587,10 @@ const Calendar: React.FC = () => {
       });
 
       // Map requests to events directly from expand
-      const eventsWithRequests = res.map(event => ({
+      const eventsWithRequests: CalendarEvent[] = res.map(event => ({
         ...event,
         almac_requests: event.expand?.agenda_cap53_almac_requests_via_event || []
-      }));
+      })) as CalendarEvent[];
 
       setEvents(eventsWithRequests);
     } catch (error) {
@@ -1304,7 +1326,7 @@ const Calendar: React.FC = () => {
                         {/* Time Column */}
                         <div className="flex flex-col items-center justify-center px-2 border-r border-slate-50 min-w-[60px]">
                           <span className="text-sm font-black text-primary">
-                            {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {event.date_end && (
                             <span className="text-[10px] font-medium text-text-secondary/60">
@@ -1409,10 +1431,10 @@ const Calendar: React.FC = () => {
               {(() => {
                  // Filter events for the current month and year using filteredEvents instead of events
                  const monthEvents = filteredEvents.filter(e => {
-                    const eDate = new Date(e.date_start || e.date);
+                    const eDate = new Date(e.date_start || '');
                     return eDate.getMonth() === currentDate.getMonth() &&
                            eDate.getFullYear() === currentDate.getFullYear();
-                 }).sort((a, b) => new Date(a.date_start || a.date).getTime() - new Date(b.date_start || b.date).getTime());
+                 }).sort((a, b) => new Date(a.date_start || '').getTime() - new Date(b.date_start || '').getTime());
 
                  if (monthEvents.length === 0) {
                     return (
@@ -1426,13 +1448,13 @@ const Calendar: React.FC = () => {
                  // Group the filtered and sorted events by date
                  const groupedEventsByDate: { [key: string]: CalendarEvent[] } = {};
                  monthEvents.forEach(event => {
-                    const dateKey = new Date(event.date_start || event.date).toDateString();
+                    const dateKey = new Date(event.date_start || '').toDateString();
                     if (!groupedEventsByDate[dateKey]) groupedEventsByDate[dateKey] = [];
                     groupedEventsByDate[dateKey].push(event);
                  });
 
                  return Object.entries(groupedEventsByDate).map(([dateStr, dayEvents]) => {
-                    const date = new Date(dayEvents[0].date_start || dayEvents[0].date);
+                    const date = new Date(dayEvents[0].date_start || '');
                     const isToday = new Date().toDateString() === date.toDateString();
                     const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                     
@@ -1539,7 +1561,7 @@ const Calendar: React.FC = () => {
           }}
           onCancel={handleCancelEvent}
           onDelete={handleDeleteEvent}
-          user={user}
+          user={user as any}
           initialChatOpen={initialChatOpen}
           initialTab={initialTab}
         />
@@ -1651,8 +1673,8 @@ const CalendarTooltip: React.FC<{
   // Mobile/Tablet Check: Don't render tooltip on small screens
   if (isMobileOrTablet) return null;
 
-  const startDate = new Date(event.date_start || event.date);
-  const endDate = new Date(event.date_end || event.date_start || event.date);
+  const startDate = new Date(event.date_start || '');
+  const endDate = new Date(event.date_end || event.date_start || '');
   const creatorInitial = (event.expand?.user?.name || 'S')[0].toUpperCase();
 
   // Helper to determine status for Almc/Copa/Inf
@@ -1862,7 +1884,7 @@ const CalendarTooltip: React.FC<{
 
 interface CalendarEventCardProps {
   event: CalendarEvent;
-  user: UsersResponse | null;
+  user: any; // Using any to avoid User/UsersResponse conflict while keeping it functional
   onCancel: (id: string, title: string, participants: string[]) => void;
   setTooltipData: (data: { event: CalendarEvent, x: number, y: number, height: number } | null) => void;
   detailed?: boolean;
@@ -2028,7 +2050,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
           {!detailed && (
              <div className="flex flex-col items-end gap-1">
                  <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
-                   {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                   {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                  </span>
                  {/* Participant Count Badge */}
                  <div className="flex md:hidden items-center gap-0.5 text-[9px] font-bold text-slate-400">
@@ -2045,7 +2067,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                  <div className="flex items-center gap-1.5">
                    <span className="material-symbols-outlined text-base text-primary/70">schedule</span>
                    <span>
-                     {new Date(event.date_start || event.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                     {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                      {event.date_end && ` - ${new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
                    </span>
                  </div>
