@@ -990,11 +990,11 @@ const Calendar: React.FC = () => {
             <div className="flex-1 flex flex-col">
               {/* Header Section for Month View */}
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
-                <div className="flex items-center gap-4 md:gap-8">
+                <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                   <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
                     <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">calendar_month</span>
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Visualização Mensal</h3>
                     <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visão geral do mês selecionado</p>
                     <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Navegue pelos dias do mês</p>
@@ -1172,11 +1172,11 @@ const Calendar: React.FC = () => {
           <div className={`flex-1 flex flex-col ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
             {/* Header Section for Week View */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
-              <div className="flex items-center gap-4 md:gap-8">
+              <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                 <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
                   <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">view_week</span>
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Visualização Semanal</h3>
                   <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Confira os compromissos da semana</p>
                   <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Organize sua rotina semanal</p>
@@ -1370,11 +1370,11 @@ const Calendar: React.FC = () => {
           >
             {/* Header Section for Day View */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
-              <div className="flex items-center gap-4 md:gap-8">
+              <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                 <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
                   <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">today</span>
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Compromissos do Dia</h3>
                   <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize os agendamentos de hoje</p>
                   <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Gestão diária de tarefas</p>
@@ -1574,11 +1574,11 @@ const Calendar: React.FC = () => {
           <div className="flex-1 flex flex-col bg-white relative">
             {/* Header Section for Agenda View */}
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
-              <div className="flex items-center gap-4 md:gap-8">
+              <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                 <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
                   <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">view_agenda</span>
                 </div>
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Agenda do Mês</h3>
                   <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
                   <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Visão geral de compromissos</p>
