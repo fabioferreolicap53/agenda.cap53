@@ -699,7 +699,7 @@ const Calendar: React.FC = () => {
     setAnimDirection(direction);
     setAnimStage('exiting');
 
-    setTimeout(() => {
+    const timeoutId = setTimeout(() => {
         const newDate = new Date(currentDate);
         if (viewType === 'month' || viewType === 'agenda') {
           newDate.setMonth(currentDate.getMonth() + (direction === 'next' ? 1 : -1));
@@ -713,18 +713,20 @@ const Calendar: React.FC = () => {
         
         setAnimStage('entering');
         
-        // Small delay to allow 'entering' class (hidden/off-screen) to be applied
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                setAnimStage('idle');
-            });
-        });
+        // Use a more robust reset for animation stage
+        setTimeout(() => {
+            setAnimStage('idle');
+        }, 50);
     }, 300); // Match CSS transition duration
+
+    // Safety cleanup in case component unmounts or something goes wrong
+    return () => clearTimeout(timeoutId);
   };
 
   const swipeHandlers = useSwipe({
     onSwipeLeft: () => handleNavigate('next'),
-    onSwipeRight: () => handleNavigate('prev')
+    onSwipeRight: () => handleNavigate('prev'),
+    rangeOffset: 35 // Optimized for mobile screens
   });
 
   return (
@@ -764,12 +766,12 @@ const Calendar: React.FC = () => {
                     <span className="hidden sm:inline">Hoje</span>
                   </button>
 
-                  <div className="h-[38px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light flex-1 md:flex-none justify-center">
+                  <div className="h-[42px] flex items-center bg-slate-100/50 rounded-lg p-0.5 border border-border-light flex-1 md:flex-none justify-center">
                     <button
                       onClick={() => handleNavigate('prev')}
                       className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300 shrink-0"
                     >
-                      <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                      <span className="material-symbols-outlined text-[20px]">chevron_left</span>
                     </button>
                     
                     {/* Data Picker Agil */}
@@ -781,7 +783,7 @@ const Calendar: React.FC = () => {
                           updateURL('day', newDate, true);
                         }}
                         eventsByDate={eventsByDate}
-                        className="h-[32px]"
+                        className="h-[34px]"
                       />
                     </div>
 
@@ -789,7 +791,7 @@ const Calendar: React.FC = () => {
                       onClick={() => handleNavigate('next')}
                       className="h-full aspect-square flex items-center justify-center rounded-md hover:bg-white hover:shadow-sm text-text-secondary hover:text-primary transition-all duration-300 shrink-0"
                     >
-                      <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                      <span className="material-symbols-outlined text-[20px]">chevron_right</span>
                     </button>
                   </div>
                 </div>
@@ -893,7 +895,7 @@ const Calendar: React.FC = () => {
         {/* Calendar Grid Container */}
         <div 
           {...swipeHandlers} 
-          className={`bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[750px] overflow-visible relative transition-all duration-300 ease-in-out transform ${
+          className={`bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[500px] md:min-h-[750px] overflow-visible relative transition-all duration-300 ease-in-out transform touch-pan-y ${
             animStage === 'exiting' 
               ? (animDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
               : animStage === 'entering'

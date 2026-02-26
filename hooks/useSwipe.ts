@@ -9,38 +9,48 @@ interface SwipeInput {
 interface SwipeOutput {
     onTouchStart: (e: TouchEvent) => void;
     onTouchMove: (e: TouchEvent) => void;
-    onTouchEnd: () => void;
+    onTouchEnd: (e: TouchEvent) => void;
 }
 
 export const useSwipe = ({ onSwipeLeft, onSwipeRight, rangeOffset = 50 }: SwipeInput): SwipeOutput => {
-    const touchStart = useRef<number | null>(null);
-    const touchEnd = useRef<number | null>(null);
+    const touchStart = useRef<{ x: number, y: number } | null>(null);
+    const touchEnd = useRef<{ x: number, y: number } | null>(null);
 
-    // the required distance between touchStart and touchEnd to be detected as a swipe
     const minSwipeDistance = rangeOffset;
 
     const onTouchStart = (e: TouchEvent) => {
-        touchEnd.current = null; // reset touchEnd
-        touchStart.current = e.targetTouches[0].clientX;
+        touchEnd.current = null;
+        touchStart.current = {
+            x: e.targetTouches[0].clientX,
+            y: e.targetTouches[0].clientY
+        };
     };
 
     const onTouchMove = (e: TouchEvent) => {
-        touchEnd.current = e.targetTouches[0].clientX;
+        touchEnd.current = {
+            x: e.targetTouches[0].clientX,
+            y: e.targetTouches[0].clientY
+        };
     };
 
-    const onTouchEnd = () => {
+    const onTouchEnd = (e: TouchEvent) => {
         if (!touchStart.current || !touchEnd.current) return;
         
-        const distance = touchStart.current - touchEnd.current;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-
-        if (isLeftSwipe && onSwipeLeft) {
-            onSwipeLeft();
-        }
+        const distanceX = touchStart.current.x - touchEnd.current.x;
+        const distanceY = touchStart.current.y - touchEnd.current.y;
         
-        if (isRightSwipe && onSwipeRight) {
-            onSwipeRight();
+        const isHorizontalSwipe = Math.abs(distanceX) > Math.abs(distanceY);
+        const isLeftSwipe = distanceX > minSwipeDistance;
+        const isRightSwipe = distanceX < -minSwipeDistance;
+
+        if (isHorizontalSwipe) {
+            if (isLeftSwipe && onSwipeLeft) {
+                onSwipeLeft();
+            }
+            
+            if (isRightSwipe && onSwipeRight) {
+                onSwipeRight();
+            }
         }
     };
 
