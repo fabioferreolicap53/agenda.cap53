@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 interface Option {
   value: string;
   label: string;
+  description?: string;
 }
 
 interface CustomSelectProps {
@@ -258,24 +259,31 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 onClick={() => handleSelect(option.value)}
                 onMouseEnter={() => setHighlightedIndex(index)}
                 className={`
-                  px-4 py-2 rounded-lg cursor-pointer transition-colors duration-200
-                  flex items-center justify-between
+                  px-4 py-2.5 rounded-lg cursor-pointer transition-colors duration-200
+                  flex items-center justify-between gap-4
                   ${index === highlightedIndex ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : ''}
                   ${isSelected(option.value) 
                     ? 'bg-primary/5 text-primary' 
                     : index !== highlightedIndex ? 'text-slate-600 hover:bg-gray-50 hover:text-primary' : ''}
                 `}
               >
-                <span className="text-sm font-medium">
-                  {option.label}
-                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-sm font-semibold">
+                    {option.label}
+                  </span>
+                  {option.description && (
+                    <span className={`text-[11px] leading-tight ${index === highlightedIndex || isSelected(option.value) ? 'text-primary/70' : 'text-slate-400'}`}>
+                      {option.description}
+                    </span>
+                  )}
+                </div>
                 {isSelected(option.value) && (
-                  <span className="material-symbols-outlined text-lg">
+                  <span className="material-symbols-outlined text-lg flex-shrink-0">
                     {multiSelect ? 'check_box' : 'check'}
                   </span>
                 )}
                 {multiSelect && !isSelected(option.value) && (
-                  <span className="material-symbols-outlined text-lg opacity-20">check_box_outline_blank</span>
+                  <span className="material-symbols-outlined text-lg opacity-20 flex-shrink-0">check_box_outline_blank</span>
                 )}
               </div>
             ))}

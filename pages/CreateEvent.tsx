@@ -10,6 +10,7 @@ import CustomDatePicker from '../components/CustomDatePicker';
 import CustomTimePicker from '../components/CustomTimePicker';
 import LocationField, { LocationState, normalizeBoolean } from '../components/LocationField';
 import ConflictModal from '../components/ConflictModal';
+import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
 
 const UNIDADES = [
   'CF ALICE DE JESUS REGO', 'CF DEOLINDO COUTO', 'CF EDSON ABDALLA SAAD',
@@ -36,12 +37,6 @@ const CATEGORIAS_PROFISSIONAIS = [
   'RT DE ENFERMAGEM (UNIDADE)', 'RT MÉDICO (UNIDADE)',
   'TÉCNICO(A) DE ENFERMAGEM', 'TÉCNICO(A) DE FARMÁCIA',
   'TÉCNICO(A) DE SAÚDE BUCAL', 'TERAPEUTA OCUPACIONAL'
-];
-
-const INVOLVEMENT_LEVELS = [
-  { value: 'PARTICIPANTE', label: 'Participante' },
-  { value: 'ORGANIZADOR', label: 'Organizador' },
-  { value: 'COORGANIZADOR', label: 'Coorganizador' }
 ];
 
 const CreateEvent: React.FC = () => {
@@ -89,6 +84,7 @@ const CreateEvent: React.FC = () => {
   const [title, setTitle] = useState('');
   const [originalTitle, setOriginalTitle] = useState(''); // To track title changes
   const [type, setType] = useState('');
+  const [responsibility, setResponsibility] = useState('');
   const [involvementLevel, setInvolvementLevel] = useState('');
   const [locationState, setLocationState] = useState<LocationState>({ mode: 'fixed', fixedId: '', freeText: '' });
   const [observacoes, setObservacoes] = useState('');
@@ -108,6 +104,7 @@ const CreateEvent: React.FC = () => {
   const [transporteObs, setTransporteObs] = useState('');
   const [originalTransporteSuporte, setOriginalTransporteSuporte] = useState(false);
   const [isRestricted, setIsRestricted] = useState(false);
+  const [estimatedParticipants, setEstimatedParticipants] = useState<string>('');
   const [selectedUnidades, setSelectedUnidades] = useState<string[]>([]);
   const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
   const [envolverProfissionais, setEnvolverProfissionais] = useState(false);
@@ -326,10 +323,12 @@ const CreateEvent: React.FC = () => {
         unidades: selectedUnidades,
         categorias_profissionais: selectedCategorias,
         is_restricted: isRestricted,
+        estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : null,
         transporte_status: transporteSuporte ? (existingTransporteStatus || 'pending') : null,
         participants_status: participantsStatus,
         participants_roles: participantsRoles,
         creator_role: involvementLevel || 'PARTICIPANTE',
+        event_responsibility: responsibility,
         transport_history: initialTransportHistory
       };
 
@@ -375,23 +374,30 @@ const CreateEvent: React.FC = () => {
                   })
                 ));
 
-                await notificationService.bulkCreateNotifications(newParticipants, {
-                    title: 'Convite para Evento',
-                    message: `Você foi convidado para o evento "${title}" (edição).`,
-                    type: 'event_invite',
-                    event: editingEventId
-                });
-
                 // Notificar organizador sobre novos convites na edição
                 const newParticipantNames = newParticipants
                   .map(pId => availableUsers.find(u => u.id === pId)?.name)
                   .filter(Boolean)
                   .join(', ');
 
+                const estimatedText = estimatedParticipants ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
+                await notificationService.bulkCreateNotifications(
+                    newParticipants,
+                    {
+                        title: 'Novo Convite de Evento',
+                        message: `Você foi convidado para o evento "${title}".${estimatedText}`,
+                        type: 'event_invite',
+                        event: editingEventId || undefined,
+                        data: {
+                            estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined
+                        }
+                    }
+                );
+
                 await notificationService.createNotification({
                     user: user?.id || '',
                     title: 'Novos Convites Enviados',
-                    message: `Convite para evento "${title}" enviado para: ${newParticipantNames}.`,
+                    message: `Convite para evento "${title}" enviado para: ${newParticipantNames}.${estimatedText}`,
                     type: 'system',
                     event: editingEventId || undefined,
                     data: {
@@ -420,13 +426,17 @@ const CreateEvent: React.FC = () => {
           ));
 
           // Send notifications using service
+          const estimatedText = estimatedParticipants ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
           await notificationService.bulkCreateNotifications(
             selectedParticipants.filter(pId => pId !== user?.id),
             {
               title: 'Novo Convite de Evento',
-              message: `Você foi convidado para o evento "${title}".`,
+              message: `Você foi convidado para o evento "${title}".${estimatedText}`,
               type: 'event_invite',
-              event: eventId || undefined
+              event: eventId || undefined,
+              data: {
+                estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined
+              }
             }
           );
 
@@ -575,15 +585,17 @@ const CreateEvent: React.FC = () => {
 
                   console.log('🎯 Usuários a serem notificados:', targetUserIds);
 
+                  const estimatedText = estimatedParticipants ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
+
                   return notificationService.bulkCreateNotifications(
                     targetUserIds,
                     {
                       title: 'Solicitação de Item',
-                      message: `O evento "${title}" solicitou o item "${itemNameById.get(req.item) || 'Item'}" (Qtd: ${req.quantity || 1}).`,
+                      message: `O evento "${title}" solicitou o item "${itemNameById.get(req.item) || 'Item'}" (Qtd: ${req.quantity || 1}).${estimatedText}`,
                       type: 'almc_item_request',
                       related_request: req.id,
                       event: eventId || undefined,
-                      data: { kind: 'almc_item_request', quantity: req.quantity || 1, item: req.item }
+                      data: { kind: 'almc_item_request', quantity: req.quantity || 1, item: req.item, estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined }
                     }
                   ).then(results => {
                     console.log('✅ bulkCreateNotifications concluído:', results.length, 'notificações criadas');
@@ -609,11 +621,12 @@ const CreateEvent: React.FC = () => {
 
                 // 1. Notifica o Setor de Transporte (TRA)
                 if (traIds.length > 0) {
+                  const estimatedText = estimatedParticipants ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
                   await notificationService.bulkCreateNotifications(
                     traIds,
                     {
                       title: 'Solicitação de Transporte',
-                      message: `O evento "${title}" solicitou suporte de transporte.`,
+                      message: `O evento "${title}" solicitou suporte de transporte.${estimatedText}`,
                       type: 'transport_request',
                       event: eventId || undefined,
                       data: { 
@@ -621,7 +634,8 @@ const CreateEvent: React.FC = () => {
                         origem: transporteOrigem,
                         destino: transporteDestino,
                         horario_levar: transporteHorarioLevar,
-                        horario_buscar: transporteHorarioBuscar
+                        horario_buscar: transporteHorarioBuscar,
+                        estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined
                       }
                     }
                   );
@@ -880,6 +894,7 @@ const CreateEvent: React.FC = () => {
           // Copiar apenas Dados Essenciais
           setTitle(event.title || '');
           setType(event.type || '');
+          setResponsibility(event.event_responsibility || '');
           setInvolvementLevel(event.creator_role || 'PARTICIPANTE');
           setObservacoes(event.observacoes || event.description || '');
           
@@ -892,6 +907,9 @@ const CreateEvent: React.FC = () => {
           
           // Copiar Restrição
           setIsRestricted(!!event.is_restricted);
+          
+          // Copiar Quantidade de Participantes
+          setEstimatedParticipants(event.estimated_participants ? String(event.estimated_participants) : '');
 
           // Configurar Datas Padrão (Hoje + 1h)
           const now = new Date();
@@ -928,6 +946,7 @@ const CreateEvent: React.FC = () => {
           setTitle(event.title || '');
           setOriginalTitle(event.title || '');
           setType(event.type || '');
+          setResponsibility(event.event_responsibility || '');
           setInvolvementLevel(event.creator_role || 'PARTICIPANTE');
           setObservacoes(event.observacoes || event.description || '');
           setCreatorId(event.user);
@@ -968,6 +987,7 @@ const CreateEvent: React.FC = () => {
           setTransporteObs(event.transporte_obs || '');
           setOriginalTransporteSuporte(!!event.transporte_suporte);
           setIsRestricted(!!event.is_restricted);
+          setEstimatedParticipants(event.estimated_participants ? String(event.estimated_participants) : '');
           
           // Fetch items
           console.log('--- BUSCANDO SOLICITAÇÕES DE LOGÍSTICA ---');
@@ -1536,24 +1556,12 @@ const CreateEvent: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
-                <div className="md:col-span-1 space-y-2">
+                <div className="md:col-span-2 space-y-2">
                   <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Título da Atividade</label>
                   <input
                     required value={title} onChange={(e) => setTitle(e.target.value)}
                     className="w-full h-14 px-6 rounded-2xl bg-[#f8fafc]/50 border border-[#e2e8f0]/60 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm transition-all duration-300 placeholder:text-[#94a3b8]/60"
                     placeholder="Ex: Reunião Geral de Indicadores"
-                  />
-                </div>
-
-                <div className="md:col-span-1 space-y-2">
-                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Nível de Envolvimento</label>
-                  <CustomSelect
-                    value={involvementLevel}
-                    onChange={setInvolvementLevel}
-                    placeholder="Selecione o nível de envolvimento..."
-                    required
-                    className="h-14"
-                    options={INVOLVEMENT_LEVELS}
                   />
                 </div>
 
@@ -1608,6 +1616,43 @@ const CreateEvent: React.FC = () => {
                   />
                 </div>
 
+                <div className="md:col-span-1 space-y-2">
+                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1 block truncate" title="Responsabilidade pela organização do evento">Responsabilidade pela organização do evento</label>
+                  <CustomSelect
+                    value={responsibility}
+                    onChange={(val) => {
+                      setResponsibility(val);
+                      if (val === 'EXTERNO_COMPROMISSO') {
+                        setInvolvementLevel('PARTICIPANTE');
+                      } else if (!val) {
+                        setInvolvementLevel('');
+                      }
+                    }}
+                    placeholder="Selecione a responsabilidade..."
+                    required
+                    className="h-14"
+                    options={RESPONSIBILITY_LEVELS}
+                  />
+                </div>
+
+                <div className="md:col-span-1 space-y-2">
+                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1 block truncate" title="Nível de Envolvimento">Nível de Envolvimento</label>
+                  <CustomSelect
+                    value={involvementLevel}
+                    onChange={setInvolvementLevel}
+                    placeholder={responsibility ? "Selecione o nível..." : "Selecione a responsabilidade primeiro"}
+                    required
+                    className={`h-14 ${!responsibility ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
+                    disabled={!responsibility}
+                    options={INVOLVEMENT_LEVELS.filter(level => {
+                      if (responsibility === 'EXTERNO_COMPROMISSO') {
+                        return level.value === 'PARTICIPANTE';
+                      }
+                      return true;
+                    })}
+                  />
+                </div>
+
                 {isDateInvalid && (
                   <div className="md:col-span-2 flex items-center gap-2 px-4 py-3 bg-red-50 border border-red-100 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
                     <span className="material-symbols-outlined text-red-500 text-xl">error</span>
@@ -1636,32 +1681,53 @@ const CreateEvent: React.FC = () => {
                   />
                 </div>
 
-                {/* Event Restriction Toggle */}
-                <div className="md:col-span-2 pt-2">
+                {/* Event Restriction Toggle & Estimated Presentes */}
+                <div className="md:col-span-1 space-y-2 pt-2">
+                  <div className="h-4" /> {/* Spacer for label alignment */}
                   <button
                     type="button"
                     onClick={() => setIsRestricted(!isRestricted)}
-                    className={`w-full flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 ${isRestricted ? 'bg-amber-50 border-amber-200 shadow-sm' : 'bg-slate-50/50 border-slate-100 hover:border-slate-200'}`}
+                    className={`w-full h-20 flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 ${isRestricted ? 'bg-amber-50/40 border-amber-100 shadow-sm' : 'bg-slate-50/30 border-slate-100/60 hover:border-slate-200/40'}`}
                   >
                     <div className="flex items-center gap-4 text-left">
-                      <div className={`size-10 rounded-xl flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 text-white shadow-lg shadow-amber-200' : 'bg-slate-200 text-slate-500'}`}>
-                        <span className="material-symbols-outlined text-xl">{isRestricted ? 'lock' : 'lock_open'}</span>
+                      <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 text-white shadow-lg shadow-amber-100' : 'bg-slate-100 text-slate-400'}`}>
+                        <span className="material-symbols-outlined text-[22px]">{isRestricted ? 'lock' : 'lock_open'}</span>
                       </div>
                       <div>
-                        <h4 className={`text-[11px] font-bold uppercase tracking-wider ${isRestricted ? 'text-amber-800' : 'text-slate-700'}`}>
+                        <h4 className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isRestricted ? 'text-amber-800' : 'text-slate-700'}`}>
                           {isRestricted ? 'Evento Restrito' : 'Evento Aberto'}
                         </h4>
-                        <p className={`text-[10px] font-medium leading-relaxed ${isRestricted ? 'text-amber-600/80' : 'text-slate-400'}`}>
+                        <p className={`text-[10px] font-semibold leading-relaxed ${isRestricted ? 'text-amber-600/70' : 'text-slate-400'}`}>
                           {isRestricted 
-                            ? 'O evento continua visível, mas apenas convidados podem participar. Novas solicitações estão bloqueadas.' 
-                            : 'O evento é visível para todos e usuários podem solicitar participação livremente.'}
+                            ? 'Apenas convidados podem participar.' 
+                            : 'Usuários podem solicitar participação.'}
                         </p>
                       </div>
                     </div>
-                    <div className={`size-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 border-amber-500 text-white' : 'border-slate-300'}`}>
-                      {isRestricted && <span className="material-symbols-outlined text-sm">check</span>}
+                    <div className={`size-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 border-amber-500 shadow-sm' : 'border-slate-200'}`}>
+                      {isRestricted && <span className="material-symbols-outlined text-white text-[18px] font-bold">check</span>}
                     </div>
                   </button>
+                </div>
+
+                <div className="md:col-span-1 space-y-2 pt-2">
+                  <div className="h-4" /> {/* Spacer for label alignment */}
+                  <div className="w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border border-slate-100/60 bg-slate-50/30 transition-all duration-300 focus-within:bg-white focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5 group">
+                    <div className="size-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20">
+                      <span className="material-symbols-outlined text-[24px]">groups</span>
+                    </div>
+                    <div className="flex-1 flex flex-col justify-center min-w-0">
+                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.1em] truncate mb-0.5">Qtd. Estimada de Presentes</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={estimatedParticipants}
+                        onChange={(e) => setEstimatedParticipants(e.target.value)}
+                        className="w-full bg-transparent border-none outline-none font-semibold text-slate-400 text-[10px] p-0 h-4 placeholder:text-slate-300/60"
+                        placeholder="Ex: 50"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -1767,7 +1833,7 @@ const CreateEvent: React.FC = () => {
                               )}
                             </div>
                             
-                            {isSel && !isCreatorUser && (
+                            {isSel && !isCreatorUser && responsibility && (
                               <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-primary/10">
                                 <div className="flex items-center justify-between">
                                   <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Nível de Envolvimento:</span>
@@ -1775,13 +1841,18 @@ const CreateEvent: React.FC = () => {
                                     {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label || 'Selecione'}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-3 gap-1">
-                                  {INVOLVEMENT_LEVELS.map(level => {
+                                <div className={`grid gap-1 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                  {INVOLVEMENT_LEVELS.filter(level => {
+                                    // Se for evento externo, só permite PARTICIPANTE
+                                    if (responsibility === 'EXTERNO_COMPROMISSO') {
+                                      return level.value === 'PARTICIPANTE';
+                                    }
+                                    return true;
+                                  }).map(level => {
                                     const isSelected = (participantRoles[u.id] || involvementLevel) === level.value;
                                     const getIcon = (val: string) => {
                                       switch(val) {
                                         case 'ORGANIZADOR': return 'assignment_ind';
-                                        case 'COORGANIZADOR': return 'group_work';
                                         default: return 'person';
                                       }
                                     };

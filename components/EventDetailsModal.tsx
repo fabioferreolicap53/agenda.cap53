@@ -11,7 +11,8 @@ import {
   TiposEventoResponse
 } from '../lib/pocketbase-types';
 import { notificationService } from '../lib/notifications';
-import { INVOLVEMENT_LEVELS } from '../lib/constants';
+import { getEstimatedParticipants } from '../lib/eventUtils';
+import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
 import CustomSelect from './CustomSelect';
 import EventChatModal from './EventChatModal';
 import ReRequestModal from './ReRequestModal';
@@ -107,8 +108,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   };
 
   const getRoleLabel = (role: string | undefined) => {
-    return INVOLVEMENT_LEVELS.find(l => l.value === (role || 'PARTICIPANTE').toUpperCase())?.label || 'PARTICIPANTE';
-  };
+          const r = (role || 'PARTICIPANTE').toUpperCase();
+          return INVOLVEMENT_LEVELS.find(l => l.value === r)?.label || 'Participante';
+        };
 
   const renderParticipantRow = (p: UsersResponse) => {
     const isCreator = event.user === p.id;
@@ -838,18 +840,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         {/* Summary Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Date & Time Block */}
-                            <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-300">
+                            <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all duration-300 h-full">
                                 <div className="flex items-start gap-4">
-                                    <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
-                                        <span className="material-symbols-outlined text-xl">event</span>
+                                    <div className="p-3 rounded-xl bg-slate-50 text-slate-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                                        <span className="material-symbols-outlined text-xl">calendar_month</span>
                                     </div>
                                     <div className="space-y-1.5 min-w-0">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data e Horário</p>
-                                        <div className="flex flex-col gap-0.5">
+                                        <div className="flex flex-col">
                                             <span className="font-bold text-slate-800 text-sm capitalize truncate">
                                                 {startDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                                             </span>
-                                            <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium">
+                                            <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium mt-0.5">
                                                 <span className="material-symbols-outlined text-[16px]">schedule</span>
                                                 <span className="whitespace-nowrap">
                                                     {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -867,7 +869,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             </div>
 
                             {/* Location Block */}
-                            <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300">
+                            <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-100 transition-all duration-300 h-full">
                                 <div className="flex items-start gap-4">
                                     <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
                                         <span className="material-symbols-outlined text-xl">location_on</span>
@@ -880,6 +882,48 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Estimated Participants Block */}
+                            {getEstimatedParticipants(event) > 0 && (
+                                <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-100 transition-all duration-300 h-full">
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 rounded-xl bg-amber-50 text-amber-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                                            <span className="material-symbols-outlined text-xl">groups</span>
+                                        </div>
+                                        <div className="space-y-1.5 min-w-0">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Qtd. Estimada</p>
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-slate-900 text-2xl leading-none tracking-tight">
+                                                    {getEstimatedParticipants(event)}
+                                                </span>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">pessoas</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Responsibility Block */}
+                            {event.event_responsibility && (
+                                <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all duration-300 h-full">
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                                            <span className="material-symbols-outlined text-xl">assignment_ind</span>
+                                        </div>
+                                        <div className="space-y-1.5 min-w-0">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Responsabilidade</p>
+                                            <div className="flex flex-col">
+                                                <p className="font-bold text-slate-800 text-sm leading-snug break-words">
+                                                    {RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label || 'Não definido'}
+                                                </p>
+                                                <p className="text-[10px] font-medium text-slate-500 mt-0.5 leading-tight">
+                                                    {RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         {/* Description */}
@@ -1296,7 +1340,52 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Visão Geral</h3>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
+                            <div className="p-4 sm:p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm col-span-2 sm:col-span-1">
+                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Público do Evento</span>
+                                <div className="space-y-5">
+                                    <div className="flex items-end justify-between">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confirmados</p>
+                                            <p className="text-2xl font-black text-slate-900 leading-none">
+                                                {Object.values(participantStatus).filter(s => s === 'accepted').length + 1}
+                                            </p>
+                                        </div>
+                                        {event.estimated_participants && (
+                                            <div className="text-right space-y-1">
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estimado</p>
+                                                <p className="text-sm font-bold text-slate-600 leading-none">
+                                                    {event.estimated_participants}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {event.estimated_participants && (
+                                        <div className="space-y-2">
+                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                <div 
+                                                    className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out"
+                                                    style={{ 
+                                                        width: `${Math.min(100, ((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / event.estimated_participants) * 100)}%` 
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between items-center">
+                                                <p className="text-[9px] font-bold text-slate-400 uppercase">
+                                                    {Math.round(((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / event.estimated_participants) * 100)}% da meta
+                                                </p>
+                                                {Object.values(participantStatus).filter(s => s === 'accepted').length + 1 > event.estimated_participants && (
+                                                    <span className="text-[9px] font-bold text-amber-600 uppercase flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-[12px]">warning</span>
+                                                        Acima do esperado
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm col-span-2 sm:col-span-1">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Status de Confirmação</span>
                                 <div className="space-y-4">
                                     {[
@@ -1319,7 +1408,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     ))}
                                 </div>
                             </div>
-                            <div className="p-4 sm:p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
+                            <div className="p-4 sm:p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm col-span-2">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Infraestrutura</span>
                                 <div className="space-y-4">
                                     {/* ALMC Status */}

@@ -10,6 +10,7 @@ import RefusalModal from '../components/RefusalModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ReInviteModal from '../components/ReInviteModal';
 import HistoryChain, { HistoryEntry } from '../components/HistoryChain';
+import { RESPONSIBILITY_LEVELS } from '../lib/constants';
 
 type FilterType = 'all' | 'unread' | 'actions';
 
@@ -1160,10 +1161,26 @@ const Notifications: React.FC = () => {
 
                 {/* Metadata Tags */}
                 <div className="flex flex-wrap gap-2 mb-2">
+                  {/* Responsibility Tag */}
+                  {notification.expand?.event?.event_responsibility && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-indigo-50/50 text-indigo-700 text-[11px] font-bold rounded-lg border border-indigo-100/50" title={RESPONSIBILITY_LEVELS.find(l => l.value === notification.expand?.event?.event_responsibility)?.description}>
+                       <span className="material-symbols-outlined text-[14px] opacity-70">
+                         {notification.expand?.event?.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
+                       </span>
+                       {RESPONSIBILITY_LEVELS.find(l => l.value === notification.expand?.event?.event_responsibility)?.label}
+                    </span>
+                  )}
+
                   {getData(notification).quantity !== undefined && (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-100/50 text-slate-600 text-[11px] font-bold rounded-lg border border-slate-200/50">
                        <span className="material-symbols-outlined text-[14px] opacity-70">inventory_2</span>
                        Qtd: {getData(notification).quantity}
+                    </span>
+                  )}
+                  {getData(notification).estimated_participants !== undefined && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/50 text-amber-700 text-[11px] font-bold rounded-lg border border-amber-100/50">
+                       <span className="material-symbols-outlined text-[14px] opacity-70">groups</span>
+                       Público: {getData(notification).estimated_participants}
                     </span>
                   )}
                   {notification.type === 'transport_request' && getData(notification) && (

@@ -4,15 +4,14 @@ interface StatsProps {
   stats: {
     totalCreated: number;
     organizer: number;
-    coorganizer: number;
     participant: number;
     invitesPending: number;
     requestsPending: number;
     invitesRejected: number;
     requestsRejected: number;
   };
-  activeTab: 'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected';
-  onTabChange: (tab: 'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected') => void;
+  activeTab: 'all' | 'organizer' | 'participant' | 'pending' | 'rejected';
+  onTabChange: (tab: 'all' | 'organizer' | 'participant' | 'pending' | 'rejected') => void;
 }
 
 export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange }) => {
@@ -31,14 +30,6 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
       value: stats.organizer, 
       icon: 'assignment_ind', 
       activeColor: 'text-blue-600 bg-blue-50 border-blue-200',
-      inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
-    },
-    { 
-      id: 'coorganizer', 
-      label: 'Coorganizador', 
-      value: stats.coorganizer, 
-      icon: 'group_work', 
-      activeColor: 'text-emerald-600 bg-emerald-50 border-emerald-200',
       inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
     },
     { 
@@ -68,7 +59,7 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
   ];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
       {items.map((item) => {
         const isActive = activeTab === item.id;
         return (

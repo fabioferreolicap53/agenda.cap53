@@ -9,8 +9,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 
 const INVOLVEMENT_LEVELS = [
     { value: 'PARTICIPANTE', label: 'Participante' },
-    { value: 'ORGANIZADOR', label: 'Organizador' },
-    { value: 'COORGANIZADOR', label: 'Coorganizador' }
+    { value: 'ORGANIZADOR', label: 'Organizador' }
 ];
 
 const Requests: React.FC = () => {

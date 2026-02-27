@@ -2,6 +2,8 @@ import React from 'react';
 import { format, isPast, isFuture, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MySpaceEvent } from '../../hooks/useMySpace';
+import { RESPONSIBILITY_LEVELS } from '../../lib/constants';
+import { getEstimatedParticipants } from '../../lib/eventUtils';
 
 interface EventItemProps {
   event: MySpaceEvent;
@@ -62,14 +64,10 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
     let icon = 'person';
     let classes = 'text-indigo-600 bg-indigo-50/50 border-indigo-100';
 
-    if (role === 'ORGANIZADOR') {
+    if (role === 'ORGANIZADOR' || event.type === 'created') {
       label = 'Organizador';
       icon = 'assignment_ind';
       classes = 'text-blue-600 bg-blue-50/50 border-blue-100';
-    } else if (role === 'COORGANIZADOR') {
-      label = 'Coorganizador';
-      icon = 'group_work';
-      classes = 'text-emerald-600 bg-emerald-50/50 border-emerald-100';
     } else if (event.requestStatus === 'pending') {
       label = 'Aguardando';
       icon = 'hourglass_top';
@@ -158,6 +156,24 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
                 {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
               </span>
             </div>
+
+            {event.event_responsibility && (
+              <div className="flex items-center gap-1.5" title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
+                <span className="material-symbols-outlined text-[16px] text-slate-400">
+                  {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
+                </span>
+                <span className="truncate max-w-[100px] sm:max-w-[150px]">
+                  {RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}
+                </span>
+              </div>
+            )}
+
+            {getEstimatedParticipants(event) > 0 && (
+               <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md border border-amber-100/50 text-[11px]" title="Quantidade Estimada de Presentes">
+                 <span className="material-symbols-outlined text-[14px]">groups</span>
+                 <span className="font-bold">Est. {getEstimatedParticipants(event)}</span>
+               </div>
+            )}
             
             {(event.location || event.custom_location) && (
               <div className="flex items-center gap-1.5 max-w-[200px] truncate">

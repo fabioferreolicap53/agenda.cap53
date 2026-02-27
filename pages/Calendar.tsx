@@ -57,11 +57,13 @@ import RefusalModal from '../components/RefusalModal';
 import EventDetailsModal from '../components/EventDetailsModal';
 import CustomSelect from '../components/CustomSelect';
 import CustomDayPicker from '../components/CustomDayPicker';
-import { INVOLVEMENT_LEVELS } from '../lib/constants';
+import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
 
 import { deleteEventWithCleanup } from '../lib/eventUtils';
 import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
 import { useSwipe } from '../hooks/useSwipe';
+
+import { getEstimatedParticipants } from '../lib/eventUtils';
 
 const Calendar: React.FC = () => {
   const { user } = useAuth();
@@ -262,7 +264,7 @@ const Calendar: React.FC = () => {
                     }
                 }
                 
-                // If we are looking for specific roles like ORGANIZADOR/COORGANIZADOR and they weren't found in step 2
+                // If we are looking for specific roles like ORGANIZADOR and they weren't found in step 2
                 return false;
             }
             
@@ -597,8 +599,8 @@ const Calendar: React.FC = () => {
 
       const res = await pb.collection('agenda_cap53_eventos').getFullList({
         filter,
-        expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item',
-        fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,expand',
+        expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item,agenda_cap53_solicitacoes_evento(event)',
+        fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,event_responsibility,estimated_participants,expand',
         requestKey: null
       });
 
@@ -859,7 +861,7 @@ const Calendar: React.FC = () => {
                         value={currentDate}
                         onChange={(date) => {
                           setCurrentDate(date);
-                          updateURL(viewType, date, true);
+                          updateURL('day', date, true);
                         }}
                     />
                   </div>
@@ -989,14 +991,14 @@ const Calendar: React.FC = () => {
           {viewType === 'month' && (
             <div className="flex-1 flex flex-col">
               {/* Header Section for Month View */}
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md">
                 <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
-                  <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
-                    <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">calendar_month</span>
+                  <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
+                    <span className="material-symbols-outlined text-[28px] md:text-[36px] text-primary font-light">calendar_month</span>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Visualização Mensal</h3>
-                    <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visão geral do mês selecionado</p>
+                    <h3 className="text-lg md:text-xl font-black text-text-main leading-tight">Visualização Mensal</h3>
+                    <p className="hidden md:block text-[10px] text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visão geral do mês selecionado</p>
                     <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Navegue pelos dias do mês</p>
                   </div>
                 </div>
@@ -1018,6 +1020,7 @@ const Calendar: React.FC = () => {
                   const dateKey = dateObj.date.toDateString();
                   const dayEvents = eventsByDate[dateKey] || [];
                   const isToday = dateObj.date.toDateString() === new Date().toDateString();
+                  const isWeekend = dateObj.date.getDay() === 0 || dateObj.date.getDay() === 6;
 
                   return (
                     <div
@@ -1026,13 +1029,21 @@ const Calendar: React.FC = () => {
                       onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
                       className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${scrollMarginClass} ${
                         dateObj.type === 'current' 
-                          ? (isToday ? 'bg-primary/[0.04] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.05)] ring-1 ring-inset ring-primary/20' : 'bg-white hover:bg-slate-50/50') 
+                          ? (isToday 
+                              ? 'bg-primary/[0.04] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.05)] ring-1 ring-inset ring-primary/20' 
+                              : (isWeekend ? 'bg-slate-50/80 hover:bg-slate-100/80' : 'bg-white hover:bg-slate-50/50')) 
                           : 'bg-slate-100/70 text-text-secondary/40'
                       }`}
                     >
                       {/* Subtil pattern for out-of-month days */}
                       {dateObj.type !== 'current' && (
                         <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
+                      )}
+                      {/* Weekend indicator for current month */}
+                      {dateObj.type === 'current' && isWeekend && !isToday && (
+                        <div className="absolute top-0 right-0 p-1 opacity-20 group-hover:opacity-40 transition-opacity">
+                          <div className="size-1.5 rounded-full bg-orange-400"></div>
+                        </div>
                       )}
                       {/* Glow effect for today */}
                       {isToday && (
@@ -1047,7 +1058,7 @@ const Calendar: React.FC = () => {
                           className={`text-[11px] md:text-xs font-black size-6 md:size-7 flex items-center justify-center transition-all duration-300 rounded-full ${
                             isToday 
                               ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110 ring-2 ring-white' 
-                              : 'text-text-secondary group-hover:text-primary hover:bg-primary/10'
+                              : (isWeekend && dateObj.type === 'current' ? 'text-orange-600/70 group-hover:text-primary hover:bg-primary/10' : 'text-text-secondary group-hover:text-primary hover:bg-primary/10')
                           }`}
                         >
                           {dateObj.date.getDate()}
@@ -1093,6 +1104,7 @@ const Calendar: React.FC = () => {
                 const dateKey = date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
                 const isToday = dateKey === new Date().toDateString();
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                 const isCurrentMonth = date.getMonth() === currentDate.getMonth();
 
                 return (
@@ -1102,21 +1114,27 @@ const Calendar: React.FC = () => {
                     className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
                       isToday 
                         ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
-                        : 'bg-white hover:bg-slate-50/50'
+                        : (isWeekend ? 'bg-slate-50/80 border-slate-200' : 'bg-white hover:bg-slate-50/50')
                     }`}
                   >
+                    {/* Subtil pattern for out-of-month days */}
+                    {isWeekend && !isToday && (
+                      <div className="absolute top-3 right-3 opacity-30">
+                        <div className="size-2 rounded-full bg-orange-400/50"></div>
+                      </div>
+                    )}
                     {/* Glow effect for today */}
                     {isToday && (
                       <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
                     )}
                     
-                    <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                    <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : (isWeekend ? 'bg-orange-50/30' : 'bg-slate-50/50')}`}>
                       <div className="flex items-center gap-4">
-                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/30' : 'text-text-main opacity-30')}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                          <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/70' : 'text-text-secondary')}`}>
                             {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
                           </span>
                           <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
@@ -1171,28 +1189,30 @@ const Calendar: React.FC = () => {
         {viewType === 'week' && (
           <div className={`flex-1 flex flex-col ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
             {/* Header Section for Week View */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md">
               <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
-                <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
-                  <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">view_week</span>
+                <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
+                  <span className="material-symbols-outlined text-[28px] md:text-[36px] text-primary font-light">view_week</span>
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Visualização Semanal</h3>
-                  <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Confira os compromissos da semana</p>
+                  <h3 className="text-lg md:text-xl font-black text-text-main leading-tight">Visualização Semanal</h3>
+                  <p className="hidden md:block text-[10px] text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Confira os compromissos da semana</p>
                   <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Organize sua rotina semanal</p>
                 </div>
               </div>
             </div>
 
-            {/* Desktop Week View */}
             <div className="hidden md:flex flex-col flex-1">
               <div className="grid grid-cols-7 border-b border-border-light bg-slate-50 sticky top-[120px] md:top-[64px] z-[90] shadow-sm">
-                {getDatesForWeek(currentDate).map((date, idx) => (
+                {getDatesForWeek(currentDate).map((date, idx) => {
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  return (
                     <div key={idx} className={`py-1.5 flex flex-col items-center gap-0.5 border-r border-border-light last:border-r-0 transition-all duration-300 ${
-                    date.toDateString() === new Date().toDateString() ? 'bg-primary/10' : 'bg-slate-50'
+                    isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-50/30' : 'bg-slate-50')
                   }`}>
                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
-                      date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-secondary'
+                      isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/60' : 'text-text-secondary')
                     }`}>
                       {daysLabels[idx]}
                     </span>
@@ -1203,7 +1223,7 @@ const Calendar: React.FC = () => {
                           updateURL('day', date);
                         }}
                         className={`text-sm md:text-base font-black transition-all duration-300 hover:scale-110 active:scale-95 ${
-                          date.toDateString() === new Date().toDateString() ? 'text-primary' : 'text-text-main hover:text-primary'
+                          isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/80 hover:text-primary' : 'text-text-main hover:text-primary')
                         }`}
                       >
                         {date.getDate()}
@@ -1224,11 +1244,13 @@ const Calendar: React.FC = () => {
                       )}
                     </div>
                   </div>
-                ))}
+                );
+              })}
               </div>
               <div className="grid grid-cols-7 flex-1 divide-x divide-border-light bg-white">
                 {getDatesForWeek(currentDate).map((date, idx) => {
                   const isToday = date.toDateString() === new Date().toDateString();
+                  const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                   const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                   const dayEvents = eventsByDate[date.toDateString()] || [];
                   return (
@@ -1239,9 +1261,11 @@ const Calendar: React.FC = () => {
                       className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${scrollMarginClass} ${
                         isToday 
                           ? 'bg-primary/[0.06] shadow-inner' 
-                          : isCurrentMonth 
-                            ? 'hover:bg-slate-50/30' 
-                            : 'bg-slate-100/70'
+                          : isWeekend
+                            ? 'bg-slate-50/50 hover:bg-slate-100/50'
+                            : isCurrentMonth 
+                              ? 'hover:bg-slate-50/30' 
+                              : 'bg-slate-100/70'
                       }`}
                     >
                       {/* Subtil pattern for out-of-month days */}
@@ -1278,6 +1302,7 @@ const Calendar: React.FC = () => {
                 const dateKey = date.toDateString();
                 const dayEvents = eventsByDate[dateKey] || [];
                 const isToday = dateKey === new Date().toDateString();
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                 const isCurrentMonth = date.getMonth() === currentDate.getMonth();
 
                 return (
@@ -1287,26 +1312,34 @@ const Calendar: React.FC = () => {
                     className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
                       isToday 
                         ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
-                        : isCurrentMonth 
-                          ? 'bg-white hover:bg-slate-50/50' 
-                          : 'bg-slate-100/70'
+                        : isWeekend
+                          ? 'bg-slate-50/80 border-slate-200'
+                          : isCurrentMonth 
+                            ? 'bg-white hover:bg-slate-50/50' 
+                            : 'bg-slate-100/70'
                     }`}
                   >
                     {/* Subtil pattern for out-of-month days */}
-                    {!isCurrentMonth && !isToday && (
+                    {!isCurrentMonth && !isToday && !isWeekend && (
                       <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
+                    )}
+                    {/* Weekend indicator mobile */}
+                    {isWeekend && !isToday && (
+                      <div className="absolute top-3 right-3 opacity-30">
+                        <div className="size-2 rounded-full bg-orange-400/50"></div>
+                      </div>
                     )}
                     {/* Glow effect for today mobile */}
                     {isToday && (
                       <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
                     )}
-                    <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : 'bg-slate-50/50'}`}>
+                    <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : (isWeekend ? 'bg-orange-50/30' : 'bg-slate-50/50')}`}>
                       <div className="flex items-center gap-4">
-                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : 'text-text-main opacity-30'}`}>
+                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/30' : 'text-text-main opacity-30')}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
-                          <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>
+                          <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/70' : 'text-text-secondary')}`}>
                             {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
                           </span>
                           <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
@@ -1358,90 +1391,111 @@ const Calendar: React.FC = () => {
           </div>
         )}
 
-        {viewType === 'day' && (
-          <div 
-            ref={currentDate.toDateString() === new Date().toDateString() ? todayRef : dayViewRef}
-            onDoubleClick={() => handleDayDoubleClick(currentDate)}
-            className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${scrollMarginClass} ${
-              currentDate.toDateString() === new Date().toDateString() 
-                ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
-                : 'bg-white'
-            }`}
-          >
-            {/* Header Section for Day View */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
-              <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
-                <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
-                  <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">today</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Compromissos do Dia</h3>
-                  <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize os agendamentos de hoje</p>
-                  <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Gestão diária de tarefas</p>
+        {viewType === 'day' && (() => {
+          const isToday = currentDate.toDateString() === new Date().toDateString();
+          const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
+          
+          return (
+            <div 
+              ref={isToday ? todayRef : dayViewRef}
+              onDoubleClick={() => handleDayDoubleClick(currentDate)}
+              className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${scrollMarginClass} ${
+                isToday 
+                  ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
+                  : (isWeekend ? 'bg-slate-50/50' : 'bg-white')
+              }`}
+            >
+              {/* Header Section for Day View */}
+              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md ${
+                isWeekend && !isToday ? 'bg-orange-50/30 border-orange-100' : 'bg-slate-50/50 border-slate-100'
+              }`}>
+                <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
+                  <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
+                    <span className={`material-symbols-outlined text-[28px] md:text-[36px] font-light ${isWeekend && !isToday ? 'text-orange-500' : 'text-primary'}`}>
+                      {isWeekend ? 'event_repeat' : 'today'}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg md:text-xl font-black text-text-main leading-tight">Compromissos do Dia</h3>
+                    <p className="hidden md:block text-[10px] text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">
+                      {isWeekend ? 'Planejamento de final de semana' : 'Visualize os agendamentos de hoje'}
+                    </p>
+                    <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Gestão diária de tarefas</p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Mobile Day Info Section */}
-            <div className="md:hidden flex flex-col items-center justify-center px-6 py-8 text-center bg-white border-b border-slate-100 relative z-10">
-              <div className="flex flex-col items-center gap-2">
-                <h2 className="text-4xl font-black text-primary tracking-tighter leading-none">
-                  {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-                </h2>
-                <div className="flex items-center gap-3">
-                  <p className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em]">
-                    {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
-                  </p>
-                  {currentDate.toDateString() === new Date().toDateString() && (
-                    <span className="px-2 py-0.5 bg-primary text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-md shadow-primary/20">
+              {/* Mobile Day Info Section */}
+              <div className={`md:hidden flex flex-col items-center justify-center px-6 py-8 text-center border-b relative z-10 ${
+                isWeekend && !isToday ? 'bg-orange-50/10 border-orange-50' : 'bg-white border-slate-100'
+              }`}>
+                <div className="flex flex-col items-center gap-2">
+                  <h2 className={`text-4xl font-black tracking-tighter leading-none ${isWeekend && !isToday ? 'text-orange-600/80' : 'text-primary'}`}>
+                    {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isWeekend && !isToday ? 'text-orange-600/60' : 'text-text-secondary'}`}>
+                      {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                    </p>
+                    {isToday && (
+                      <span className="px-2 py-0.5 bg-primary text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-md shadow-primary/20">
+                        Hoje
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
+                  <div className={`mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border shadow-sm ${
+                    isWeekend && !isToday ? 'bg-orange-50/50 border-orange-100' : 'bg-primary/5 border-primary/10'
+                  }`}>
+                    <span className={`material-symbols-outlined text-sm ${isWeekend && !isToday ? 'text-orange-500/60' : 'text-primary/60'}`}>event_available</span>
+                    <span className={`text-[10px] font-black uppercase tracking-wider ${isWeekend && !isToday ? 'text-orange-600/70' : 'text-primary'}`}>
+                      {(eventsByDate[currentDate.toDateString()] || []).length} Eventos
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Glow effect for today day view */}
+              {isToday && (
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent"></div>
+              )}
+              {isWeekend && !isToday && (
+                <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-orange-400/[0.03] via-transparent to-transparent"></div>
+              )}
+            <div className={`hidden md:block sticky top-[120px] md:top-[64px] z-[90] border-b px-3 md:px-8 py-1.5 md:py-3 shadow-sm ${
+              isWeekend && !isToday ? 'bg-orange-50/30 border-orange-50' : 'bg-white border-slate-100'
+            }`}>
+                <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
+                  <div className="flex flex-col md:gap-1">
+                    <div className="flex items-center gap-1.5 md:gap-3">
+                      <h2 className={`text-lg md:text-3xl font-black tracking-tight ${isWeekend && !isToday ? 'text-orange-600/80' : 'text-primary'}`}>
+                        {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                      </h2>
+                      {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded-lg md:rounded-xl border shadow-sm ${
+                          isWeekend && !isToday ? 'bg-orange-100/50 border-orange-200' : 'bg-primary/5 border-primary/10'
+                        }`}>
+                          <span className={`material-symbols-outlined text-xs md:text-lg ${isWeekend && !isToday ? 'text-orange-500/60' : 'text-primary/60'}`}>event_available</span>
+                          <span className={`text-[9px] md:text-xs font-black ${isWeekend && !isToday ? 'text-orange-600/70' : 'text-primary'}`}>
+                            {(eventsByDate[currentDate.toDateString()] || []).length}
+                            <span className="ml-1 opacity-60 text-[8px] md:text-[10px] uppercase tracking-wider hidden sm:inline">Eventos</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className={`text-[9px] md:text-sm font-bold uppercase tracking-[0.15em] md:tracking-[0.2em] ${isWeekend && !isToday ? 'text-orange-600/60' : 'text-text-secondary'}`}>
+                      {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                    </p>
+                  </div>
+                  {isToday && (
+                    <span className="px-1.5 py-0.5 md:px-4 md:py-1.5 bg-primary text-white text-[7px] md:text-[10px] font-black uppercase tracking-widest rounded-full shadow-md md:shadow-lg shadow-primary/20 shrink-0">
                       Hoje
                     </span>
                   )}
                 </div>
               </div>
-              {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
-                <div className="mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/5 border border-primary/10 shadow-sm">
-                  <span className="material-symbols-outlined text-sm text-primary/60">event_available</span>
-                  <span className="text-[10px] font-black text-primary uppercase tracking-wider">
-                    {(eventsByDate[currentDate.toDateString()] || []).length} Eventos
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Glow effect for today day view */}
-            {currentDate.toDateString() === new Date().toDateString() && (
-              <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-primary/[0.06] via-transparent to-transparent"></div>
-            )}
-          <div className="hidden md:block sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-100 px-3 md:px-8 py-1.5 md:py-3 shadow-sm">
-              <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
-                <div className="flex flex-col md:gap-1">
-                  <div className="flex items-center gap-1.5 md:gap-3">
-                    <h2 className="text-lg md:text-3xl font-black text-primary tracking-tight">
-                      {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-                    </h2>
-                    {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
-                      <div className="flex items-center gap-1 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded-lg md:rounded-xl bg-primary/5 border border-primary/10 shadow-sm">
-                        <span className="material-symbols-outlined text-xs md:text-lg text-primary/60">event_available</span>
-                        <span className="text-[9px] md:text-xs font-black text-primary">
-                          {(eventsByDate[currentDate.toDateString()] || []).length}
-                          <span className="ml-1 opacity-60 text-[8px] md:text-[10px] uppercase tracking-wider hidden sm:inline">Eventos</span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="text-[9px] md:text-sm font-bold text-text-secondary uppercase tracking-[0.15em] md:tracking-[0.2em]">
-                    {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
-                  </p>
-                </div>
-                {currentDate.toDateString() === new Date().toDateString() && (
-                  <span className="px-1.5 py-0.5 md:px-4 md:py-1.5 bg-primary text-white text-[7px] md:text-[10px] font-black uppercase tracking-widest rounded-full shadow-md md:shadow-lg shadow-primary/20 shrink-0">
-                    Hoje
-                  </span>
-                )}
-              </div>
-            </div>
-            <div ref={dayViewRef} className={`p-4 md:p-8 max-w-4xl mx-auto w-full ${scrollMarginClass}`}>
+              <div className={`p-4 md:p-8 max-w-4xl mx-auto w-full ${scrollMarginClass}`}>
 
               <div className="space-y-4">
                 {(() => {
@@ -1568,7 +1622,8 @@ const Calendar: React.FC = () => {
               </div>
             </div>
           </div>
-        )}
+        );
+      })()}
 
         {viewType === 'agenda' && (
           <div className="flex-1 flex flex-col bg-white relative">
@@ -1586,18 +1641,6 @@ const Calendar: React.FC = () => {
               </div>
             </div>
 
-            <div className="hidden md:block sticky top-[120px] md:top-[64px] z-[90] bg-white border-b border-slate-50 px-3 md:px-8 py-1.5 md:py-3 shadow-sm">
-              <div className="max-w-5xl mx-auto w-full flex items-center gap-2 md:gap-4">
-                <div className="size-7 md:size-12 rounded-lg md:rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <span className="material-symbols-outlined text-sm md:text-2xl">view_agenda</span>
-                </div>
-                <div>
-                  <h3 className="text-sm md:text-2xl font-black text-text-main leading-tight">Agenda do Mês</h3>
-                  <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
-                </div>
-              </div>
-            </div>
-            
             <div ref={agendaViewRef} className={`p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full ${scrollMarginClass}`}>
               {(() => {
                  // Filter events for the current month and year using filteredEvents instead of events
@@ -1627,6 +1670,7 @@ const Calendar: React.FC = () => {
                  return Object.entries(groupedEventsByDate).map(([dateStr, dayEvents]) => {
                     const date = new Date(dayEvents[0].date_start || '');
                     const isToday = new Date().toDateString() === date.toDateString();
+                    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                     const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                     
                     return (
@@ -1636,9 +1680,11 @@ const Calendar: React.FC = () => {
                             className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden ${scrollMarginClass} ${
                                 isToday 
                                     ? 'bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
-                                    : isCurrentMonth 
-                                        ? 'hover:bg-slate-50/50'
-                                        : 'bg-slate-100/70 opacity-80'
+                                    : isWeekend && isCurrentMonth
+                                        ? 'bg-orange-50/40 border-2 border-orange-100/50 hover:bg-orange-50/60'
+                                        : isCurrentMonth 
+                                            ? 'hover:bg-slate-50/50'
+                                            : 'bg-slate-100/70 opacity-80'
                             }`}
                         >
                             {/* Subtil pattern for out-of-month days */}
@@ -1649,14 +1695,48 @@ const Calendar: React.FC = () => {
                             {isToday && (
                               <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
                             )}
+                            {/* Glow effect for weekend agenda */}
+                            {isWeekend && !isToday && isCurrentMonth && (
+                              <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-orange-500/[0.03] via-transparent to-transparent"></div>
+                            )}
                             <div className="flex md:flex-col items-center md:items-start gap-4 md:gap-0 md:w-32 shrink-0 relative z-10">
-                                <span className={`text-4xl md:text-5xl font-black transition-transform duration-500 ${isToday ? 'text-primary scale-110 drop-shadow-md' : isCurrentMonth ? 'text-text-main opacity-30' : 'text-slate-400'}`}>{String(date.getDate()).padStart(2, '0')}</span>
+                                <span className={`text-4xl md:text-5xl font-black transition-transform duration-500 ${
+                                    isToday 
+                                        ? 'text-primary scale-110 drop-shadow-md' 
+                                        : isWeekend && isCurrentMonth
+                                            ? 'text-orange-600/30'
+                                            : isCurrentMonth 
+                                                ? 'text-text-main opacity-30' 
+                                                : 'text-slate-400'
+                                }`}>
+                                    {String(date.getDate()).padStart(2, '0')}
+                                </span>
                                 <div className="flex flex-col leading-tight">
-                                    <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${isToday ? 'text-primary' : 'text-text-secondary'}`}>{date.toLocaleDateString('pt-BR', { weekday: 'short' })}</span>
-                                    <span className={`text-[9px] font-medium uppercase tracking-widest ${isToday ? 'text-primary/60' : 'text-text-secondary/60'}`}>
+                                    <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${
+                                        isToday 
+                                            ? 'text-primary' 
+                                            : isWeekend && isCurrentMonth
+                                                ? 'text-orange-600/70'
+                                                : 'text-text-secondary'
+                                    }`}>
+                                        {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                                    </span>
+                                    <span className={`text-[9px] font-medium uppercase tracking-widest ${
+                                        isToday 
+                                            ? 'text-primary/60' 
+                                            : isWeekend && isCurrentMonth
+                                                ? 'text-orange-600/50'
+                                                : 'text-text-secondary/60'
+                                    }`}>
                                       {date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')}
                                     </span>
                                     {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
+                                    {isWeekend && !isToday && isCurrentMonth && (
+                                        <span className="text-[7px] font-black text-orange-600/60 uppercase tracking-widest mt-1 flex items-center gap-1">
+                                            <span className="w-1 h-1 rounded-full bg-orange-500/50"></span>
+                                            Fim de semana
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <div className={`flex-1 flex flex-col gap-4 border-l-2 border-slate-50 pl-6 md:pl-12 pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
@@ -1894,9 +1974,10 @@ const CalendarTooltip: React.FC<{
     if (userId === event.user) {
       label = 'Criador e Participante';
     } else {
-      const level = INVOLVEMENT_LEVELS.find(l => l.value === roleValue.toUpperCase());
-      label = level ? level.label : 'Participante';
-    }
+            const r = roleValue.toUpperCase();
+            const level = INVOLVEMENT_LEVELS.find(l => l.value === r);
+            label = level ? level.label : 'Participante';
+          }
     roleBreakdown[label] = (roleBreakdown[label] || 0) + 1;
   };
 
@@ -1992,6 +2073,22 @@ const CalendarTooltip: React.FC<{
               {event.expand?.location?.name || event.custom_location || 'Local não definido'}
             </span>
           </div>
+
+          {event.event_responsibility && (
+            <div className="flex flex-col gap-0.5 px-1">
+              <div className="flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-base text-slate-400">
+                  {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
+                </span>
+                <span className="text-[11px] font-bold text-text-main truncate">
+                  {RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}
+                </span>
+              </div>
+              <span className="text-[9px] text-slate-400 pl-7 leading-tight">
+                {RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}
+              </span>
+            </div>
+          )}
           
           <div className="flex items-center gap-2.5 px-1">
             <span className="material-symbols-outlined text-base text-slate-400">groups</span>
@@ -1999,6 +2096,12 @@ const CalendarTooltip: React.FC<{
               <span className="text-[11px] font-bold text-text-main">
                 {totalConfirmed} {totalConfirmed === 1 ? 'Participante' : 'Participantes'}
               </span>
+              {getEstimatedParticipants(event) > 0 && (
+                   <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-text-secondary bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 w-fit">
+                     <span className="material-symbols-outlined text-[12px] opacity-70">groups</span>
+                     <span>Est. {getEstimatedParticipants(event)} pessoas</span>
+                   </div>
+               )}
               {totalConfirmed > 0 && (
                 <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                   {Object.entries(roleBreakdown).map(([label, count]) => (
@@ -2150,8 +2253,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
     // Check role in participants_roles first
     const roleValue = (event.participants_roles?.[user.id] || '').toUpperCase();
     if (roleValue) {
-        if (roleValue === 'ORGANIZADOR') return { label: 'Organizador', color: 'bg-blue-50 text-blue-700 border-blue-100' };
-        if (roleValue === 'COORGANIZADOR') return { label: 'Coorganizador', color: 'bg-emerald-50 text-emerald-700 border-emerald-100' };
+        if (roleValue === 'ORGANIZADOR' || roleValue === 'COORGANIZADOR') return { label: 'Organizador', color: 'bg-blue-50 text-blue-700 border-blue-100' };
         if (roleValue === 'PARTICIPANTE') return { label: 'Participante', color: 'bg-slate-50 text-slate-700 border-slate-100' };
         
         // Legacy or specific roles
@@ -2198,7 +2300,16 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-col gap-0.5 min-w-0">
+          {/* Responsabilidade - Visual indicador no card */}
+            {event.event_responsibility && (
+              <div className="absolute top-2 right-2 flex items-center justify-center size-5 rounded-full bg-slate-50 border border-slate-100 text-slate-400 group-hover:text-indigo-500 transition-colors" title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
+                <span className="material-symbols-outlined text-[12px]">
+                  {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
+                </span>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5 min-w-0">
              <p className={`font-bold leading-tight ${detailed ? 'text-lg text-slate-800' : 'text-xs text-slate-800 truncate'} ${isCancelled ? 'line-through decoration-slate-400' : ''}`}>
                {event.title}
              </p>
@@ -2227,6 +2338,9 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                  <div className="flex md:hidden items-center gap-0.5 text-[9px] font-bold text-slate-400">
                     <span className="material-symbols-outlined text-[10px]">group</span>
                     {participantCount}
+                    {event.estimated_participants && (
+                        <span className="ml-0.5 text-[8px] opacity-70">(Est. {event.estimated_participants})</span>
+                    )}
                  </div>
              </div>
           )}
@@ -2283,6 +2397,11 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                     <span className="material-symbols-outlined text-[14px] text-slate-400">group</span>
                     <span className="text-[10px] font-bold text-slate-600">
                         {participantCount}
+                        {event.estimated_participants && (
+                            <span className="text-slate-400 font-medium ml-1">
+                                (Est. {event.estimated_participants})
+                            </span>
+                        )}
                     </span>
                 </div>
              </div>

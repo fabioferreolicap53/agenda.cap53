@@ -15,7 +15,7 @@ export interface EventData {
 
 /**
  * Envia notificações para todos os envolvidos quando um evento é cancelado ou excluído.
- * Envolvidos: Participantes, Organizadores, Coorganizadores, Setores com solicitações aprovadas (ALMC, DCA, TRA).
+ * Envolvidos: Participantes, Organizadores, Setores com solicitações aprovadas (ALMC, DCA, TRA).
  * 
  * @param event O objeto do evento.
  * @param action A ação realizada ('cancelled' ou 'deleted').
@@ -32,7 +32,7 @@ export const notifyEventStatusChange = async (
     
     const recipients = new Set<string>();
 
-    // Participantes e Co-organizadores via agenda_cap53_participantes
+    // Participantes via agenda_cap53_participantes
     try {
         const participantsList = await pb.collection('agenda_cap53_participantes').getFullList({
             filter: `event = "${event.id}"`,
@@ -40,7 +40,8 @@ export const notifyEventStatusChange = async (
         });
         participantsList.forEach((p: any) => recipients.add(p.user));
     } catch (err) {
-        console.error('[NotificationUtils] Erro ao buscar participantes do evento:', err);
+        // Ignora erro se não encontrar participantes
+        console.warn('[NotificationUtils] Aviso ao buscar participantes:', err);
     }
 
     // Participantes diretos do objeto do evento (fallback/legado)
@@ -53,45 +54,48 @@ export const notifyEventStatusChange = async (
         recipients.add(event.user);
     }
 
-    // Setores aprovados (ALMC, DCA, TRA)
-    const sectorRoles = new Set<string>();
-
     try {
-        // Busca solicitações de itens/serviços (ALMC e DCA)
-        const requestFilter = `event = "${event.id}" && status = "approved"`;
-        const almacRequests = await pb.collection('agenda_cap53_almac_requests').getFullList({
-            filter: requestFilter,
-            expand: 'item'
+        // Busca usuários dos setores relevantes (ALMC, DCA, TRA)
+        const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
+            filter: 'role ?~ "ALMC" || role ?~ "DCA" || role ?~ "TRA"',
+            fields: 'id,role'
         });
 
-        const hasAlmcRequest = almacRequests.some((r: any) => r.expand?.item?.category !== 'INFORMATICA');
-        const hasDcaRequest = almacRequests.some((r: any) => r.expand?.item?.category === 'INFORMATICA');
+        // Mapeia usuários por setor
+        const usersByRole: Record<string, string[]> = {
+            'ALMC': [],
+            'DCA': [],
+            'TRA': []
+        };
 
-        if (hasAlmcRequest) sectorRoles.add('ALMC');
-        if (hasDcaRequest) sectorRoles.add('DCA');
-
-        // Busca solicitações de transporte (TRA)
-        const transportRequests = await pb.collection('agenda_cap53_transport_requests').getList(1, 1, {
-            filter: `evento = "${event.id}" && status = "APPROVED"`,
-            fields: 'id'
+        sectorUsers.forEach((u: any) => {
+            if (u.role.includes('ALMC')) usersByRole['ALMC'].push(u.id);
+            if (u.role.includes('DCA')) usersByRole['DCA'].push(u.id);
+            if (u.role.includes('TRA')) usersByRole['TRA'].push(u.id);
         });
 
-        if (transportRequests.totalItems > 0) {
-            sectorRoles.add('TRA');
-        }
+        // 1. Verifica solicitações de itens (Almoxarifado e Informática)
+        // Otimização: Fazemos uma query simples para ver se existem pedidos aprovados
+        const requests = await pb.collection('agenda_cap53_almac_requests').getFullList({
+            filter: `event = "${event.id}" && status = "approved"`,
+            expand: 'item',
+            fields: 'expand.item.category'
+        });
 
-        // Adiciona os usuários dos setores identificados
-        if (sectorRoles.size > 0) {
-            const roleFilter = Array.from(sectorRoles).map(role => `role = "${role}"`).join(' || ');
-            const sectorUsers = await pb.collection('agenda_cap53_usuarios').getFullList({
-                filter: `(${roleFilter}) && hidden != true`,
-                fields: 'id'
-            });
-            sectorUsers.forEach((u: any) => recipients.add(u.id));
+        const hasAlmc = requests.some((r: any) => r.expand?.item?.category !== 'INFORMATICA');
+        const hasDca = requests.some((r: any) => r.expand?.item?.category === 'INFORMATICA');
+
+        if (hasAlmc) usersByRole['ALMC'].forEach(uid => recipients.add(uid));
+        if (hasDca) usersByRole['DCA'].forEach(uid => recipients.add(uid));
+
+        // 2. Verifica transporte (verificando flag no evento ou status)
+        // Se o evento tem suporte de transporte confirmado/pendente, notifica o setor
+        if (event.transporte_suporte || event.transporte_status === 'confirmed' || event.transporte_status === 'approved') {
+             usersByRole['TRA'].forEach(uid => recipients.add(uid));
         }
 
     } catch (err) {
-        console.error('[NotificationUtils] Erro ao buscar setores para notificação:', err);
+        console.warn('[NotificationUtils] Erro ao buscar setores (pode ser ignorado se não houver permissão):', err);
     }
 
     // Remover o autor da ação da lista de destinatários
@@ -130,7 +134,8 @@ export const notifyEventStatusChange = async (
             original_event_title: event.title,
             action,
             reason,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            estimated_participants: (event as any).estimated_participants
         }
     });
     

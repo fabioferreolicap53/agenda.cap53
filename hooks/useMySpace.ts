@@ -4,6 +4,10 @@ import { useAuth } from '../components/AuthContext';
 
 export interface MySpaceEvent {
   id: string;
+  collectionId: string;
+  collectionName: string;
+  created: string;
+  updated: string;
   title: string;
   description: string;
   date_start: string;
@@ -17,6 +21,8 @@ export interface MySpaceEvent {
   category?: string; // Mapeado como "Tipo"
   nature?: string;   // Mapeado como "Natureza"
   logistics_resources?: string; // Mapeado como "Logística & Recursos"
+  event_responsibility?: string;
+  estimated_participants?: number;
   expand?: {
     location?: {
       name: string;
@@ -25,6 +31,8 @@ export interface MySpaceEvent {
       name: string;
       avatar?: string;
     };
+    participants?: any[];
+    'agenda_cap53_solicitacoes_evento(event)'?: any[];
   };
   userRole?: string;
   type: 'created' | 'participation' | 'request';
@@ -53,7 +61,6 @@ export const useMySpace = () => {
   });
   const [stats, setStats] = useState({
     organizer: 0,
-    coorganizer: 0,
     participant: 0,
     // Convites Recebidos
     invitesPending: 0,
@@ -87,7 +94,7 @@ export const useMySpace = () => {
       const createdRes = await pb.collection('agenda_cap53_eventos').getFullList<any>({
         filter: `user = "${user.id}"`,
         sort: '-date_start',
-        expand: 'location,user,type'
+        expand: 'location,user,type,participants,agenda_cap53_solicitacoes_evento(event)'
       });
       
       const createdWithMeta = createdRes.map(e => {
@@ -102,7 +109,7 @@ export const useMySpace = () => {
       // 2. Fetch participations (Invites received by me OR roles I have in other events)
       const participationsRes = await pb.collection('agenda_cap53_participantes').getFullList({
         filter: `user = "${user.id}"`,
-        expand: 'event,event.location,event.user,event.type'
+        expand: 'event,event.location,event.user,event.type,event.participants,event.agenda_cap53_solicitacoes_evento(event)'
       });
       
       const participationEvents = participationsRes
@@ -122,7 +129,7 @@ export const useMySpace = () => {
       createdRes.forEach(e => managedEventIds.add(e.id));
       participationsRes.forEach(p => {
         const role = (p.role || '').toUpperCase();
-        if (role === 'ORGANIZADOR' || role === 'COORGANIZADOR') {
+        if (role === 'ORGANIZADOR') {
           if (p.event) managedEventIds.add(p.event);
         }
       });
@@ -149,7 +156,7 @@ export const useMySpace = () => {
       // 3. Fetch requests (Solicitations sent)
       const requestsRes = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
         filter: `user = "${user.id}"`,
-        expand: 'event,event.location,event.user,event.type'
+        expand: 'event,event.location,event.user,event.type,event.participants,event.agenda_cap53_solicitacoes_evento(event)'
       });
       
       const requestEvents = requestsRes
@@ -193,7 +200,6 @@ export const useMySpace = () => {
       const breakdown = {
         totalCreated: createdRes.length,
         organizer: 0,
-        coorganizer: 0,
         participant: 0,
         // Recebidos
         invitesPending: 0,
@@ -236,8 +242,7 @@ export const useMySpace = () => {
           if (eventIsActive) {
             const role = (e.userRole || '').toUpperCase();
             if (role === 'ORGANIZADOR') breakdown.organizer++;
-            else if (role === 'COORGANIZADOR') breakdown.coorganizer++;
-            else if (role === 'PARTICIPANTE') breakdown.participant++;
+            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
             breakdown.confirmed++;
           }
           return;
@@ -248,8 +253,7 @@ export const useMySpace = () => {
           if (e.participationStatus === 'accepted') {
             const role = (e.userRole || '').toUpperCase();
             if (role === 'ORGANIZADOR') breakdown.organizer++;
-            else if (role === 'COORGANIZADOR') breakdown.coorganizer++;
-            else if (role === 'PARTICIPANTE') breakdown.participant++;
+            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
             breakdown.invitesAccepted++;
             breakdown.confirmed++;
           } else if (e.participationStatus === 'pending') {
@@ -265,8 +269,7 @@ export const useMySpace = () => {
           if (e.requestStatus === 'accepted') {
             const role = (e.userRole || '').toUpperCase();
             if (role === 'ORGANIZADOR') breakdown.organizer++;
-            else if (role === 'COORGANIZADOR') breakdown.coorganizer++;
-            else if (role === 'PARTICIPANTE') breakdown.participant++;
+            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
             breakdown.requestsAccepted++;
             breakdown.confirmed++;
           } else if (e.requestStatus === 'pending') {
@@ -280,7 +283,6 @@ export const useMySpace = () => {
       const newStats = {
         totalCreated: breakdown.totalCreated,
         organizer: breakdown.organizer,
-        coorganizer: breakdown.coorganizer,
         participant: breakdown.participant,
         invitesPending: breakdown.invitesPending,
         invitesAccepted: breakdown.invitesAccepted,
@@ -294,7 +296,7 @@ export const useMySpace = () => {
         receivedRequestsPending: breakdown.receivedRequestsPending,
         receivedRequestsAccepted: breakdown.receivedRequestsAccepted,
         receivedRequestsRejected: breakdown.receivedRequestsRejected,
-        totalParticipated: breakdown.confirmed,
+        totalParticipated: breakdown.invitesAccepted + breakdown.requestsAccepted,
         confirmedEvents: breakdown.confirmed
       };
 

@@ -78,7 +78,9 @@ export interface EventsRecord {
 	transporte_status?: string
 	is_restricted?: boolean
 	creator_role?: string
-    observacoes?: string
+	observacoes?: string
+	estimated_participants?: number
+	event_responsibility?: string
 }
 
 // Participant
@@ -86,7 +88,6 @@ export interface ParticipantesRecord {
 	event: string
 	user: string
 	status?: 'pending' | 'accepted' | 'declined'
-	role?: string
 }
 
 // Almac Request

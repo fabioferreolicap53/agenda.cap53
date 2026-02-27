@@ -444,6 +444,9 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
     // Days
     for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      
       const isSelected = value && 
         new Date(value).getDate() === day && 
         new Date(value).getMonth() === viewDate.getMonth() && 
@@ -464,7 +467,9 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               ? 'bg-slate-800 text-white font-black shadow-lg shadow-slate-200 scale-105 z-10' 
               : isToday
                 ? 'bg-slate-100 text-slate-900 font-black'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-bold'}
+                : isWeekend
+                  ? 'text-orange-600/60 bg-orange-50/20 hover:bg-orange-50/50 hover:text-orange-700 font-bold'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800 font-bold'}
           `}
         >
           {day}
@@ -602,11 +607,14 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
                   {/* Calendar Grid */}
                   <div className="grid grid-cols-7 gap-px mb-2">
-                    {DAYS_OF_WEEK.map((day, index) => (
-                      <div key={`header-mobile-${index}`} className="text-center text-[10px] font-black text-slate-200 py-2 uppercase tracking-widest">
-                        {day}
-                      </div>
-                    ))}
+                    {DAYS_OF_WEEK.map((day, index) => {
+                      const isWeekend = index === 0 || index === 6;
+                      return (
+                        <div key={`header-mobile-${index}`} className={`text-center text-[10px] font-black py-2 uppercase tracking-widest ${isWeekend ? 'text-orange-500/30' : 'text-slate-200'}`}>
+                          {day}
+                        </div>
+                      );
+                    })}
                     {renderCalendarDays()}
                   </div>
                 </div>
@@ -761,11 +769,14 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
 
                 {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-px mb-2">
-                  {DAYS_OF_WEEK.map((day, index) => (
-                    <div key={`header-desktop-${index}`} className="text-center text-[11px] font-black text-slate-200 py-3 uppercase tracking-widest">
-                      {day}
-                    </div>
-                  ))}
+                  {DAYS_OF_WEEK.map((day, index) => {
+                    const isWeekend = index === 0 || index === 6;
+                    return (
+                      <div key={`header-desktop-${index}`} className={`text-center text-[11px] font-black py-3 uppercase tracking-widest ${isWeekend ? 'text-orange-500/30' : 'text-slate-200'}`}>
+                        {day}
+                      </div>
+                    );
+                  })}
                   {renderCalendarDays()}
                 </div>
               </div>

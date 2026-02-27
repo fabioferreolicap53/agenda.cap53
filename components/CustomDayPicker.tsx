@@ -100,6 +100,7 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
             const d = new Date(year, month, i);
             const isSelected = d.toDateString() === value.toDateString();
             const isToday = d.toDateString() === new Date().toDateString();
+            const isWeekend = d.getDay() === 0 || d.getDay() === 6;
             const hasEvents = (eventsByDate[d.toDateString()] || []).length > 0;
 
             days.push(
@@ -111,12 +112,16 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
                             ? 'bg-[#1e293b] text-white shadow-[0_4px_12px_-2px_rgba(30,41,59,0.25)] scale-105 z-10' 
                             : isToday
                                 ? 'bg-primary/10 text-primary hover:bg-primary/20'
-                                : 'text-slate-600 hover:bg-slate-100/80 active:bg-slate-200/50'
+                                : isWeekend
+                                    ? 'text-orange-600/60 bg-orange-50/30 hover:bg-orange-50/80 active:bg-orange-100/50'
+                                    : 'text-slate-600 hover:bg-slate-100/80 active:bg-slate-200/50'
                     }`}
                 >
                     <span className="relative z-10">{i}</span>
                     {hasEvents && !isSelected && (
-                        <span className={`absolute bottom-1.5 md:bottom-1 size-1 rounded-full transition-transform duration-300 ${isToday ? 'bg-primary' : 'bg-slate-400/60'}`}></span>
+                        <span className={`absolute bottom-1.5 md:bottom-1 size-1 rounded-full transition-transform duration-300 ${
+                            isToday ? 'bg-primary' : isWeekend ? 'bg-orange-400/60' : 'bg-slate-400/60'
+                        }`}></span>
                     )}
                     {isSelected && (
                         <span className="absolute inset-0 bg-white/10 rounded-xl md:rounded-lg animate-pulse"></span>
@@ -196,11 +201,19 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
                         </div>
 
                         <div className="grid grid-cols-7 gap-1 mb-2 md:mb-2">
-                            {DAYS_SHORT.map((day, index) => (
-                                <div key={`header-${index}`} className="h-7 md:h-7 flex items-center justify-center text-[9px] md:text-[9px] font-black text-slate-200 uppercase tracking-widest">
-                                    {day}
-                                </div>
-                            ))}
+                            {DAYS_SHORT.map((day, index) => {
+                                const isWeekend = index === 0 || index === 6;
+                                return (
+                                    <div 
+                                        key={`header-${index}`} 
+                                        className={`h-7 md:h-7 flex items-center justify-center text-[9px] md:text-[9px] font-black uppercase tracking-widest ${
+                                            isWeekend ? 'text-orange-500/30' : 'text-slate-200'
+                                        }`}
+                                    >
+                                        {day}
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         <div className="grid grid-cols-7 gap-1">

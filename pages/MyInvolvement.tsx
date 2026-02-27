@@ -23,7 +23,7 @@ const MyInvolvement: React.FC = () => {
   const { events, loading, stats, analytics, refresh } = useMySpace();
   
   // Local state
-  const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'coorganizer' | 'participant' | 'pending' | 'rejected'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'participant' | 'pending' | 'rejected'>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
 
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
@@ -158,11 +158,15 @@ const MyInvolvement: React.FC = () => {
     // 1. Filtro por Tab (Status/Papel)
     switch (activeTab) {
       case 'organizer': 
-        result = events.filter(e => (e.userRole || '').toUpperCase() === 'ORGANIZADOR' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
-        break;
-      case 'coorganizer': 
-        result = events.filter(e => (e.userRole || '').toUpperCase() === 'COORGANIZADOR' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
-        break;
+          result = events.filter(e => {
+            const role = (e.userRole || '').toUpperCase();
+            return (role === 'ORGANIZADOR') && 
+                   e.requestStatus !== 'pending' && 
+                   e.participationStatus !== 'pending' && 
+                   e.requestStatus !== 'rejected' && 
+                   e.participationStatus !== 'rejected';
+          });
+          break;
       case 'participant': 
         result = events.filter(e => (e.userRole || '').toUpperCase() === 'PARTICIPANTE' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
         break;

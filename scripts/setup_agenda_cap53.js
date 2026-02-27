@@ -206,7 +206,15 @@ async function setup() {
                 { name: 'transporte_passageiro', type: 'text' },
                 { name: 'transporte_obs', type: 'text' },
                 { name: 'transporte_justification', type: 'text' },
-                { name: 'participants_status', type: 'json', options: { maxSize: 2000000 } }
+                { name: 'participants_status', type: 'json', options: { maxSize: 2000000 } },
+                { name: 'participants_roles', type: 'json', options: { maxSize: 2000000 } },
+                { name: 'estimated_participants', type: 'number' },
+                { name: 'is_restricted', type: 'bool' },
+                { name: 'creator_role', type: 'text' },
+                { name: 'transport_history', type: 'json', options: { maxSize: 2000000 } },
+                { name: 'informatica_items', type: 'json', options: { maxSize: 2000000 } },
+                { name: 'nature', type: 'text' },
+                { name: 'event_responsibility', type: 'text' }
             ]
         });
         const eventosRes = await fetch(`${pbUrl}/api/collections/${PREFIX}eventos`, { headers });
