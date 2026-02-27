@@ -1350,7 +1350,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 {Object.values(participantStatus).filter(s => s === 'accepted').length + 1}
                                             </p>
                                         </div>
-                                        {event.estimated_participants && (
+                                        {Number(event.estimated_participants) > 0 && (
                                             <div className="text-right space-y-1">
                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estimado</p>
                                                 <p className="text-sm font-bold text-slate-600 leading-none">
@@ -1360,21 +1360,21 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         )}
                                     </div>
 
-                                    {event.estimated_participants && (
+                                    {Number(event.estimated_participants) > 0 && (
                                         <div className="space-y-2">
                                             <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                                                 <div 
                                                     className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out"
                                                     style={{ 
-                                                        width: `${Math.min(100, ((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / event.estimated_participants) * 100)}%` 
+                                                        width: `${Math.min(100, ((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / Number(event.estimated_participants)) * 100)}%` 
                                                     }}
                                                 />
                                             </div>
                                             <div className="flex justify-between items-center">
                                                 <p className="text-[9px] font-bold text-slate-400 uppercase">
-                                                    {Math.round(((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / event.estimated_participants) * 100)}% da meta
+                                                    {Math.round(((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / Number(event.estimated_participants)) * 100)}% da meta
                                                 </p>
-                                                {Object.values(participantStatus).filter(s => s === 'accepted').length + 1 > event.estimated_participants && (
+                                                {Object.values(participantStatus).filter(s => s === 'accepted').length + 1 > Number(event.estimated_participants) && (
                                                     <span className="text-[9px] font-bold text-amber-600 uppercase flex items-center gap-1">
                                                         <span className="material-symbols-outlined text-[12px]">warning</span>
                                                         Acima do esperado

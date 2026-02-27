@@ -306,9 +306,9 @@ const Calendar: React.FC = () => {
      if (view === 'month' || view === 'week' || view === 'day' || view === 'agenda') {
        return view;
      }
-     // Mobile/Tablet default view: Agenda (AGE)
+     // Mobile/Tablet default view: Day (DIA)
      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-         return 'agenda';
+         return 'day';
      }
      return 'month';
     });
@@ -345,7 +345,7 @@ const Calendar: React.FC = () => {
     // Enforce initial view if no view parameter is present
     useEffect(() => {
         if (!searchParams.get('view')) {
-            const defaultView = isMobileOrTablet ? 'agenda' : 'month';
+            const defaultView = isMobileOrTablet ? 'day' : 'month';
             updateURL(defaultView, currentDate, true);
         }
     }, [isMobileOrTablet]);
@@ -363,6 +363,7 @@ const Calendar: React.FC = () => {
   const [returnPath, setReturnPath] = useState<string | null>(null);
   const todayRef = useRef<HTMLDivElement>(null);
   const firstEventRef = useRef<HTMLDivElement>(null);
+  const agendaTargetRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Scroll Margin based on sticky bars and filters state
   const scrollMarginClass = useMemo(() => {
@@ -375,6 +376,31 @@ const Calendar: React.FC = () => {
     }
     return 'scroll-mt-[112px] md:scroll-mt-[58px]';
   }, [showFilters]);
+
+  const agendaMonthEvents = useMemo(() => {
+    return filteredEvents
+      .filter(e => {
+        const eDate = new Date(e.date_start || '');
+        return eDate.getMonth() === currentDate.getMonth() &&
+               eDate.getFullYear() === currentDate.getFullYear();
+      })
+      .sort((a, b) => new Date(a.date_start || '').getTime() - new Date(b.date_start || '').getTime());
+  }, [filteredEvents, currentDate]);
+
+  const agendaTargetDateKey = useMemo(() => {
+    if (agendaMonthEvents.length === 0) return null;
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    const todayEvent = agendaMonthEvents.find(e => {
+      const d = new Date(e.date_start || '');
+      return d >= todayStart && d <= todayEnd;
+    });
+    if (todayEvent) return new Date(todayEvent.date_start || '').toDateString();
+    const nextEvent = agendaMonthEvents.find(e => new Date(e.date_start || '') > todayEnd);
+    return new Date((nextEvent || agendaMonthEvents[0]).date_start || '').toDateString();
+  }, [agendaMonthEvents]);
 
   // Animation States
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
@@ -407,13 +433,17 @@ const Calendar: React.FC = () => {
         inline: 'center'
       };
 
-      // Prioritize focusing on the first event if it exists (only for DIA view)
-      if (viewType === 'day' && firstEventRef.current) {
+      // Prioritize focusing on the first event if it exists (only for DIA view on desktop)
+      if (viewType === 'day' && firstEventRef.current && !isMobileOrTablet) {
         firstEventRef.current.scrollIntoView(scrollConfig);
         return;
       }
 
-      // For Agenda and other views, scroll to the day container
+      if (viewType === 'agenda' && isMobileOrTablet && agendaTargetRef.current) {
+        agendaTargetRef.current.scrollIntoView(scrollConfig);
+        return;
+      }
+
       if (todayRef.current) {
         todayRef.current.scrollIntoView(scrollConfig);
         return;
@@ -577,6 +607,15 @@ const Calendar: React.FC = () => {
     // Scroll whenever viewType or currentDate changes to ensure focus
     scrollToToday();
   }, [currentDate, viewType]);
+
+  useEffect(() => {
+    if (viewType !== 'agenda' || !isMobileOrTablet) return;
+    if (!agendaTargetRef.current) return;
+    const timeout = setTimeout(() => {
+      agendaTargetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+    return () => clearTimeout(timeout);
+  }, [viewType, isMobileOrTablet, agendaTargetDateKey]);
 
   const fetchEvents = async () => {
     setLoading(true);
@@ -1406,7 +1445,7 @@ const Calendar: React.FC = () => {
               }`}
             >
               {/* Header Section for Day View */}
-              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-t-[0] md:rounded-[2rem] border-b md:border shadow-none md:shadow-sm mx-0 md:mx-8 mt-0 md:mt-4 transition-all duration-500 hover:shadow-none md:hover:shadow-md ${
+              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md ${
                 isWeekend && !isToday ? 'bg-orange-50/30 border-orange-100' : 'bg-slate-50/50 border-slate-100'
               }`}>
                 <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
@@ -1676,7 +1715,7 @@ const Calendar: React.FC = () => {
                     return (
                         <div 
                             key={dateStr} 
-                            ref={isToday ? todayRef : null}
+                            ref={dateStr === agendaTargetDateKey ? agendaTargetRef : (isToday ? todayRef : null)}
                             className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden ${scrollMarginClass} ${
                                 isToday 
                                     ? 'bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
@@ -1740,10 +1779,10 @@ const Calendar: React.FC = () => {
                                 </div>
                             </div>
                             <div className={`flex-1 flex flex-col gap-4 border-l-2 border-slate-50 pl-6 md:pl-12 pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
-                                {dayEvents.map((event, index) => (
+                                {dayEvents.map((event) => (
                                     <div 
                                         key={event.id} 
-                                        ref={isToday && index === 0 ? firstEventRef : null}
+                                        ref={isToday ? firstEventRef : null}
                                         className={`hover:translate-x-1 transition-transform duration-300 ${scrollMarginClass}`}
                                     >
                                         <CalendarEventCard
