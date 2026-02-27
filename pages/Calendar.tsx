@@ -1406,7 +1406,7 @@ const Calendar: React.FC = () => {
               }`}
             >
               {/* Header Section for Day View */}
-              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md ${
+              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-t-[0] md:rounded-[2rem] border-b md:border shadow-none md:shadow-sm mx-0 md:mx-8 mt-0 md:mt-4 transition-all duration-500 hover:shadow-none md:hover:shadow-md ${
                 isWeekend && !isToday ? 'bg-orange-50/30 border-orange-100' : 'bg-slate-50/50 border-slate-100'
               }`}>
                 <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
@@ -1420,7 +1420,7 @@ const Calendar: React.FC = () => {
                     <p className="hidden md:block text-[10px] text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">
                       {isWeekend ? 'Planejamento de final de semana' : 'Visualize os agendamentos de hoje'}
                     </p>
-                    <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Gestão diária de tarefas</p>
+                    <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Gestão diária de atividades</p>
                   </div>
                 </div>
               </div>
