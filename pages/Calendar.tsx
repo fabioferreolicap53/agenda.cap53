@@ -335,9 +335,13 @@ const Calendar: React.FC = () => {
 
     // Check for mobile/tablet breakpoint
     const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
+    const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
     useEffect(() => {
-        const handleResize = () => setIsMobileOrTablet(window.innerWidth < 1024);
+        const handleResize = () => {
+          setIsMobileOrTablet(window.innerWidth < 1024);
+          setIsMobile(window.innerWidth < 768);
+        };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -364,6 +368,7 @@ const Calendar: React.FC = () => {
   const todayRef = useRef<HTMLDivElement>(null);
   const firstEventRef = useRef<HTMLDivElement>(null);
   const agendaTargetRef = useRef<HTMLDivElement>(null);
+  const monthWeekTargetRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Scroll Margin based on sticky bars and filters state
   const scrollMarginClass = useMemo(() => {
@@ -387,6 +392,32 @@ const Calendar: React.FC = () => {
       .sort((a, b) => new Date(a.date_start || '').getTime() - new Date(b.date_start || '').getTime());
   }, [filteredEvents, currentDate]);
 
+  const monthRangeStart = useMemo(() => {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [currentDate]);
+
+  const monthRangeEnd = useMemo(() => {
+    const d = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [currentDate]);
+
+  const weekRangeStart = useMemo(() => {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, [currentDate]);
+
+  const weekRangeEnd = useMemo(() => {
+    const d = new Date(weekRangeStart);
+    d.setDate(d.getDate() + 6);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  }, [weekRangeStart]);
+
   const agendaTargetDateKey = useMemo(() => {
     if (agendaMonthEvents.length === 0) return null;
     const todayStart = new Date();
@@ -401,6 +432,55 @@ const Calendar: React.FC = () => {
     const nextEvent = agendaMonthEvents.find(e => new Date(e.date_start || '') > todayEnd);
     return new Date((nextEvent || agendaMonthEvents[0]).date_start || '').toDateString();
   }, [agendaMonthEvents]);
+
+  const monthTargetDateKey = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    if (agendaMonthEvents.length === 0) {
+      const today = new Date();
+      if (today >= monthRangeStart && today <= monthRangeEnd) return today.toDateString();
+      return monthRangeStart.toDateString();
+    }
+    const todayEvent = agendaMonthEvents.find(e => {
+      const d = new Date(e.date_start || '');
+      return d >= todayStart && d <= todayEnd;
+    });
+    if (todayEvent) return new Date(todayEvent.date_start || '').toDateString();
+    const nextEvent = agendaMonthEvents.find(e => new Date(e.date_start || '') > todayEnd);
+    if (nextEvent) return new Date(nextEvent.date_start || '').toDateString();
+    return monthRangeStart.toDateString();
+  }, [agendaMonthEvents, monthRangeStart, monthRangeEnd]);
+
+  const weekEvents = useMemo(() => {
+    return filteredEvents
+      .filter(e => {
+        const d = new Date(e.date_start || '');
+        return d >= weekRangeStart && d <= weekRangeEnd;
+      })
+      .sort((a, b) => new Date(a.date_start || '').getTime() - new Date(b.date_start || '').getTime());
+  }, [filteredEvents, weekRangeStart, weekRangeEnd]);
+
+  const weekTargetDateKey = useMemo(() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    if (weekEvents.length === 0) {
+      const today = new Date();
+      if (today >= weekRangeStart && today <= weekRangeEnd) return today.toDateString();
+      return weekRangeStart.toDateString();
+    }
+    const todayEvent = weekEvents.find(e => {
+      const d = new Date(e.date_start || '');
+      return d >= todayStart && d <= todayEnd;
+    });
+    if (todayEvent) return new Date(todayEvent.date_start || '').toDateString();
+    const nextEvent = weekEvents.find(e => new Date(e.date_start || '') > todayEnd);
+    if (nextEvent) return new Date(nextEvent.date_start || '').toDateString();
+    return weekRangeStart.toDateString();
+  }, [weekEvents, weekRangeStart, weekRangeEnd]);
 
   // Animation States
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
@@ -433,13 +513,18 @@ const Calendar: React.FC = () => {
         inline: 'center'
       };
 
-      // Prioritize focusing on the first event if it exists (only for DIA view on desktop)
-      if (viewType === 'day' && firstEventRef.current && !isMobileOrTablet) {
+      // Prioritize focusing on the first event if it exists (only for DIA view on desktop/tablet)
+      if (viewType === 'day' && firstEventRef.current && !isMobile) {
         firstEventRef.current.scrollIntoView(scrollConfig);
         return;
       }
 
-      if (viewType === 'agenda' && isMobileOrTablet && agendaTargetRef.current) {
+      if ((viewType === 'month' || viewType === 'week') && monthWeekTargetRef.current) {
+        monthWeekTargetRef.current.scrollIntoView(scrollConfig);
+        return;
+      }
+
+      if (viewType === 'agenda' && agendaTargetRef.current) {
         agendaTargetRef.current.scrollIntoView(scrollConfig);
         return;
       }
@@ -1064,7 +1149,7 @@ const Calendar: React.FC = () => {
                   return (
                     <div
                       key={idx}
-                      ref={isToday ? todayRef : null}
+                      ref={dateKey === monthTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
                       onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
                       className={`flex flex-col p-1.5 md:p-2.5 relative group transition-all duration-300 cursor-default min-h-[120px] ${scrollMarginClass} ${
                         dateObj.type === 'current' 
@@ -1149,7 +1234,7 @@ const Calendar: React.FC = () => {
                 return (
                   <div 
                     key={idx} 
-                    ref={isToday ? todayRef : null}
+                    ref={dateKey === monthTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
                     className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
                       isToday 
                         ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
@@ -1295,7 +1380,7 @@ const Calendar: React.FC = () => {
                   return (
                     <div
                       key={idx}
-                      ref={isToday ? todayRef : null}
+                      ref={date.toDateString() === weekTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
                       onDoubleClick={() => handleDayDoubleClick(date)}
                       className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${scrollMarginClass} ${
                         isToday 
@@ -1347,7 +1432,7 @@ const Calendar: React.FC = () => {
                 return (
                   <div 
                     key={idx} 
-                    ref={isToday ? todayRef : null}
+                    ref={dateKey === weekTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
                     className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
                       isToday 
                         ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
