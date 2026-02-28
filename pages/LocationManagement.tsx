@@ -4,6 +4,19 @@ import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import ConfirmationModal from '../components/ConfirmationModal';
 
+const EVENT_TYPES_ORDER = [
+    'EVENTO',
+    'REUNIÃO',
+    'TREINAMENTO',
+    'OFICINA',
+    'COMPROMISSO',
+    'COLEGIADO',
+    'REUNIÃO DE GESTORES',
+    'REUNIÃO DE PLANEJAMENTO',
+    'SEMINÁRIO',
+    'PALESTRA'
+];
+
 const LocationManagement: React.FC = () => {
     const { user } = useAuth();
     const location = useLocation();
@@ -47,6 +60,19 @@ const LocationManagement: React.FC = () => {
             loc.name.toLowerCase().includes(lowerSearch)
         );
     }, [locations, searchTerm]);
+
+    const orderedEventTypes = useMemo(() => {
+        const eventTypesByName = new Map(
+            eventTypes.map(type => [String(type.name || '').trim().toLowerCase(), type])
+        );
+        return EVENT_TYPES_ORDER
+            .map(label => {
+                const normalized = label.trim().toLowerCase();
+                const type = eventTypesByName.get(normalized);
+                return type ? { type, label } : null;
+            })
+            .filter((item): item is { type: (typeof eventTypes)[number]; label: string } => Boolean(item));
+    }, [eventTypes]);
 
     // Inscrever para atualizações em tempo real
     useEffect(() => {
@@ -738,21 +764,21 @@ const LocationManagement: React.FC = () => {
                             <h2 className="text-base font-bold tracking-tight text-primary uppercase tracking-widest">Tipos de Evento</h2>
                         </div>
                         <span className="bg-primary/10 text-primary text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter">
-                            {eventTypes.length} {eventTypes.length === 1 ? 'Tipo' : 'Tipos'}
+                            {orderedEventTypes.length} {orderedEventTypes.length === 1 ? 'Tipo' : 'Tipos'}
                         </span>
                     </div>
                     <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <tbody className="divide-y divide-border-light">
-                                {eventTypes.length === 0 && (
+                                {orderedEventTypes.length === 0 && (
                                     <tr>
                                         <td className="px-6 py-10 text-center text-gray-400 italic text-sm">Nenhum tipo cadastrado.</td>
                                     </tr>
                                 )}
-                                {eventTypes.map(type => (
-                                    <tr key={type.id} className="group hover:bg-primary/[0.01] transition-colors">
+                                {orderedEventTypes.map(item => (
+                                    <tr key={item.type.id} className="group hover:bg-primary/[0.01] transition-colors">
                                         <td className="px-6 py-4">
-                                            {editingTypeId === type.id ? (
+                                            {editingTypeId === item.type.id ? (
                                                 <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-200">
                                                     <input
                                                         type="text"
@@ -761,7 +787,7 @@ const LocationManagement: React.FC = () => {
                                                         className="w-full rounded-xl border-2 border-primary/30 px-3 py-1.5 text-sm focus:border-primary outline-none font-bold"
                                                         autoFocus
                                                     />
-                                                    <button onClick={() => handleSaveEditType(type.id)} className="size-8 rounded-lg bg-green-500 text-white flex items-center justify-center hover:bg-green-600 shadow-sm transition-all active:scale-90" title="Confirmar"><span className="material-symbols-outlined text-lg">check</span></button>
+                                                    <button onClick={() => handleSaveEditType(item.type.id)} className="size-8 rounded-lg bg-green-500 text-white flex items-center justify-center hover:bg-green-600 shadow-sm transition-all active:scale-90" title="Confirmar"><span className="material-symbols-outlined text-lg">check</span></button>
                                                     <button onClick={cancelEditingType} className="size-8 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition-all active:scale-90" title="Cancelar"><span className="material-symbols-outlined text-lg">close</span></button>
                                                 </div>
                                             ) : (
@@ -771,26 +797,26 @@ const LocationManagement: React.FC = () => {
                                                             <span className="material-symbols-outlined text-xl">label</span>
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className={`text-sm font-black ${type.active ? 'text-text-main' : 'text-gray-400 line-through'} leading-tight`}>{type.name}</span>
+                                                            <span className={`text-sm font-black ${item.type.active ? 'text-text-main' : 'text-gray-400 line-through'} leading-tight`}>{item.label}</span>
                                                             <div className="flex items-center gap-3 mt-0.5">
                                                                 <button 
-                                                                    onClick={() => startEditingType(type)} 
+                                                                    onClick={() => startEditingType(item.type)} 
                                                                     className="flex items-center gap-1 text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-all hover:underline"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[12px]">edit</span>
                                                                     EDITAR
                                                                 </button>
                                                                 <button 
-                                                                    onClick={() => toggleEventTypeActive(type.id, type.active)} 
+                                                                    onClick={() => toggleEventTypeActive(item.type.id, item.type.active)} 
                                                                     className="text-[10px] font-bold text-gray-500 opacity-0 group-hover:opacity-100 transition-all hover:underline"
                                                                 >
-                                                                    {type.active ? 'DESATIVAR' : 'ATIVAR'}
+                                                                    {item.type.active ? 'DESATIVAR' : 'ATIVAR'}
                                                                 </button>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <button 
-                                                        onClick={() => handleDeleteType(type.id)} 
+                                                        onClick={() => handleDeleteType(item.type.id)} 
                                                         className="size-8 rounded-lg bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all opacity-0 group-hover:opacity-100 shadow-sm active:scale-90"
                                                         title="Excluir Tipo"
                                                     >

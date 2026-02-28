@@ -130,30 +130,41 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
     );
   }
 
+  const selectedLoc = locations.find(l => l.id === value.fixedId);
+  const showNoConflictNotice = selectedLoc ? !normalizeBoolean(selectedLoc.conflict_control) : false;
+
   return (
-    <CustomSelect
-      value={value.fixedId || ''}
-      onChange={(val) => {
-        if (val === 'external') {
-          handleModeSwitch('free');
-        } else {
-          onChange({ mode: 'fixed', fixedId: val, freeText: '' });
-        }
-      }}
-      placeholder="Onde ocorrerá?"
-      required={required}
-      className="h-14"
-      disabled={loading}
-      options={[
-        { value: 'external', label: '📍 LUGAR EXTERNO NÃO FIXO' },
-        ...locations
-          .filter(loc => normalizeBoolean(loc.is_available) || loc.id === value.fixedId)
-          .map(loc => ({
-            value: loc.id,
-            label: `${loc.name}${normalizeBoolean(loc.conflict_control) ? ' (C/ Conflito)' : ''}`
-          }))
-      ]}
-    />
+    <div className="space-y-2">
+      <CustomSelect
+        value={value.fixedId || ''}
+        onChange={(val) => {
+          if (val === 'external') {
+            handleModeSwitch('free');
+          } else {
+            onChange({ mode: 'fixed', fixedId: val, freeText: '' });
+          }
+        }}
+        placeholder="Onde ocorrerá?"
+        required={required}
+        className="h-14"
+        disabled={loading}
+        options={[
+          { value: 'external', label: '📍 LUGAR EXTERNO NÃO FIXO' },
+          ...locations
+            .filter(loc => normalizeBoolean(loc.is_available) || loc.id === value.fixedId)
+            .map(loc => ({
+              value: loc.id,
+              label: `${loc.name}${normalizeBoolean(loc.conflict_control) ? ' (C/ Conflito)' : ''}`
+            }))
+        ]}
+      />
+      {showNoConflictNotice && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-100 bg-amber-50 text-amber-700 text-[11px] font-semibold">
+          <span className="material-symbols-outlined text-[16px]">info</span>
+          É necessário contatar os responsáveis pelo local para liberação do evento.
+        </div>
+      )}
+    </div>
   );
 };
 

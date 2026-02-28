@@ -168,12 +168,15 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
               </div>
             )}
 
-            {getEstimatedParticipants(event) > 0 && (
+            {(() => {
+              const est = getEstimatedParticipants({ estimated_participants: event.estimated_participants });
+              return event.event_responsibility !== 'EXTERNO_COMPROMISSO' && est > 0 ? (
                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md border border-amber-100/50 text-[11px]" title="Quantidade Estimada de Presentes">
                  <span className="material-symbols-outlined text-[14px]">groups</span>
-                 <span className="font-bold">Est. {getEstimatedParticipants(event)}</span>
+                 <span className="font-bold">Est. {est}</span>
                </div>
-            )}
+              ) : null;
+            })()}
             
             {(event.location || event.custom_location) && (
               <div className="flex items-center gap-1.5 max-w-[200px] truncate">

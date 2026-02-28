@@ -2220,7 +2220,7 @@ const CalendarTooltip: React.FC<{
               <span className="text-[11px] font-bold text-text-main">
                 {totalConfirmed} {totalConfirmed === 1 ? 'Participante' : 'Participantes'}
               </span>
-              {getEstimatedParticipants(event) > 0 && (
+              {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && getEstimatedParticipants(event) > 0 && (
                    <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-text-secondary bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 w-fit">
                      <span className="material-symbols-outlined text-[12px] opacity-70">groups</span>
                      <span>Est. {getEstimatedParticipants(event)} pessoas</span>
@@ -2462,7 +2462,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                  <div className="flex md:hidden items-center gap-0.5 text-[9px] font-bold text-slate-400">
                     <span className="material-symbols-outlined text-[10px]">group</span>
                     {participantCount}
-                    {event.estimated_participants && (
+                    {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && event.estimated_participants && (
                         <span className="ml-0.5 text-[8px] opacity-70">(Est. {event.estimated_participants})</span>
                     )}
                  </div>
@@ -2521,7 +2521,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                     <span className="material-symbols-outlined text-[14px] text-slate-400">group</span>
                     <span className="text-[10px] font-bold text-slate-600">
                         {participantCount}
-                        {event.estimated_participants && (
+                        {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && event.estimated_participants && (
                             <span className="text-slate-400 font-medium ml-1">
                                 (Est. {event.estimated_participants})
                             </span>

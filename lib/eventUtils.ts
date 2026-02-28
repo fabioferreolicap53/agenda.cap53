@@ -3,51 +3,14 @@ import { notifyEventStatusChange, EventData } from './notificationUtils';
 import { EventsResponse, ParticipantesRecord, SolicitacoesEventoRecord } from './pocketbase-types';
 
 /**
- * Calculates the estimated number of participants for an event.
- * Logic:
- * If 'estimated_participants' field is set, use it.
- * Otherwise:
- *   1 (Creator)
- *   + Count of participants (accepted + pending)
- *   + Count of requests (pending)
- *   - Count of declined participants (already excluded if we sum only accepted+pending)
- *   - Count of rejected requests (already excluded if we sum only pending)
- * 
- * So simplified:
- *   1 (Creator) + Count(Participants where status != 'declined') + Count(Requests where status == 'pending')
- * 
- * @param event The event object (must include expand.participants and expand.agenda_cap53_solicitacoes_evento_via_event)
- * @returns The estimated number of participants.
+ * Returns the explicit estimated_participants value only when provided (>0).
+ * If the field is empty, null, 0 or missing, returns 0 to avoid propagating a guess.
  */
-export const getEstimatedParticipants = (event: EventsResponse<any>): number => {
-    if (event.estimated_participants && event.estimated_participants > 0) {
-        return event.estimated_participants;
-    }
+export type HasEstimatedParticipants = { estimated_participants?: number | null } | null | undefined;
 
-    let count = 1; // Creator (assumed attending unless declined explicitly in participants list?)
-
-    // Participants
-    const participants = event.expand?.participants as ParticipantesRecord[] || [];
-    // Check if creator is already in participants list to avoid double counting
-    const creatorInList = participants.some(p => p.user === event.user);
-    if (creatorInList) {
-        count = 0; // Will be counted in the loop below
-    }
-
-    // Count non-declined participants
-    const validParticipants = participants.filter(p => p.status !== 'declined');
-    count += validParticipants.length;
-
-    // Requests (Pending)
-    // Note: The reverse relation expand name might vary. Assuming 'agenda_cap53_solicitacoes_evento_via_event' based on standard PB naming for reverse relation.
-    // Or it might be 'solicitacoes_evento(event)'.
-    // We should check the actual expand property in the response or try both standard patterns.
-    const requests = (event.expand?.['agenda_cap53_solicitacoes_evento(event)'] || event.expand?.solicitacoes_evento) as SolicitacoesEventoRecord[] || [];
-    
-    const pendingRequests = requests.filter(r => r.status === 'pending');
-    count += pendingRequests.length;
-
-    return count;
+export const getEstimatedParticipants = (event: HasEstimatedParticipants): number => {
+    const val = Number((event as any)?.estimated_participants ?? 0);
+    return Number.isFinite(val) && val > 0 ? val : 0;
 };
 
 /**

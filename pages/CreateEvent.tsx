@@ -10,7 +10,7 @@ import CustomDatePicker from '../components/CustomDatePicker';
 import CustomTimePicker from '../components/CustomTimePicker';
 import LocationField, { LocationState, normalizeBoolean } from '../components/LocationField';
 import ConflictModal from '../components/ConflictModal';
-import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
+import { EVENT_TYPES_ORDER, INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
 
 const UNIDADES = [
   'CF ALICE DE JESUS REGO', 'CF DEOLINDO COUTO', 'CF EDSON ABDALLA SAAD',
@@ -118,6 +118,20 @@ const CreateEvent: React.FC = () => {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [isDateInvalid, setIsDateInvalid] = useState(false);
   const [isDurationInvalid, setIsDurationInvalid] = useState(false);
+
+  const orderedEventTypeOptions = useMemo(() => {
+    const eventTypesByName = new Map(
+      eventTypes.map(type => [String(type.name || '').trim().toLowerCase(), type])
+    );
+    const ordered = EVENT_TYPES_ORDER
+      .map(label => {
+        const normalized = label.trim().toLowerCase();
+        const type = eventTypesByName.get(normalized);
+        return type ? { value: type.name, label } : null;
+      })
+      .filter((item): item is { value: string; label: string } => Boolean(item));
+    return ordered.length > 0 ? ordered : eventTypes.map(t => ({ value: t.name, label: t.name }));
+  }, [eventTypes]);
   const [isTransportTimeInvalid, setIsTransportTimeInvalid] = useState(false);
   const [isConflictCheckLoading, setIsConflictCheckLoading] = useState(false);
   // Quantity State
@@ -323,7 +337,7 @@ const CreateEvent: React.FC = () => {
         unidades: selectedUnidades,
         categorias_profissionais: selectedCategorias,
         is_restricted: isRestricted,
-        estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : null,
+        estimated_participants: responsibility === 'EXTERNO_COMPROMISSO' ? null : (estimatedParticipants ? parseInt(estimatedParticipants) : null),
         transporte_status: transporteSuporte ? (existingTransporteStatus || 'pending') : null,
         participants_status: participantsStatus,
         participants_roles: participantsRoles,
@@ -426,7 +440,7 @@ const CreateEvent: React.FC = () => {
           ));
 
           // Send notifications using service
-          const estimatedText = estimatedParticipants ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
+          const estimatedText = (responsibility !== 'EXTERNO_COMPROMISSO' && estimatedParticipants) ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
           await notificationService.bulkCreateNotifications(
             selectedParticipants.filter(pId => pId !== user?.id),
             {
@@ -585,7 +599,7 @@ const CreateEvent: React.FC = () => {
 
                   console.log('🎯 Usuários a serem notificados:', targetUserIds);
 
-                  const estimatedText = estimatedParticipants ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
+                  const estimatedText = (responsibility !== 'EXTERNO_COMPROMISSO' && estimatedParticipants) ? `\n\nQuantidade estimada de presentes: ${estimatedParticipants} pessoas.` : '';
 
                   return notificationService.bulkCreateNotifications(
                     targetUserIds,
@@ -595,7 +609,7 @@ const CreateEvent: React.FC = () => {
                       type: 'almc_item_request',
                       related_request: req.id,
                       event: eventId || undefined,
-                      data: { kind: 'almc_item_request', quantity: req.quantity || 1, item: req.item, estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined }
+                      data: { kind: 'almc_item_request', quantity: req.quantity || 1, item: req.item, estimated_participants: responsibility !== 'EXTERNO_COMPROMISSO' && estimatedParticipants ? parseInt(estimatedParticipants) : undefined }
                     }
                   ).then(results => {
                     console.log('✅ bulkCreateNotifications concluído:', results.length, 'notificações criadas');
@@ -635,7 +649,7 @@ const CreateEvent: React.FC = () => {
                         destino: transporteDestino,
                         horario_levar: transporteHorarioLevar,
                         horario_buscar: transporteHorarioBuscar,
-                        estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined
+                        estimated_participants: responsibility !== 'EXTERNO_COMPROMISSO' && estimatedParticipants ? parseInt(estimatedParticipants) : undefined
                       }
                     }
                   );
@@ -1081,6 +1095,12 @@ const CreateEvent: React.FC = () => {
       // as they are managed when items are added/removed, but we could if needed.
     }
   }, [logisticaRecursos]);
+
+  useEffect(() => {
+    if (responsibility === 'EXTERNO_COMPROMISSO') {
+      setEstimatedParticipants('');
+    }
+  }, [responsibility]);
 
   useEffect(() => {
     console.log('--- CreateEvent: useEffect para fetchInitialData acionado ---');
@@ -1573,7 +1593,7 @@ const CreateEvent: React.FC = () => {
                     placeholder="Selecione o tipo..."
                     required
                     className="h-14"
-                    options={eventTypes.map(t => ({ value: t.name, label: t.name }))}
+                    options={orderedEventTypeOptions}
                   />
                 </div>
 
@@ -1617,7 +1637,7 @@ const CreateEvent: React.FC = () => {
                 </div>
 
                 <div className="md:col-span-1 space-y-2">
-                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1 block truncate" title="Responsabilidade pela organização do evento">Responsabilidade pela organização do evento</label>
+                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1 block truncate" title="Responsabilidade pela organização">Responsabilidade pela organização</label>
                   <CustomSelect
                     value={responsibility}
                     onChange={(val) => {
@@ -1712,8 +1732,8 @@ const CreateEvent: React.FC = () => {
 
                 <div className="md:col-span-1 space-y-2 pt-2">
                   <div className="h-4" /> {/* Spacer for label alignment */}
-                  <div className="w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border border-slate-100/60 bg-slate-50/30 transition-all duration-300 focus-within:bg-white focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5 group">
-                    <div className="size-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20">
+                  <div className={`w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-100/60 bg-slate-50/60 opacity-60 cursor-not-allowed' : 'border-slate-100/60 bg-slate-50/30 focus-within:bg-white focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5'}`}>
+                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 text-slate-400'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
                       <span className="material-symbols-outlined text-[24px]">groups</span>
                     </div>
                     <div className="flex-1 flex flex-col justify-center min-w-0">
@@ -1723,8 +1743,10 @@ const CreateEvent: React.FC = () => {
                         min="1"
                         value={estimatedParticipants}
                         onChange={(e) => setEstimatedParticipants(e.target.value)}
-                        className="w-full bg-transparent border-none outline-none font-semibold text-slate-400 text-[10px] p-0 h-4 placeholder:text-slate-300/60"
+                        disabled={responsibility === 'EXTERNO_COMPROMISSO'}
+                        className={`w-full bg-transparent border-none outline-none font-semibold text-[10px] p-0 h-4 placeholder:text-slate-300/60 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'text-slate-300' : 'text-slate-400'}`}
                         placeholder="Ex: 50"
+                        title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : undefined}
                       />
                     </div>
                   </div>

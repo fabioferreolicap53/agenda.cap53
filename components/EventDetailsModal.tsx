@@ -884,7 +884,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             </div>
 
                             {/* Estimated Participants Block */}
-                            {getEstimatedParticipants(event) > 0 && (
+                            {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && getEstimatedParticipants(event) > 0 && (
                                 <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-100 transition-all duration-300 h-full">
                                     <div className="flex items-start gap-4">
                                         <div className="p-3 rounded-xl bg-amber-50 text-amber-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
@@ -1339,174 +1339,136 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         <div className="flex items-center justify-between">
                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Visão Geral</h3>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 sm:p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm col-span-2 sm:col-span-1">
-                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Público do Evento</span>
-                                <div className="space-y-5">
-                                    <div className="flex items-end justify-between">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Confirmados</p>
-                                            <p className="text-2xl font-black text-slate-900 leading-none">
-                                                {Object.values(participantStatus).filter(s => s === 'accepted').length + 1}
-                                            </p>
-                                        </div>
-                                        {Number(event.estimated_participants) > 0 && (
-                                            <div className="text-right space-y-1">
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Estimado</p>
-                                                <p className="text-sm font-bold text-slate-600 leading-none">
-                                                    {event.estimated_participants}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {Number(event.estimated_participants) > 0 && (
-                                        <div className="space-y-2">
-                                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                                                <div 
-                                                    className="h-full bg-amber-500 rounded-full transition-all duration-1000 ease-out"
-                                                    style={{ 
-                                                        width: `${Math.min(100, ((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / Number(event.estimated_participants)) * 100)}%` 
-                                                    }}
-                                                />
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase">
-                                                    {Math.round(((Object.values(participantStatus).filter(s => s === 'accepted').length + 1) / Number(event.estimated_participants)) * 100)}% da meta
-                                                </p>
-                                                {Object.values(participantStatus).filter(s => s === 'accepted').length + 1 > Number(event.estimated_participants) && (
-                                                    <span className="text-[9px] font-bold text-amber-600 uppercase flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[12px]">warning</span>
-                                                        Acima do esperado
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm col-span-2 sm:col-span-1">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Status de Confirmação</span>
-                                <div className="space-y-4">
-                                    {[
-                                        { label: 'Confirmados', color: 'bg-green-500', count: Object.values(participantStatus).filter(s => s === 'accepted').length + 1 },
-                                        { 
-                                            label: 'Pendentes', 
-                                            color: 'bg-yellow-500', 
-                                            count: Object.values(participantStatus).filter(s => s === 'pending').length + 
-                                                   eventParticipationRequests.filter(r => r.status === 'pending').length 
-                                        },
-                                        { label: 'Recusados', color: 'bg-red-500', count: Object.values(participantStatus).filter(s => s === 'rejected').length }
-                                    ].map(item => (
-                                        <div key={item.label} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`size-2 rounded-full ${item.color}`} />
-                                                <span className="text-[11px] font-bold text-slate-600">{item.label}</span>
+                                {(() => {
+                                    const confirmed = Object.values(participantStatus).filter(s => s === 'accepted').length + 1;
+                                    const pendentes = Object.values(participantStatus).filter(s => s === 'pending').length + eventParticipationRequests.filter(r => r.status === 'pending').length;
+                                    const recusados = Object.values(participantStatus).filter(s => s === 'rejected').length;
+                                    const total = confirmed + pendentes + recusados;
+                                    const segments = [
+                                        { label: 'Confirmados', color: 'bg-green-500', icon: 'check_circle', count: confirmed },
+                                        { label: 'Pendentes', color: 'bg-yellow-500', icon: 'schedule', count: pendentes },
+                                        { label: 'Recusados', color: 'bg-red-500', icon: 'cancel', count: recusados }
+                                    ];
+                                    return (
+                                        <div className="space-y-4">
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                {segments.map(s => (
+                                                    <div key={s.label} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className={`size-7 rounded-lg flex items-center justify-center text-white ${s.color}`}>
+                                                                <span className="material-symbols-outlined text-[16px]"> {s.icon} </span>
+                                                            </span>
+                                                            <span className="text-[11px] font-bold text-slate-600">{s.label}</span>
+                                                        </div>
+                                                        <span className="text-[13px] font-black text-slate-900">{s.count}</span>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            <span className="text-[11px] font-black text-slate-900">{item.count}</span>
+                                            {total > 0 && (
+                                                <div className="h-2 w-full rounded-full bg-slate-100 overflow-hidden flex">
+                                                    <div className="h-full bg-green-500" style={{ width: `${(confirmed / total) * 100}%` }} />
+                                                    <div className="h-full bg-yellow-500" style={{ width: `${(pendentes / total) * 100}%` }} />
+                                                    <div className="h-full bg-red-500" style={{ width: `${(recusados / total) * 100}%` }} />
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
+                                    );
+                                })()}
                             </div>
-                            <div className="p-4 sm:p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm col-span-2">
+                            <div className="p-4 sm:p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Infraestrutura</span>
-                                <div className="space-y-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {/* ALMC Status */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/60">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">inventory_2</span>
                                             <span className="text-[11px] font-bold text-slate-600">Almoxarifado</span>
                                         </div>
                                         {(() => {
                                             const almcReqs = requests.filter(r => r.expand?.item?.category === 'ALMOXARIFADO');
-                                            if (almcReqs.length === 0) return <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>;
+                                            if (almcReqs.length === 0) return <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Não solicitado</span>;
                                             
                                             const status = almcReqs.some(r => r.status === 'rejected') ? 'rejected' : 
                                                           almcReqs.some(r => r.status === 'pending') ? 'pending' : 'approved';
                                             
                                             return (
-                                                <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
-                                                    <span className={`text-[10px] font-black uppercase ${
-                                                        status === 'approved' ? 'text-green-600' : 
-                                                        status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
-                                                    }`}>
-                                                        {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
-                                                    </span>
-                                                </div>
+                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                    status === 'approved' ? 'bg-green-50 text-green-600' : 
+                                                    status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'
+                                                }`}>
+                                                    {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
+                                                </span>
                                             );
                                         })()}
                                     </div>
 
                                     {/* COPA Status */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/60">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">local_cafe</span>
                                             <span className="text-[11px] font-bold text-slate-600">Copa</span>
                                         </div>
                                         {(() => {
                                             const copaReqs = requests.filter(r => r.expand?.item?.category === 'COPA');
-                                            if (copaReqs.length === 0) return <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>;
+                                            if (copaReqs.length === 0) return <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Não solicitado</span>;
                                             
                                             const status = copaReqs.some(r => r.status === 'rejected') ? 'rejected' : 
                                                           copaReqs.some(r => r.status === 'pending') ? 'pending' : 'approved';
                                             
                                             return (
-                                                <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
-                                                    <span className={`text-[10px] font-black uppercase ${
-                                                        status === 'approved' ? 'text-green-600' : 
-                                                        status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
-                                                    }`}>
-                                                        {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
-                                                    </span>
-                                                </div>
+                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                    status === 'approved' ? 'bg-green-50 text-green-600' : 
+                                                    status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'
+                                                }`}>
+                                                    {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
+                                                </span>
                                             );
                                         })()}
                                     </div>
 
                                     {/* DCA Status */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/60">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">laptop_mac</span>
                                             <span className="text-[11px] font-bold text-slate-600">Informática</span>
                                         </div>
                                         {(() => {
                                             const dcaReqs = requests.filter(r => r.expand?.item?.category === 'INFORMATICA');
-                                            if (dcaReqs.length === 0) return <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>;
+                                            if (dcaReqs.length === 0) return <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Não solicitado</span>;
                                             
                                             const status = dcaReqs.some(r => r.status === 'rejected') ? 'rejected' : 
                                                           dcaReqs.some(r => r.status === 'pending') ? 'pending' : 'approved';
                                             
                                             return (
-                                                <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
-                                                    <span className={`text-[10px] font-black uppercase ${
-                                                        status === 'approved' ? 'text-green-600' : 
-                                                        status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
-                                                    }`}>
-                                                        {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
-                                                    </span>
-                                                </div>
+                                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                    status === 'approved' ? 'bg-green-50 text-green-600' : 
+                                                    status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'
+                                                }`}>
+                                                    {status === 'approved' ? 'Aceito' : status === 'rejected' ? 'Recusado' : 'Pendente'}
+                                                </span>
                                             );
                                         })()}
                                     </div>
 
                                     {/* TRA Status */}
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                                    <div className="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/60">
                                         <div className="flex items-center gap-2">
                                             <span className="material-symbols-outlined text-lg text-slate-400">directions_car</span>
                                             <span className="text-[11px] font-bold text-slate-600">Transporte</span>
                                         </div>
                                         {event.transporte_suporte ? (
-                                            <div className="flex flex-col items-start sm:items-end pl-7 sm:pl-0">
-                                                <span className={`text-[10px] font-black uppercase ${
-                                                    event.transporte_status === 'confirmed' ? 'text-green-600' : 
-                                                    event.transporte_status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
-                                                }`}>
-                                                    {event.transporte_status === 'confirmed' ? 'Aceito' : 
-                                                     event.transporte_status === 'rejected' ? 'Recusado' : 'Pendente'}
-                                                </span>
-                                            </div>
+                                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                                event.transporte_status === 'confirmed' ? 'bg-green-50 text-green-600' : 
+                                                event.transporte_status === 'rejected' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'
+                                            }`}>
+                                                {event.transporte_status === 'confirmed' ? 'Aceito' : 
+                                                 event.transporte_status === 'rejected' ? 'Recusado' : 'Pendente'}
+                                            </span>
                                         ) : (
-                                            <span className="text-[10px] font-black text-slate-300 uppercase pl-7 sm:pl-0">Não Solic.</span>
+                                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-400">Não solicitado</span>
                                         )}
                                     </div>
                                 </div>
