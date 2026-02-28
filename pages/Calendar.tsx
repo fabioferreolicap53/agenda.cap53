@@ -346,19 +346,26 @@ const Calendar: React.FC = () => {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
+    const viewParam = searchParams.get('view');
+
     // Enforce initial view if no view parameter is present
     useEffect(() => {
-        if (!searchParams.get('view')) {
+        if (!viewParam) {
             const defaultView = isMobileOrTablet ? 'day' : 'month';
+            if (viewType !== defaultView) {
+              setViewType(defaultView);
+            }
             updateURL(defaultView, currentDate, true);
         }
-    }, [isMobileOrTablet]);
+    }, [isMobileOrTablet, viewType, currentDate, viewParam]);
 
     // Check if we are on the initial default view
     const isInitialView = useMemo(() => {
-        const defaultView = isMobileOrTablet ? 'agenda' : 'month';
+        const defaultView = isMobileOrTablet ? 'day' : 'month';
         return viewType === defaultView;
     }, [viewType, isMobileOrTablet]);
+
+    const showBackButton = !isMobileOrTablet && !isInitialView;
   const [tooltipData, setTooltipData] = useState<{ event: CalendarEvent, x: number, y: number, height: number } | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -905,7 +912,7 @@ const Calendar: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-0">
                   {/* Botão Voltar */}
-                  {!isInitialView && (
+                  {showBackButton && (
                     <button
                       onClick={() => navigate(-1)}
                       className="size-[42px] flex items-center justify-center rounded-xl bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group"
