@@ -1162,7 +1162,7 @@ const Calendar: React.FC = () => {
                         dateObj.type === 'current' 
                           ? (isToday 
                               ? 'bg-primary/[0.04] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.05)] ring-1 ring-inset ring-primary/20' 
-                              : (isWeekend ? 'bg-slate-50/80 hover:bg-slate-100/80' : 'bg-white hover:bg-slate-50/50')) 
+                              : (isWeekend ? 'bg-orange-50/60 hover:bg-orange-100/60' : 'bg-white hover:bg-slate-50/50')) 
                           : 'bg-slate-100/70 text-text-secondary/40'
                       }`}
                     >
@@ -1189,7 +1189,7 @@ const Calendar: React.FC = () => {
                           className={`text-[11px] md:text-xs font-black size-6 md:size-7 flex items-center justify-center transition-all duration-300 rounded-full ${
                             isToday 
                               ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-110 ring-2 ring-white' 
-                              : (isWeekend && dateObj.type === 'current' ? 'text-orange-600/70 group-hover:text-primary hover:bg-primary/10' : 'text-text-secondary group-hover:text-primary hover:bg-primary/10')
+                              : (isWeekend && dateObj.type === 'current' ? 'text-orange-600/80 group-hover:text-primary hover:bg-primary/10' : 'text-text-secondary group-hover:text-primary hover:bg-primary/10')
                           }`}
                         >
                           {dateObj.date.getDate()}
@@ -1245,7 +1245,7 @@ const Calendar: React.FC = () => {
                     className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
                       isToday 
                         ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
-                        : (isWeekend ? 'bg-slate-50/80 border-slate-200' : 'bg-white hover:bg-slate-50/50')
+                        : (isWeekend ? 'bg-orange-50/60 border-orange-200' : 'bg-white hover:bg-slate-50/50')
                     }`}
                   >
                     {/* Subtil pattern for out-of-month days */}
@@ -1261,7 +1261,7 @@ const Calendar: React.FC = () => {
                     
                     <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : (isWeekend ? 'bg-orange-50/30' : 'bg-slate-50/50')}`}>
                       <div className="flex items-center gap-4">
-                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/30' : 'text-text-main opacity-30')}`}>
+                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/80' : 'text-text-main opacity-30')}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
@@ -1340,10 +1340,10 @@ const Calendar: React.FC = () => {
                   const isToday = date.toDateString() === new Date().toDateString();
                   return (
                     <div key={idx} className={`py-1.5 flex flex-col items-center gap-0.5 border-r border-border-light last:border-r-0 transition-all duration-300 ${
-                    isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-50/30' : 'bg-slate-50')
+                    isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-50/60' : 'bg-slate-50')
                   }`}>
                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
-                      isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/60' : 'text-text-secondary')
+                      isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/80' : 'text-text-secondary')
                     }`}>
                       {daysLabels[idx]}
                     </span>
@@ -1393,7 +1393,7 @@ const Calendar: React.FC = () => {
                         isToday 
                           ? 'bg-primary/[0.06] shadow-inner' 
                           : isWeekend
-                            ? 'bg-slate-50/50 hover:bg-slate-100/50'
+                            ? 'bg-orange-50/40 hover:bg-orange-100/40'
                             : isCurrentMonth 
                               ? 'hover:bg-slate-50/30' 
                               : 'bg-slate-100/70'
@@ -1444,7 +1444,7 @@ const Calendar: React.FC = () => {
                       isToday 
                         ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
                         : isWeekend
-                          ? 'bg-slate-50/80 border-slate-200'
+                          ? 'bg-orange-50/60 border-orange-200'
                           : isCurrentMonth 
                             ? 'bg-white hover:bg-slate-50/50' 
                             : 'bg-slate-100/70'
@@ -1466,7 +1466,7 @@ const Calendar: React.FC = () => {
                     )}
                     <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : (isWeekend ? 'bg-orange-50/30' : 'bg-slate-50/50')}`}>
                       <div className="flex items-center gap-4">
-                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/30' : 'text-text-main opacity-30')}`}>
+                        <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/80' : 'text-text-main opacity-30')}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
                         <div className="flex flex-col leading-tight">
@@ -1533,12 +1533,12 @@ const Calendar: React.FC = () => {
               className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${scrollMarginClass} ${
                 isToday 
                   ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
-                  : (isWeekend ? 'bg-slate-50/50' : 'bg-white')
+                  : (isWeekend ? 'bg-orange-50/20' : 'bg-white')
               }`}
             >
               {/* Header Section for Day View */}
               <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md ${
-                isWeekend && !isToday ? 'bg-orange-50/30 border-orange-100' : 'bg-slate-50/50 border-slate-100'
+                isWeekend && !isToday ? 'bg-orange-50/60 border-orange-200' : 'bg-slate-50/50 border-slate-100'
               }`}>
                 <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                   <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
@@ -1812,7 +1812,7 @@ const Calendar: React.FC = () => {
                                 isToday 
                                     ? 'bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
                                     : isWeekend && isCurrentMonth
-                                        ? 'bg-orange-50/40 border-2 border-orange-100/50 hover:bg-orange-50/60'
+                                        ? 'bg-orange-50/40 md:bg-orange-50/60 border-2 border-orange-100/50 hover:bg-orange-50/60 md:hover:bg-orange-50/80'
                                         : isCurrentMonth 
                                             ? 'hover:bg-slate-50/50'
                                             : 'bg-slate-100/70 opacity-80'
@@ -1835,7 +1835,7 @@ const Calendar: React.FC = () => {
                                     isToday 
                                         ? 'text-primary scale-110 drop-shadow-md' 
                                         : isWeekend && isCurrentMonth
-                                            ? 'text-orange-600/30'
+                                            ? 'text-orange-600/80'
                                             : isCurrentMonth 
                                                 ? 'text-text-main opacity-30' 
                                                 : 'text-slate-400'
