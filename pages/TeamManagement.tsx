@@ -19,6 +19,7 @@ const TeamManagement: React.FC = () => {
     const [hasMore, setHasMore] = useState(true);
     const [loading, setLoading] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [stats, setStats] = useState({ total: 0, online: 0 });
     const ITEMS_PER_PAGE = 20;
 
     const [showAvatarModal, setShowAvatarModal] = useState(false);
@@ -131,6 +132,18 @@ const TeamManagement: React.FC = () => {
                 requestKey: 'team_fetch' 
             });
 
+            if (page === 1) {
+                // Fetch stats for the header
+                const allUsers = await pb.collection('agenda_cap53_usuarios').getFullList<UsersResponse>({
+                    filter: 'hidden != true && role != "ALMC" && role != "TRA" && role != "DCA"',
+                    fields: 'id,status'
+                });
+                setStats({
+                    total: allUsers.length,
+                    online: allUsers.filter(u => u.status === 'Online').length
+                });
+            }
+
             setUsers(prev => {
                 if (page === 1) return result.items;
                 // Filter out duplicates just in case
@@ -229,7 +242,46 @@ const TeamManagement: React.FC = () => {
     };
 
     return (
-        <div className="flex flex-col gap-2 md:gap-4 max-w-[1500px] mx-auto w-full p-2 md:p-4">
+        <div className="flex flex-col gap-4 md:gap-8 max-w-[1600px] mx-auto w-full p-4 md:p-8">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-primary text-3xl">groups</span>
+                        </div>
+                        <h1 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
+                            Equipe <span className="text-primary">Cap5.3</span>
+                        </h1>
+                    </div>
+                    <p className="text-slate-500 text-sm md:text-base max-w-2xl font-medium">
+                        Gerencie os membros da equipe, visualize status em tempo real e coordene atividades de forma integrada.
+                    </p>
+                </div>
+
+                {/* Quick Stats */}
+                <div className="flex items-center gap-4">
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 min-w-[140px]">
+                        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-blue-500">person</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total</p>
+                            <p className="text-xl font-black text-slate-900">{stats.total}</p>
+                        </div>
+                    </div>
+                    <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 min-w-[140px]">
+                        <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+                            <span className="material-symbols-outlined text-green-500">sensors</span>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Online</p>
+                            <p className="text-xl font-black text-slate-900">{stats.online}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <TeamFilterBar
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}

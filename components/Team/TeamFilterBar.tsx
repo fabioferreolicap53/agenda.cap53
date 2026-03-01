@@ -24,71 +24,87 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
     onToggleFavoritesOnly
 }) => {
     return (
-        <div className="sticky -top-2 z-[99] bg-white py-3 px-4 -mx-4 md:px-0 md:mx-0 border-b border-gray-100 shadow-sm md:static md:bg-transparent md:mb-4 md:border-none md:shadow-none transition-all">
-            <div className="flex flex-col md:flex-row md:items-center justify-end gap-2 md:gap-3">
-                {/* Search and Actions Wrapper */}
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                    {/* Mobile Search Input */}
-                    <div className="relative group flex-1 md:hidden">
-                        <span className="absolute left-3 top-2.5 text-gray-400 group-focus-within:text-primary material-symbols-outlined text-[20px] transition-colors">search</span>
-                        <input 
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => onSearchChange(e.target.value)}
-                            placeholder="Buscar na equipe..."
-                            className="w-full h-10 pl-10 pr-4 rounded-xl bg-slate-50 border border-slate-200 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all outline-none"
+        <div className="sticky top-0 z-[90] bg-white/80 backdrop-blur-md py-4 px-4 -mx-4 md:px-0 md:mx-0 border-b border-slate-100 md:static md:bg-transparent md:border-none md:shadow-none transition-all">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Search Input - Now visible on all screens */}
+                <div className="relative group flex-1 max-w-md">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary material-symbols-outlined text-[22px] transition-colors">search</span>
+                    <input 
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => onSearchChange(e.target.value)}
+                        placeholder="Buscar por nome, setor ou cargo..."
+                        className="w-full h-12 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-medium focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all outline-none placeholder:text-slate-400"
+                    />
+                </div>
+                
+                <div className="flex items-center gap-3">
+                    {/* Sector Filter - Desktop */}
+                    <div className="hidden md:block w-72">
+                        <CustomSelect
+                            value={selectedSectors}
+                            onChange={onSectorChange}
+                            startIcon="filter_list"
+                            className="h-12 text-sm shadow-sm rounded-2xl"
+                            multiSelect={true}
+                            options={[
+                                { value: 'Todos', label: 'Todos os Setores' },
+                                ...SECTORS.map(s => ({ value: s, label: s }))
+                            ]}
                         />
                     </div>
-                    
-                    <div className="flex items-center gap-2 shrink-0">
-                        {/* Favorites Filter Toggle */}
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2">
+                        {/* Favorites Toggle */}
                         <button
                             onClick={onToggleFavoritesOnly}
-                            className={`flex-none flex items-center justify-center h-10 w-10 md:h-12 md:w-12 rounded-xl border transition-all duration-200 shadow-sm ${
+                            className={`flex items-center justify-center h-12 px-4 rounded-2xl border transition-all duration-300 gap-2 font-bold text-sm ${
                                 showFavoritesOnly
-                                    ? 'bg-rose-50 border-rose-200 text-rose-500 shadow-rose-100' 
-                                    : 'bg-white border-gray-200 text-slate-400 hover:text-rose-400 hover:border-rose-200 hover:bg-rose-50/50'
+                                    ? 'bg-rose-50 border-rose-200 text-rose-500 shadow-lg shadow-rose-100' 
+                                    : 'bg-white border-slate-200 text-slate-500 hover:text-rose-500 hover:border-rose-200 hover:bg-rose-50/30'
                             }`}
                             title={showFavoritesOnly ? "Mostrar todos" : "Mostrar apenas favoritos"}
                         >
                             <span 
-                                className="material-symbols-outlined text-[20px] md:text-[24px]"
+                                className="material-symbols-outlined text-[22px]"
                                 style={showFavoritesOnly ? { fontVariationSettings: "'FILL' 1" } : undefined}
                             >
                                 favorite
                             </span>
+                            <span className="hidden sm:inline">Favoritos</span>
                         </button>
 
                         {/* Mobile Filter Toggle */}
                         <button
                             onClick={onToggleFilters}
-                            className={`md:hidden flex-none flex items-center justify-center h-10 w-10 rounded-xl border transition-all duration-200 shadow-sm ${
+                            className={`md:hidden flex items-center justify-center h-12 w-12 rounded-2xl border transition-all duration-300 ${
                                 showFilters || (!selectedSectors.includes('Todos') && selectedSectors.length > 0)
-                                    ? 'bg-primary border-primary text-white shadow-primary/20' 
-                                    : 'bg-white border-gray-200 text-slate-500 hover:bg-slate-50'
+                                    ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' 
+                                    : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
                             }`}
                         >
-                            <span className="material-symbols-outlined text-[20px]">
-                                {showFilters ? 'close' : 'filter_list'}
+                            <span className="material-symbols-outlined text-[22px]">
+                                {showFilters ? 'close' : 'tune'}
                             </span>
                         </button>
                     </div>
                 </div>
+            </div>
 
-                {/* Sector Filter - Collapsible on Mobile */}
-                <div className={`${showFilters ? 'block' : 'hidden'} md:block w-full md:w-72 animate-in fade-in slide-in-from-top-2 duration-200`}>
-                    <CustomSelect
-                        value={selectedSectors}
-                        onChange={onSectorChange}
-                        startIcon="filter_list"
-                        className="h-10 md:h-12 text-xs md:text-sm shadow-sm"
-                        multiSelect={true}
-                        options={[
-                            { value: 'Todos', label: 'Todos os Setores' },
-                            ...SECTORS.map(s => ({ value: s, label: s }))
-                        ]}
-                    />
-                </div>
+            {/* Mobile Sector Filter - Collapsible */}
+            <div className={`${showFilters ? 'block' : 'hidden'} md:hidden mt-4 animate-in fade-in slide-in-from-top-2 duration-300`}>
+                <CustomSelect
+                    value={selectedSectors}
+                    onChange={onSectorChange}
+                    startIcon="filter_list"
+                    className="h-12 text-sm shadow-sm rounded-2xl"
+                    multiSelect={true}
+                    options={[
+                        { value: 'Todos', label: 'Todos os Setores' },
+                        ...SECTORS.map(s => ({ value: s, label: s }))
+                    ]}
+                />
             </div>
         </div>
     );
