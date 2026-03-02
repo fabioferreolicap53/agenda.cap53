@@ -1,4 +1,4 @@
-﻿import PocketBase from 'pocketbase';
+import PocketBase from 'pocketbase';
 
 const PB_URL = 'https://centraldedados.dev.br';
 const ADMIN_EMAIL = 'fabioferreoli@gmail.com';
@@ -265,7 +265,7 @@ async function createAgendaEventos() {
                 cascadeDelete: false
             }
         },
-        { name: 'status', type: 'select', options: { maxSelect: 1, values: ['active', 'cancelled'] } },
+        { name: 'status', type: 'select', options: { maxSelect: 1, values: ['active', 'canceled'] } },
         { name: 'cancel_reason', type: 'text' },
         { name: 'almoxarifado_items', type: 'json', options: { maxSize: 2000000 } },
         { name: 'copa_items', type: 'json', options: { maxSize: 2000000 } },

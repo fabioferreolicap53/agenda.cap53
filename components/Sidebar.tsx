@@ -81,6 +81,7 @@ const Sidebar: React.FC = () => {
                 )}
               </NavLink>
 
+              {!['DCA', 'ALMC', 'TRA'].includes(user?.role || '') && (
               <NavLink to="/create-event" className={linkClass} onClick={() => setSidebarOpen(false)}>
                 {({ isActive }) => (
                   <>
@@ -89,6 +90,7 @@ const Sidebar: React.FC = () => {
                   </>
                 )}
               </NavLink>
+              )}
 
               <NavLink to="/chat" className={linkClass} onClick={() => setSidebarOpen(false)}>
                 {({ isActive }) => (

@@ -24,7 +24,7 @@ export interface EventData {
  */
 export const notifyEventStatusChange = async (
     event: EventData,
-    action: 'cancelled' | 'deleted',
+    action: 'canceled' | 'deleted',
     reason: string = '',
     actorId: string
 ) => {
@@ -42,6 +42,17 @@ export const notifyEventStatusChange = async (
     } catch (err) {
         // Ignora erro se não encontrar participantes
         console.warn('[NotificationUtils] Aviso ao buscar participantes:', err);
+    }
+
+    // Solicitantes de participação via agenda_cap53_solicitacoes_evento
+    try {
+        const requestsList = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
+            filter: `event = "${event.id}" && status != "rejected"`, // Notifica pendentes e aceitos (embora aceitos devam estar em participantes)
+            fields: 'user'
+        });
+        requestsList.forEach((r: any) => recipients.add(r.user));
+    } catch (err) {
+        console.warn('[NotificationUtils] Aviso ao buscar solicitantes de participação:', err);
     }
 
     // Participantes diretos do objeto do evento (fallback/legado)
@@ -75,9 +86,9 @@ export const notifyEventStatusChange = async (
         });
 
         // 1. Verifica solicitações de itens (Almoxarifado e Informática)
-        // Otimização: Fazemos uma query simples para ver se existem pedidos aprovados
+        // Removemos o filtro de status="approved" para notificar também sobre pedidos pendentes que serão cancelados indiretamente
         const requests = await pb.collection('agenda_cap53_almac_requests').getFullList({
-            filter: `event = "${event.id}" && status = "approved"`,
+            filter: `event = "${event.id}" && status != "rejected"`,
             expand: 'item',
             fields: 'expand.item.category'
         });
@@ -90,7 +101,7 @@ export const notifyEventStatusChange = async (
 
         // 2. Verifica transporte (verificando flag no evento ou status)
         // Se o evento tem suporte de transporte confirmado/pendente, notifica o setor
-        if (event.transporte_suporte || event.transporte_status === 'confirmed' || event.transporte_status === 'approved') {
+        if (event.transporte_suporte || (event.transporte_status && event.transporte_status !== 'rejected' && event.transporte_status !== 'canceled')) {
              usersByRole['TRA'].forEach(uid => recipients.add(uid));
         }
 
@@ -109,10 +120,10 @@ export const notifyEventStatusChange = async (
     console.log(`[NotificationUtils] Enviando notificações para ${recipients.size} usuários.`);
 
     // Preparar dados da notificação
-    const title = action === 'cancelled' ? 'Evento Cancelado' : 'Evento Excluído';
+    const title = action === 'canceled' ? 'Evento Cancelado' : 'Evento Excluído';
     let message = '';
     
-    if (action === 'cancelled') {
+    if (action === 'canceled') {
         message = `O evento "${event.title}" foi cancelado.`;
         if (reason) message += ` Motivo: ${reason}`;
     } else {
@@ -122,7 +133,7 @@ export const notifyEventStatusChange = async (
 
     // Se for exclusão, NÃO vinculamos o ID do evento no campo 'event' porque ele será deletado
     // e o cascade delete apagaria a notificação.
-    const eventIdLink = action === 'cancelled' ? event.id : undefined;
+    const eventIdLink = action === 'canceled' ? event.id : undefined;
 
     await notificationService.bulkCreateNotifications(Array.from(recipients), {
         title,

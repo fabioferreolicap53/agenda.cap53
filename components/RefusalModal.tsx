@@ -6,9 +6,10 @@ interface RefusalModalProps {
   loading?: boolean;
   title?: string;
   description?: string;
+  confirmText?: string;
 }
 
-const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading, title = 'Recusar Solicitação', description }) => {
+const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading, title = 'Recusar Solicitação', description, confirmText = 'Confirmar Recusa' }) => {
   const [justification, setJustification] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -52,7 +53,7 @@ const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all"
+              className="flex-1 py-2.5 text-sm font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-all shadow-sm shadow-slate-300/20"
               disabled={loading}
             >
               Cancelar
@@ -66,8 +67,8 @@ const RefusalModal: React.FC<RefusalModalProps> = ({ onClose, onConfirm, loading
                 <div className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
                 <>
-                  <span className="material-symbols-outlined text-[18px]">send</span>
-                  Confirmar Recusa
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                  {confirmText}
                 </>
               )}
             </button>

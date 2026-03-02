@@ -45,6 +45,16 @@ const CreateEvent: React.FC = () => {
   const location = useLocation();
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (user) {
+        const restrictedRoles = ['DCA', 'ALMC', 'TRA'];
+        if (restrictedRoles.includes(user.role)) {
+            alert('Você não tem permissão para criar eventos.');
+            navigate('/calendar', { replace: true });
+        }
+    }
+  }, [user, navigate]);
+
   const handleFormKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       const target = e.target as HTMLElement;

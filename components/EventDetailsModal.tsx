@@ -142,7 +142,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     );
   };
   
-  const isCancelled = event.transporte_status === 'cancelled' || (event as any).status === 'cancelled';
+  const isCancelled = event.transporte_status === 'canceled' || (event as any).status === 'canceled';
 
   // Fetch participation requests
   const fetchParticipationRequests = async () => {
@@ -318,6 +318,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const handleRequestParticipation = async () => {
     if (!user) return;
     
+    // Verifica se o evento está cancelado
+    if (isCancelled) {
+      alert('Este evento foi cancelado e não aceita novas solicitações.');
+      return;
+    }
+
     // Verifica se o evento é restrito
     if (event.is_restricted) {
       alert('Este evento é restrito e não permite novas solicitações de participação.');
@@ -781,12 +787,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 {event.expand?.type?.name || (event as any).nature || event.type || 'Evento'}
                             </span>
                             {isCancelled && (
-                                <span className="px-1.5 md:px-2 py-0.5 rounded-full bg-red-50 border border-red-100 text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-red-500">
-                                    Cancelado
+                                <span className="px-2 py-1 rounded-md bg-red-500 text-white text-[10px] md:text-[11px] font-black uppercase tracking-widest shadow-sm shadow-red-200">
+                                    CANCELADO
                                 </span>
                             )}
                         </div>
-                        <h2 className="text-base md:text-3xl font-bold text-slate-900 leading-tight tracking-tight line-clamp-2">{event.title}</h2>
+                        <h2 className={`text-base md:text-3xl font-bold leading-tight tracking-tight line-clamp-2 ${isCancelled ? 'text-red-500/80 line-through decoration-2' : 'text-slate-900'}`}>{event.title}</h2>
                     </div>
                     <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                         {!isCancelled && (
@@ -955,7 +961,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                                     {/* Action Buttons based on status */}
                                     <div className="flex justify-end w-full md:w-auto">
-                                        {!participantStatus[user.id] && !hasRequestedParticipation && !showRequestForm && (
+                                        {!participantStatus[user.id] && !hasRequestedParticipation && !showRequestForm && !isCancelled && (
                                             <button 
                                                 onClick={() => setShowRequestForm(true)}
                                                 className="w-full md:w-auto px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
@@ -963,6 +969,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 <span className="material-symbols-outlined text-base md:hidden">send</span>
                                                 Solicitar Participação
                                             </button>
+                                        )}
+
+                                        {isCancelled && !participantStatus[user.id] && (
+                                            <div className="px-4 py-2 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[10px] md:text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2">
+                                                <span className="material-symbols-outlined text-base">event_busy</span>
+                                                Evento Cancelado
+                                            </div>
                                         )}
 
                                         {participantStatus[user.id] === 'pending' && (
@@ -986,7 +999,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     </div>
                                 </div>
 
-                                {showRequestForm && (
+                                {showRequestForm && !isCancelled && (
                                     <div className="pt-4 border-t border-primary/10 space-y-3 animate-in fade-in slide-in-from-top-2">
                                         <textarea
                                             placeholder="Escreva uma mensagem para o criador (opcional)..."

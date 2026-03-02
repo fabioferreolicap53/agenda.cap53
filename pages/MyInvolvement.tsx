@@ -88,7 +88,7 @@ const MyInvolvement: React.FC = () => {
     try {
       // 1. Atualizar status
       await pb.collection('agenda_cap53_eventos').update(eventToCancel.id, {
-        status: 'cancelled',
+        status: 'canceled',
         cancel_reason: justification
       });
 
@@ -96,7 +96,7 @@ const MyInvolvement: React.FC = () => {
       try {
         const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventToCancel.id);
         if (user) {
-          await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', justification, user.id);
+          await notifyEventStatusChange(updatedEvent as unknown as EventData, 'canceled', justification, user.id);
         }
       } catch (notifErr) {
         console.error('Erro ao enviar notificações de cancelamento:', notifErr);
@@ -321,6 +321,7 @@ const MyInvolvement: React.FC = () => {
           loading={processingCancellation}
           title="Cancelar Evento"
           description="Por favor, informe o motivo do cancelamento deste evento. Esta ação notificará todos os participantes."
+          confirmText="Confirmar cancelamento"
         />
       )}
 

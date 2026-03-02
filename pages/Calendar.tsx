@@ -14,6 +14,16 @@ import {
   Collections
 } from '../lib/pocketbase-types';
 
+import ConfirmationModal from '../components/ConfirmationModal';
+import RefusalModal from '../components/RefusalModal';
+import EventDetailsModal from '../components/EventDetailsModal';
+import CustomSelect from '../components/CustomSelect';
+import CustomDayPicker from '../components/CustomDayPicker';
+import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
+import { deleteEventWithCleanup, getEstimatedParticipants } from '../lib/eventUtils';
+import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
+import { useSwipe } from '../hooks/useSwipe';
+
 interface CalendarExpand {
   user?: UsersResponse;
   location?: LocaisResponse;
@@ -50,20 +60,6 @@ interface CalendarEvent extends EventsResponse<CalendarExpand> {
     item: ItensServicoResponse;
   }>[];
 }
-
-import ConfirmationModal from '../components/ConfirmationModal';
-import RefusalModal from '../components/RefusalModal';
-
-import EventDetailsModal from '../components/EventDetailsModal';
-import CustomSelect from '../components/CustomSelect';
-import CustomDayPicker from '../components/CustomDayPicker';
-import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
-
-import { deleteEventWithCleanup } from '../lib/eventUtils';
-import { notifyEventStatusChange, EventData } from '../lib/notificationUtils';
-import { useSwipe } from '../hooks/useSwipe';
-
-import { getEstimatedParticipants } from '../lib/eventUtils';
 
 const Calendar: React.FC = () => {
   const { user } = useAuth();
@@ -761,7 +757,7 @@ const Calendar: React.FC = () => {
     try {
       // 1. Atualizar status
       await pb.collection('agenda_cap53_eventos').update(eventToCancel.id, {
-        status: 'cancelled',
+        status: 'canceled',
         cancel_reason: justification
       });
 
@@ -769,7 +765,7 @@ const Calendar: React.FC = () => {
       try {
         const updatedEvent = await pb.collection('agenda_cap53_eventos').getOne(eventToCancel.id);
         if (user) {
-            await notifyEventStatusChange(updatedEvent as unknown as EventData, 'cancelled', justification, user.id);
+            await notifyEventStatusChange(updatedEvent as unknown as EventData, 'canceled', justification, user.id);
         }
       } catch (notifErr) {
         console.error('Erro ao enviar notificações de cancelamento:', notifErr);
@@ -835,6 +831,11 @@ const Calendar: React.FC = () => {
   };
 
   const handleDayDoubleClick = (date: Date) => {
+    if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+        alert('Você não tem permissão para criar eventos.');
+        return;
+    }
+
     // Use local date components to avoid timezone shifts
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -1662,7 +1663,7 @@ const Calendar: React.FC = () => {
 
                       {/* Mobile View - Optimized Layout */}
                       <div 
-                        className="md:hidden bg-white rounded-xl border border-slate-100 shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform"
+                        className={`md:hidden rounded-xl border shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform ${event.status === 'canceled' ? 'bg-red-50/40 border-red-200' : 'bg-white border-slate-100'}`}
                         onClick={() => setSelectedEvent(event)}
                       >
                         {/* Time Column */}
@@ -1679,7 +1680,7 @@ const Calendar: React.FC = () => {
 
                         {/* Content Column */}
                         <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                          <h4 className={`text-sm font-bold leading-tight break-words ${event.status === 'cancelled' ? 'line-through text-slate-400' : 'text-slate-800'}`}>
+                          <h4 className={`text-sm font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : 'text-slate-800'}`}>
                             {event.title}
                           </h4>
                           
@@ -1696,6 +1697,11 @@ const Calendar: React.FC = () => {
 
                           {/* Status Badges Row */}
                           <div className="flex items-center gap-1.5 mt-1">
+                             {event.status === 'canceled' && (
+                               <span className="text-[9px] font-black text-white bg-red-400 px-1.5 py-0.5 rounded border border-red-500 uppercase tracking-wide">
+                                   CANCELADO
+                               </span>
+                             )}
                              {/* Transport */}
                              {event.transporte_suporte && (
                                <div className={`flex items-center justify-center size-5 rounded border ${
@@ -1959,6 +1965,7 @@ const Calendar: React.FC = () => {
           loading={processingCancellation}
           title="Cancelar Evento"
           description={`Por favor, informe o motivo do cancelamento do evento "${eventToCancel?.title}". Esta ação notificará todos os participantes.`}
+          confirmText="Confirmar cancelamento"
         />
       )}
 
@@ -2139,7 +2146,10 @@ const CalendarTooltip: React.FC<{
     return 'PEND';
   };
 
-  return createPortal(
+  const isCancelled = event.status === 'canceled';
+
+  return (
+    createPortal(
     <div
       ref={tooltipRef}
       style={{ 
@@ -2149,25 +2159,25 @@ const CalendarTooltip: React.FC<{
         transform: `scale(${0.95 + (opacity * 0.05)}) translateY(${(1 - opacity) * 10}px)`,
         transition: 'opacity 200ms ease-out, transform 200ms ease-out'
       }}
-      className="absolute z-[10000] w-[280px] bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] border border-gray-100/50 overflow-hidden pointer-events-none"
+      className={`absolute z-[10000] w-[280px] bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] overflow-hidden pointer-events-none ${isCancelled ? 'border-2 border-red-100 ring-4 ring-red-50' : 'border border-gray-100/50'}`}
     >
       <div className="p-4 space-y-3">
         {/* Header Section */}
         <div className="flex justify-between items-start gap-3">
           <div className="flex flex-col min-w-0">
-            <h4 className="text-base font-black text-primary leading-tight">
+            <h4 className={`text-base font-black leading-tight ${isCancelled ? 'text-red-500 line-through decoration-2' : 'text-primary'}`}>
               {event.title}
             </h4>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[9px] font-bold uppercase tracking-wider text-text-secondary/60 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
                 {event.type || 'Evento'}
               </span>
-              {event.status === 'cancelled' && (
-                <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-red-50 text-red-600 border border-red-100 uppercase tracking-wider">Cancelado</span>
+              {isCancelled && (
+                <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white shadow-sm shadow-red-200 uppercase tracking-wider">Cancelado</span>
               )}
             </div>
           </div>
-          <div className="size-8 rounded-full bg-primary/5 border border-primary/10 flex items-center justify-center text-primary font-black text-xs shadow-sm shrink-0">
+          <div className={`size-8 rounded-full flex items-center justify-center font-black text-xs shadow-sm shrink-0 ${isCancelled ? 'bg-red-100 text-red-500 border border-red-200' : 'bg-primary/5 border border-primary/10 text-primary'}`}>
             {creatorInitial}
           </div>
         </div>
@@ -2284,7 +2294,7 @@ const CalendarTooltip: React.FC<{
       </div>
     </div>,
     document.body
-  );
+    ) );
 };
 
 interface CalendarEventCardProps {
@@ -2297,7 +2307,7 @@ interface CalendarEventCardProps {
 }
 
 const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, onSelect }) => {
-  const isCancelled = event.status === 'cancelled';
+  const isCancelled = event.status === 'canceled';
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup timeout on unmount
@@ -2425,7 +2435,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
         onSelect(event);
       }}
       className={`w-full border-l-[3px] rounded-lg px-3 py-3 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
-        ? 'bg-slate-50 border-slate-300 opacity-60'
+        ? 'bg-red-50/40 border-red-200 hover:border-red-300'
         : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'
         } ${detailed ? 'p-5' : ''}`}
     >
@@ -2433,7 +2443,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
         <div className="flex items-start justify-between gap-2">
           {/* Responsabilidade - Visual indicador no card */}
             {event.event_responsibility && (
-              <div className="absolute top-2 right-2 flex items-center justify-center size-5 rounded-full bg-slate-50 border border-slate-100 text-slate-400 group-hover:text-indigo-500 transition-colors" title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
+              <div className={`absolute top-2 right-2 flex items-center justify-center size-5 rounded-full border text-slate-400 group-hover:text-indigo-500 transition-colors ${isCancelled ? 'bg-white/50 border-red-100' : 'bg-slate-50 border-slate-100'}`} title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
                 <span className="material-symbols-outlined text-[12px]">
                   {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
                 </span>
@@ -2441,7 +2451,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
             )}
 
             <div className="flex flex-col gap-1.5 min-w-0">
-             <p className={`font-bold leading-tight ${detailed ? 'text-lg text-slate-800' : 'text-xs text-slate-800 truncate'} ${isCancelled ? 'line-through decoration-slate-400' : ''}`}>
+             <p className={`font-bold leading-tight ${detailed ? 'text-lg' : 'text-xs truncate'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : 'text-slate-800'}`}>
                {event.title}
              </p>
              {/* Mobile/Tablet Extra Details */}
@@ -2451,6 +2461,11 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${involvement.color}`}>
                           {involvement.label}
                       </span>
+                  )}
+                  {isCancelled && (
+                    <span className="text-[9px] font-black text-white bg-red-400 px-1.5 py-0.5 rounded border border-red-500 uppercase tracking-wide">
+                        CANCELADO
+                    </span>
                   )}
                   <span className="text-[9px] font-medium text-slate-500 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[10px]">person</span>
@@ -2571,7 +2586,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
 
            {/* Cancelled Label */}
            {isCancelled && (
-             <span className="text-[9px] font-black text-red-500 uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded border border-red-100 ml-auto">
+             <span className="text-[9px] font-black text-white uppercase tracking-wider bg-red-500 px-2 py-0.5 rounded shadow-sm shadow-red-200 ml-auto">
                Cancelado
              </span>
            )}
