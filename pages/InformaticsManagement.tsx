@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { Navigate, useLocation, Link } from 'react-router-dom';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const InformaticsManagement: React.FC = () => {
     const { user, loading: authLoading } = useAuth();
@@ -13,6 +14,25 @@ const InformaticsManagement: React.FC = () => {
     const [activeView, setActiveView] = useState<'inventory' | 'history'>('inventory');
     const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Form State
+    const [newItemName, setNewItemName] = useState('');
+    const [newItemUnit, setNewItemUnit] = useState('un');
+    const [newItemAvailable, setNewItemAvailable] = useState(true);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
+    const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
+    const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
+        title: string;
+        description: string;
+        onConfirm: () => void;
+        variant?: 'danger' | 'warning' | 'info';
+        confirmText?: string;
+    }>({
+        title: '',
+        description: '',
+        onConfirm: () => {},
+    });
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -120,6 +140,111 @@ const InformaticsManagement: React.FC = () => {
         };
     }, [activeView]);
 
+    const handleAddItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newItemName) return;
+        try {
+            const normalizedName = newItemName.toUpperCase().trim();
+            const normalizedUnit = newItemUnit.trim();
+            
+            const itemData = {
+                name: normalizedName,
+                category: 'INFORMATICA',
+                unit: normalizedUnit,
+                is_available: !!newItemAvailable
+            };
+
+            if (editingId) {
+                const existing = items.find(i => 
+                    i.name.toUpperCase().trim() === normalizedName && 
+                    i.id !== editingId
+                );
+                if (existing) {
+                    alert('Já existe outro recurso com este nome.');
+                    return;
+                }
+
+                await pb.collection('agenda_cap53_itens_servico').update(editingId, itemData);
+                alert('Recurso atualizado com sucesso!');
+                setEditingId(null);
+            } else {
+                const existing = items.find(i => 
+                    i.name.toUpperCase().trim() === normalizedName
+                );
+                if (existing) {
+                    alert('Este recurso já existe.');
+                    return;
+                }
+
+                await pb.collection('agenda_cap53_itens_servico').create(itemData);
+                alert('Recurso adicionado com sucesso!');
+            }
+            
+            setNewItemName('');
+            setNewItemAvailable(true);
+            setNewItemUnit('un');
+            fetchData();
+        } catch (error: any) {
+            console.error('Erro ao salvar recurso:', error);
+            alert(`Erro ao salvar recurso: ${error.message || 'Erro desconhecido'}`);
+        }
+    };
+
+    const handleEditItem = (item: any) => {
+        setNewItemName(item.name);
+        setNewItemUnit(item.unit || 'un');
+        setNewItemAvailable(item.is_available ?? true);
+        setEditingId(item.id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleToggleAvailability = async (itemId: string) => {
+        const currentItem = items.find(i => i.id === itemId);
+        if (!currentItem) return;
+
+        const previousStatus = currentItem.is_available;
+        const currentlyAvailable = previousStatus === true || String(previousStatus) === 'true';
+        const nextStatus = !currentlyAvailable;
+
+        setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: nextStatus } : i));
+
+        try {
+            const result = await pb.collection('agenda_cap53_itens_servico').update(itemId, { 
+                is_available: nextStatus
+            });
+            setItems(prev => prev.map(i => i.id === itemId ? result : i));
+        } catch (error: any) {
+            console.error('Erro ao atualizar disponibilidade:', error);
+            setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: previousStatus } : i));
+            alert(`Erro ao atualizar disponibilidade: ${error.message || 'Erro de conexão'}`);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setNewItemName('');
+        setNewItemUnit('un');
+        setNewItemAvailable(true);
+        setEditingId(null);
+    };
+
+    const handleDeleteItem = async (id: string) => {
+        setConfirmationModalConfig({
+            title: 'Excluir Recurso',
+            description: 'Tem certeza que deseja excluir este recurso? Esta ação não pode ser desfeita.',
+            confirmText: 'Excluir',
+            variant: 'danger',
+            onConfirm: async () => {
+                try {
+                    await pb.collection('agenda_cap53_itens_servico').delete(id);
+                    setConfirmationModalOpen(false);
+                } catch (error) {
+                    console.error('Error deleting item:', error);
+                }
+            }
+        });
+        setConfirmationModalOpen(true);
+    };
+
     if (authLoading) return null;
     if (!user || (user.role !== 'DCA' && user.role !== 'ADMIN')) {
         return <Navigate to="/calendar" replace />;
@@ -200,9 +325,91 @@ const InformaticsManagement: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-8 items-start">
-                        {/* Inventory Table */}
-                        <div className="flex flex-col gap-6">
+                    <div className="flex flex-col xl:flex-row gap-8 items-start">
+                        {/* Novo Recurso Form */}
+                        <div className="w-full xl:w-[400px] shrink-0 sticky top-8">
+                            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-900/20">
+                                        <span className="material-symbols-outlined text-2xl">add_circle</span>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Novo Recurso</h2>
+                                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Cadastro de Recurso</p>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handleAddItem} className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Recurso</label>
+                                        <input
+                                            type="text"
+                                            value={newItemName}
+                                            onChange={(e) => setNewItemName(e.target.value)}
+                                            placeholder="Ex: Notebook Dell, Projetor..."
+                                            className="w-full h-14 px-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade</label>
+                                        <input
+                                            type="text"
+                                            value={newItemUnit}
+                                            onChange={(e) => setNewItemUnit(e.target.value)}
+                                            placeholder="un"
+                                            className="w-full h-14 px-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Disponibilidade Imediata</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewItemAvailable(!newItemAvailable)}
+                                            className={`w-full h-14 px-4 rounded-2xl flex items-center justify-between transition-all border ${
+                                                newItemAvailable 
+                                                ? 'bg-emerald-50 border-emerald-100/50' 
+                                                : 'bg-slate-50 border-slate-100'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`size-2 rounded-full ${newItemAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                                                <span className={`text-xs font-black uppercase tracking-wider ${newItemAvailable ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                    {newItemAvailable ? 'Disponível' : 'Indisponível'}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className={`w-11 h-6 rounded-full p-1 transition-colors relative ${newItemAvailable ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                                                <div className={`size-4 rounded-full bg-white shadow-sm transition-transform duration-300 absolute top-1 ${newItemAvailable ? 'left-[22px]' : 'left-1'}`} />
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        className="w-full h-14 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 active:scale-[0.98] transition-all shadow-xl shadow-slate-900/20 hover:shadow-slate-900/30 mt-2"
+                                    >
+                                        {editingId ? 'Atualizar Recurso' : 'Cadastrar Recurso'}
+                                    </button>
+
+                                    {editingId && (
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelEdit}
+                                            className="w-full text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-slate-600 transition-colors py-2"
+                                        >
+                                            Cancelar Edição
+                                        </button>
+                                    )}
+                                </form>
+                            </div>
+                        </div>
+
+                        {/* Inventory Table Container */}
+                        <div className="flex-1 w-full min-w-0 flex flex-col gap-6">
                             {/* Search and Filters */}
                             <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
                                 <div className="relative flex-1 w-full">
@@ -221,69 +428,88 @@ const InformaticsManagement: React.FC = () => {
                                 </div>
                             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
-                <div className="overflow-x-auto -mx-4 md:mx-0">
-                    <div className="min-w-[800px] md:min-w-full">
-                        <table className="w-full border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Recurso</th>
-                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidade</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={2} className="px-6 py-20 text-center">
-                                            <div className="flex flex-col items-center gap-3">
-                                                <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
-                                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando recursos...</p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredItems.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={2} className="px-6 py-32 text-center">
-                                            <div className="flex flex-col items-center gap-4">
-                                                <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-3xl text-slate-200">devices</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-slate-900 font-black text-sm">Nenhum recurso encontrado</p>
-                                                    <p className="text-slate-400 font-medium text-xs mt-1">Tente ajustar sua busca.</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredItems.map((item) => (
-                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-6 py-5">
-                                                <div className="flex flex-col">
-                                                    <span className="text-slate-900 font-bold text-sm">{item.name}</span>
-                                                    <span className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">{item.unit || 'un'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-5">
-                                                <div
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all ${
-                                                        (item.is_available === true || String(item.is_available) === 'true')
-                                                        ? 'bg-green-50 text-green-600 border border-green-100/50'
-                                                        : 'bg-rose-50 text-rose-600 border border-rose-100/50'
-                                                    } border text-[10px] font-black uppercase tracking-widest w-fit`}
-                                                >
-                                                    <span className={`size-1.5 rounded-full ${(item.is_available === true || String(item.is_available) === 'true') ? 'bg-green-500' : 'bg-rose-500'} animate-pulse`}></span>
-                                                    {(item.is_available === true || String(item.is_available) === 'true') ? 'Disponível' : 'Indisponível'}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+                            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+                                <div className="overflow-x-auto -mx-4 md:mx-0">
+                                    <div className="min-w-[800px] md:min-w-full">
+                                        <table className="w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-slate-50/50 border-b border-slate-100">
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Recurso</th>
+                                                    <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidade</th>
+                                                    <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {loading ? (
+                                                    <tr>
+                                                        <td colSpan={3} className="px-6 py-20 text-center">
+                                                            <div className="flex flex-col items-center gap-3">
+                                                                <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
+                                                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando recursos...</p>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ) : filteredItems.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={3} className="px-6 py-32 text-center">
+                                                            <div className="flex flex-col items-center gap-4">
+                                                                <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center">
+                                                                    <span className="material-symbols-outlined text-3xl text-slate-200">devices</span>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-slate-900 font-black text-sm">Nenhum recurso encontrado</p>
+                                                                    <p className="text-slate-400 font-medium text-xs mt-1">Tente ajustar sua busca.</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    filteredItems.map((item) => (
+                                                        <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
+                                                            <td className="px-6 py-5">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-slate-900 font-bold text-sm">{item.name}</span>
+                                                                    <span className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">{item.unit || 'un'}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-5">
+                                                                <button 
+                                                                    onClick={() => handleToggleAvailability(item.id)}
+                                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+                                                                    (item.is_available === true || String(item.is_available) === 'true')
+                                                                    ? 'bg-green-50 text-green-600 border border-green-100/50 hover:bg-green-100 hover:border-green-200'
+                                                                    : 'bg-rose-50 text-rose-600 border border-rose-100/50 hover:bg-rose-100 hover:border-rose-200'
+                                                                } border text-[10px] font-black uppercase tracking-widest`}>
+                                                                    <span className={`size-1.5 rounded-full ${(item.is_available === true || String(item.is_available) === 'true') ? 'bg-green-500' : 'bg-rose-500'} animate-pulse`}></span>
+                                                                    {(item.is_available === true || String(item.is_available) === 'true') ? 'Disponível' : 'Indisponível'}
+                                                                </button>
+                                                            </td>
+                                                            <td className="px-6 py-5 text-right">
+                                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <button
+                                                                        onClick={() => handleEditItem(item)}
+                                                                        className="size-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white flex items-center justify-center transition-all"
+                                                                        title="Editar"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-base">edit</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteItem(item.id)}
+                                                                        className="size-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all"
+                                                                        title="Excluir"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-base">delete</span>
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -420,6 +646,15 @@ const InformaticsManagement: React.FC = () => {
             </div>
             )}
 
+            <ConfirmationModal
+                isOpen={confirmationModalOpen}
+                onClose={() => setConfirmationModalOpen(false)}
+                onConfirm={confirmationModalConfig.onConfirm}
+                title={confirmationModalConfig.title}
+                description={confirmationModalConfig.description}
+                confirmText={confirmationModalConfig.confirmText}
+                variant={confirmationModalConfig.variant}
+            />
         </div>
     );
 };

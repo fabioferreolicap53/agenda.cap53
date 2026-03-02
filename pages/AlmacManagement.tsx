@@ -401,9 +401,119 @@ const AlmacManagement: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-8 items-start">
-                        {/* Inventory Table */}
-                        <div className="flex flex-col gap-6">
+                    <div className="flex flex-col xl:flex-row gap-8 items-start">
+                        {/* Novo Item Form */}
+                        <div className="w-full xl:w-[400px] shrink-0 sticky top-8">
+                            <div className="bg-white p-6 md:p-8 rounded-3xl border border-slate-100 shadow-xl shadow-slate-100/50">
+                                <div className="flex items-center gap-4 mb-8">
+                                    <div className="size-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-lg shadow-slate-900/20">
+                                        <span className="material-symbols-outlined text-2xl">add_circle</span>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Novo Item</h2>
+                                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-0.5">Cadastro de Item</p>
+                                    </div>
+                                </div>
+
+                                <form onSubmit={handleAddItem} className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Nome do Item</label>
+                                        <input
+                                            type="text"
+                                            value={newItemName}
+                                            onChange={(e) => setNewItemName(e.target.value)}
+                                            placeholder="Ex: Água Mineral 500ml"
+                                            className="w-full h-14 px-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Categoria</label>
+                                        <div className="flex bg-slate-50 p-1.5 rounded-2xl">
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewItemType('almoxarifado')}
+                                                className={`flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                    newItemType === 'almoxarifado' 
+                                                    ? 'bg-white text-slate-900 shadow-sm' 
+                                                    : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                            >
+                                                Almoxarifado
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewItemType('copa')}
+                                                className={`flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                    newItemType === 'copa' 
+                                                    ? 'bg-white text-slate-900 shadow-sm' 
+                                                    : 'text-slate-400 hover:text-slate-600'
+                                                }`}
+                                            >
+                                                Copa
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unidade</label>
+                                        <input
+                                            type="text"
+                                            value={newItemUnit}
+                                            onChange={(e) => setNewItemUnit(e.target.value)}
+                                            placeholder="un"
+                                            className="w-full h-14 px-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-300 focus:ring-4 focus:ring-slate-900/5 transition-all outline-none"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Disponibilidade Imediata</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewItemAvailable(!newItemAvailable)}
+                                            className={`w-full h-14 px-4 rounded-2xl flex items-center justify-between transition-all border ${
+                                                newItemAvailable 
+                                                ? 'bg-emerald-50 border-emerald-100/50' 
+                                                : 'bg-slate-50 border-slate-100'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`size-2 rounded-full ${newItemAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                                                <span className={`text-xs font-black uppercase tracking-wider ${newItemAvailable ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                    {newItemAvailable ? 'Disponível' : 'Indisponível'}
+                                                </span>
+                                            </div>
+                                            
+                                            <div className={`w-11 h-6 rounded-full p-1 transition-colors relative ${newItemAvailable ? 'bg-emerald-500' : 'bg-slate-200'}`}>
+                                                <div className={`size-4 rounded-full bg-white shadow-sm transition-transform duration-300 absolute top-1 ${newItemAvailable ? 'left-[22px]' : 'left-1'}`} />
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="submit"
+                                        className="w-full h-14 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 active:scale-[0.98] transition-all shadow-xl shadow-slate-900/20 hover:shadow-slate-900/30 mt-2"
+                                    >
+                                        {editingId ? 'Atualizar Item' : 'Cadastrar Item'}
+                                    </button>
+
+                                    {editingId && (
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelEdit}
+                                            className="w-full text-slate-400 text-[10px] font-bold uppercase tracking-widest hover:text-slate-600 transition-colors py-2"
+                                        >
+                                            Cancelar Edição
+                                        </button>
+                                    )}
+                                </form>
+                            </div>
+                        </div>
+
+                        {/* Inventory Table Container */}
+                        <div className="flex-1 w-full min-w-0 flex flex-col gap-6">
                             {/* Search and Filters */}
                             <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-3 rounded-3xl border border-slate-100 shadow-sm">
                                 <div className="relative flex-1 w-full">
@@ -443,12 +553,13 @@ const AlmacManagement: React.FC = () => {
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidade</th>
+                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {loading ? (
                                                 <tr>
-                                                    <td colSpan={3} className="px-6 py-20 text-center">
+                                                    <td colSpan={4} className="px-6 py-20 text-center">
                                                         <div className="flex flex-col items-center gap-3">
                                                             <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
                                                             <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando estoque...</p>
@@ -457,7 +568,7 @@ const AlmacManagement: React.FC = () => {
                                                 </tr>
                                             ) : filteredItems.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={3} className="px-6 py-32 text-center">
+                                                    <td colSpan={4} className="px-6 py-32 text-center">
                                                         <div className="flex flex-col items-center gap-4">
                                                             <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center">
                                                                 <span className="material-symbols-outlined text-3xl text-slate-200">inventory_2</span>
@@ -488,13 +599,33 @@ const AlmacManagement: React.FC = () => {
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-5">
-                                                            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all ${
+                                                            <button 
+                                                                onClick={() => handleToggleAvailability(item.id)}
+                                                                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl transition-all cursor-pointer hover:scale-105 active:scale-95 ${
                                                                 (item.is_available === true || String(item.is_available) === 'true')
-                                                                ? 'bg-green-50 text-green-600 border border-green-100/50'
-                                                                : 'bg-rose-50 text-rose-600 border border-rose-100/50'
+                                                                ? 'bg-green-50 text-green-600 border border-green-100/50 hover:bg-green-100 hover:border-green-200'
+                                                                : 'bg-rose-50 text-rose-600 border border-rose-100/50 hover:bg-rose-100 hover:border-rose-200'
                                                             } border text-[10px] font-black uppercase tracking-widest`}>
                                                                 <span className={`size-1.5 rounded-full ${(item.is_available === true || String(item.is_available) === 'true') ? 'bg-green-500' : 'bg-rose-500'} animate-pulse`}></span>
                                                                 {(item.is_available === true || String(item.is_available) === 'true') ? 'Disponível' : 'Indisponível'}
+                                                            </button>
+                                                        </td>
+                                                        <td className="px-6 py-5 text-right">
+                                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => handleEditItem(item)}
+                                                                    className="size-8 rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-900 hover:text-white flex items-center justify-center transition-all"
+                                                                    title="Editar"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-base">edit</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteItem(item.id)}
+                                                                    className="size-8 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white flex items-center justify-center transition-all"
+                                                                    title="Excluir"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-base">delete</span>
+                                                                </button>
                                                             </div>
                                                         </td>
                                                     </tr>
