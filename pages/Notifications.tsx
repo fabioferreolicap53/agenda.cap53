@@ -1067,6 +1067,10 @@ const Notifications: React.FC = () => {
                          const isOld = false;
                          
                          const creatorName = getEventCreator(notification);
+                         
+                         // Check if event is cancelled
+                         const isEventCancelled = notification.expand?.event?.status === 'canceled' || 
+                                                 notification.expand?.related_event?.status === 'canceled';
 
                          return (
                             <div
@@ -1075,13 +1079,15 @@ const Notifications: React.FC = () => {
                                 if (notification.event) handleViewEvent(notification);
                               }}
                               className={`group relative flex gap-4 md:gap-6 p-4 md:p-6 rounded-2xl transition-all duration-300 z-10 
-                                ${getStatusContainerStyles(notification)} 
+                                ${isEventCancelled 
+                                    ? 'border border-red-200 bg-red-50/20 hover:border-red-300 hover:shadow-sm' 
+                                    : getStatusContainerStyles(notification)} 
                                 ${notification.event ? 'cursor-pointer' : ''}
                                 z-20
                               `}
                             >
                               {/* Status Indicator Bar */}
-                              <div className={`absolute left-0 top-0 bottom-0 w-1 ${getStatusIndicator(notification)} opacity-80`} />
+                              <div className={`absolute left-0 top-0 bottom-0 w-1 ${isEventCancelled ? 'bg-red-500' : getStatusIndicator(notification)} opacity-80`} />
 
               <div className="absolute top-4 md:top-6 right-4 md:right-6 flex items-center gap-2 z-30">
                 {!notification.read && (
@@ -1106,6 +1112,14 @@ const Notifications: React.FC = () => {
               </div>
 
               <div className="flex-1 min-w-0">
+                
+                {isEventCancelled && (
+                    <div className="mb-2 inline-flex items-center gap-1.5 px-2.5 py-1 bg-red-100 text-red-800 text-[11px] font-bold rounded-lg border border-red-200 shadow-sm animate-in fade-in slide-in-from-left-2">
+                        <span className="material-symbols-outlined text-[16px]">event_busy</span>
+                        EVENTO CANCELADO
+                    </div>
+                )}
+
                 <div className={`flex items-center justify-between gap-2 mb-1.5 ${!notification.read ? 'pr-16' : 'pr-4'}`}>
                   <h4 className={`text-sm md:text-base font-bold tracking-tight 
                     ${getNotificationStatus(notification) === 'rejected' ? 'text-rose-700' : 
