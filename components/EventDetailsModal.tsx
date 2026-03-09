@@ -65,8 +65,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   } | null>(null);
   const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
   const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'transport' | 'participation', data?: string } | null>(null);
+  const [resourceRefusalTarget, setResourceRefusalTarget] = React.useState<string | null>(null); // NOVO ESTADO
   const [refusalModalProps, setRefusalModalProps] = React.useState<{title?: string, description?: string}>({});
   const [processingTransport, setProcessingTransport] = React.useState(false);
+  const [processingResource, setProcessingResource] = React.useState(false); // NOVO ESTADO para indicar processamento de recurso
 
   // Touch/Swipe logic
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
@@ -303,16 +305,62 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       }
   };
 
-  const handleRefusalConfirm = async (justification: string) => {
-    if (!refusalTarget) return;
+  const handleResourceDecision = async (requestId: string, decision: 'approved' | 'rejected', justification?: string) => {
+    if (!user || !event.id) return;
+    setProcessingResource(true);
+    try {
+      const request = requests.find(r => r.id === requestId);
+      if (!request) {
+        throw new Error('Solicitação de recurso não encontrada.');
+      }
 
-    if (refusalTarget.type === 'transport') {
+      await pb.collection('agenda_cap53_almac_requests').update(requestId, {
+        status: decision,
+        justification: decision === 'rejected' ? justification : ''
+      });
+
+      // Notificar o criador da solicitação
+      if (request.created_by) {
+        await notificationService.createNotification({
+          user: request.created_by,
+          title: `Solicitação de Recurso ${decision === 'approved' ? 'Aprovada' : 'Recusada'}`,
+          message: `Sua solicitação para o item "${request.expand?.item?.name}" no evento "${event.title}" foi ${decision === 'approved' ? 'aprovada' : 'recusada'}.${justification ? `\n\nJustificativa: "${justification}"` : ''}`,
+          type: decision === 'approved' ? 'system' : 'refusal',
+          event: event.id,
+          data: {
+            kind: 'resource_request_response',
+            action: decision,
+            resource_name: request.expand?.item?.name,
+            justification: justification
+          }
+        });
+      }
+
+      // Atualizar o estado local das solicitações
+      setRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: decision } : req));
+      alert(`Solicitação de recurso ${decision === 'approved' ? 'aprovada' : 'recusada'} com sucesso!`);
+
+    } catch (err) {
+      console.error('Erro ao processar decisão de recurso:', err);
+      alert('Erro ao processar decisão de recurso.');
+    } finally {
+      setProcessingResource(false);
+    }
+  };
+
+  const handleRefusalConfirm = async (justification: string) => {
+    if (!refusalTarget && !resourceRefusalTarget) return;
+
+    if (refusalTarget?.type === 'transport') {
       await processTransportDecision('rejected', justification);
-    } else if (refusalTarget.type === 'participation') {
-      await handleRequestAction(refusalTarget.data, 'reject', justification);
+    } else if (refusalTarget?.type === 'participation') {
+      await handleRequestAction(refusalTarget.data!, 'reject', justification);
+    } else if (resourceRefusalTarget) { // NOVO: Lidar com recusa de recurso
+      await handleResourceDecision(resourceRefusalTarget, 'rejected', justification);
     }
     setRefusalModalOpen(false);
     setRefusalTarget(null);
+    setResourceRefusalTarget(null); // Limpar o estado de recusa de recurso
   };
 
   const handleRequestParticipation = async () => {
@@ -1206,6 +1254,33 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                             {req.status === 'rejected' && refusalAckByRequest[req.id] === false && (
                                                                 <div className="size-8 flex items-center justify-center text-red-500 bg-red-50 rounded-lg border border-red-100 animate-pulse">
                                                                     <span className="material-symbols-outlined text-lg">warning</span>
+                                                                </div>
+                                                            )}
+
+                                                            {/* Botões de Aceitar/Recusar para ALMC/DCA/TRA */}
+                                                            {req.status === 'pending' && user && (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'TRA') && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setResourceRefusalTarget(req.id);
+                                                                            setRefusalModalProps({
+                                                                                title: 'Recusar Recurso',
+                                                                                description: `Por favor, informe o motivo da recusa para o item "${req.expand?.item?.name}".`
+                                                                            });
+                                                                            setRefusalModalOpen(true);
+                                                                        }}
+                                                                        disabled={processingResource}
+                                                                        className="size-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-lg">close</span>
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleResourceDecision(req.id, 'approved')}
+                                                                        disabled={processingResource}
+                                                                        className="size-9 rounded-xl bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm border border-green-100"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-lg">check</span>
+                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>
