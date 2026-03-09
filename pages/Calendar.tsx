@@ -46,7 +46,10 @@ interface CalendarEvent extends EventsResponse<CalendarExpand> {
   almoxarifado_confirmed_items?: string[];
   copa_confirmed_items?: string[];
   informatica_confirmed_items?: string[];
-  transporte_suporte?: boolean;
+  hasAlmoxarifado?: boolean;
+  hasCopa?: boolean;
+  hasInformatica?: boolean;
+  hasTransporte?: boolean;
   transporte_origem?: string;
   transporte_destino?: string;
   transporte_horario_levar?: string;
