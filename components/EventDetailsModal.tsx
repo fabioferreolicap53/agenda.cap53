@@ -64,11 +64,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     data: AlmacRequestsResponse<{ item: ItensServicoResponse }> | EventsResponse<EventExpand>
   } | null>(null);
   const [refusalModalOpen, setRefusalModalOpen] = React.useState(false);
-  const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'transport' | 'participation', data?: string } | null>(null);
-  const [resourceRefusalTarget, setResourceRefusalTarget] = React.useState<string | null>(null); // NOVO ESTADO
+  const [refusalTarget, setRefusalTarget] = React.useState<{ type: 'transport' | 'participation' | 'resource', data?: string } | null>(null);
   const [refusalModalProps, setRefusalModalProps] = React.useState<{title?: string, description?: string}>({});
   const [processingTransport, setProcessingTransport] = React.useState(false);
-  const [processingResource, setProcessingResource] = React.useState(false); // NOVO ESTADO para indicar processamento de recurso
 
   // Touch/Swipe logic
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
@@ -305,62 +303,60 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       }
   };
 
-  const handleResourceDecision = async (requestId: string, decision: 'approved' | 'rejected', justification?: string) => {
-    if (!user || !event.id) return;
-    setProcessingResource(true);
-    try {
-      const request = requests.find(r => r.id === requestId);
-      if (!request) {
-        throw new Error('Solicitação de recurso não encontrada.');
-      }
-
-      await pb.collection('agenda_cap53_almac_requests').update(requestId, {
-        status: decision,
-        justification: decision === 'rejected' ? justification : ''
-      });
-
-      // Notificar o criador da solicitação
-      if (request.created_by) {
-        await notificationService.createNotification({
-          user: request.created_by,
-          title: `Solicitação de Recurso ${decision === 'approved' ? 'Aprovada' : 'Recusada'}`,
-          message: `Sua solicitação para o item "${request.expand?.item?.name}" no evento "${event.title}" foi ${decision === 'approved' ? 'aprovada' : 'recusada'}.${justification ? `\n\nJustificativa: "${justification}"` : ''}`,
-          type: decision === 'approved' ? 'system' : 'refusal',
-          event: event.id,
-          data: {
-            kind: 'resource_request_response',
-            action: decision,
-            resource_name: request.expand?.item?.name,
-            justification: justification
-          }
-        });
-      }
-
-      // Atualizar o estado local das solicitações
-      setRequests(prev => prev.map(req => req.id === requestId ? { ...req, status: decision } : req));
-      alert(`Solicitação de recurso ${decision === 'approved' ? 'aprovada' : 'recusada'} com sucesso!`);
-
-    } catch (err) {
-      console.error('Erro ao processar decisão de recurso:', err);
-      alert('Erro ao processar decisão de recurso.');
-    } finally {
-      setProcessingResource(false);
-    }
-  };
-
   const handleRefusalConfirm = async (justification: string) => {
-    if (!refusalTarget && !resourceRefusalTarget) return;
+    if (!refusalTarget) return;
 
-    if (refusalTarget?.type === 'transport') {
+    if (refusalTarget.type === 'transport') {
       await processTransportDecision('rejected', justification);
-    } else if (refusalTarget?.type === 'participation') {
+    } else if (refusalTarget.type === 'participation') {
       await handleRequestAction(refusalTarget.data!, 'reject', justification);
-    } else if (resourceRefusalTarget) { // NOVO: Lidar com recusa de recurso
-      await handleResourceDecision(resourceRefusalTarget, 'rejected', justification);
+    } else if (refusalTarget.type === 'resource') {
+      await handleResourceAction(refusalTarget.data!, 'reject', justification);
     }
     setRefusalModalOpen(false);
     setRefusalTarget(null);
-    setResourceRefusalTarget(null); // Limpar o estado de recusa de recurso
+  };
+
+  const handleResourceAction = async (requestId: string, action: 'approve' | 'reject', justification?: string) => {
+      try {
+          const request = requests.find(r => r.id === requestId);
+          if (!request) return;
+
+          // 1. Update request status
+          await pb.collection('agenda_cap53_almac_requests').update(requestId, {
+              status: action === 'approve' ? 'approved' : 'rejected',
+              justification: action === 'reject' ? justification : ''
+          });
+
+          // 2. Notify Creator
+          if (event.user) {
+              const itemName = request.expand?.item?.name || 'Item';
+              await notificationService.createNotification({
+                  user: event.user,
+                  title: action === 'approve' ? 'Recurso Aprovado' : 'Recurso Recusado',
+                  message: action === 'approve'
+                      ? `O recurso "${itemName}" foi aprovado para o evento "${event.title}".`
+                      : `O recurso "${itemName}" foi recusado para o evento "${event.title}".${justification ? `\n\nJustificativa: "${justification}"` : ''}`,
+                  type: action === 'approve' ? 'request_decision' : 'refusal',
+                  event: event.id,
+                  related_request: requestId,
+                  data: {
+                      kind: 'almc_item_decision',
+                      action: action === 'approve' ? 'approved' : 'rejected',
+                      item_name: itemName,
+                      justification: justification
+                  }
+              });
+          }
+
+          // 3. Update local state
+          setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r));
+          
+          alert(action === 'approve' ? 'Recurso aprovado!' : 'Recurso recusado.');
+      } catch (err) {
+          console.error('Error handling resource action:', err);
+          alert('Erro ao processar ação.');
+      }
   };
 
   const handleRequestParticipation = async () => {
@@ -636,6 +632,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             ));
         } catch (syncErr) {
             console.warn('Error syncing notifications:', syncErr);
+        }
+
+        // Notify Creator if action is by sector
+        if (event.user && user && user.id !== event.user) {
+             await notificationService.createNotification({
+                  user: event.user,
+                  title: decision === 'confirmed' ? 'Transporte Confirmado' : 'Transporte Recusado',
+                  message: decision === 'confirmed'
+                      ? `O transporte para o evento "${event.title}" foi confirmado.`
+                      : `O transporte para o evento "${event.title}" foi recusado.${justification ? `\n\nJustificativa: "${justification}"` : ''}`,
+                  type: decision === 'confirmed' ? 'transport_decision' : 'refusal',
+                  event: event.id,
+                  data: {
+                      kind: 'transport_decision',
+                      action: decision === 'confirmed' ? 'confirmed' : 'rejected',
+                      justification: justification
+                  }
+              });
         }
 
         // Refresh event data
@@ -1218,6 +1232,37 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                         </div>
 
                                                         <div className="flex items-center gap-2">
+                                                            {/* Approval Actions */}
+                                                            {req.status === 'pending' && (
+                                                                (user?.role === 'ALMC' && (category === 'ALMOXARIFADO' || category === 'COPA')) ||
+                                                                (user?.role === 'DCA' && category === 'INFORMATICA') ||
+                                                                user?.role === 'ADMIN'
+                                                            ) && (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button 
+                                                                        onClick={() => {
+                                                                            setRefusalTarget({ type: 'resource', data: req.id });
+                                                                            setRefusalModalProps({
+                                                                                title: 'Recusar Recurso',
+                                                                                description: 'Por favor, informe o motivo da recusa.'
+                                                                            });
+                                                                            setRefusalModalOpen(true);
+                                                                        }}
+                                                                        className="size-8 flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100 shadow-sm"
+                                                                        title="Recusar"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-lg">close</span>
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => handleResourceAction(req.id, 'approve')}
+                                                                        className="size-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors border border-green-100 shadow-sm"
+                                                                        title="Aprovar"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-lg">check</span>
+                                                                    </button>
+                                                                </div>
+                                                            )}
+
                                                             {/* Re-request Button */}
                                                             {req.status === 'rejected' && event.user === user?.id && (
                                                                 <button
@@ -1234,53 +1279,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                                 Agora ela é exibida apenas nas notificações.
                                                             */}
 
-                                                            {/* ALMC Availability Toggle */}
-                                                            {user?.role === 'ALMC' && req.expand?.item && (
-                                                                <button 
-                                                                    onClick={() => toggleItemAvailability(req.id, req.expand.item.is_available)}
-                                                                    className={`size-8 flex items-center justify-center rounded-lg transition-all ${
-                                                                        req.expand.item.is_available 
-                                                                        ? 'bg-green-50 text-green-600 hover:bg-green-100' 
-                                                                        : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                                                    }`}
-                                                                >
-                                                                    <span className="material-symbols-outlined text-lg">
-                                                                        {req.expand.item.is_available ? 'check_circle' : 'cancel'}
-                                                                    </span>
-                                                                </button>
-                                                            )}
+
                                                             
                                                             {/* Refusal notification check */}
                                                             {req.status === 'rejected' && refusalAckByRequest[req.id] === false && (
                                                                 <div className="size-8 flex items-center justify-center text-red-500 bg-red-50 rounded-lg border border-red-100 animate-pulse">
                                                                     <span className="material-symbols-outlined text-lg">warning</span>
-                                                                </div>
-                                                            )}
-
-                                                            {/* Botões de Aceitar/Recusar para ALMC/DCA/TRA */}
-                                                            {req.status === 'pending' && user && (user.role === 'ALMC' || user.role === 'DCA' || user.role === 'TRA') && (
-                                                                <div className="flex items-center gap-2">
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setResourceRefusalTarget(req.id);
-                                                                            setRefusalModalProps({
-                                                                                title: 'Recusar Recurso',
-                                                                                description: `Por favor, informe o motivo da recusa para o item "${req.expand?.item?.name}".`
-                                                                            });
-                                                                            setRefusalModalOpen(true);
-                                                                        }}
-                                                                        disabled={processingResource}
-                                                                        className="size-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm border border-red-100"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-lg">close</span>
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleResourceDecision(req.id, 'approved')}
-                                                                        disabled={processingResource}
-                                                                        className="size-9 rounded-xl bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-500 hover:text-white transition-all shadow-sm border border-green-100"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-lg">check</span>
-                                                                    </button>
                                                                 </div>
                                                             )}
                                                         </div>
@@ -1315,6 +1319,31 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                          event.transporte_status === 'rejected' ? 'Recusado' : 
                                          'Pendente'}
                                     </span>
+                                )}
+                                {(user?.role === 'TRA' || user?.role === 'ADMIN') && event.transporte_status === 'pending' && event.transporte_suporte && (
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => {
+                                                setRefusalTarget({ type: 'transport' });
+                                                setRefusalModalProps({
+                                                    title: 'Recusar Transporte',
+                                                    description: 'Por favor, informe o motivo da recusa.'
+                                                });
+                                                setRefusalModalOpen(true);
+                                            }}
+                                            className="size-8 flex items-center justify-center rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100 shadow-sm"
+                                            title="Recusar"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">close</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => processTransportDecision('confirmed')}
+                                            className="size-8 flex items-center justify-center rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors border border-green-100 shadow-sm"
+                                            title="Confirmar"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">check</span>
+                                        </button>
+                                    </div>
                                 )}
                                 {event.transporte_suporte && event.transporte_status === 'rejected' && event.user === user?.id && (
                                     <button
