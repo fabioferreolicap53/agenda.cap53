@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthContext';
 import { useNavigate, useSearchParams, Link, useLocation } from 'react-router-dom';
 import RefusalModal from '../components/RefusalModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { printEventDoc } from '../lib/printUtils';
 
 const TransportManagement: React.FC = () => {
     const { user } = useAuth();
@@ -463,17 +464,44 @@ const TransportManagement: React.FC = () => {
                                                         {event.expand?.user?.name || 'Criador do Evento'}
                                                     </span>
                                                 </div>
-                                                {event.transporte_status === 'pending' ? (
-                                                    <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1">
-                                                        <div className="size-1 rounded-full bg-amber-500 animate-pulse" />
-                                                        Pendente
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[10px]">check</span>
-                                                        Confirmado
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            printEventDoc({
+                                                                responsavel: event.expand?.user?.name || 'Não informado',
+                                                                nomeEvento: event.title || 'Evento sem título',
+                                                                localEvento: event.expand?.location?.name || event.custom_location || 'Utilizando transporte (vários)',
+                                                                dataInicio: event.date_start ? new Date(event.date_start.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
+                                                                dataFim: event.date_end ? new Date(event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
+                                                                observacoes: event.transporte_obs || event.observacoes || event.description || '',
+                                                                participantes: event.transporte_passageiro || event.estimated_participants || 'Não informado',
+                                                                insumos: [
+                                                                    { quantidade: 1, nome: `Origem: ${event.transporte_origem || '---'}`, status: 'Transporte' },
+                                                                    { quantidade: 1, nome: `Destino: ${event.transporte_destino || '---'}` },
+                                                                    { quantidade: 1, nome: `Saída: ${event.transporte_horario_levar || '--:--'} | Retorno: ${event.transporte_horario_buscar || '--:--'}` }
+                                                                ],
+                                                                departamento: 'Transporte'
+                                                            });
+                                                        }}
+                                                        className="size-7 rounded-lg bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                                                        title="Imprimir Solicitação de Transporte"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">print</span>
+                                                    </button>
+                                                    {event.transporte_status === 'pending' ? (
+                                                        <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1">
+                                                            <div className="size-1 rounded-full bg-amber-500 animate-pulse" />
+                                                            Pendente
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-[10px]">check</span>
+                                                            Confirmado
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );

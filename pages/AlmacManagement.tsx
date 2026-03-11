@@ -3,6 +3,7 @@ import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import { Navigate, useLocation, Link } from 'react-router-dom';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { printEventDoc } from '../lib/printUtils';
 
 const AlmacManagement: React.FC = () => {
     const { user, loading: authLoading } = useAuth();
@@ -933,17 +934,44 @@ const AlmacManagement: React.FC = () => {
                                                         {group.event.expand?.user?.name || 'Criador do Evento'}
                                                     </span>
                                                 </div>
-                                                {pendings > 0 ? (
-                                                    <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1">
-                                                        <div className="size-1 rounded-full bg-amber-500 animate-pulse" />
-                                                        {pendings} Pendente{pendings > 1 ? 's' : ''}
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[10px]">check</span>
-                                                        Concluído
-                                                    </span>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            printEventDoc({
+                                                                responsavel: group.event.expand?.user?.name || 'Não informado',
+                                                                nomeEvento: group.event.title || 'Evento sem título',
+                                                                localEvento: group.event.expand?.location?.name || group.event.custom_location || 'Não informado',
+                                                                dataInicio: group.event.date_start ? new Date(group.event.date_start.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
+                                                                dataFim: group.event.date_end ? new Date(group.event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
+                                                                observacoes: group.event.observacoes || group.event.description || '',
+                                                                participantes: group.event.estimated_participants || 'Não informado',
+                                                                insumos: r.map((req: any) => ({
+                                                                    quantidade: req.quantity || 1,
+                                                                    nome: req.expand?.item?.name || 'Item desconhecido',
+                                                                    status: req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Não Liberado' : 'Pendente'
+                                                                })),
+                                                                departamento: 'Almoxarifado e Copa'
+                                                            });
+                                                        }}
+                                                        className="size-7 rounded-lg bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                                                        title="Imprimir Solicitação"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">print</span>
+                                                    </button>
+                                                    {pendings > 0 ? (
+                                                        <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1">
+                                                            <div className="size-1 rounded-full bg-amber-500 animate-pulse" />
+                                                            {pendings} Pendente{pendings > 1 ? 's' : ''}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-[10px]">check</span>
+                                                            Concluído
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );
