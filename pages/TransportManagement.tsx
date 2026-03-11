@@ -14,7 +14,7 @@ const TransportManagement: React.FC = () => {
     const scrollRef = useRef<Record<string, HTMLDivElement | null>>({});
     const [transportRequests, setTransportRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [transportSubTab, setTransportSubTab] = useState<'pending' | 'history'>('pending');
+    const [transportSubTab, setTransportSubTab] = useState<'pending' | 'history' | 'events'>('pending');
     const [transportSearch, setTransportSearch] = useState('');
 
     useEffect(() => {
@@ -24,6 +24,8 @@ const TransportManagement: React.FC = () => {
         const view = params.get('view');
         if (view === 'history') {
             setTransportSubTab('history');
+        } else if (view === 'events') {
+            setTransportSubTab('events');
         } else if (view === 'pending') {
             setTransportSubTab('pending');
         }
@@ -284,6 +286,32 @@ const TransportManagement: React.FC = () => {
         });
     }, [transportRequests, transportSubTab, transportSearch, transportFilterStatus]);
 
+    const agendaEvents = useMemo(() => {
+        if (transportSubTab !== 'events') return [];
+        return transportRequests
+            .filter(e => {
+                if (e.transporte_status === 'rejected') return false;
+                
+                // Filtra para exibir apenas eventos de hoje em diante
+                if (e.date_start) {
+                    const eventDate = new Date(e.date_start.replace(' ', 'T'));
+                    eventDate.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas as datas
+                    
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Zera as horas de hoje
+                    
+                    if (eventDate < today) return false;
+                }
+                
+                return true;
+            })
+            .sort((a, b) => {
+                const dateA = new Date(a.date_start.replace(' ', 'T')).getTime();
+                const dateB = new Date(b.date_start.replace(' ', 'T')).getTime();
+                return dateA - dateB;
+            });
+    }, [transportRequests, transportSubTab]);
+
     return (
         <div className="flex flex-col gap-8 max-w-[1400px] mx-auto w-full p-4 md:p-8">
             {/* Bloco de notificação removido conforme solicitação */}
@@ -292,8 +320,19 @@ const TransportManagement: React.FC = () => {
                 <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
                     <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
                         <button
+                            onClick={() => setTransportSubTab('events')}
+                            className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                                transportSubTab === 'events'
+                                    ? 'bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0,05)]'
+                                    : 'text-slate-500 hover:text-slate-700'
+                            }`}
+                        >
+                            <span className="material-symbols-outlined text-[18px]">calendar_month</span>
+                            Agenda
+                        </button>
+                        <button
                             onClick={() => setTransportSubTab('pending')}
-                            className={`px-6 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                            className={`px-5 py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
                                 transportSubTab === 'pending'
                                     ? 'bg-white text-slate-900 shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700'
@@ -324,7 +363,7 @@ const TransportManagement: React.FC = () => {
                                 type="text"
                             />
                         </div>
-                        {transportSubTab === 'history' && (
+                        {(transportSubTab === 'history' || transportSubTab === 'pending') && (
                             <select
                                 value={transportFilterStatus}
                                 onChange={(e) => setTransportFilterStatus(e.target.value as any)}
@@ -342,6 +381,105 @@ const TransportManagement: React.FC = () => {
                     <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-slate-100 shadow-sm">
                         <div className="size-12 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin mb-6"></div>
                         <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando dados...</p>
+                    </div>
+                ) : transportSubTab === 'events' ? (
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 md:p-8">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+                                    <span className="material-symbols-outlined text-2xl">event_upcoming</span>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Agenda de Eventos - Transporte</h2>
+                                    <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mt-0.5">Eventos agendados por data</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {agendaEvents.length === 0 ? (
+                            <div className="flex flex-col items-center gap-3 py-20">
+                                <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                                    <span className="material-symbols-outlined text-3xl text-slate-200">event_busy</span>
+                                </div>
+                                <p className="text-slate-900 font-black text-sm">Nenhum evento agendado</p>
+                                <p className="text-slate-400 font-medium text-xs max-w-xs mx-auto text-balance text-center">Não há eventos futuros com solicitações de transporte.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {agendaEvents.map((event) => {
+                                    const eventDate = event.date_start ? new Date(event.date_start.replace(' ', 'T')) : new Date();
+                                    const day = String(eventDate.getDate()).padStart(2, '0');
+                                    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                                    const month = monthNames[eventDate.getMonth()];
+                                    
+                                    return (
+                                        <div key={event.id} className="group relative bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                                            {/* Date Badge */}
+                                            <div className="absolute -top-3 -right-3 size-16 bg-slate-900 text-white rounded-2xl flex flex-col items-center justify-center shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform">
+                                                <span className="text-xl font-black leading-none">{day}</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mt-0.5">{month}</span>
+                                            </div>
+
+                                            <div className="mb-6 pr-12">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
+                                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                                <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight">
+                                                    <Link to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}`)}`} className="hover:text-indigo-600 transition-colors">
+                                                        {event.title || 'Evento sem título'}
+                                                    </Link>
+                                                </h3>
+                                            </div>
+
+                                            <div className="space-y-4 mb-6">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">trip_origin</span> Origem</span>
+                                                    <span className="text-sm font-bold text-slate-700">{event.transporte_origem || '---'}</span>
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">location_on</span> Destino</span>
+                                                    <span className="text-sm font-bold text-slate-700">{event.transporte_destino || '---'}</span>
+                                                </div>
+                                                
+                                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">schedule</span> Saída/Retorno</span>
+                                                        <span className="text-xs font-bold text-slate-700">{event.transporte_horario_levar || '--:--'} às {event.transporte_horario_buscar || '--:--'}</span>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">group</span> Passageiros</span>
+                                                        <span className="text-xs font-bold text-slate-700">{event.transporte_passageiro || '-'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="size-6 rounded-full bg-slate-100 flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-[12px] text-slate-500">person</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[120px]" title={event.expand?.user?.name || 'Criador do Evento'}>
+                                                        {event.expand?.user?.name || 'Criador do Evento'}
+                                                    </span>
+                                                </div>
+                                                {event.transporte_status === 'pending' ? (
+                                                    <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1">
+                                                        <div className="size-1 rounded-full bg-amber-500 animate-pulse" />
+                                                        Pendente
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-[10px]">check</span>
+                                                        Confirmado
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 ) : filteredTransportRequests.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-32 bg-white rounded-3xl border border-slate-200 border-dashed">
@@ -528,7 +666,7 @@ const TransportManagement: React.FC = () => {
                                                     const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
                                                     return (
                                                         <Link
-                                                            to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${location.pathname}`}
+                                                            to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}`)}`}
                                                             className="size-11 rounded-xl bg-slate-50 text-slate-500 hover:text-primary hover:bg-primary/5 border border-slate-100 hover:border-primary/20 transition-all flex items-center justify-center active:scale-[0.98]"
                                                             title="Ver detalhes do evento"
                                                         >

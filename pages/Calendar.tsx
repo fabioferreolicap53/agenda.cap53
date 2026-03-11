@@ -1938,13 +1938,13 @@ const Calendar: React.FC = () => {
               const path = returnPath;
               setReturnPath(null);
               
-              // Se o path tiver parâmetros, usá-los, senão tentar manter a aba histórico
-              if (path.includes('/almoxarifado')) {
-                navigate(`${path}${path.includes('?') ? '&' : '?'}view=history`);
-              } else if (path.includes('/informatica')) {
-                navigate(`${path}${path.includes('?') ? '&' : '?'}view=history`);
-              } else if (path.includes('/transporte')) {
-                navigate(`${path}${path.includes('?') ? '&' : '?'}view=history`);
+              // Se o path já possuir parâmetro view, usar ele. Senão tentar manter a aba histórico assumindo legado
+              if (path.includes('/almoxarifado') || path.includes('/informatica') || path.includes('/transporte')) {
+                if (!path.includes('view=')) {
+                  navigate(`${path}${path.includes('?') ? '&' : '?'}view=history`);
+                } else {
+                  navigate(path);
+                }
               } else {
                 navigate(path);
               }

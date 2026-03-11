@@ -17,7 +17,7 @@ const AlmacManagement: React.FC = () => {
     const [newItemStock, setNewItemStock] = useState<number>(0);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeView, setActiveView] = useState<'inventory' | 'history'>('inventory');
+    const [activeView, setActiveView] = useState<'inventory' | 'history' | 'events'>('inventory');
     const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -41,6 +41,8 @@ const AlmacManagement: React.FC = () => {
         const view = params.get('view');
         if (view === 'history') {
             setActiveView('history');
+        } else if (view === 'events') {
+            setActiveView('events');
         } else if (view === 'inventory') {
             setActiveView('inventory');
         }
@@ -69,6 +71,48 @@ const AlmacManagement: React.FC = () => {
     const availableItemsCount = items.filter(i => i.is_available === true || String(i.is_available) === 'true').length;
     const unavailableItemsCount = items.length - availableItemsCount;
 
+    const groupedEvents = React.useMemo(() => {
+        if (activeView !== 'events') return [];
+        
+        const eventsMap = new Map<string, any>();
+        
+        history.forEach(req => {
+            if (!req.event || req.status === 'rejected') return; // hide rejected or orphaned requests
+            
+            const eventId = req.event;
+            if (!eventsMap.has(eventId)) {
+                eventsMap.set(eventId, {
+                    event: req.expand?.event,
+                    requests: []
+                });
+            }
+            eventsMap.get(eventId).requests.push(req);
+        });
+        
+        const eventsList = Array.from(eventsMap.values()).filter(e => {
+            if (!e.event) return false;
+            if (e.event.status === 'canceled' || e.event.status === 'rejected') return false;
+            
+            // Filtra para exibir apenas eventos de hoje em diante
+            if (e.event.date_start) {
+                const eventDate = new Date(e.event.date_start.replace(' ', 'T'));
+                eventDate.setHours(0, 0, 0, 0); // Zera as horas para comparar apenas as datas
+                
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Zera as horas de hoje
+                
+                if (eventDate < today) return false;
+            }
+            return true;
+        });
+        
+        return eventsList.sort((a, b) => {
+            const dateA = new Date(a.event.date_start.replace(' ', 'T')).getTime();
+            const dateB = new Date(b.event.date_start.replace(' ', 'T')).getTime();
+            return dateA - dateB;
+        });
+    }, [history, activeView]);
+
     useEffect(() => {
         if (user && (user.role === 'ALMC' || user.role === 'ADMIN')) {
             fetchData();
@@ -87,7 +131,7 @@ const AlmacManagement: React.FC = () => {
             } else {
                 const res = await pb.collection('agenda_cap53_almac_requests').getFullList({
                     sort: '-created',
-                    expand: 'item,event,created_by'
+                    expand: 'item,event,event.location,event.user,created_by'
                 });
                 // Filtrar apenas itens que NÃO são informática
                 const almacHistory = res.filter(req => req.expand?.item?.category !== 'INFORMATICA');
@@ -140,10 +184,10 @@ const AlmacManagement: React.FC = () => {
                     }
                 });
 
-                // Subscribe to requests (history)
+                // Subscribe to requests (history & events)
                 unsubscribeRequests = await pb.collection('agenda_cap53_almac_requests').subscribe('*', (e) => {
                     if (!isMounted) return;
-                    if (activeView === 'history') {
+                    if (activeView === 'history' || activeView === 'events') {
                         fetchData();
                     }
                 });
@@ -340,7 +384,18 @@ const AlmacManagement: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl w-fit border border-slate-200/50">
+                <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl w-fit border border-slate-200/50 overflow-x-auto max-w-full">
+                    <button
+                        onClick={() => setActiveView('events')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 whitespace-nowrap ${
+                            activeView === 'events' 
+                            ? 'bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0,05)] border border-slate-200/50' 
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                        }`}
+                    >
+                        <span className="material-symbols-outlined text-lg">calendar_month</span>
+                        Agenda
+                    </button>
                     <button
                         onClick={() => setActiveView('inventory')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
@@ -639,7 +694,7 @@ const AlmacManagement: React.FC = () => {
                         </div>
                     </div>
                 </div>
-            ) : (
+            ) : activeView === 'history' ? (
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Search and Filters for History */}
                     <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
@@ -721,7 +776,7 @@ const AlmacManagement: React.FC = () => {
                                                             const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
                                                             return (
                                                                 <Link 
-                                                                    to={`/calendar?date=${dateStr}&view=day&eventId=${req.event}&tab=resources&from=${location.pathname}`}
+                                                                    to={`/calendar?date=${dateStr}&view=day&eventId=${req.event}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}`)}`}
                                                                     className="text-slate-900 font-bold hover:text-primary transition-colors flex items-center gap-1 group/link"
                                                                     title="Ver detalhes do evento na aba recursos"
                                                                 >
@@ -774,6 +829,129 @@ const AlmacManagement: React.FC = () => {
                     </div>
                 </div>
             </div>
+            ) : (
+                <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 md:p-8">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+                                    <span className="material-symbols-outlined text-2xl">event_upcoming</span>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-slate-900 tracking-tight">Agenda de Solicitações</h2>
+                                    <p className="text-slate-500 text-xs font-medium uppercase tracking-widest mt-0.5">Eventos agendados por data</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {loading ? (
+                            <div className="flex flex-col items-center gap-3 py-20">
+                                <div className="size-10 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando agenda...</p>
+                            </div>
+                        ) : groupedEvents.length === 0 ? (
+                            <div className="flex flex-col items-center gap-3 py-20">
+                                <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                                    <span className="material-symbols-outlined text-3xl text-slate-200">event_busy</span>
+                                </div>
+                                <p className="text-slate-900 font-black text-sm">Nenhum evento agendado</p>
+                                <p className="text-slate-400 font-medium text-xs max-w-xs mx-auto text-balance text-center">Não há eventos futuros solicitando materiais do Almoxarifado/Copa.</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                                {groupedEvents.map((group) => {
+                                    const eventDate = group.event.date_start ? new Date(group.event.date_start.replace(' ', 'T')) : new Date();
+                                    const day = String(eventDate.getDate()).padStart(2, '0');
+                                    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+                                    const month = monthNames[eventDate.getMonth()];
+                                    const year = eventDate.getFullYear();
+                                    const r = group.requests;
+                                    const pendings = r.filter((x: any) => x.status === 'pending').length;
+                                    
+                                    return (
+                                        <div key={group.event.id} className="group relative bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                                            {/* Date Badge */}
+                                            <div className="absolute -top-3 -right-3 size-16 bg-slate-900 text-white rounded-2xl flex flex-col items-center justify-center shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform">
+                                                <span className="text-xl font-black leading-none">{day}</span>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mt-0.5">{month}</span>
+                                            </div>
+
+                                            <div className="mb-6 pr-12">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
+                                                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                                <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight">
+                                                    <Link to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}`)}`} className="hover:text-indigo-600 transition-colors">
+                                                        {group.event.title || 'Evento sem título'}
+                                                    </Link>
+                                                </h3>
+                                                {group.event.expand?.location ? (
+                                                    <div className="flex items-center gap-1.5 mt-2">
+                                                        <span className="material-symbols-outlined text-[14px] text-slate-400">location_on</span>
+                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{group.event.expand.location.name}</span>
+                                                    </div>
+                                                ) : group.event.custom_location ? (
+                                                    <div className="flex items-center gap-1.5 mt-2">
+                                                        <span className="material-symbols-outlined text-[14px] text-slate-400">location_on</span>
+                                                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{group.event.custom_location}</span>
+                                                    </div>
+                                                ) : null}
+                                            </div>
+
+                                            <div className="space-y-3 mb-6">
+                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Itens Solicitados ({r.length})</h4>
+                                                <ul className="space-y-2 max-h-[160px] overflow-y-auto pr-1 flex flex-col gap-1 custom-scrollbar">
+                                                    {r.map((req: any) => (
+                                                        <li key={req.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 border border-slate-100/50">
+                                                            <div className="flex items-center gap-3 overflow-hidden">
+                                                                <div className="size-6 shrink-0 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-900 font-bold text-[10px] shadow-sm">
+                                                                    {req.quantity || 1}
+                                                                </div>
+                                                                <span className="text-xs font-bold text-slate-700 truncate" title={req.expand?.item?.name || 'Item desconhecido'}>{req.expand?.item?.name || 'Item desconhecido'}</span>
+                                                            </div>
+                                                            <div className="shrink-0 ml-2">
+                                                                {req.status === 'approved' ? (
+                                                                    <span className="material-symbols-outlined text-[16px] text-emerald-500" title="Entregue">check_circle</span>
+                                                                ) : req.status === 'rejected' ? (
+                                                                    <span className="material-symbols-outlined text-[16px] text-rose-500" title="Negado">cancel</span>
+                                                                ) : (
+                                                                    <span className="material-symbols-outlined text-[16px] text-amber-500 animate-pulse" title="Pendente">pending</span>
+                                                                )}
+                                                            </div>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="size-6 rounded-full bg-slate-100 flex items-center justify-center">
+                                                        <span className="material-symbols-outlined text-[12px] text-slate-500">person</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate max-w-[120px]" title={group.event.expand?.user?.name || 'Criador do Evento'}>
+                                                        {group.event.expand?.user?.name || 'Criador do Evento'}
+                                                    </span>
+                                                </div>
+                                                {pendings > 0 ? (
+                                                    <span className="px-2 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100 flex items-center gap-1">
+                                                        <div className="size-1 rounded-full bg-amber-500 animate-pulse" />
+                                                        {pendings} Pendente{pendings > 1 ? 's' : ''}
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-[10px]">check</span>
+                                                        Concluído
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
             
             <ConfirmationModal
