@@ -692,6 +692,23 @@ const Calendar: React.FC = () => {
 
   useEffect(() => {
     fetchEvents();
+
+    let unsubscribe: (() => void) | undefined;
+    const setupSubscription = async () => {
+      try {
+        unsubscribe = await pb.collection('agenda_cap53_eventos').subscribe('*', () => {
+          fetchEvents();
+        });
+      } catch (err) {
+        console.error('Failed to subscribe to real-time events:', err);
+      }
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
   }, [currentDate]);
 
   useEffect(() => {
@@ -1719,14 +1736,21 @@ const Calendar: React.FC = () => {
                              {/* Resources - Using helper logic inline since we are in map */}
                              {(() => {
                                const getStatus = (cat: string) => {
-                                  const items = cat === 'ALMOXARIFADO' ? (event.almoxarifado_items || []) :
-                                                cat === 'COPA' ? (event.copa_items || []) :
-                                                (event.informatica_items || []);
-                                  if (items.length === 0) return null;
-                                  const confirmed = cat === 'ALMOXARIFADO' ? (event.almoxarifado_confirmed_items || []) :
-                                                    cat === 'COPA' ? (event.copa_confirmed_items || []) :
-                                                    (event.informatica_confirmed_items || []);
-                                  return (confirmed.length === items.length) ? 'confirmed' : 'pending';
+                                  const categoryRequests = event.almac_requests?.filter((r) => {
+                                      let currCat = r.expand?.item?.category;
+                                      if (currCat === 'ALMC') currCat = 'ALMOXARIFADO';
+                                      if (currCat === 'INFO') currCat = 'INFORMATICA';
+                                      return currCat === cat;
+                                  }) || [];
+                                  
+                                  if (categoryRequests.length === 0) return null;
+                                  
+                                  const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
+                                  const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
+                            
+                                  if (anyRejected) return 'rejected';
+                                  if (allConfirmed) return 'confirmed';
+                                  return 'pending';
                                };
 
                                const almc = getStatus('ALMOXARIFADO');
@@ -2072,31 +2096,21 @@ const CalendarTooltip: React.FC<{
   // Helper to determine status for Almc/Copa/Inf
   const getRequestStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
     // Priority 1: Check actual requests (real-time data passed from parent)
-    const categoryRequests = event.almac_requests?.filter((r) => r.expand?.item?.category === category) || [];
+    const categoryRequests = event.almac_requests?.filter((r) => {
+        let cat = r.expand?.item?.category;
+        if (cat === 'ALMC') cat = 'ALMOXARIFADO';
+        if (cat === 'INFO') cat = 'INFORMATICA';
+        return cat === category;
+    }) || [];
     
-    if (categoryRequests.length > 0) {
-      const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
-      const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
+    if (categoryRequests.length === 0) return null;
 
-      if (anyRejected) return 'rejected';
-      if (allConfirmed) return 'confirmed';
-      return 'pending';
-    }
+    const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
+    const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
 
-    // Priority 2: Fallback to event summary fields (static data from fetchEvents)
-    // This is useful for Informática and initial states
-    const items = category === 'ALMOXARIFADO' ? (event.almoxarifado_items || []) :
-                  category === 'COPA' ? (event.copa_items || []) :
-                  (event.informatica_items || []);
-                  
-    if (items.length === 0) return null;
-
-    const confirmedCount = category === 'ALMOXARIFADO' ? (event.almoxarifado_confirmed_items?.length || 0) :
-                           category === 'COPA' ? (event.copa_confirmed_items?.length || 0) :
-                           (event.informatica_confirmed_items?.length || 0);
-
-    // If we don't have request records yet, we only know if it's all confirmed or pending
-    return (confirmedCount === items.length && items.length > 0) ? 'confirmed' : 'pending';
+    if (anyRejected) return 'rejected';
+    if (allConfirmed) return 'confirmed';
+    return 'pending';
   };
 
   const almcStatus = getRequestStatus('ALMOXARIFADO');
@@ -2321,7 +2335,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
   }, []);
   
   const getCategoryStatus = (category: 'ALMOXARIFADO' | 'COPA' | 'INFORMATICA') => {
-    // Priority 1: Check actual requests (real-time data)
+    // Check actual requests (real-time data)
     const categoryRequests = event.almac_requests?.filter((r) => {
         let cat = r.expand?.item?.category;
         // Normalize categories
@@ -2330,27 +2344,14 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
         return cat === category;
     }) || [];
     
-    if (categoryRequests.length > 0) {
-      const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
-      const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
+    if (categoryRequests.length === 0) return null;
 
-      if (anyRejected) return 'rejected';
-      if (allConfirmed) return 'confirmed';
-      return 'pending';
-    }
+    const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
+    const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
 
-    // Priority 2: Fallback to event summary fields (static data from fetchEvents)
-    const items = category === 'ALMOXARIFADO' ? (event.almoxarifado_items || []) :
-                  category === 'COPA' ? (event.copa_items || []) :
-                  (event.informatica_items || []);
-                  
-    if (items.length === 0) return null;
-
-    const confirmed = category === 'ALMOXARIFADO' ? (event.almoxarifado_confirmed_items || []) :
-                      category === 'COPA' ? (event.copa_confirmed_items || []) :
-                      (event.informatica_confirmed_items || []);
-
-    return (confirmed.length === items.length && items.length > 0) ? 'confirmed' : 'pending';
+    if (anyRejected) return 'rejected';
+    if (allConfirmed) return 'confirmed';
+    return 'pending';
   };
 
   const getStatusColor = (status: string | null) => {
