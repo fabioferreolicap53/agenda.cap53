@@ -2254,10 +2254,10 @@ const CalendarTooltip: React.FC<{
               <span className="text-[11px] font-bold text-text-main">
                 {totalConfirmed} {totalConfirmed === 1 ? 'Participante' : 'Participantes'}
               </span>
-              {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && getEstimatedParticipants(event) > 0 && (
+              {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && (event.estimated_participants || 0) > 0 && (
                    <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-text-secondary bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 w-fit">
                      <span className="material-symbols-outlined text-[12px] opacity-70">groups</span>
-                     <span>Est. {getEstimatedParticipants(event)} pessoas</span>
+                     <span>Est. {event.estimated_participants} pessoas</span>
                    </div>
                )}
               {totalConfirmed > 0 && (
@@ -2423,7 +2423,19 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
 
   const involvement = getInvolvementLevel();
   const creatorName = event.expand?.user?.name || 'Desconhecido';
-  const participantCount = (event.expand?.participants?.length || 0) + 1; // +1 for creator
+  
+  const pStatus = event.participants_status || {};
+  let participantCount = 0;
+  
+  Object.entries(pStatus).forEach(([userId, status]) => {
+    if (status === 'accepted') {
+      participantCount++;
+    }
+  });
+
+  if (event.user && !pStatus[event.user]) {
+    participantCount++;
+  }
 
   return (
     <div
@@ -2488,7 +2500,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                  <div className="flex md:hidden items-center gap-0.5 text-[9px] font-bold text-slate-400">
                     <span className="material-symbols-outlined text-[10px]">group</span>
                     {participantCount}
-                    {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && event.estimated_participants && (
+                    {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && (event.estimated_participants || 0) > 0 && (
                         <span className="ml-0.5 text-[8px] opacity-70">(Est. {event.estimated_participants})</span>
                     )}
                  </div>
@@ -2547,7 +2559,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                     <span className="material-symbols-outlined text-[14px] text-slate-400">group</span>
                     <span className="text-[10px] font-bold text-slate-600">
                         {participantCount}
-                        {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && event.estimated_participants && (
+                        {event.event_responsibility !== 'EXTERNO_COMPROMISSO' && (event.estimated_participants || 0) > 0 && (
                             <span className="text-slate-400 font-medium ml-1">
                                 (Est. {event.estimated_participants})
                             </span>
