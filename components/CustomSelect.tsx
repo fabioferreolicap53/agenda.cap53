@@ -4,6 +4,7 @@ interface Option {
   value: string;
   label: string;
   description?: string;
+  disabled?: boolean;
 }
 
 interface CustomSelectProps {
@@ -109,6 +110,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
   }, []);
 
   const handleSelect = (optionValue: string) => {
+    const selectedOption = options.find(opt => opt.value === optionValue);
+    if (selectedOption?.disabled) return;
+
     if (multiSelect && Array.isArray(value)) {
       let newValue: string[];
       if (optionValue === 'Todos') {
@@ -256,15 +260,16 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             {filteredOptions.map((option, index) => (
               <div
                 key={option.value}
-                onClick={() => handleSelect(option.value)}
-                onMouseEnter={() => setHighlightedIndex(index)}
+                onClick={() => !option.disabled && handleSelect(option.value)}
+                onMouseEnter={() => !option.disabled && setHighlightedIndex(index)}
                 className={`
-                  px-4 py-2.5 rounded-lg cursor-pointer transition-colors duration-200
+                  px-4 py-2.5 rounded-lg transition-colors duration-200
                   flex items-center justify-between gap-4
-                  ${index === highlightedIndex ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : ''}
-                  ${isSelected(option.value) 
+                  ${option.disabled ? 'opacity-50 cursor-not-allowed bg-gray-50 text-gray-400' : 'cursor-pointer'}
+                  ${!option.disabled && index === highlightedIndex ? 'bg-primary/10 text-primary ring-1 ring-primary/20' : ''}
+                  ${!option.disabled && isSelected(option.value) 
                     ? 'bg-primary/5 text-primary' 
-                    : index !== highlightedIndex ? 'text-slate-600 hover:bg-gray-50 hover:text-primary' : ''}
+                    : !option.disabled && index !== highlightedIndex ? 'text-slate-600 hover:bg-gray-50 hover:text-primary' : ''}
                 `}
               >
                 <div className="flex flex-col gap-0.5">

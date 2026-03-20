@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
 import CustomSelect from './CustomSelect';
+import { useAuth } from './AuthContext';
 
 export type LocationMode = 'fixed' | 'free';
 
@@ -15,6 +16,10 @@ export interface LocationRecord {
   name: string;
   is_available: boolean | string;
   conflict_control: boolean | string;
+  allowed_users?: string[];
+  expand?: {
+    allowed_users?: { id: string; name: string }[];
+  };
 }
 
 interface LocationFieldProps {
@@ -35,11 +40,13 @@ export const normalizeBoolean = (val: any): boolean => {
 const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required = false }) => {
   const [locations, setLocations] = useState<LocationRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
     try {
       const res = await pb.collection('agenda_cap53_locais').getFullList<LocationRecord>({
         sort: 'name',
+        expand: 'allowed_users'
       });
       setLocations(res);
     } catch (error) {
@@ -72,7 +79,7 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
           } else if (e.action === 'delete') {
             setLocations(prev => prev.filter(loc => loc.id !== e.record.id));
           }
-        });
+        }, { expand: 'allowed_users' });
         unsubscribeFunc = unsub;
       } catch (err: any) {
         if (isMounted && retries > 0 && err.status === 403) {
@@ -152,10 +159,22 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
           { value: 'external', label: '📍 LUGAR EXTERNO NÃO FIXO' },
           ...locations
             .filter(loc => normalizeBoolean(loc.is_available) || loc.id === value.fixedId)
-            .map(loc => ({
-              value: loc.id,
-              label: `${loc.name}${normalizeBoolean(loc.conflict_control) ? ' (C/ Conflito)' : ''}`
-            }))
+            .map(loc => {
+              const isRestricted = loc.allowed_users && loc.allowed_users.length > 0;
+              const hasPermission = isRestricted ? loc.allowed_users.includes(user?.id || '') : true;
+              let description = '';
+              if (isRestricted && !hasPermission) {
+                const allowedNames = loc.expand?.allowed_users?.map(u => u.name).join(', ') || 'Usuários autorizados';
+                description = `Restrito para: ${allowedNames}`;
+              }
+
+              return {
+                value: loc.id,
+                label: `${loc.name}${normalizeBoolean(loc.conflict_control) ? ' (C)' : ''}`,
+                disabled: isRestricted && !hasPermission,
+                description
+              };
+            })
         ]}
       />
       {showNoConflictNotice && (

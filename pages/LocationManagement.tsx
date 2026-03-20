@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
 import ConfirmationModal from '../components/ConfirmationModal';
+import CustomSelect from '../components/CustomSelect';
 
 const EVENT_TYPES_ORDER = [
     'EVENTO',
@@ -22,10 +23,12 @@ const LocationManagement: React.FC = () => {
     const location = useLocation();
     const [locations, setLocations] = useState<any[]>([]);
     const [eventTypes, setEventTypes] = useState<any[]>([]);
+    const [allUsers, setAllUsers] = useState<{id: string, name: string}[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [newName, setNewName] = useState('');
     const [newConflictControl, setNewConflictControl] = useState(false);
     const [newIsAvailable, setNewIsAvailable] = useState(true);
+    const [newAllowedUsers, setNewAllowedUsers] = useState<string[]>([]);
     const [newEventTypeName, setNewEventTypeName] = useState('');
     const [loading, setLoading] = useState(true);
     const [adding, setAdding] = useState(false);
@@ -34,6 +37,11 @@ const LocationManagement: React.FC = () => {
     const [editingTypeId, setEditingTypeId] = useState<string | null>(null);
     const [editName, setEditName] = useState('');
     const [editTypeName, setEditTypeName] = useState('');
+    
+    // Modal de Edição de Acesso
+    const [accessModalOpen, setAccessModalOpen] = useState(false);
+    const [editingAccessLocId, setEditingAccessLocId] = useState<string | null>(null);
+    const [editingAccessUsers, setEditingAccessUsers] = useState<string[]>([]);
 
     const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
     const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
@@ -167,6 +175,11 @@ const LocationManagement: React.FC = () => {
         try {
             const res = await pb.collection('agenda_cap53_locais').getFullList();
             setLocations(res);
+            const usersRes = await pb.collection('agenda_cap53_usuarios').getFullList({
+                sort: 'name',
+                fields: 'id,name'
+            });
+            setAllUsers(usersRes);
         } catch (error) {
             console.error('Error fetching data:', error);
         } finally {
@@ -235,15 +248,18 @@ const LocationManagement: React.FC = () => {
         setAdding(true);
         try {
             console.log('Attempting to create location...');
+            const finalAllowedUsers = newAllowedUsers.filter(u => u !== 'Todos');
             const result = await pb.collection('agenda_cap53_locais').create({
                 name: nameToUse,
                 conflict_control: newConflictControl,
-                is_available: newIsAvailable
+                is_available: newIsAvailable,
+                allowed_users: finalAllowedUsers
             });
             console.log('Location created successfully:', result);
             setNewName('');
             setNewConflictControl(false);
             setNewIsAvailable(true);
+            setNewAllowedUsers([]);
             // Forçar atualização da lista se o real-time falhar
             fetchData();
         } catch (error: any) {
@@ -461,6 +477,29 @@ const LocationManagement: React.FC = () => {
         }
     };
 
+    const startEditingAccess = (loc: any) => {
+        setEditingAccessLocId(loc.id);
+        setEditingAccessUsers(loc.allowed_users || []);
+        setAccessModalOpen(true);
+    };
+
+    const handleSaveAccess = async () => {
+        if (!editingAccessLocId) return;
+        try {
+            const finalAllowedUsers = editingAccessUsers.filter(u => u !== 'Todos');
+            await pb.collection('agenda_cap53_locais').update(editingAccessLocId, {
+                allowed_users: finalAllowedUsers
+            });
+            setAccessModalOpen(false);
+            setEditingAccessLocId(null);
+            setEditingAccessUsers([]);
+            fetchData();
+        } catch (error) {
+            console.error('Error updating location access:', error);
+            alert('Erro ao atualizar acesso do local.');
+        }
+    };
+
     const handleDelete = async (id: string) => {
         setConfirmationModalConfig({
             title: 'Excluir Local',
@@ -495,8 +534,8 @@ const LocationManagement: React.FC = () => {
     return (
         <div className="flex flex-col gap-6 max-w-[1100px] mx-auto w-full p-4 md:p-0">
             {/* Adicionar Novo Local */}
-            <div className="bg-white rounded-3xl shadow-sm border border-border-light overflow-hidden transition-all hover:shadow-md">
-                <div className="bg-primary/5 px-6 py-4 border-b border-primary/10 flex items-center gap-3">
+            <div className="bg-white rounded-3xl shadow-sm border border-border-light transition-all hover:shadow-md">
+                <div className="bg-primary/5 px-6 py-4 border-b border-primary/10 flex items-center gap-3 rounded-t-3xl">
                     <div className="size-8 rounded-xl bg-primary text-white flex items-center justify-center shadow-sm">
                         <span className="material-symbols-outlined text-xl font-bold">add_location_alt</span>
                     </div>
@@ -505,7 +544,7 @@ const LocationManagement: React.FC = () => {
                 
                 <div className="p-6">
                     <form onSubmit={handleAddLocation} onKeyDown={handleFormKeyDown} className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
-                        <div className="md:col-span-5">
+                        <div className="md:col-span-4">
                             <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-2 ml-1">Nome do Local</label>
                             <input
                                 type="text"
@@ -522,6 +561,18 @@ const LocationManagement: React.FC = () => {
                             />
                         </div>
                         <div className="md:col-span-3">
+                            <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-2 ml-1">Usuários Restritos (Opcional)</label>
+                            <CustomSelect
+                                value={newAllowedUsers}
+                                onChange={(val) => setNewAllowedUsers(val)}
+                                options={allUsers.map(u => ({ value: u.id, label: u.name }))}
+                                placeholder="Todos os usuários"
+                                className="h-12 bg-gray-50/50"
+                                multiSelect={true}
+                                searchable={true}
+                            />
+                        </div>
+                        <div className="md:col-span-2">
                             <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-2 ml-1">Configurações</label>
                             <div className="flex flex-col gap-2">
                                 <label className="flex items-center gap-3 h-12 px-4 border border-border-light rounded-2xl bg-gray-50/50 cursor-pointer hover:bg-white transition-all group">
@@ -531,20 +582,20 @@ const LocationManagement: React.FC = () => {
                                         onChange={(e) => setNewConflictControl(e.target.checked)}
                                         className="w-5 h-5 accent-primary cursor-pointer rounded-lg"
                                     />
-                                    <span className="text-xs font-bold text-text-secondary group-hover:text-primary transition-colors">Controle de Conflito</span>
+                                    <span className="text-xs font-bold text-text-secondary group-hover:text-primary transition-colors">Controle Conflito</span>
                                 </label>
                             </div>
                         </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-2 ml-1">Status Inicial</label>
-                            <label className="flex items-center gap-3 h-12 px-4 border border-border-light rounded-2xl bg-gray-50/50 cursor-pointer hover:bg-white transition-all group">
+                        <div className="md:col-span-1">
+                            <label className="block text-[10px] font-bold text-primary uppercase tracking-widest mb-2 ml-1">Status</label>
+                            <label className="flex items-center justify-center gap-3 h-12 px-4 border border-border-light rounded-2xl bg-gray-50/50 cursor-pointer hover:bg-white transition-all group">
                                 <input
                                     type="checkbox"
                                     checked={newIsAvailable}
                                     onChange={(e) => setNewIsAvailable(e.target.checked)}
                                     className="w-5 h-5 accent-primary cursor-pointer rounded-lg"
+                                    title="Disponível"
                                 />
-                                <span className="text-xs font-bold text-text-secondary group-hover:text-primary transition-colors">Disponível</span>
                             </label>
                         </div>
                         <div className="md:col-span-2">
@@ -641,14 +692,28 @@ const LocationManagement: React.FC = () => {
                                                         <span className="material-symbols-outlined text-xl">home_pin</span>
                                                     </div>
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-text-main leading-tight">{loc.name}</span>
-                                                        <button 
-                                                            onClick={() => startEditing(loc)} 
-                                                            className="flex items-center gap-1 text-[10px] font-bold text-primary opacity-0 group-hover:opacity-100 transition-all hover:underline mt-0.5"
-                                                        >
-                                                            <span className="material-symbols-outlined text-[12px]">edit</span>
-                                                            EDITAR NOME
-                                                        </button>
+                                                        <span className="text-sm font-black text-text-main leading-tight flex items-center gap-2">
+                                                            {loc.name}
+                                                            {loc.allowed_users && loc.allowed_users.length > 0 && (
+                                                                <span className="material-symbols-outlined text-[14px] text-amber-500" title="Acesso Restrito">lock</span>
+                                                            )}
+                                                        </span>
+                                                        <div className="flex items-center gap-3 mt-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                                                            <button 
+                                                                onClick={() => startEditing(loc)} 
+                                                                className="flex items-center gap-1 text-[10px] font-bold text-primary hover:underline"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[12px]">edit</span>
+                                                                EDITAR NOME
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => startEditingAccess(loc)} 
+                                                                className="flex items-center gap-1 text-[10px] font-bold text-amber-600 hover:underline"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[12px]">lock_person</span>
+                                                                EDITAR ACESSO
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -842,6 +907,51 @@ const LocationManagement: React.FC = () => {
                 confirmText={confirmationModalConfig.confirmText}
                 variant={confirmationModalConfig.variant}
             />
+
+            {/* Modal de Edição de Acesso */}
+            {accessModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-200">
+                        <div className="bg-primary/5 px-6 py-4 border-b border-primary/10 flex items-center justify-between rounded-t-3xl">
+                            <h3 className="font-bold text-primary flex items-center gap-2">
+                                <span className="material-symbols-outlined">lock_person</span>
+                                Controle de Acesso
+                            </h3>
+                            <button onClick={() => setAccessModalOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <div className="p-6">
+                            <p className="text-sm text-text-secondary mb-4">
+                                Selecione os usuários que terão permissão para agendar eventos neste local. Se nenhum for selecionado, todos terão acesso.
+                            </p>
+                            <CustomSelect
+                                value={editingAccessUsers}
+                                onChange={(val) => setEditingAccessUsers(val)}
+                                options={allUsers.map(u => ({ value: u.id, label: u.name }))}
+                                placeholder="Selecione os usuários permitidos..."
+                                className="h-12 bg-gray-50/50 w-full mb-6"
+                                multiSelect={true}
+                                searchable={true}
+                            />
+                            <div className="flex justify-end gap-3">
+                                <button 
+                                    onClick={() => setAccessModalOpen(false)}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 transition-all text-sm"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    onClick={handleSaveAccess}
+                                    className="px-5 py-2.5 rounded-xl font-bold text-white bg-primary hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all text-sm"
+                                >
+                                    Salvar Acesso
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

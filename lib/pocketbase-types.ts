@@ -119,6 +119,8 @@ export interface NotificationsRecord {
 export interface LocaisRecord {
     name: string
     conflict_control?: boolean
+    is_available?: boolean
+    allowed_users?: string[]
 }
 
 // Tipos Evento
