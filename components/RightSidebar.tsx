@@ -158,6 +158,13 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                    (u.sector || '').toLowerCase().includes(searchLower);
         })
         .sort((a, b) => {
+            const unreadA = unreadCounts[a.id] || 0;
+            const unreadB = unreadCounts[b.id] || 0;
+            
+            // Unread messages always at the very top
+            if (unreadA > 0 && unreadB === 0) return -1;
+            if (unreadB > 0 && unreadA === 0) return 1;
+
             const priorityA = statusPriority[a.status] || 5;
             const priorityB = statusPriority[b.status] || 5;
             if (priorityA !== priorityB) {
@@ -244,16 +251,15 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                     ) : (
                         <div className="flex flex-col gap-5">
                             {sortedAndFilteredUsers.map((u) => (
-                                <div key={u.id} className="group cursor-pointer">
+                                <div key={u.id} className="group cursor-pointer" onClick={() => {
+                                    navigate(`/chat?userId=${u.id}`);
+                                    if (window.innerWidth < 1024) setIsOpen(false);
+                                }}>
                                     <div className="flex items-start gap-3">
                                         <div className="relative flex-shrink-0">
                                             <div
                                                 className="size-10 rounded-2xl bg-cover bg-center border border-slate-100 group-hover:border-primary/30 transition-all cursor-pointer shadow-sm"
                                                 style={{ backgroundImage: `url(${getAvatarUrl(u)})` }}
-                                                onDoubleClick={() => {
-                                                    navigate(`/chat?userId=${u.id}`);
-                                                    if (window.innerWidth < 1024) setIsOpen(false);
-                                                }}
                                             ></div>
                                             <div className={`absolute -bottom-1 -right-1 size-3.5 border-2 border-white rounded-full ${getStatusColor(u.status)} shadow-sm`}></div>
                                             {unreadCounts[u.id] > 0 && (
@@ -266,11 +272,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center justify-between gap-1">
                                                 <p 
-                                                    className="text-xs font-bold text-text-main truncate group-hover:text-primary transition-colors"
-                                                    onDoubleClick={() => {
-                                                        navigate(`/chat?userId=${u.id}`);
-                                                        if (window.innerWidth < 1024) setIsOpen(false);
-                                                    }}
+                                                    className={`text-xs truncate transition-colors ${unreadCounts[u.id] > 0 ? 'font-black text-primary' : 'font-bold text-text-main group-hover:text-primary'}`}
                                                 >
                                                     {u.name || 'Membro do Time'}
                                                 </p>
@@ -282,7 +284,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ isOpen, setIsOpen }) => {
                                                     {u.context_status || u.status || 'Offline'}
                                                 </span>
                                             </div>
-                                            <p className="text-[10px] text-text-secondary truncate font-medium">
+                                            <p className={`text-[10px] truncate ${unreadCounts[u.id] > 0 ? 'font-bold text-primary/80' : 'font-medium text-text-secondary'}`}>
                                                 {u.sector || 'Colaborador'}
                                             </p>
 

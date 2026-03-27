@@ -567,10 +567,17 @@ const Calendar: React.FC = () => {
         console.log('Calendar: targetEventId found in URL:', targetEventId);
       }
 
-      // Se já estivermos com este evento selecionado, não fazemos nada
+      // Se já estivermos com este evento selecionado, não fazemos nada,
+      // EXCETO se a aba solicitada na URL for diferente da ativa no modal.
+      // E só validamos selectedEvent.id == targetEventId se o modal estiver aberto (selectedEvent não é nulo).
+      // (Isso permite trocar de abas via link com o modal já aberto)
       if (selectedEvent?.id === targetEventId) {
         if (import.meta.env.DEV) {
-          console.log('Calendar: event already selected, skipping');
+          console.log('Calendar: event already selected, skipping fetch');
+        }
+        // Force the tab to change if the URL demands it, even if already open
+        if (tabParam && ['details', 'dashboard', 'transport', 'resources', 'professionals', 'requests'].includes(tabParam)) {
+          setInitialTab(tabParam as any);
         }
         return;
       }
@@ -579,8 +586,6 @@ const Calendar: React.FC = () => {
         if (import.meta.env.DEV) {
           console.log('Calendar: Opening modal for event:', event.id);
         }
-        setSelectedEvent(event);
-        setInitialChatOpen(!!chatEventId);
         
         if (tabParam && ['details', 'dashboard', 'transport', 'resources', 'professionals', 'requests'].includes(tabParam)) {
           setInitialTab(tabParam as 'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests');
@@ -588,12 +593,13 @@ const Calendar: React.FC = () => {
           setInitialTab('details');
         }
 
+        setSelectedEvent(event);
+        setInitialChatOpen(!!chatEventId);
+
         if (fromParam) {
-          if (fromParam === 'notifications') {
-            setReturnPath('/notifications');
-          } else if (fromParam !== location.pathname) {
-            setReturnPath(fromParam);
-          }
+            // Encode again just in case it contains nested query params
+            // Desfazemos o encode feito no momento de montar o link
+            setReturnPath(decodeURIComponent(fromParam));
         }
       };
 
@@ -621,6 +627,14 @@ const Calendar: React.FC = () => {
             almac_requests: record.expand?.agenda_cap53_almac_requests_via_event || []
           };
           openModal(eventWithRequests);
+          
+          // Force view and date update if not already there
+          if (record.date_start) {
+            const recordDate = new Date(record.date_start);
+            if (recordDate.getMonth() !== currentDate.getMonth() || recordDate.getFullYear() !== currentDate.getFullYear()) {
+               setCurrentDate(recordDate);
+            }
+          }
         })
         .catch(err => {
           console.error('Calendar: Erro ao buscar evento para o modal:', err);
@@ -1969,7 +1983,13 @@ const Calendar: React.FC = () => {
                 } else {
                   navigate(path);
                 }
+              } else if (path.startsWith('/chat')) {
+                // Ao voltar para o chat, precisamos forçar a navegação preservando a string inteira,
+                // mas como estamos usando HashRouter, precisamos ter cuidado com os prefixos.
+                // navigate(`/chat` já assume /#/chat)
+                navigate(path);
               } else {
+                // Ensure we navigate back preserving any query params from the returnPath
                 navigate(path);
               }
             }

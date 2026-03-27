@@ -1837,7 +1837,14 @@ const CreateEvent: React.FC = () => {
                         return (
                           <div
                             key={u.id}
-                            className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all duration-300 ${
+                            onClick={(e) => {
+                              // Se clicar nos botões de role não aciona o toggle do participante
+                              if ((e.target as HTMLElement).closest('button')) return;
+                              if (!isCreatorUser) {
+                                toggleArrayItem(selectedParticipants, setSelectedParticipants, u.id);
+                              }
+                            }}
+                            className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all duration-300 ${!isCreatorUser ? 'cursor-pointer' : ''} ${
                               isSel 
                                 ? 'bg-primary/5 border-primary/20 shadow-sm translate-x-1' 
                                 : isCreatorUser
@@ -1851,23 +1858,23 @@ const CreateEvent: React.FC = () => {
                                 <span className={`text-xs font-bold uppercase tracking-tight truncate w-full ${isSel ? 'text-primary' : 'text-slate-700'}`}>
                                   {u.name || (u.email ? u.email.split('@')[0] : 'Usuário')}
                                 </span>
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-1.5 w-full">
                                   {u.sector && (
-                                    <span className={`text-[10px] font-medium uppercase tracking-tight ${isSel ? 'text-primary/40' : 'text-slate-400/70'}`}>
+                                    <span className={`text-[10px] font-medium uppercase tracking-tight truncate ${isSel ? 'text-primary/40' : 'text-slate-400/70'}`}>
                                       {u.sector}
                                     </span>
                                   )}
                                 </div>
                               </div>
                               {isCreatorUser ? (
-                                <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/10">
+                                <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/10 shrink-0">
                                   <span className="text-[10px] font-black uppercase tracking-widest">Você</span>
                                 </div>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => toggleArrayItem(selectedParticipants, setSelectedParticipants, u.id)}
-                                  className={`material-symbols-outlined text-xl transition-all duration-300 ${isSel ? 'text-primary scale-110' : 'text-slate-300 hover:text-primary/40'}`}
+                                  className={`material-symbols-outlined text-xl transition-all duration-300 shrink-0 ${isSel ? 'text-primary scale-110' : 'text-slate-300 hover:text-primary/40'}`}
                                 >
                                   {isSel ? 'check_circle' : 'add_circle'}
                                 </button>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth, UserRole } from './AuthContext';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
@@ -9,6 +9,41 @@ const Sidebar: React.FC = () => {
   const [showStatusMenu, setShowStatusMenu] = React.useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = React.useState(false);
   const { unreadCount: notificationCount } = useNotifications();
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
+  // Fetch and subscribe to unread messages count
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const fetchUnreadMessages = async () => {
+      try {
+        const records = await pb.collection('agenda_cap53_mensagens').getList(1, 1, {
+          filter: `receiver = "${user.id}" && read = false`,
+          $autoCancel: false,
+        });
+        setUnreadMessagesCount(records.totalItems);
+      } catch (error) {
+        console.error('Error fetching unread messages count:', error);
+      }
+    };
+
+    fetchUnreadMessages();
+
+    let unsubscribe: (() => void) | undefined;
+    const setupSubscription = async () => {
+      unsubscribe = await pb.collection('agenda_cap53_mensagens').subscribe('*', (e) => {
+        if (e.record.receiver === user.id) {
+          fetchUnreadMessages();
+        }
+      });
+    };
+
+    setupSubscription();
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user?.id]);
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${isActive
@@ -95,7 +130,14 @@ const Sidebar: React.FC = () => {
               <NavLink to="/chat" className={linkClass} onClick={() => setSidebarOpen(false)}>
                 {({ isActive }) => (
                   <>
-                    <span className={iconClass(isActive)}>chat</span>
+                    <div className="relative">
+                      <span className={iconClass(isActive)}>chat</span>
+                      {unreadMessagesCount > 0 && (
+                        <span className="absolute -top-1 -right-1 size-4 bg-primary border-2 border-white rounded-full flex items-center justify-center text-[10px] text-white font-bold animate-in fade-in zoom-in duration-300">
+                          {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm font-bold">Mensagens</p>
                   </>
                 )}

@@ -46,6 +46,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const [transportRefusalAck, setTransportRefusalAck] = React.useState<boolean | null>(null);
   const [participantStatus, setParticipantStatus] = React.useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = React.useState<'details' | 'dashboard' | 'transport' | 'resources' | 'professionals' | 'requests'>(initialTab);
+
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
   const [isChatOpen, setIsChatOpen] = React.useState(initialChatOpen);
   const [isRequesting, setIsRequesting] = React.useState(false);
   const [requestMessage, setRequestMessage] = React.useState('');
@@ -776,10 +780,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   };
 
   const handleShare = () => {
+    const eventDateStr = new Date(event.date_start).toISOString().split('T')[0];
+    const link = `${window.location.origin}/#/calendar?date=${eventDateStr}&view=day&eventId=${event.id}&tab=details`;
     const locationName = event.expand?.location?.name || event.custom_location || 'Local não definido';
-    const text = `📅 ${event.title}\n🕒 ${startDate.toLocaleDateString('pt-BR')} ${startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n📍 ${locationName}\n\n${event.description || ''}`;
+    
+    const text = `📅 ${event.title}\n🕒 ${startDate.toLocaleDateString('pt-BR')} ${startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n📍 ${locationName}\n\n🔗 Link: ${link}`;
+    
     navigator.clipboard.writeText(text);
-    alert('Detalhes copiados para a área de transferência!');
+    alert('Link e detalhes copiados para a área de transferência!');
   };
 
   const toggleItemAvailability = async (reqId: string, currentAvailability: boolean) => {
@@ -1701,6 +1709,14 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             <div className="p-4 bg-white border-t border-slate-50 flex flex-col sm:flex-row items-center gap-3">
                 {/* Mobile: Flex for Actions */}
                 <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
+                    <button 
+                        onClick={handleShare}
+                        className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-600 text-[10px] font-bold uppercase tracking-wider hover:bg-primary/10 hover:text-primary transition-all flex items-center justify-center gap-2 border border-slate-200 hover:border-primary/20"
+                    >
+                        <span className="material-symbols-outlined text-lg">share</span>
+                        <span>Compartilhar</span>
+                    </button>
+                    
                     {canEdit && (
                         <button 
                             onClick={() => {

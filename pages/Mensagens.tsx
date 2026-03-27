@@ -413,9 +413,35 @@ const Chat: React.FC = () => {
 
 
 
-  const filteredUsers = users.filter(u => 
-    (u.name || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const statusPriority: Record<string, number> = {
+    'Online': 1,
+    'Ausente': 2,
+    'Ocupado': 3,
+    'Offline': 4
+  };
+
+  const filteredUsers = users.filter(u => {
+    const searchLower = searchTerm.toLowerCase();
+    return (u.name || '').toLowerCase().includes(searchLower) || 
+           (u.sector || '').toLowerCase().includes(searchLower);
+  }).sort((a, b) => {
+    const unreadA = unreadCounts[a.id] || 0;
+    const unreadB = unreadCounts[b.id] || 0;
+    
+    // Unread messages always at the very top
+    if (unreadA > 0 && unreadB === 0) return -1;
+    if (unreadB > 0 && unreadA === 0) return 1;
+
+    // Then sort by status priority
+    const priorityA = statusPriority[a.status] || 5;
+    const priorityB = statusPriority[b.status] || 5;
+    if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+    }
+
+    // Then sort by name alphabetically
+    return (a.name || '').localeCompare(b.name || '');
+  });
 
   return (
     <div className="flex h-[calc(100vh-120px)] lg:h-[calc(100vh-160px)] border-none lg:border lg:border-border-light rounded-none lg:rounded-xl overflow-hidden bg-white shadow-none lg:shadow-sm">
@@ -447,7 +473,7 @@ const Chat: React.FC = () => {
                                 navigate(`/chat?userId=${user.id}`);
                                 if (isMobile) setShowChatMobile(true);
                             }}
-                            className={`flex items-center gap-4 p-3.5 rounded-2xl cursor-pointer transition-all duration-200 group ${
+                            className={`flex items-start gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 group ${
                                 user.id === userId 
                                 ? 'bg-primary/5 border border-primary/10 shadow-sm' 
                                 : 'hover:bg-slate-50 border border-transparent'
@@ -455,29 +481,34 @@ const Chat: React.FC = () => {
                         >
                             <div className="relative shrink-0">
                                 <div 
-                                    className="size-12 rounded-2xl bg-slate-50 bg-cover bg-center border border-slate-100 group-hover:border-primary/30 group-hover:scale-105 transition-all shadow-sm" 
+                                    className="size-10 rounded-2xl bg-slate-50 bg-cover bg-center border border-slate-100 group-hover:border-primary/30 transition-all shadow-sm" 
                                     style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}
                                 ></div>
-                                <span className={`absolute -bottom-1 -right-1 size-4 border-2 border-white rounded-full shadow-sm ${getStatusColor(user.status)}`}></span>
+                                {unreadCounts[user.id] > 0 && (
+                                    <div className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold size-4 flex items-center justify-center rounded-full border-2 border-white animate-pulse shadow-sm z-10">
+                                        {unreadCounts[user.id]}
+                                    </div>
+                                )}
+                                <span className={`absolute -bottom-1 -right-1 size-3.5 border-2 border-white rounded-full shadow-sm ${getStatusColor(user.status)} z-10`}></span>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <div className="flex justify-between items-center mb-0.5">
-                                    <p className={`text-[15px] font-bold truncate ${user.id === userId ? 'text-primary' : 'text-slate-800'}`}>
+                                <div className="flex justify-between items-center">
+                                    <p className={`text-[12px] font-bold truncate ${user.id === userId ? 'text-primary' : 'text-slate-800 group-hover:text-primary transition-colors'}`}>
                                         {user.name || 'Membro do Time'}
                                     </p>
-                                    {unreadCounts[user.id] > 0 && (
-                                        <div className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-300">
-                                            {unreadCounts[user.id]}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <p className="text-xs text-slate-500 truncate font-medium flex-1">
-                                        {user.sector || 'Sem setor'}
-                                    </p>
-                                    <span className={`text-[10px] font-bold uppercase tracking-wider ${user.status === 'Online' ? 'text-green-500' : 'text-slate-300'}`}>
+                                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase ${
+                                        user.status === 'Online' ? 'bg-green-100 text-green-700' :
+                                        user.status === 'Ausente' ? 'bg-amber-100 text-amber-700' :
+                                        user.status === 'Ocupado' ? 'bg-red-100 text-red-700' :
+                                        'bg-slate-100 text-slate-500'
+                                    }`}>
                                         {user.status || 'Offline'}
                                     </span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <p className={`text-[10px] truncate flex-1 ${unreadCounts[user.id] > 0 ? 'text-primary/80 font-bold' : 'text-slate-500 font-medium'}`}>
+                                        {user.sector || 'Sem setor'}
+                                    </p>
                                 </div>
                                 {user.observations && (
                                     <p className="text-[10px] text-slate-400 mt-0.5 italic leading-tight line-clamp-1" title={user.observations}>
@@ -521,6 +552,11 @@ const Chat: React.FC = () => {
                     ></div>
                     {selectedUser && (
                         <span className={`absolute -bottom-1 -right-1 size-3.5 border-2 border-white rounded-full shadow-sm ${getStatusColor(selectedUser?.status)}`}></span>
+                    )}
+                    {userId && unreadCounts[userId] > 0 && (
+                        <div className="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-black px-1.5 py-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full shadow-lg shadow-primary/20 border-2 border-white animate-in fade-in zoom-in duration-300">
+                            {unreadCounts[userId]}
+                        </div>
                     )}
                 </div>
                 <div className="min-w-0">
@@ -612,14 +648,29 @@ const Chat: React.FC = () => {
                                   </div>
                                 ) : (
                                   <div className="relative group/msg">
-                                    <div className={`p-3 lg:p-4 rounded-2xl shadow-sm text-sm lg:text-[15px] leading-relaxed transition-all ${
+                                    <div className={`p-3 lg:p-4 rounded-2xl shadow-sm text-sm lg:text-[15px] leading-relaxed transition-all relative ${
                                       msg.is_deleted 
                                         ? 'bg-slate-50 text-slate-400 italic border border-slate-100' 
                                         : isMe 
                                           ? 'bg-primary text-white rounded-tr-none shadow-md shadow-primary/10' 
-                                          : 'bg-white border border-slate-100 text-slate-700 rounded-tl-none'
+                                          : `border rounded-tl-none ${!msg.read ? 'bg-primary/5 border-primary/20 text-slate-800 font-medium' : 'bg-white border-slate-100 text-slate-700'}`
                                     }`}>
-                                        {msg.content}
+                                        {!isMe && !msg.read && (
+                                            <div className="absolute -left-1.5 top-0 w-3 h-3 bg-primary rounded-full border-2 border-white shadow-sm" title="Mensagem nova" />
+                                        )}
+                                        {msg.content.split(/(https?:\/\/[^\s]+)/g).map((part, i) => 
+                                          part.match(/^https?:\/\//) ? (
+                                            <a 
+                                              key={i} 
+                                              href={part.includes('?') ? `${part}&from=${encodeURIComponent(`/chat?userId=${userId}`)}` : `${part}?from=${encodeURIComponent(`/chat?userId=${userId}`)}`} 
+                                              className="underline underline-offset-2 hover:text-blue-300 font-bold break-all"
+                                            >
+                                              {part}
+                                            </a>
+                                          ) : (
+                                            <span key={i}>{part}</span>
+                                          )
+                                        )}
                                     </div>
                                     
                                     {!msg.is_deleted && (

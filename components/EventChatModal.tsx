@@ -243,7 +243,19 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                                             ? 'bg-slate-900 text-white rounded-br-none shadow-lg shadow-slate-200' 
                                             : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none shadow-sm hover:shadow-md'
                                         }`}>
-                                            {msg.content}
+                                            {msg.content.split(/(https?:\/\/[^\s]+)/g).map((part, j) => 
+                                                part.match(/^https?:\/\//) ? (
+                                                    <a 
+                                                        key={j} 
+                                                        href={part.includes('?') ? `${part}&from=${encodeURIComponent(`/chat?userId=${user?.id}`)}` : `${part}?from=${encodeURIComponent(`/chat?userId=${user?.id}`)}`} 
+                                                        className="underline underline-offset-2 hover:text-blue-300 font-bold break-all"
+                                                    >
+                                                        {part}
+                                                    </a>
+                                                ) : (
+                                                    <span key={j}>{part}</span>
+                                                )
+                                            )}
                                             <div className={`absolute bottom-[-18px] ${isMe ? 'right-1' : 'left-1'} opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center gap-2`}>
                                                 <span className="text-[8px] text-slate-400 font-bold uppercase tracking-tighter whitespace-nowrap">
                                                     {new Date(msg.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
