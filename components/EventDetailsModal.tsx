@@ -1006,12 +1006,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 mt-4">
                             <div className="flex items-center gap-1.5" title="Data de Criação">
                                 <span className="material-symbols-outlined text-[14px]">add_circle</span>
-                                Criado em: {new Date(event.created).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                Criado em: {new Date(event.created.replace(' ', 'T') + (event.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                             </div>
                             {event.updated && event.updated !== event.created && (
                                 <div className="flex items-center gap-1.5" title="Última Edição">
                                     <span className="material-symbols-outlined text-[14px]">edit</span>
-                                    Editado em: {new Date(event.updated).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                    Editado em: {new Date(event.updated.replace(' ', 'T') + (event.updated.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                                 </div>
                             )}
                         </div>

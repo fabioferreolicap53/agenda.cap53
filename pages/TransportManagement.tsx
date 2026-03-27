@@ -457,12 +457,12 @@ const TransportManagement: React.FC = () => {
                                                 <div className="flex items-center gap-3 pt-4 border-t border-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                                                     <div className="flex items-center gap-1" title="Data de Solicitação">
                                                         <span className="material-symbols-outlined text-[11px]">add_circle</span>
-                                                        {new Date(event.created).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                                        {new Date(event.created.replace(' ', 'T') + (event.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                                                     </div>
                                                     {event.updated && event.updated !== event.created && (
                                                         <div className="flex items-center gap-1" title="Última Edição">
                                                             <span className="material-symbols-outlined text-[11px]">edit</span>
-                                                            {new Date(event.updated).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                                            {new Date(event.updated.replace(' ', 'T') + (event.updated.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
                                                         </div>
                                                     )}
                                                 </div>
