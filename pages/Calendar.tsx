@@ -507,9 +507,17 @@ const Calendar: React.FC = () => {
       onConfirm: () => {},
   });
   const [eventToCancel, setEventToCancel] = useState<{ id: string, title: string } | null>(null);
-  const [processingCancellation, setProcessingCancellation] = useState(false);
+  // State para controlar a animação de pulso quando a página carregar
+  const [shouldPulseToday, setShouldPulseToday] = useState(true);
 
-  // Function to scroll to today and center it
+  useEffect(() => {
+    // Desliga a animação de pulso após alguns segundos
+    const timer = setTimeout(() => {
+      setShouldPulseToday(false);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const scrollToToday = () => {
     setTimeout(() => {
       // Configuração base de scroll
@@ -1200,14 +1208,14 @@ const Calendar: React.FC = () => {
                       className={`flex flex-col p-2.5 relative group transition-all duration-300 cursor-default min-h-[140px] ${!isRightEdge ? 'border-r border-border-light/50' : ''} ${!isBottomEdge ? 'border-b border-border-light/50' : ''} ${scrollMarginClass} ${
                         dateObj.type === 'current' 
                           ? (isToday 
-                              ? 'bg-primary/[0.03] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.03)]' 
-                              : (isWeekend ? 'bg-orange-50/30 hover:bg-orange-50/60' : 'bg-white hover:bg-slate-50/50')) 
-                          : 'bg-slate-50/80 text-text-secondary/30'
+                              ? `bg-primary/[0.03] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.03)] ${shouldPulseToday ? 'animate-pulse border-primary/30 z-20' : ''}` 
+                              : (isWeekend ? 'bg-orange-50/20 hover:bg-orange-50/40' : 'bg-white hover:bg-slate-50/50')) 
+                          : 'bg-slate-50/60 text-slate-400'
                       }`}
                     >
                       {/* Glow effect for today */}
                       {isToday && (
-                        <div className="absolute inset-0 ring-2 ring-inset ring-primary/20 pointer-events-none z-10" />
+                        <div className={`absolute inset-0 pointer-events-none z-10 transition-all duration-1000 ${shouldPulseToday ? 'ring-4 ring-inset ring-primary/40 bg-primary/[0.05]' : 'ring-2 ring-inset ring-primary/20'}`} />
                       )}
                       {isToday && (
                         <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-primary/[0.08] to-transparent"></div>
@@ -1276,7 +1284,7 @@ const Calendar: React.FC = () => {
                     ref={dateKey === monthTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
                     className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
                       isToday 
-                        ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
+                        ? `bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20 shadow-primary/20' : ''}` 
                         : (isWeekend ? 'bg-orange-50/60 border-orange-200' : 'bg-white hover:bg-slate-50/50')
                     }`}
                   >
@@ -1288,7 +1296,7 @@ const Calendar: React.FC = () => {
                     )}
                     {/* Glow effect for today */}
                     {isToday && (
-                      <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
+                      <div className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 ${shouldPulseToday ? 'bg-gradient-to-r from-primary/[0.15] via-transparent to-transparent' : 'bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent'}`}></div>
                     )}
                     
                     <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-50 relative z-10 ${isToday ? 'bg-primary/5' : (isWeekend ? 'bg-orange-50/30' : 'bg-slate-50/50')}`}>
@@ -1372,7 +1380,7 @@ const Calendar: React.FC = () => {
                   const isToday = date.toDateString() === new Date().toDateString();
                   return (
                     <div key={idx} className={`py-3 flex flex-col items-center gap-0.5 border-r border-border-light/50 last:border-r-0 transition-all duration-300 ${
-                    isToday ? 'bg-primary/5' : (isWeekend ? 'bg-orange-50/30' : 'bg-transparent')
+                    isToday ? 'bg-primary/5' : (isWeekend ? 'bg-orange-50/20' : 'bg-transparent')
                   }`}>
                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] ${
                       isToday ? 'text-primary' : (isWeekend ? 'text-orange-600/80' : 'text-slate-500')
@@ -1425,19 +1433,19 @@ const Calendar: React.FC = () => {
                       onDoubleClick={() => handleDayDoubleClick(date)}
                       className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${!isRightEdge ? 'border-r border-border-light/50' : ''} ${scrollMarginClass} ${
                         isToday 
-                          ? 'bg-primary/[0.03] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.03)]' 
+                          ? `bg-primary/[0.03] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.03)] ${shouldPulseToday ? 'animate-pulse ring-4 ring-inset ring-primary/20 z-20' : ''}` 
                           : isWeekend
-                            ? 'bg-orange-50/20 hover:bg-orange-50/50'
+                            ? 'bg-orange-50/10 hover:bg-orange-50/30'
                             : isCurrentMonth 
                               ? 'hover:bg-slate-50/50' 
-                              : 'bg-slate-50/80'
+                              : 'bg-slate-50 text-slate-400'
                       }`}
                     >
                       {/* Subtil pattern for out-of-month days */}
                       {!isCurrentMonth && (
                         <div className="absolute inset-0 pointer-events-none opacity-[0.05]" style={{ backgroundImage: 'radial-gradient(#000 0.5px, transparent 0.5px)', backgroundSize: '4px 4px' }}></div>
                       )}
-                      <div className={`flex flex-col gap-1.5 flex-1 group/cell transition-all duration-300 relative z-10 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
+                      <div className={`flex flex-col gap-1.5 flex-1 group/cell transition-all duration-300 relative z-10 ${!isCurrentMonth ? 'opacity-30 grayscale-[0.6]' : ''}`}>
                         {dayEvents.length > 0 ? (
                           dayEvents.map(event => (
                             <CalendarEventCard
@@ -1531,7 +1539,7 @@ const Calendar: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    <div className={`p-3 flex flex-col gap-2 relative z-10 transition-all duration-300 group/cell ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
+                    <div className={`p-3 flex flex-col gap-2 relative z-10 transition-all duration-300 group/cell ${!isCurrentMonth ? 'opacity-30 grayscale-[0.6]' : ''}`}>
                       {dayEvents.length > 0 ? (
                         dayEvents.map(event => (
                           <CalendarEventCard
@@ -1566,7 +1574,7 @@ const Calendar: React.FC = () => {
               onDoubleClick={() => handleDayDoubleClick(currentDate)}
               className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${scrollMarginClass} ${
                 isToday 
-                  ? 'bg-primary/[0.03] ring-inset ring-1 ring-primary/10' 
+                  ? `bg-primary/[0.03] ring-inset ring-1 ring-primary/10 ${shouldPulseToday ? 'animate-pulse ring-4 ring-primary/20 z-20' : ''}` 
                   : (isWeekend ? 'bg-orange-50/20' : 'bg-white')
               }`}
             >
@@ -1856,12 +1864,12 @@ const Calendar: React.FC = () => {
                             ref={dateStr === agendaTargetDateKey ? agendaTargetRef : (isToday ? todayRef : null)}
                             className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden ${scrollMarginClass} ${
                                 isToday 
-                                    ? 'bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
+                                    ? `bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20 shadow-primary/20' : ''}` 
                                     : isWeekend && isCurrentMonth
-                                        ? 'bg-orange-50/40 md:bg-orange-50/60 border-2 border-orange-100/50 hover:bg-orange-50/60 md:hover:bg-orange-50/80'
+                                        ? 'bg-orange-50/20 md:bg-orange-50/40 border border-orange-100 hover:bg-orange-50/40 md:hover:bg-orange-50/60'
                                         : isCurrentMonth 
-                                            ? 'hover:bg-slate-50/50'
-                                            : 'bg-slate-100/70 opacity-80'
+                                            ? 'bg-white border border-border-light hover:border-border-light/80 hover:shadow-md hover:-translate-y-0.5'
+                                            : 'bg-slate-50 border border-border-light opacity-80'
                             }`}
                         >
                             {/* Subtil pattern for out-of-month days */}
@@ -1870,7 +1878,7 @@ const Calendar: React.FC = () => {
                             )}
                             {/* Glow effect for today agenda */}
                             {isToday && (
-                              <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent"></div>
+                              <div className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 ${shouldPulseToday ? 'bg-gradient-to-r from-primary/[0.15] via-transparent to-transparent' : 'bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent'}`}></div>
                             )}
                             {/* Glow effect for weekend agenda */}
                             {isWeekend && !isToday && isCurrentMonth && (
