@@ -1495,28 +1495,28 @@ const CreateEvent: React.FC = () => {
     }
 
     return (
-      <div key={item.id} className={`flex items-center rounded-xl border transition-all duration-300 h-10 ${isSelected ? (isConfirmed ? 'bg-slate-800 border-slate-800 shadow-sm pr-1' : 'bg-white border-slate-800 shadow-md pr-1') : (isAvailable ? 'bg-white border-slate-100 hover:border-slate-300 hover:bg-slate-50' : 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed')}`}>
+      <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center rounded-[20px] border-2 transition-all duration-300 min-h-[48px] py-2 sm:py-0 ${isSelected ? (isConfirmed ? 'bg-slate-900 border-slate-900 shadow-lg sm:pr-1.5' : 'bg-white border-slate-900 shadow-md sm:pr-1.5') : (isAvailable ? 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50' : 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed')}`}>
         <button 
           type="button" 
           disabled={!isClickable}
           onClick={() => toggleArrayItem(selectedItems, setSelectedItems, item.id)}
-          className={`flex-1 h-full px-4 text-[10px] font-bold uppercase tracking-wider text-left transition-all ${isSelected ? (isConfirmed ? 'text-white' : 'text-slate-800') : (isAvailable ? 'text-slate-400' : 'text-slate-300')}`}
+          className={`flex-1 h-full px-4 py-2 sm:py-0 text-[11px] font-bold uppercase tracking-wider text-left transition-all ${isSelected ? (isConfirmed ? 'text-white' : 'text-slate-800') : (isAvailable ? 'text-slate-600' : 'text-slate-300')}`}
         >
           <div className="flex flex-col leading-tight">
             <span className={!isAvailable && isSelected ? 'line-through opacity-70' : ''}>{item.name}</span>
-            <span className={`text-[8px] normal-case font-medium ${!isAvailable ? 'text-red-500 font-bold' : 'text-green-500'}`}>
+            <span className={`text-[8px] normal-case font-medium ${!isAvailable ? 'text-red-500 font-bold' : 'text-emerald-500 font-bold'}`}>
               {isAvailable ? 'Disponível' : (isSelected ? 'Indisponível (Remover)' : 'Indisponível')}
             </span>
           </div>
         </button>
         
         {isSelected && !isConfirmed && (
-          <div className="flex items-center gap-2 px-2 animate-in fade-in zoom-in-95 duration-200 border-l border-slate-100">
-              <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+          <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-0 sm:pb-0 sm:pr-2 h-full animate-in fade-in zoom-in-95 duration-200 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 mt-1 sm:mt-0">
+              <div className="flex items-center bg-slate-100/50 rounded-xl border border-slate-200 p-1">
                 <button 
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, (itemQuantities[item.id] || 1) - 1); }}
-                  className="size-6 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors"
+                  className="size-6 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all"
                 >
                   <span className="material-symbols-outlined text-[16px]">remove</span>
                 </button>
@@ -1531,31 +1531,40 @@ const CreateEvent: React.FC = () => {
                 <button 
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, (itemQuantities[item.id] || 1) + 1); }}
-                  className="size-6 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-colors"
+                  className="size-6 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
                 </button>
               </div>
               {item.unit && <span className="text-[10px] font-bold text-slate-400 min-w-[24px]">{item.unit}</span>}
-              <button 
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setConfirmedItems(prev => [...prev, item.id]); }}
-                className="size-7 rounded-lg bg-slate-800 text-white flex items-center justify-center hover:bg-slate-700 shadow-sm transition-all active:scale-90"
-              >
-                <span className="material-symbols-outlined text-[16px]">check</span>
-              </button>
+              <div className="flex items-center ml-auto sm:ml-0">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2 mr-1 hidden sm:inline-block">Confirmar item</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1 sm:hidden">Confirmar</span>
+                <button 
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setConfirmedItems(prev => [...prev, item.id]); }}
+                  className="size-8 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 shadow-sm transition-all active:scale-90 ml-1"
+                  title="Confirmar item"
+                >
+                  <span className="material-symbols-outlined text-[18px]">check</span>
+                </button>
+              </div>
           </div>
         )}
 
         {isSelected && isConfirmed && (
            <div 
               onClick={(e) => { e.stopPropagation(); setConfirmedItems(prev => prev.filter(id => id !== item.id)); }}
-              className="flex items-center gap-2 px-3 h-full cursor-pointer hover:bg-white/10 rounded-r-xl transition-colors border-l border-white/10"
+              className="flex items-center justify-between sm:justify-start gap-2.5 px-4 py-2 sm:py-0 h-full cursor-pointer hover:bg-white/10 rounded-b-[18px] sm:rounded-b-none sm:rounded-r-[18px] transition-colors border-t sm:border-t-0 sm:border-l border-white/20 group bg-white/5 sm:bg-transparent mt-1 sm:mt-0"
+              title="Clique para editar"
            >
-              <span className="text-[10px] font-bold text-white opacity-90">
-                {itemQuantities[item.id] || 1} {item.unit || ''}
-              </span>
-              <span className="material-symbols-outlined text-[16px] text-white/50">edit</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[9px] font-bold text-white uppercase tracking-widest opacity-80 mr-1 hidden sm:inline-block">Selecionado</span>
+                <span className="text-[11px] font-bold text-emerald-400 group-hover:text-white transition-colors">
+                  {itemQuantities[item.id] || 1} {item.unit || ''}
+                </span>
+              </div>
+              <span className="material-symbols-outlined text-[16px] text-white/50 group-hover:text-white transition-colors ml-1">edit</span>
            </div>
         )}
       </div>
@@ -1590,7 +1599,7 @@ const CreateEvent: React.FC = () => {
                   <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Título da Atividade</label>
                   <input
                     required value={title} onChange={(e) => setTitle(e.target.value)}
-                    className="w-full h-14 px-6 rounded-2xl bg-[#f8fafc]/50 border border-[#e2e8f0]/60 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm transition-all duration-300 placeholder:text-[#94a3b8]/60"
+                    className="w-full h-14 px-6 rounded-2xl bg-white border border-slate-300 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-800 transition-all duration-300 placeholder:text-slate-400"
                     placeholder="Ex: Reunião Geral de Indicadores"
                   />
                 </div>
@@ -1602,7 +1611,7 @@ const CreateEvent: React.FC = () => {
                     onChange={setType}
                     placeholder="Selecione o tipo..."
                     required
-                    className="h-14"
+                    className="h-14 font-semibold"
                     options={orderedEventTypeOptions}
                   />
                 </div>
@@ -1660,7 +1669,7 @@ const CreateEvent: React.FC = () => {
                     }}
                     placeholder="Selecione a responsabilidade..."
                     required
-                    className="h-14"
+                    className="h-14 font-semibold"
                     options={RESPONSIBILITY_LEVELS}
                   />
                 </div>
@@ -1672,7 +1681,7 @@ const CreateEvent: React.FC = () => {
                     onChange={setInvolvementLevel}
                     placeholder={responsibility ? "Selecione o nível..." : "Selecione a responsabilidade primeiro"}
                     required
-                    className={`h-14 ${!responsibility ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
+                    className={`h-14 font-semibold ${!responsibility ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
                     disabled={!responsibility}
                     options={INVOLVEMENT_LEVELS.filter(level => {
                       if (responsibility === 'EXTERNO_COMPROMISSO') {
@@ -1707,7 +1716,7 @@ const CreateEvent: React.FC = () => {
                     value={observacoes}
                     onChange={(e) => setObservacoes(e.target.value)}
                     placeholder="Informações relevantes sobre o evento (objetivos, pautas, orientações)..."
-                    className="w-full min-h-[120px] p-5 rounded-2xl bg-[#f8fafc]/50 border border-[#e2e8f0]/60 focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm transition-all duration-300 placeholder:text-[#94a3b8]/60 resize-none"
+                    className="w-full min-h-[120px] p-5 rounded-2xl bg-white border border-slate-300 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-800 transition-all duration-300 placeholder:text-slate-400 resize-none"
                   />
                 </div>
 
@@ -1742,8 +1751,8 @@ const CreateEvent: React.FC = () => {
 
                 <div className="md:col-span-1 space-y-2 pt-2">
                   <div className="h-4" /> {/* Spacer for label alignment */}
-                  <div className={`w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-100/60 bg-slate-50/60 opacity-60 cursor-not-allowed' : 'border-slate-100/60 bg-slate-50/30 focus-within:bg-white focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5'}`}>
-                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 text-slate-400'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
+                  <div className={`w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-100/60 bg-slate-50/60 opacity-60 cursor-not-allowed' : 'border-slate-300 bg-white focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5'}`}>
+                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 text-slate-500'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
                       <span className="material-symbols-outlined text-[24px]">groups</span>
                     </div>
                     <div className="flex-1 flex flex-col justify-center min-w-0">
@@ -1754,7 +1763,7 @@ const CreateEvent: React.FC = () => {
                         value={estimatedParticipants}
                         onChange={(e) => setEstimatedParticipants(e.target.value)}
                         disabled={responsibility === 'EXTERNO_COMPROMISSO'}
-                        className={`w-full bg-transparent border-none outline-none font-semibold text-[10px] p-0 h-4 placeholder:text-slate-300/60 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'text-slate-300' : 'text-slate-400'}`}
+                        className={`w-full bg-transparent border-none outline-none font-semibold text-sm p-0 h-5 placeholder:text-slate-400 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'text-slate-400' : 'text-slate-800'}`}
                         placeholder="Ex: 50"
                         title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : undefined}
                       />
@@ -1787,7 +1796,7 @@ const CreateEvent: React.FC = () => {
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors duration-300">person_search</span>
                 <input
                   type="text" placeholder="Pesquisar..." value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)}
-                  className="w-full h-11 pl-11 pr-10 rounded-xl bg-slate-50 border border-slate-200 outline-none font-semibold text-[11px] focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-300"
+                  className="w-full h-11 pl-11 pr-10 rounded-xl bg-white border border-slate-300 outline-none font-semibold text-sm text-slate-800 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-300 placeholder:text-slate-400"
                 />
                 {participantSearch && (
                   <button 
@@ -1942,7 +1951,7 @@ const CreateEvent: React.FC = () => {
                 </div>
                 <div>
                   <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${envolverProfissionais ? 'text-slate-800' : 'text-slate-400'}`}>Envolvimento de Unidades e Profissionais</h3>
-                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Defina o público-alvo nas unidades</p>
+                  <p className="text-[10px] font-medium text-slate-400 mt-0.5">Clique no botão ao lado para ativar e definir o público-alvo nas unidades</p>
                 </div>
               </div>
               <button
@@ -1954,7 +1963,7 @@ const CreateEvent: React.FC = () => {
                   {envolverProfissionais && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${envolverProfissionais ? 'bg-green-500' : 'bg-slate-300'}`}></span>
                 </span>
-                {envolverProfissionais ? 'ATIVADO' : 'DESATIVADO'}
+                {envolverProfissionais ? 'ATIVADO' : 'ATIVAR'}
               </button>
             </div>
 
@@ -1994,13 +2003,13 @@ const CreateEvent: React.FC = () => {
                       </div>
                     </div>
                     <div className="relative group">
-                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-300 group-focus-within:text-slate-500 transition-colors">search</span>
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-400 group-focus-within:text-slate-500 transition-colors">search</span>
                       <input
                         type="text"
                         placeholder="Pesquisar unidade..."
                         value={unitSearch}
                         onChange={(e) => setUnitSearch(e.target.value)}
-                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold text-[11px] text-slate-700 focus:bg-white focus:border-slate-400 transition-all duration-300"
+                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-white border border-slate-300 outline-none font-semibold text-sm text-slate-800 focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
                       />
                     </div>
                   </div>
@@ -2071,13 +2080,13 @@ const CreateEvent: React.FC = () => {
                       </div>
                     </div>
                     <div className="relative group">
-                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-300 group-focus-within:text-slate-500 transition-colors">search</span>
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-400 group-focus-within:text-slate-500 transition-colors">search</span>
                       <input
                         type="text"
                         placeholder="Pesquisar categoria..."
                         value={categorySearch}
                         onChange={(e) => setCategorySearch(e.target.value)}
-                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-slate-50 border border-slate-200 outline-none font-bold text-[11px] text-slate-700 focus:bg-white focus:border-slate-400 transition-all duration-300"
+                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-white border border-slate-300 outline-none font-semibold text-sm text-slate-800 focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
                       />
                     </div>
                   </div>
@@ -2121,7 +2130,7 @@ const CreateEvent: React.FC = () => {
                 </div>
                 <div>
                   <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${logisticaRecursos ? 'text-slate-800' : 'text-slate-400'}`}>Logística & Recursos</h3>
-                  <p className="text-[10px] font-medium text-slate-400 uppercase tracking-widest mt-0.5">Solicite insumos e apoio para o evento</p>
+                  <p className="text-[10px] font-medium text-slate-400 mt-0.5">Clique no botão ao lado para ativar e solicitar insumos e apoio para o evento</p>
                 </div>
               </div>
 
@@ -2134,7 +2143,7 @@ const CreateEvent: React.FC = () => {
                   {logisticaRecursos && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${logisticaRecursos ? 'bg-green-500' : 'bg-slate-300'}`}></span>
                 </span>
-                {logisticaRecursos ? 'ATIVADO' : 'DESATIVADO'}
+                {logisticaRecursos ? 'ATIVADO' : 'ATIVAR'}
               </button>
             </div>
 
@@ -2260,7 +2269,7 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="De onde o veículo deve sair?"
-                              className="w-full h-12 px-5 rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 font-medium text-sm focus:outline-none focus:border-slate-400 focus:bg-white transition-all duration-300"
+                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
                             />
                           </div>
                           <div className="space-y-2.5">
@@ -2274,7 +2283,7 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="Para onde o veículo deve ir?"
-                              className="w-full h-12 px-5 rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 font-medium text-sm focus:outline-none focus:border-slate-400 focus:bg-white transition-all duration-300"
+                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
                             />
                           </div>
 
@@ -2310,7 +2319,7 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="Qtd."
-                              className="w-full h-12 px-5 rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 font-medium text-sm focus:outline-none focus:border-slate-400 focus:bg-white transition-all duration-300"
+                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
                             />
                           </div>
 
@@ -2333,7 +2342,7 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="Ex: Quantidade de passageiros, volume de carga, ponto de referência específico..."
-                              className="w-full min-h-[100px] p-5 rounded-2xl bg-slate-50 border border-slate-100 text-slate-700 font-medium text-sm focus:outline-none focus:border-slate-400 focus:bg-white transition-all duration-300 resize-none"
+                              className="w-full min-h-[100px] p-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400 resize-none"
                             />
                           </div>
                         </div>
@@ -2346,18 +2355,19 @@ const CreateEvent: React.FC = () => {
           </section>
 
           {/* Submit Button Section */}
-          <div className="fixed bottom-4 left-4 right-4 z-[100] p-2 bg-white/80 backdrop-blur-2xl border border-white/50 shadow-2xl shadow-slate-200/50 rounded-2xl md:static md:bg-transparent md:backdrop-blur-none md:border-none md:shadow-none md:p-0 md:pt-6 flex justify-center lg:justify-end transition-all duration-300">
+          <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100] transition-all duration-300">
             <button
               type="submit"
               disabled={loading || isDateInvalid || isDurationInvalid || isTransportTimeInvalid}
-              className="w-full md:w-auto h-12 md:h-12 px-8 bg-primary text-white rounded-xl font-bold text-[10px] uppercase tracking-[0.15em] hover:bg-primary-hover active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/25 md:shadow-none"
+              className="h-14 w-14 md:w-auto md:px-8 bg-slate-900 text-white rounded-full md:rounded-[20px] font-bold text-xs uppercase tracking-[0.15em] hover:bg-slate-800 hover:scale-105 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)]"
+              title={isEditing ? 'Salvar Alterações' : 'Agendar Atividade'}
             >
               {loading ? (
                 <div className="size-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>{isEditing ? 'Salvar Alterações' : 'Agendar Atividade'}</span>
-                  <span className="material-symbols-outlined text-lg group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">send</span>
+                  <span className="hidden md:inline">{isEditing ? 'Salvar Alterações' : 'Agendar Atividade'}</span>
+                  <span className="material-symbols-outlined text-[24px] md:text-xl group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform">send</span>
                 </>
               )}
             </button>

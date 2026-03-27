@@ -192,24 +192,24 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         className={`
-          w-full h-full px-4 rounded-lg bg-white border border-gray-300 
+          w-full h-full px-4 rounded-xl bg-white border border-slate-300 
           flex items-center justify-between cursor-pointer transition-all duration-300
           outline-none focus:ring-2 focus:ring-primary focus:border-transparent
           ${isOpen ? 'ring-2 ring-primary border-transparent' : ''}
-          ${disabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-primary/50'}
+          ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:border-primary/50'}
         `}
       >
         <div className="flex items-center gap-2 overflow-hidden">
             {startIcon && (
-                <span className="material-symbols-outlined text-text-secondary text-lg">
+                <span className="material-symbols-outlined text-slate-500 text-lg">
                     {startIcon}
                 </span>
             )}
-            <span className={`text-sm truncate ${value && (Array.isArray(value) ? value.length > 0 : value !== '') ? 'text-[#1e293b]' : 'text-gray-400'}`}>
+            <span className={`text-sm font-semibold truncate ${value && (Array.isArray(value) ? value.length > 0 : value !== '') ? 'text-slate-800' : 'text-slate-400'}`}>
               {getLabel()}
             </span>
         </div>
-        <span className={`material-symbols-outlined text-gray-400 transition-transform duration-300 flex-shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`}>
+        <span className={`material-symbols-outlined text-slate-400 transition-transform duration-300 flex-shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`}>
           expand_more
         </span>
       </div>

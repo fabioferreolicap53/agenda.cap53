@@ -118,24 +118,20 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
         </label>
       )}
       
-      <div 
-        onClick={() => setIsOpen(!isOpen)}
-        onKeyDown={handleKeyDown}
+      {/* Trigger Button */}
+      <button
+        type="button"
         tabIndex={tabIndex}
-        role="button"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
+        onClick={() => setIsOpen(!isOpen)}
         className={`
-          relative group w-full h-12 px-5 rounded-2xl bg-slate-50 border border-slate-100 
-          flex items-center cursor-pointer transition-all duration-300 outline-none
-          focus:ring-4 focus:ring-primary/10 focus:border-primary
-          ${isOpen ? 'bg-white border-primary shadow-sm ring-4 ring-primary/5' : 'hover:bg-white hover:border-slate-300'}
+          group w-full flex items-center h-12 px-5 rounded-2xl border transition-all duration-300 focus:outline-none
+          ${isOpen ? 'bg-white border-primary shadow-sm ring-4 ring-primary/10' : 'bg-white border-slate-300 hover:border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10'}
         `}
       >
         <span className={`material-symbols-outlined mr-3 text-[20px] transition-colors duration-300 ${isOpen ? 'text-primary' : 'text-slate-400'}`}>
           {label?.toLowerCase().includes('volta') ? 'history' : 'schedule'}
         </span>
-        <span className={`text-sm font-bold ${value ? 'text-slate-700' : 'text-slate-400'}`}>
+        <span className={`text-sm font-semibold ${value ? 'text-slate-800' : 'text-slate-400'}`}>
           {value || '--:--'}
         </span>
 
@@ -152,7 +148,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         )}
-      </div>
+      </button>
 
       {isOpen && (
         <>

@@ -904,20 +904,34 @@ const AlmacManagement: React.FC = () => {
                                                 <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Itens Solicitados ({r.length})</h4>
                                                 <ul className="space-y-2 max-h-[160px] overflow-y-auto pr-1 flex flex-col gap-1 custom-scrollbar">
                                                     {r.map((req: any) => (
-                                                        <li key={req.id} className="flex items-center justify-between p-2 rounded-xl bg-slate-50/50 border border-slate-100/50">
-                                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                                <div className="size-6 shrink-0 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-900 font-bold text-[10px] shadow-sm">
-                                                                    {req.quantity || 1}
+                                                        <li key={req.id} className="flex flex-col p-2.5 rounded-xl bg-slate-50/50 border border-slate-100/50">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-3 overflow-hidden">
+                                                                    <div className="size-6 shrink-0 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-900 font-bold text-[10px] shadow-sm">
+                                                                        {req.quantity || 1}
+                                                                    </div>
+                                                                    <span className="text-xs font-bold text-slate-700 truncate" title={req.expand?.item?.name || 'Item desconhecido'}>{req.expand?.item?.name || 'Item desconhecido'}</span>
                                                                 </div>
-                                                                <span className="text-xs font-bold text-slate-700 truncate" title={req.expand?.item?.name || 'Item desconhecido'}>{req.expand?.item?.name || 'Item desconhecido'}</span>
+                                                                <div className="shrink-0 ml-2">
+                                                                    {req.status === 'approved' ? (
+                                                                        <span className="material-symbols-outlined text-[16px] text-emerald-500" title="Entregue">check_circle</span>
+                                                                    ) : req.status === 'rejected' ? (
+                                                                        <span className="material-symbols-outlined text-[16px] text-rose-500" title="Negado">cancel</span>
+                                                                    ) : (
+                                                                        <span className="material-symbols-outlined text-[16px] text-amber-500 animate-pulse" title="Pendente">pending</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className="shrink-0 ml-2">
-                                                                {req.status === 'approved' ? (
-                                                                    <span className="material-symbols-outlined text-[16px] text-emerald-500" title="Entregue">check_circle</span>
-                                                                ) : req.status === 'rejected' ? (
-                                                                    <span className="material-symbols-outlined text-[16px] text-rose-500" title="Negado">cancel</span>
-                                                                ) : (
-                                                                    <span className="material-symbols-outlined text-[16px] text-amber-500 animate-pulse" title="Pendente">pending</span>
+                                                            <div className="flex items-center gap-3 mt-2 pt-2 border-t border-slate-100/50 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                                                                <div className="flex items-center gap-1" title="Data de Solicitação">
+                                                                    <span className="material-symbols-outlined text-[11px]">add_circle</span>
+                                                                    {new Date(req.created).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                                                </div>
+                                                                {req.updated && req.updated !== req.created && (
+                                                                    <div className="flex items-center gap-1" title="Última Edição">
+                                                                        <span className="material-symbols-outlined text-[11px]">edit</span>
+                                                                        {new Date(req.updated).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </li>

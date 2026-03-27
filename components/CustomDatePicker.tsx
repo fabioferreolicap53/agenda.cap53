@@ -491,7 +491,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     <div className={`relative ${className} ${isOpen ? 'z-[100]' : ''}`} ref={containerRef}>
       {/* Trigger Input */}
       <div 
-        className="group w-full flex items-center gap-2 px-3.5 py-3 bg-white border border-slate-200 rounded-2xl hover:border-slate-400 focus-within:border-slate-800 focus-within:ring-4 focus-within:ring-slate-50 transition-all duration-300"
+        className="group w-full flex items-center gap-2 px-3.5 py-3 bg-white border border-slate-300 rounded-xl hover:border-slate-400 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all duration-300"
       >
         <div className="flex-1 min-w-0">
             <input 
@@ -504,7 +504,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                 onFocus={() => setIsOpen(true)}
                 placeholder="DD/MM/AAAA HH:mm"
                 tabIndex={tabIndex}
-                className={`font-bold text-[13px] bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-300 w-full outline-none transition-colors duration-200 ${isInvalid ? 'text-red-500' : value ? 'text-slate-800' : 'text-slate-400'}`}
+                className={`font-semibold text-sm bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-400 w-full outline-none transition-colors duration-200 ${isInvalid ? 'text-red-500' : value ? 'text-slate-800' : 'text-slate-800'}`}
             />
         </div>
 
