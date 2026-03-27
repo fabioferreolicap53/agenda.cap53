@@ -794,7 +794,7 @@ const InformaticsManagement: React.FC = () => {
                                                             <div className="flex items-center gap-3 mt-2 pt-2 border-t border-slate-100/50 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                                                                 <div className="flex items-center gap-1" title="Data de Solicitação">
                                                                     <span className="material-symbols-outlined text-[11px]">add_circle</span>
-                                                                    {new Date(req.created.replace(' ', 'T') + (req.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                                                    {req.created ? new Date(req.created.replace(' ', 'T') + (req.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---'}
                                                                 </div>
                                                                 {req.updated && req.updated !== req.created && (
                                                                     <div className="flex items-center gap-1" title="Última Edição">

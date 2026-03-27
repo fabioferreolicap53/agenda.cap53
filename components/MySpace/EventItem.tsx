@@ -198,7 +198,7 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 pt-3 border-t border-slate-50 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
             <div className="flex items-center gap-1" title="Data de Criação">
               <span className="material-symbols-outlined text-[12px]">add_circle</span>
-              Criado: {new Date(event.created.replace(' ', 'T') + (event.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+              Criado: {event.created ? new Date(event.created.replace(' ', 'T') + (event.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---'}
             </div>
             {event.updated && event.updated !== event.created && (
               <div className="flex items-center gap-1" title="Última Edição">
