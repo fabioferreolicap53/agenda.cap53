@@ -157,11 +157,16 @@ const Calendar: React.FC = () => {
       }
   }, [filterUser, filterRoles, filterSectors, persistFilters, user?.id, isFiltersLoaded]);
 
-  const userOptions = useMemo(() => [
-      { value: 'Todos', label: 'Todos os usuários' },
-      { value: 'me', label: `Eu (${user?.name || '...'})` },
-      ...users.filter(u => u.id !== user?.id).map(u => ({ value: u.id, label: u.name }))
-  ], [users, user]);
+  const userOptions = useMemo(() => {
+      const opts: { value: string; label: string }[] = [
+          { value: 'Todos', label: 'Todos os usuários' },
+          { value: 'me', label: `Eu (${user?.name || '...'})` }
+      ];
+      users.filter(u => u.id !== user?.id).forEach(u => {
+          opts.push({ value: u.id, label: u.name || 'Desconhecido' });
+      });
+      return opts;
+  }, [users, user]);
 
   const roleOptions = [
       { value: 'Todos', label: 'Todos os papéis' },
@@ -209,20 +214,21 @@ const Calendar: React.FC = () => {
                 const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
                 
                 return targetUserIds.some(targetId => {
+                    const userRolesMap = e.participants_roles || {};
                     const userRoles: string[] = [];
                     
                     // Check creator
                     if (e.user === targetId) userRoles.push('CRIADOR');
                     
                     // Check explicit roles
-                    if (e.participants_roles && e.participants_roles[targetId]) {
-                        userRoles.push(e.participants_roles[targetId]);
+                    if (userRolesMap[targetId]) {
+                        userRoles.push(userRolesMap[targetId]);
                     }
                     
                     // Check participant without explicit role
                     if (e.participants && e.participants.includes(targetId)) {
-                        const hasExplicitRole = e.participants_roles && e.participants_roles[targetId];
-                        if (!hasExplicitRole && e.user !== targetId) {
+                        const explicitRole = userRolesMap[targetId];
+                        if (!explicitRole && e.user !== targetId) {
                             userRoles.push('PARTICIPANTE');
                         }
                     }
@@ -256,7 +262,8 @@ const Calendar: React.FC = () => {
                         // However, to be strict, we should check if they have a specific role assigned.
                         // If logic above assigns 'PARTICIPANTE' when no explicit role, we replicate that check:
                         const hasGenericParticipant = e.participants.some((pId: string) => {
-                            const explicitRole = e.participants_roles && e.participants_roles[pId];
+                            const rolesMap = e.participants_roles || {};
+                            const explicitRole = rolesMap[pId];
                             return !explicitRole && pId !== e.user;
                         });
                         if (hasGenericParticipant) return true;
@@ -506,6 +513,7 @@ const Calendar: React.FC = () => {
       description: '',
       onConfirm: () => {},
   });
+  const [processingCancellation, setProcessingCancellation] = useState(false);
   const [eventToCancel, setEventToCancel] = useState<{ id: string, title: string } | null>(null);
   // State para controlar a animação de pulso quando a página carregar
   const [shouldPulseToday, setShouldPulseToday] = useState(true);
@@ -571,7 +579,7 @@ const Calendar: React.FC = () => {
     const targetEventId = chatEventId || viewEventId;
 
     if (targetEventId) {
-      if (import.meta.env.DEV) {
+      if (process.env.NODE_ENV === 'development') {
         console.log('Calendar: targetEventId found in URL:', targetEventId);
       }
 
@@ -614,12 +622,12 @@ const Calendar: React.FC = () => {
       // Tenta encontrar o evento na lista local primeiro
       const event = events.find(e => e.id === targetEventId);
       if (event) {
-        if (import.meta.env.DEV) {
+        if (process.env.NODE_ENV === 'development') {
           console.log('Calendar: Event found in local list');
         }
         openModal(event);
       } else {
-        if (import.meta.env.DEV) {
+        if (process.env.NODE_ENV === 'development') {
           console.log('Calendar: Event not found in local list, fetching from PB');
         }
         // Se não encontrou localmente, busca no PocketBase
@@ -627,7 +635,7 @@ const Calendar: React.FC = () => {
           expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item'
         })
         .then((record) => {
-          if (import.meta.env.DEV) {
+          if (process.env.NODE_ENV === 'development') {
             console.log('Calendar: Event fetched from PB successfully');
           }
           const eventWithRequests: CalendarEvent = {

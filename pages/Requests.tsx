@@ -674,7 +674,22 @@ const Requests: React.FC = () => {
                 
                 // Atualizar estado local após sucesso na API
                 setAlmacRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action, justification } : r));
-                // Notificação removida conforme solicitação
+                
+                // Sincronizar as notificações pendentes relacionadas a esta solicitação
+                try {
+                    const pendingNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
+                        filter: `related_request = "${requestId}" && type = "almc_item_request" && invite_status = "pending"`
+                    });
+                    await Promise.all(pendingNotifs.map(n => 
+                        pb.collection('agenda_cap53_notifications').update(n.id, {
+                            invite_status: action === 'approved' ? 'accepted' : 'rejected',
+                            read: true
+                        })
+                    ));
+                } catch (syncErr) {
+                    console.warn('Erro ao sincronizar notificações:', syncErr);
+                }
+
                 return;
             } catch (apiError) {
                 console.warn('Backend endpoint /api/almac_decision failed or not found. Falling back to client-side logic.', apiError);
@@ -764,6 +779,21 @@ const Requests: React.FC = () => {
                         }
                     }
                 }
+            }
+
+            // Sync pending notifications for this request (Fallback for client side)
+            try {
+                const pendingNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
+                    filter: `related_request = "${requestId}" && type = "almc_item_request" && invite_status = "pending"`
+                });
+                await Promise.all(pendingNotifs.map(n => 
+                    pb.collection('agenda_cap53_notifications').update(n.id, {
+                        invite_status: action === 'approved' ? 'accepted' : 'rejected',
+                        read: true
+                    })
+                ));
+            } catch (syncErr) {
+                console.warn('Erro ao sincronizar notificações no fallback:', syncErr);
             }
 
             // Local update

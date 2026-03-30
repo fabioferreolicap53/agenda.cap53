@@ -263,8 +263,7 @@ const CreateEvent: React.FC = () => {
 
     setLoading(true);
     try {
-      // CustomDatePicker now returns proper ISO strings
-      const startISO = dateStart.includes('Z') ? dateStart : new Date(dateStart).toISOString();
+          const startISO = dateStart.includes('Z') ? dateStart : new Date(dateStart).toISOString();
       const endISO = dateEnd.includes('Z') ? dateEnd : new Date(dateEnd).toISOString();
 
       // Initialize participants_status and participants_roles
@@ -340,7 +339,7 @@ const CreateEvent: React.FC = () => {
         transporte_suporte: transporteSuporte,
         transporte_origem: transporteSuporte ? (transporteOrigem || null) : null,
         transporte_destino: transporteSuporte ? (transporteDestino || null) : null,
-        transporte_passageiro: transporteSuporte ? (transportePassageiros || null) : null,
+        transporte_passageiro: transporteSuporte ? (transportePassageiros ? String(transportePassageiros) : null) : null,
         transporte_horario_levar: transporteSuporte ? (transporteHorarioLevar || null) : null,
         transporte_horario_buscar: transporteSuporte ? (transporteHorarioBuscar || null) : null,
         transporte_obs: transporteSuporte ? (transporteObs || null) : null,
@@ -993,15 +992,15 @@ const CreateEvent: React.FC = () => {
              return `${year}-${month}-${day}T${hours}:${minutes}`;
           };
           
-          setDateStart(formatDate(event.date_start));
-          setDateEnd(formatDate(event.date_end));
+          setDateStart(formatDate(event.date_start || ''));
+          setDateEnd(formatDate(event.date_end || ''));
           
           setSelectedParticipants(event.participants || []);
           setOriginalParticipants(event.participants || []);
           setParticipantRoles(event.participants_roles || {});
           setSelectedUnidades(event.unidades || []);
           setSelectedCategorias(event.categorias_profissionais || []);
-          setEnvolverProfissionais((event.unidades?.length > 0 || event.categorias_profissionais?.length > 0));
+          setEnvolverProfissionais(((event.unidades?.length || 0) > 0 || (event.categorias_profissionais?.length || 0) > 0));
           setTransporteSuporte(!!event.transporte_suporte);
           setTransporteOrigem(event.transporte_origem || '');
           setTransporteDestino(event.transporte_destino || '');

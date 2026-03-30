@@ -33,10 +33,14 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
 
     useEffect(() => {
         const checkAccess = () => {
+            if (!user) {
+                setIsParticipant(false);
+                return;
+            }
             const isCreator = event.user === user.id;
             // Access is granted if user is creator OR if they have accepted the invitation
             // New: Privileged roles (ADMIN, ALMC, TRA, CE, DCA) have unrestricted access
-            const hasPrivilegedRole = ['ADMIN', 'ALMC', 'TRA', 'CE', 'DCA'].includes(user?.role);
+            const hasPrivilegedRole = ['ADMIN', 'ALMC', 'TRA', 'CE', 'DCA'].includes(user?.role as string);
             
             setIsParticipant(isCreator || isAccepted === true || hasPrivilegedRole);
         };
@@ -72,14 +76,14 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                     // Room doesn't exist, create it
                     existingRoom = await pb.collection('agenda_cap53_salas_batepapo').create({
                         event: event.id,
-                        created_by: user.id,
+                        created_by: user!.id,
                         status: 'active'
                     });
 
                     // Notify participants (simple bulk creation)
                     if (participants.length > 0) {
                         for (const pId of participants) {
-                            if (pId === user.id) continue;
+                            if (pId === user!.id) continue;
                             try {
                                 await pb.collection('agenda_cap53_notifications').create({
                                     user: pId,
@@ -95,7 +99,7 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                         }
                     }
                 }
-                setRoom(existingRoom);
+                setRoom(existingRoom as SalasBatepapoResponse);
 
                 // Load messages
                 const messageRecords = await pb.collection('agenda_cap53_mensagens_salas').getFullList<MensagensSalasResponse<{ sender: UsersResponse }>>({
@@ -136,7 +140,7 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
         return () => {
             pb.collection('agenda_cap53_mensagens_salas').unsubscribe();
         };
-    }, [event.id, user.id, isParticipant]);
+    }, [event.id, user?.id, isParticipant]);
 
     const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();

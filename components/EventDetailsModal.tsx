@@ -119,7 +119,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const renderParticipantRow = (p: UsersResponse) => {
     const isCreator = event.user === p.id;
     const status = isCreator ? 'accepted' : (participantStatus[p.id] || 'pending');
-    const role = isCreator ? (event.creator_role || (event.participants_roles && event.participants_roles[p.id])) : (event.participants_roles && event.participants_roles[p.id]);
+    // Ensure participants_roles exists
+    const rolesMap = event.participants_roles || {};
+    const role = isCreator ? (event.creator_role || rolesMap[p.id]) : rolesMap[p.id];
 
     return (
       <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 shadow-sm">
@@ -332,6 +334,21 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
               justification: action === 'reject' ? justification : ''
           });
 
+          // Sync pending notifications for this request
+          try {
+              const pendingNotifs = await pb.collection('agenda_cap53_notifications').getFullList({
+                  filter: `related_request = "${requestId}" && type = "almc_item_request" && invite_status = "pending"`
+              });
+              await Promise.all(pendingNotifs.map(n => 
+                  pb.collection('agenda_cap53_notifications').update(n.id, {
+                      invite_status: action === 'approve' ? 'accepted' : 'rejected',
+                      read: true
+                  })
+              ));
+          } catch (syncErr) {
+              console.warn('Error syncing item request notifications:', syncErr);
+          }
+
           // 2. Notify Creator
           if (event.user) {
               const itemName = request.expand?.item?.name || 'Item';
@@ -380,7 +397,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
     // Safety check for restricted roles
     // Permite que CE solicite participação, removendo-o da lista de bloqueio
-    if (['TRA', 'ALMC', 'DCA'].includes(user.role)) {
+    if (['TRA', 'ALMC', 'DCA'].includes(user.role as string)) {
       alert('Seu perfil não possui permissão para solicitar participação em eventos.');
       return;
     }
@@ -774,13 +791,13 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     };
   }, [initialEvent.id]);
 
-  const handleCancelClick = () => {
-    onCancel(event.id, event.title, event.participants);
+  const handleCancel = () => {
+    onCancel(event.id, event.title, event.participants || []);
     onClose();
   };
 
   const handleShare = () => {
-    const eventDateStr = new Date(event.date_start).toISOString().split('T')[0];
+    const eventDateStr = new Date(event.date_start || '').toISOString().split('T')[0];
     const link = `${window.location.origin}/#/calendar?date=${eventDateStr}&view=day&eventId=${event.id}&tab=details`;
     const locationName = event.expand?.location?.name || event.custom_location || 'Local não definido';
     
@@ -807,12 +824,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             ...r,
             expand: {
               ...r.expand,
-              item: {
+              item: r.expand?.item ? {
                 ...r.expand.item,
                 is_available: !currentAvailability
-              }
+              } : undefined
             }
-          };
+          } as AlmacRequestsResponse<{ item: ItensServicoResponse }>;
         }
         return r;
       }));
