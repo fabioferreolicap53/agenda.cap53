@@ -132,7 +132,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         </div>
         <div className="flex items-center gap-2 shrink-0 ml-2">
           {isCreator && (
-            <span className="text-[8px] bg-slate-800 text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0">CRIADOR</span>
+            <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0">CRIADOR</span>
           )}
           <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded shrink-0 ${
             status === 'accepted' ? 'bg-green-100 text-green-700' :
@@ -983,7 +983,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             {event.event_responsibility && (
                                 <div className="group p-5 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all duration-300 h-full">
                                     <div className="flex items-start gap-4">
-                                        <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform duration-300 shrink-0">
+                                        <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:scale-110 transition-transform duration-300 shrink-0">
                                             <span className="material-symbols-outlined text-xl">assignment_ind</span>
                                         </div>
                                         <div className="space-y-1.5 min-w-0">
@@ -1754,7 +1754,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                 {/* Close Button - Full Width on Mobile */}
                 <button 
                     onClick={onClose}
-                    className="w-full sm:w-auto sm:min-w-[100px] h-12 sm:h-10 rounded-xl bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 shadow-lg shadow-slate-200 transition-all flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto sm:min-w-[100px] h-12 sm:h-10 rounded-xl bg-primary text-white text-[10px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
                 >
                     <span className="material-symbols-outlined text-lg">close</span>
                     <span>Fechar</span>

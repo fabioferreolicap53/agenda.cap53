@@ -240,7 +240,7 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
                                         />
                                         <div className={`group relative p-4 rounded-2xl text-[13px] font-medium transition-all duration-300 ${
                                             isMe 
-                                            ? 'bg-slate-900 text-white rounded-br-none shadow-lg shadow-slate-200' 
+                                            ? 'bg-primary text-white rounded-br-none shadow-lg shadow-primary/20' 
                                             : 'bg-white text-slate-700 border border-slate-100 rounded-bl-none shadow-sm hover:shadow-md'
                                         }`}>
                                             {msg.content.split(/(https?:\/\/[^\s]+)/g).map((part, j) => 

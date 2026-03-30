@@ -867,7 +867,7 @@ const Requests: React.FC = () => {
                     >
                         Notificações
                         {filteredNotifications.length > 0 && (
-                            <span className="ml-2 bg-slate-800 text-white text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full">{filteredNotifications.length}</span>
+                            <span className="ml-2 bg-primary text-white text-[9px] md:text-[10px] px-1.5 py-0.5 rounded-full">{filteredNotifications.length}</span>
                         )}
                         {activeTab === 'notifications' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-slate-900 rounded-t-full" />}
                     </button>
@@ -955,7 +955,7 @@ const Requests: React.FC = () => {
                                                     <span className="font-bold text-sm text-slate-800 tracking-tight">{req.expand?.item?.name || 'Item Desconhecido'}</span>
                                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-wider border ${
                                                         req.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                        req.status === 'approved' ? 'bg-slate-800 text-white border-slate-800' :
+                                                        req.status === 'approved' ? 'bg-primary text-white border-primary' :
                                                         'bg-rose-50 text-rose-700 border-rose-200 shadow-[0_0_8px_rgba(225,29,72,0.1)]'
                                                     }`}>
                                                         {req.status === 'pending' ? 'Pendente' : req.status === 'approved' ? 'Aprovado' : 'Recusado'}
@@ -1254,7 +1254,7 @@ const Requests: React.FC = () => {
                                                                         <>
                                                                             <button
                                                                                 onClick={() => handleAlmcItemNotificationDecision(notification, 'approved')}
-                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-slate-800 text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-primary-hover transition-all shadow-sm flex items-center justify-center gap-1.5"
                                                                             >
                                                                                 <span className="material-symbols-outlined text-[16px] md:text-[18px]">check</span>
                                                                                 Confirmar
@@ -1270,7 +1270,7 @@ const Requests: React.FC = () => {
                                                                     ) : ( (isRefusal || isTransportRequest) && !notification.acknowledged ) ? (
                                                                         <button
                                                                             onClick={() => handleAcknowledgement(notification)}
-                                                                            className="w-full md:w-auto h-10 px-5 rounded-xl bg-slate-800 text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center justify-center gap-2"
+                                                                            className="w-full md:w-auto h-10 px-5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-primary-hover transition-all shadow-sm flex items-center justify-center gap-2"
                                                                         >
                                                                             <span className="material-symbols-outlined text-[18px]">visibility</span>
                                                                             Ciente
@@ -1292,7 +1292,7 @@ const Requests: React.FC = () => {
                                                                             )}
                                                                             <button
                                                                                 onClick={() => handleNotificationAction(notification, 'accepted')}
-                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-slate-800 text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all shadow-sm flex items-center justify-center gap-2"
+                                                                                className="flex-1 md:flex-none h-10 px-4 md:px-5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-primary-hover transition-all shadow-sm flex items-center justify-center gap-2"
                                                                             >
                                                                                 <span className="material-symbols-outlined text-[18px]">check_circle</span>
                                                                                 Ciente

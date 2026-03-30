@@ -21,7 +21,7 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
       label: 'Criados', 
       value: stats.totalCreated, 
       icon: 'edit_calendar', 
-      activeColor: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+      activeColor: 'text-primary bg-primary/10 border-primary/20',
       inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
     },
     { 

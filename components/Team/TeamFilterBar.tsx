@@ -24,7 +24,7 @@ export const TeamFilterBar: React.FC<TeamFilterBarProps> = ({
     onToggleFavoritesOnly
 }) => {
     return (
-        <div className="sticky top-0 z-[90] bg-white/80 backdrop-blur-md py-4 px-4 -mx-4 md:px-0 md:mx-0 border-b border-slate-100 md:static md:bg-transparent md:border-none md:shadow-none transition-all">
+        <div className="bg-white/80 backdrop-blur-md py-4 px-4 -mx-4 md:px-0 md:mx-0 border-b border-slate-100 md:bg-transparent md:border-none md:shadow-none transition-all">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 {/* Search Input - Now visible on all screens */}
                 <div className="relative group flex-1 max-w-md">

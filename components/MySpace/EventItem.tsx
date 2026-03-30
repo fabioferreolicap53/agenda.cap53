@@ -62,12 +62,12 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
     const role = (event.userRole || '').toUpperCase();
     let label = 'Participante';
     let icon = 'person';
-    let classes = 'text-indigo-600 bg-indigo-50/50 border-indigo-100';
+    let classes = 'text-primary bg-primary/5 border-primary/20';
 
     if (role === 'ORGANIZADOR' || event.type === 'created') {
       label = 'Organizador';
       icon = 'assignment_ind';
-      classes = 'text-blue-600 bg-blue-50/50 border-blue-100';
+      classes = 'text-primary bg-primary/10 border-primary/20';
     } else if (event.requestStatus === 'pending') {
       label = 'Aguardando';
       icon = 'hourglass_top';
@@ -104,7 +104,7 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
                 {getStatusDot(event)}
                 {getRoleBadge(event)}
               </div>
-              <h3 className="text-base font-bold text-slate-800 truncate leading-tight group-hover:text-indigo-600 transition-colors">
+              <h3 className="text-base font-bold text-slate-800 truncate leading-tight group-hover:text-primary transition-colors">
                 {event.title}
               </h3>
             </div>
@@ -113,7 +113,7 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
             <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity self-start sm:self-center">
               <button 
                 onClick={() => onOpenCalendar(event)}
-                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
               >
                 <span className="material-symbols-outlined text-xl">calendar_month</span>
               </button>
@@ -128,7 +128,7 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
                   </button>
                   <button 
                     onClick={() => onDuplicate(event)}
-                    className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                   >
                     <span className="material-symbols-outlined text-xl">content_copy</span>
                   </button>

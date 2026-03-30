@@ -422,11 +422,11 @@ const Notifications: React.FC = () => {
     if (status === 'rejected') return 'text-rose-600 bg-rose-50';
 
     switch (n.type) {
-      case 'event_invite': return 'text-blue-600 bg-blue-50';
+      case 'event_invite': return 'text-primary bg-primary/10';
       case 'event_participation_request': return 'text-violet-600 bg-violet-50';
       case 'cancellation': return 'text-rose-600 bg-rose-50';
       case 'service_request': return 'text-amber-600 bg-amber-50';
-      case 'almc_item_request': return 'text-indigo-600 bg-indigo-50';
+      case 'almc_item_request': return 'text-primary bg-primary/10';
       case 'transport_request': return 'text-cyan-600 bg-cyan-50';
       case 'request_decision': return 'text-teal-600 bg-teal-50';
       case 'transport_decision': return 'text-cyan-600 bg-cyan-50';
@@ -1744,7 +1744,7 @@ const Notifications: React.FC = () => {
                                     const action = (isSectorRequest || isParticipationRequest) ? 'approved' : 'accepted';
                                     onHandleAction(notification, action);
                                 }}
-                                className="px-3 py-1.5 bg-slate-900 text-white text-xs font-medium rounded-lg hover:bg-slate-800 transition-all disabled:opacity-50 shadow-sm"
+                                className="px-3 py-1.5 bg-primary text-white text-xs font-medium rounded-lg hover:bg-primary-hover transition-all disabled:opacity-50 shadow-sm"
                             >
                                 {(isSectorRequest || isParticipationRequest) ? 'Aprovar' : 'Aceitar'}
                             </button>

@@ -376,7 +376,7 @@ const TeamManagement: React.FC = () => {
                 <div className="fixed bottom-24 right-6 md:bottom-8 md:right-8 z-[100] animate-in slide-in-from-bottom-4 duration-300">
                     <button
                         onClick={handleCreateEventWithSelected}
-                        className="bg-slate-900 text-white pl-3 pr-5 py-3 md:pl-4 md:pr-6 md:py-4 rounded-2xl md:rounded-3xl shadow-2xl shadow-slate-900/30 hover:bg-primary hover:shadow-primary/30 hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 md:gap-4 group border border-white/10 backdrop-blur-md"
+                        className="bg-primary text-white pl-3 pr-5 py-3 md:pl-4 md:pr-6 md:py-4 rounded-2xl md:rounded-3xl shadow-2xl shadow-primary/30 hover:bg-primary-hover hover:shadow-primary/40 hover:-translate-y-1 transition-all duration-300 flex items-center gap-3 md:gap-4 group border border-white/10 backdrop-blur-md"
                     >
                         <div className="flex -space-x-2 md:-space-x-3 overflow-hidden">
                             {selectedUsers.slice(0, 3).map((id) => {

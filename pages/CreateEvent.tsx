@@ -278,7 +278,7 @@ const CreateEvent: React.FC = () => {
 
       selectedParticipants.forEach(pId => {
           if (!participantsRoles[pId]) {
-            participantsRoles[pId] = creatorRoleToUse;
+            participantsRoles[pId] = 'PARTICIPANTE';
           }
           participantsStatus[pId] = 'pending';
       });
@@ -394,7 +394,7 @@ const CreateEvent: React.FC = () => {
                     event: editingEventId,
                     user: pId,
                     status: 'pending',
-                    role: participantsRoles[pId] || involvementLevel || 'PARTICIPANTE'
+                    role: participantsRoles[pId] || 'PARTICIPANTE'
                   })
                 ));
 
@@ -1109,6 +1109,14 @@ const CreateEvent: React.FC = () => {
   useEffect(() => {
     if (responsibility === 'EXTERNO_COMPROMISSO') {
       setEstimatedParticipants('');
+      // Force all participants to be 'PARTICIPANTE' if it's an external event
+      setParticipantRoles(prev => {
+        const newRoles = { ...prev };
+        Object.keys(newRoles).forEach(key => {
+          newRoles[key] = 'PARTICIPANTE';
+        });
+        return newRoles;
+      });
     }
   }, [responsibility]);
 
@@ -1588,7 +1596,7 @@ const CreateEvent: React.FC = () => {
             {/* Essential Information Card */}
             <section className="lg:col-span-8 relative z-20 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-6">
               <div className="flex items-center gap-3 pb-2 border-b border-slate-100/50">
-                <div className="size-12 rounded-2xl bg-slate-800 text-white shadow-lg transition-all duration-500 flex items-center justify-center">
+                <div className="size-12 rounded-2xl bg-primary text-white shadow-lg transition-all duration-500 flex items-center justify-center">
                   <span className="material-symbols-outlined text-2xl font-bold">bolt</span>
                 </div>
                 <h3 className="text-lg font-bold tracking-tight text-slate-800">Dados Essenciais</h3>
@@ -1777,7 +1785,7 @@ const CreateEvent: React.FC = () => {
             <section className="lg:col-span-4 relative z-10 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-5">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-xl bg-slate-900 text-white shadow-lg flex items-center justify-center">
+                  <div className="size-10 rounded-xl bg-primary text-white shadow-lg flex items-center justify-center">
                     <span className="material-symbols-outlined text-xl">person_add</span>
                   </div>
                   <div>
@@ -1881,12 +1889,12 @@ const CreateEvent: React.FC = () => {
                               )}
                             </div>
                             
-                            {isSel && !isCreatorUser && responsibility && (
+                            {isSel && !isCreatorUser && (
                               <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-primary/10">
                                 <div className="flex items-center justify-between">
                                   <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Nível de Envolvimento:</span>
                                   <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                    {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || involvementLevel))?.label || 'Selecione'}
+                                    {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || 'PARTICIPANTE'))?.label || 'Selecione'}
                                   </span>
                                 </div>
                                 <div className={`grid gap-1 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'grid-cols-1' : 'grid-cols-2'}`}>
@@ -1897,7 +1905,7 @@ const CreateEvent: React.FC = () => {
                                     }
                                     return true;
                                   }).map(level => {
-                                    const isSelected = (participantRoles[u.id] || involvementLevel) === level.value;
+                                    const isSelected = (participantRoles[u.id] || 'PARTICIPANTE') === level.value;
                                     const getIcon = (val: string) => {
                                       switch(val) {
                                         case 'ORGANIZADOR': return 'assignment_ind';
@@ -1953,7 +1961,7 @@ const CreateEvent: React.FC = () => {
           <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!envolverProfissionais && 'opacity-90'}`}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100/50">
               <div className="flex items-center gap-4">
-                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${envolverProfissionais ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${envolverProfissionais ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-100 text-slate-400'}`}>
                   <span className="material-symbols-outlined text-2xl font-bold">groups</span>
                 </div>
                 <div>
@@ -1964,7 +1972,7 @@ const CreateEvent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEnvolverProfissionais(!envolverProfissionais)}
-                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${envolverProfissionais ? 'bg-slate-800 text-white shadow-xl shadow-slate-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${envolverProfissionais ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
               >
                 <span className="relative flex h-2 w-2">
                   {envolverProfissionais && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
@@ -2042,7 +2050,7 @@ const CreateEvent: React.FC = () => {
                       <button
                         key={u} type="button"
                         onClick={() => toggleArrayItem(selectedUnidades, setSelectedUnidades, u)}
-                        className={`p-3.5 rounded-2xl border text-[10px] font-bold transition-all duration-300 text-center relative overflow-hidden group ${selectedUnidades.includes(u) ? 'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-200 scale-[1.02]' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300 hover:bg-slate-50'}`}
+                        className={`p-3.5 rounded-2xl border text-[10px] font-bold transition-all duration-300 text-center relative overflow-hidden group ${selectedUnidades.includes(u) ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-white border-slate-100 text-slate-500 hover:border-primary/30 hover:bg-slate-50'}`}
                       >
                         <span className="relative z-10">{u}</span>
                         {selectedUnidades.includes(u) && (
@@ -2114,7 +2122,7 @@ const CreateEvent: React.FC = () => {
                       <button
                         key={cp} type="button"
                         onClick={() => toggleArrayItem(selectedCategorias, setSelectedCategorias, cp)}
-                        className={`w-full text-left p-4 rounded-2xl border text-[10px] font-bold transition-all duration-300 flex items-center justify-between group ${selectedCategorias.includes(cp) ? 'bg-slate-800 text-white border-slate-800 shadow-lg shadow-slate-200' : 'bg-white border-slate-100 text-slate-500 hover:border-slate-300 hover:bg-slate-50'}`}
+                        className={`w-full text-left p-4 rounded-2xl border text-[10px] font-bold transition-all duration-300 flex items-center justify-between group ${selectedCategorias.includes(cp) ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white border-slate-100 text-slate-500 hover:border-primary/30 hover:bg-slate-50'}`}
                       >
                         <span className="uppercase tracking-tight">{cp}</span>
                         <span className={`material-symbols-outlined text-[16px] transition-all ${selectedCategorias.includes(cp) ? 'text-white rotate-0' : 'text-slate-200 rotate-90 opacity-0 group-hover:opacity-100'}`}>
@@ -2132,7 +2140,7 @@ const CreateEvent: React.FC = () => {
           <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!logisticaRecursos && 'opacity-90'}`}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100/50">
               <div className="flex items-center gap-4">
-                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${logisticaRecursos ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${logisticaRecursos ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-100 text-slate-400'}`}>
                   <span className="material-symbols-outlined text-2xl font-bold">inventory_2</span>
                 </div>
                 <div>
@@ -2144,7 +2152,7 @@ const CreateEvent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setLogisticaRecursos(!logisticaRecursos)}
-                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${logisticaRecursos ? 'bg-slate-800 text-white shadow-xl shadow-slate-200' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${logisticaRecursos ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
               >
                 <span className="relative flex h-2 w-2">
                   {logisticaRecursos && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
@@ -2366,7 +2374,7 @@ const CreateEvent: React.FC = () => {
             <button
               type="submit"
               disabled={loading || isDateInvalid || isDurationInvalid || isTransportTimeInvalid}
-              className="h-14 w-14 md:w-auto md:px-8 bg-slate-900 text-white rounded-full md:rounded-[20px] font-bold text-xs uppercase tracking-[0.15em] hover:bg-slate-800 hover:scale-105 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)] hover:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6)]"
+              className="h-14 w-14 md:w-auto md:px-8 bg-primary text-white rounded-full md:rounded-[20px] font-bold text-xs uppercase tracking-[0.15em] hover:bg-primary-hover hover:scale-105 active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-3 group disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_10px_40px_-10px_rgba(28,46,74,0.5)] hover:shadow-[0_20px_50px_-10px_rgba(28,46,74,0.6)]"
               title={isEditing ? 'Salvar Alterações' : 'Agendar Atividade'}
             >
               {loading ? (

@@ -192,7 +192,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                             className={`
                               w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                               ${isSelected 
-                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                ? 'bg-primary text-white font-bold shadow-lg scale-105 z-10' 
                                 : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
                             `}
                           >
@@ -226,7 +226,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                             className={`
                               w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                               ${isSelected 
-                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                ? 'bg-primary text-white font-bold shadow-lg scale-105 z-10' 
                                 : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
                             `}
                           >
@@ -253,7 +253,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                     onChange(`${currentHour}:${currentMinute}`);
                     setIsOpen(false);
                   }}
-                  className="w-full py-3 rounded-full bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
+                  className="w-full py-3 rounded-full bg-primary text-white text-[10px] font-bold hover:bg-primary-hover transition-all uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-[0.98]"
                 >
                   Confirmar
                 </button>
@@ -292,7 +292,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                             className={`
                               w-full h-10 rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                               ${isSelected 
-                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                ? 'bg-primary text-white font-bold shadow-lg scale-105 z-10' 
                                 : 'text-slate-400 hover:bg-slate-50 hover:text-slate-800 font-medium'}
                             `}
                           >
@@ -353,7 +353,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
                     onChange(`${currentHour}:${currentMinute}`);
                     setIsOpen(false);
                   }}
-                  className="w-full py-3 rounded-full bg-slate-800 text-white text-[10px] font-bold hover:bg-slate-900 transition-all uppercase tracking-widest shadow-lg shadow-slate-200 active:scale-[0.98]"
+                  className="w-full py-3 rounded-full bg-primary text-white text-[10px] font-bold hover:bg-primary-hover transition-all uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-[0.98]"
                 >
                   Confirmar
                 </button>

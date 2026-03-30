@@ -66,7 +66,7 @@ const Reports: React.FC = () => {
             className={`p-2.5 rounded-2xl transition-all border border-transparent shadow-sm ${
               loading 
                 ? 'bg-slate-50 text-slate-300' 
-                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:shadow-md'
+                : 'bg-primary/10 text-primary hover:bg-primary/20 hover:shadow-md'
             }`}
           >
             <span className={`material-symbols-outlined ${loading ? 'animate-spin' : ''}`}>refresh</span>
@@ -128,7 +128,7 @@ const Reports: React.FC = () => {
         <div className="lg:col-span-2 bg-white border border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden flex flex-col">
           <div className="flex items-center justify-between p-8 border-b border-slate-50">
             <div className="flex items-center gap-4">
-              <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
                 <span className="material-symbols-outlined text-2xl">timeline</span>
               </div>
               <div>

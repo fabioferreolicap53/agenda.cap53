@@ -446,7 +446,7 @@ const InformaticsManagement: React.FC = () => {
 
                                     <button
                                         type="submit"
-                                        className="w-full h-14 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 active:scale-[0.98] transition-all shadow-xl shadow-slate-900/20 hover:shadow-slate-900/30 mt-2"
+                                        className="w-full h-14 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-primary-hover active:scale-[0.98] transition-all shadow-xl shadow-primary/20 hover:shadow-primary/30 mt-2"
                                     >
                                         {editingId ? 'Atualizar Recurso' : 'Cadastrar Recurso'}
                                     </button>
@@ -705,7 +705,7 @@ const InformaticsManagement: React.FC = () => {
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 md:p-8">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                             <div className="flex items-center gap-4">
-                                <div className="size-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shadow-inner">
+                                <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shadow-inner">
                                     <span className="material-symbols-outlined text-2xl">event_upcoming</span>
                                 </div>
                                 <div>
@@ -741,7 +741,7 @@ const InformaticsManagement: React.FC = () => {
                                     return (
                                         <div key={group.event.id} className="group relative bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
                                             {/* Date Badge */}
-                                            <div className="absolute -top-3 -right-3 size-16 bg-slate-900 text-white rounded-2xl flex flex-col items-center justify-center shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform">
+                                            <div className="absolute -top-3 -right-3 size-16 bg-primary text-white rounded-2xl flex flex-col items-center justify-center shadow-lg transform rotate-3 group-hover:rotate-0 transition-transform">
                                                 <span className="text-xl font-black leading-none">{day}</span>
                                                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mt-0.5">{month}</span>
                                             </div>
@@ -752,7 +752,7 @@ const InformaticsManagement: React.FC = () => {
                                                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight">
-                                                    <Link to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}`)}`} className="hover:text-indigo-600 transition-colors">
+                                                    <Link to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}`)}`} className="hover:text-primary transition-colors">
                                                         {group.event.title || 'Evento sem título'}
                                                     </Link>
                                                 </h3>
@@ -838,7 +838,7 @@ const InformaticsManagement: React.FC = () => {
                                                                 departamento: 'Informática'
                                                             });
                                                         }}
-                                                        className="size-7 rounded-lg bg-slate-50 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 border border-slate-100 transition-all flex items-center justify-center cursor-pointer active:scale-95"
+                                                        className="size-7 rounded-lg bg-slate-50 text-slate-500 hover:text-primary hover:bg-primary/10 border border-slate-100 transition-all flex items-center justify-center cursor-pointer active:scale-95"
                                                         title="Imprimir Solicitação"
                                                     >
                                                         <span className="material-symbols-outlined text-[14px]">print</span>
@@ -851,7 +851,7 @@ const InformaticsManagement: React.FC = () => {
                                                     ) : (
                                                         <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-emerald-100 flex items-center gap-1">
                                                             <span className="material-symbols-outlined text-[10px]">check</span>
-                                                            Concluído
+                                                            Aprovado
                                                         </span>
                                                     )}
                                                 </div>

@@ -464,7 +464,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
           className={`
             h-8 w-full rounded-lg text-[10px] flex items-center justify-center transition-all duration-200 relative
             ${isSelected 
-              ? 'bg-slate-800 text-white font-black shadow-lg shadow-slate-200 scale-105 z-10' 
+              ? 'bg-primary text-white font-black shadow-lg shadow-primary/20 scale-105 z-10' 
               : isToday
                 ? 'bg-slate-100 text-slate-900 font-black'
                 : isWeekend
@@ -525,7 +525,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             onClick={() => setIsOpen(!isOpen)}
             className={`
             size-7 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer
-            ${isOpen ? 'bg-slate-800 text-white rotate-90 shadow-lg shadow-slate-200' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-100 group-hover:text-slate-600'}
+            ${isOpen ? 'bg-primary text-white rotate-90 shadow-lg shadow-primary/20' : 'bg-slate-50 text-slate-400 group-hover:bg-slate-100 group-hover:text-primary'}
         `}>
             <span className="material-symbols-outlined text-base">calendar_today</span>
         </div>
@@ -703,7 +703,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
               <div className="pt-2 border-t border-slate-100">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="w-full py-3 bg-slate-800 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-slate-900 transition-all active:scale-95"
+                  className="w-full py-3 bg-primary text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-primary-hover transition-all active:scale-95 shadow-primary/20"
                 >
                   Confirmar
                 </button>

@@ -2486,7 +2486,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
         <div className="flex items-start justify-between gap-2">
           {/* Responsabilidade - Visual indicador no card */}
             {event.event_responsibility && (
-              <div className={`absolute top-2 right-2 flex items-center justify-center size-5 rounded-full border text-slate-400 group-hover:text-indigo-500 transition-colors ${isCancelled ? 'bg-white/50 border-red-100' : 'bg-slate-50 border-slate-100'}`} title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
+              <div className={`absolute top-2 right-2 flex items-center justify-center size-5 rounded-full border text-slate-400 group-hover:text-primary transition-colors ${isCancelled ? 'bg-white/50 border-red-100' : 'bg-slate-50 border-slate-100'}`} title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
                 <span className="material-symbols-outlined text-[12px]">
                   {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
                 </span>

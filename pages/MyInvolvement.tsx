@@ -261,7 +261,7 @@ const MyInvolvement: React.FC = () => {
 
           <button 
             onClick={() => refresh()}
-            className="size-10 flex items-center justify-center rounded-full text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors group"
+            className="size-10 flex items-center justify-center rounded-full text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors group"
             title="Sincronizar dados"
           >
             <span className="material-symbols-outlined text-[22px] transition-transform duration-700 group-hover:rotate-180">refresh</span>

@@ -90,7 +90,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
             </div>
             <button 
               onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden flex items-center justify-center w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors shrink-0"
+              className="lg:hidden flex items-center justify-center w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 text-slate-500 hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
               title={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
             >
               <span className="material-symbols-outlined">{showFilters ? 'filter_list_off' : 'filter_list'}</span>
