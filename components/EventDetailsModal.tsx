@@ -1749,7 +1749,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     
                     {canCancel && (
                         <button 
-                            onClick={handleCancelClick}
+                            onClick={handleCancel}
                             className="flex-1 h-12 sm:h-10 rounded-xl bg-red-50 text-red-500 text-[10px] font-bold uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all flex items-center justify-center gap-2 border border-red-100"
                         >
                             <span className="material-symbols-outlined text-lg">event_busy</span>
