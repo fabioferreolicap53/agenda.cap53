@@ -973,7 +973,7 @@ const Calendar: React.FC = () => {
             <div className="flex flex-col xl:flex-row items-center justify-between gap-3">
               {/* Grupo de Navegação e Filtro (Esquerda/Centro) */}
               <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
-                <div className="flex items-center gap-2 w-full md:w-auto md:flex-none min-w-0">
+                <div className="flex items-center justify-between gap-2 w-full xl:w-auto min-w-0">
                   {/* Botão Voltar */}
                   {showBackButton && (
                     <button
@@ -1002,7 +1002,7 @@ const Calendar: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="h-[42px] flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 flex-1 md:flex-none justify-center">
+                  <div className="h-[42px] flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 flex-1 md:flex-1 justify-center max-w-[280px]">
                     <button
                       onClick={() => handleNavigate('prev')}
                       className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 shrink-0"
@@ -1011,8 +1011,8 @@ const Calendar: React.FC = () => {
                     </button>
                     
                     {/* Indicação de Mês e Ano */}
-                    <div className="h-full px-2 sm:px-4 flex items-center min-w-[120px] sm:min-w-[160px] justify-center">
-                      <span className="text-[11px] sm:text-[13px] font-black uppercase tracking-[0.05em] sm:tracking-[0.15em] text-slate-900 whitespace-nowrap">
+                    <div className="h-full px-2 sm:px-4 flex items-center min-w-0 flex-1 justify-center">
+                      <span className="text-[11px] sm:text-[13px] font-black uppercase tracking-[0.05em] sm:tracking-[0.15em] text-slate-900 truncate">
                         {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
                       </span>
                     </div>
@@ -1084,12 +1084,12 @@ const Calendar: React.FC = () => {
               </div>
 
               {/* View Type Group */}
-              <div className="h-[42px] flex bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0 w-full xl:w-auto justify-center overflow-x-auto no-scrollbar">
+              <div className="h-[42px] flex bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0 w-full xl:w-auto overflow-x-auto no-scrollbar">
                   {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
                     <button
                       key={view}
                       onClick={() => updateURL(view, currentDate)}
-                      className={`h-full px-4 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 whitespace-nowrap ${
+                      className={`h-full flex-1 px-4 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 whitespace-nowrap ${
                         viewType === view 
                           ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
                           : 'text-slate-400 hover:text-slate-600'
