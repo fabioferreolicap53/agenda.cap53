@@ -1062,15 +1062,24 @@ const Calendar: React.FC = () => {
                 </div>
 
                 {/* Caixa de Busca - Agora visível em todas as versões (Mobile, Tablet e Desktop) */}
-                <div className="flex items-center flex-1 md:flex-none min-w-0 md:min-w-[200px] xl:max-w-xs relative group w-full md:w-auto">
+                <div className="flex items-center flex-1 xl:flex-none min-w-0 md:min-w-[200px] xl:max-w-xs relative group w-full xl:w-auto">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[20px] text-slate-400 group-focus-within:text-primary transition-colors">search</span>
                   <input
                     type="text"
                     placeholder="Buscar eventos..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full h-[42px] pl-11 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
+                    className="w-full h-[42px] pl-11 pr-10 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
                   />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 size-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all active:scale-90"
+                      title="Limpar busca"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                  )}
                 </div>
               </div>
 
