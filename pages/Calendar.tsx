@@ -70,6 +70,7 @@ const Calendar: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   // State for search query
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
 
   // Update URL search param when searchQuery changes
   useEffect(() => {
@@ -1049,6 +1050,21 @@ const Calendar: React.FC = () => {
                     )}
                   </button>
 
+                  {/* Botão de Busca - Toggle para Tablet e Mobile */}
+                  <button
+                    onClick={() => setShowMobileSearch(!showMobileSearch)}
+                    className={`h-[42px] flex items-center justify-center aspect-square rounded-xl border transition-all duration-300 active:scale-95 shrink-0 xl:hidden ${
+                      showMobileSearch || searchQuery
+                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' 
+                        : 'bg-white text-slate-400 border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                    }`}
+                    title="Alternar busca"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      {showMobileSearch ? 'search_off' : 'search'}
+                    </span>
+                  </button>
+
                   {/* CustomDayPicker - Disponível em Tablet e Desktop */}
                   <div className="hidden md:block">
                     <CustomDayPicker 
@@ -1061,8 +1077,8 @@ const Calendar: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Caixa de Busca - Agora visível em todas as versões (Mobile, Tablet e Desktop) */}
-                <div className="flex items-center flex-1 xl:flex-none min-w-0 md:min-w-[200px] xl:max-w-xs relative group w-full xl:w-auto">
+                {/* Caixa de Busca - Visibilidade controlada em Tablet/Mobile, fixa em Desktop (xl) */}
+                <div className={`${showMobileSearch || searchQuery ? 'flex' : 'hidden xl:flex'} items-center flex-1 xl:flex-none min-w-0 md:min-w-[200px] xl:max-w-xs relative group w-full xl:w-auto animate-in slide-in-from-top-1 duration-300`}>
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[20px] text-slate-400 group-focus-within:text-primary transition-colors">search</span>
                   <input
                     type="text"
