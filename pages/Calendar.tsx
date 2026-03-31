@@ -68,7 +68,19 @@ const Calendar: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const searchTerm = (searchParams.get('search') || '').toLowerCase();
+  // State for search query
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
+
+  // Update URL search param when searchQuery changes
+  useEffect(() => {
+    const newParams = new URLSearchParams(searchParams);
+    if (searchQuery) {
+      newParams.set('search', searchQuery);
+    } else {
+      newParams.delete('search');
+    }
+    setSearchParams(newParams, { replace: true });
+  }, [searchQuery]);
   
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,8 +195,8 @@ const Calendar: React.FC = () => {
     let result = events;
 
     // Text Search
-    if (searchTerm) {
-        const lower = searchTerm.toLowerCase();
+    if (searchQuery) {
+        const lower = searchQuery.toLowerCase();
         result = result.filter(e => 
           (e.title || '').toLowerCase().includes(lower) ||
           (e.description || '').toLowerCase().includes(lower) ||
@@ -279,7 +291,7 @@ const Calendar: React.FC = () => {
     }
 
     return result;
-  }, [events, searchTerm, filterUser, filterRoles, filterSectors, user]);
+  }, [events, searchQuery, filterUser, filterRoles, filterSectors, user]);
 
   // Group events by date for efficient lookup
   const eventsByDate = useMemo(() => {
@@ -958,10 +970,10 @@ const Calendar: React.FC = () => {
         <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-2">
           <div className="flex flex-col gap-3">
             {/* Barra Principal: Navegação + Tipos de View */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+            <div className="flex flex-col xl:flex-row items-center justify-between gap-3">
               {/* Grupo de Navegação e Filtro (Esquerda/Centro) */}
-              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                <div className="flex items-center gap-2 flex-1 sm:flex-none min-w-0">
+              <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto">
+                <div className="flex items-center gap-2 w-full md:w-auto md:flex-none min-w-0">
                   {/* Botão Voltar */}
                   {showBackButton && (
                     <button
@@ -990,7 +1002,7 @@ const Calendar: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="h-[42px] flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 flex-1 sm:flex-none justify-center">
+                  <div className="h-[42px] flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 flex-1 md:flex-none justify-center">
                     <button
                       onClick={() => handleNavigate('prev')}
                       className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 shrink-0"
@@ -1038,7 +1050,7 @@ const Calendar: React.FC = () => {
                   </button>
 
                   {/* CustomDayPicker - Disponível em Tablet e Desktop */}
-                  <div className="hidden sm:block">
+                  <div className="hidden md:block">
                     <CustomDayPicker 
                         value={currentDate}
                         onChange={(date) => {
@@ -1048,10 +1060,22 @@ const Calendar: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* Caixa de Busca - Agora visível em todas as versões (Mobile, Tablet e Desktop) */}
+                <div className="flex items-center flex-1 md:flex-none min-w-0 md:min-w-[200px] xl:max-w-xs relative group w-full md:w-auto">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[20px] text-slate-400 group-focus-within:text-primary transition-colors">search</span>
+                  <input
+                    type="text"
+                    placeholder="Buscar eventos..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-[42px] pl-11 pr-4 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-bold text-slate-700 placeholder:text-slate-400 focus:bg-white focus:ring-4 focus:ring-primary/5 focus:border-primary transition-all outline-none"
+                  />
+                </div>
               </div>
 
               {/* View Type Group */}
-              <div className="h-[42px] flex bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0 w-full md:w-auto justify-center overflow-x-auto no-scrollbar">
+              <div className="h-[42px] flex bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0 w-full xl:w-auto justify-center overflow-x-auto no-scrollbar">
                   {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
                     <button
                       key={view}
