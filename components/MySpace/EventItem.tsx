@@ -75,8 +75,8 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
     }
 
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider ${classes}`}>
-        <span className="material-symbols-outlined text-[12px]">{icon}</span>
+      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${classes}`}>
+        <span className="material-symbols-outlined text-[11px] sm:text-[12px]">{icon}</span>
         {label}
       </span>
     );
@@ -98,58 +98,63 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
 
         {/* Content */}
         <div className="flex-1 min-w-0 py-0.5">
-          <div className="flex items-start justify-between gap-4 mb-1">
-            <div className="flex flex-col gap-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
+            <div className="flex flex-col gap-2 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 {getStatusDot(event)}
                 {getRoleBadge(event)}
               </div>
-              <h3 className="text-base font-bold text-slate-800 truncate leading-tight group-hover:text-primary transition-colors">
+              <h3 className="text-base font-bold text-slate-800 sm:truncate leading-tight group-hover:text-primary transition-colors">
                 {event.title}
               </h3>
             </div>
             
-            {/* Actions (Desktop: visible on hover, Mobile: always visible but smaller) */}
-            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity self-start sm:self-center">
+            {/* Actions (Desktop: visible on hover, Mobile: always visible) */}
+            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity self-start sm:self-center bg-slate-50 sm:bg-transparent p-1 sm:p-0 rounded-lg border border-slate-100 sm:border-0 -mt-1 sm:mt-0">
               <button 
                 onClick={() => onOpenCalendar(event)}
-                className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center"
+                title="Abrir no Calendário"
               >
-                <span className="material-symbols-outlined text-xl">calendar_month</span>
+                <span className="material-symbols-outlined text-[20px]">calendar_month</span>
               </button>
               
               {isCreator && (
                 <>
                   <button 
                     onClick={() => onEdit(event)}
-                    className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center justify-center"
+                    title="Editar"
                   >
-                    <span className="material-symbols-outlined text-xl">edit</span>
+                    <span className="material-symbols-outlined text-[20px]">edit</span>
                   </button>
                   <button 
                     onClick={() => onDuplicate(event)}
-                    className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors flex items-center justify-center"
+                    title="Duplicar"
                   >
-                    <span className="material-symbols-outlined text-xl">content_copy</span>
+                    <span className="material-symbols-outlined text-[20px]">content_copy</span>
                   </button>
                   <button 
                     onClick={() => onCancel(event)}
-                    className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors flex items-center justify-center"
+                    title="Cancelar Evento"
                   >
-                    <span className="material-symbols-outlined text-xl">block</span>
+                    <span className="material-symbols-outlined text-[20px]">block</span>
                   </button>
                   <button 
                     onClick={() => onDelete(event)}
-                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center justify-center"
+                    title="Excluir"
                   >
-                    <span className="material-symbols-outlined text-xl">delete</span>
+                    <span className="material-symbols-outlined text-[20px]">delete</span>
                   </button>
                 </>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-2 text-xs text-slate-500 font-medium">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 font-medium">
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
               <span>
