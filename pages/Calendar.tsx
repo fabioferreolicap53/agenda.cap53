@@ -1741,7 +1741,9 @@ const Calendar: React.FC = () => {
                       </div>
                     );
                   }
-                return dayEvents.map((event, index) => (
+                return dayEvents.map((event, index) => {
+                  const isPast = event.date_end ? new Date(event.date_end) < new Date() : false;
+                  return (
                     <div 
                       key={event.id} 
                       ref={index === 0 ? firstEventRef : null}
@@ -1761,12 +1763,16 @@ const Calendar: React.FC = () => {
 
                       {/* Mobile View - Optimized Layout */}
                       <div 
-                        className={`md:hidden rounded-xl border shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform ${event.status === 'canceled' ? 'bg-red-50/40 border-red-200' : 'bg-white border-slate-100'}`}
+                        className={`md:hidden rounded-xl border shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform ${event.status === 'canceled' 
+                          ? 'bg-red-50/40 border-red-200' 
+                          : isPast 
+                            ? 'bg-slate-50/60 border-slate-200 opacity-70' 
+                            : 'bg-white border-slate-100'}`}
                         onClick={() => setSelectedEvent(event)}
                       >
                         {/* Time Column */}
                         <div className="flex flex-col items-center justify-center px-2 border-r border-slate-50 min-w-[60px]">
-                          <span className="text-sm font-black text-primary">
+                          <span className={`text-sm font-black ${isPast ? 'text-slate-400' : 'text-primary'}`}>
                             {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           {event.date_end && (
@@ -1778,7 +1784,7 @@ const Calendar: React.FC = () => {
 
                         {/* Content Column */}
                         <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                          <h4 className={`text-sm font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : 'text-slate-800'}`}>
+                          <h4 className={`text-sm font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
                             {event.title}
                           </h4>
                           
@@ -1859,8 +1865,9 @@ const Calendar: React.FC = () => {
                         </div>
                       </div>
                     </div>
-                  ));
-                })()}
+                  );
+                });
+              })()}
               </div>
             </div>
           </div>
@@ -1998,7 +2005,7 @@ const Calendar: React.FC = () => {
                                         />
                                     </div>
                                 ))}
-                            </div>
+                             </div>
                         </div>
                     );
                  });
@@ -2409,6 +2416,7 @@ interface CalendarEventCardProps {
 
 const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, onSelect }) => {
   const isCancelled = event.status === 'canceled';
+  const isPast = event.date_end ? new Date(event.date_end) < new Date() : false;
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Cleanup timeout on unmount
@@ -2536,7 +2544,9 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
       }}
       className={`w-full border-l-[3px] rounded-lg px-3 py-3 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
         ? 'bg-red-50/40 border-red-200 hover:border-red-300'
-        : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'
+        : isPast 
+          ? 'bg-slate-50/60 border-slate-300/50 hover:border-slate-400/50 opacity-70'
+          : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'
         } ${detailed ? 'p-5' : ''}`}
     >
       <div className="flex flex-col gap-2">
@@ -2551,7 +2561,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
             )}
 
             <div className="flex flex-col gap-1.5 min-w-0">
-             <p className={`font-bold leading-tight ${detailed ? 'text-lg' : 'text-xs truncate'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : 'text-slate-800'}`}>
+             <p className={`font-bold leading-tight ${detailed ? 'text-lg' : 'text-xs truncate'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
                {event.title}
              </p>
              {/* Mobile/Tablet Extra Details */}
