@@ -1097,6 +1097,25 @@ const Calendar: React.FC = () => {
                     </button>
                   )}
                 </div>
+
+                {/* Navegação Desktop Adicional - Setas Próximo/Anterior */}
+                <div className="hidden xl:flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-500">
+                  <div className="h-[32px] w-[1px] bg-slate-200 mx-2 opacity-50"></div>
+                  <button
+                    onClick={() => handleNavigate('prev')}
+                    className="size-[42px] flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/50 hover:bg-slate-50 transition-all duration-300 active:scale-95 shadow-sm group"
+                    title="Retroceder visualização"
+                  >
+                    <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">chevron_left</span>
+                  </button>
+                  <button
+                    onClick={() => handleNavigate('next')}
+                    className="size-[42px] flex items-center justify-center rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-primary hover:border-primary/50 hover:bg-slate-50 transition-all duration-300 active:scale-95 shadow-sm group"
+                    title="Avançar visualização"
+                  >
+                    <span className="material-symbols-outlined text-[20px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
+                  </button>
+                </div>
               </div>
 
               {/* View Type Group */}
