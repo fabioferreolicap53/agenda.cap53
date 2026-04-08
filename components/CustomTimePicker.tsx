@@ -266,7 +266,7 @@ const CustomTimePicker: React.FC<CustomTimePickerProps> = ({
             <div 
               ref={portalRef}
               onClick={(e) => e.stopPropagation()}
-              className="hidden md:block bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 p-1.5 animate-in zoom-in-95 fade-in duration-300 overflow-hidden fixed z-[9999]"
+              className="hidden md:block bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 p-1.5 animate-in zoom-in-95 fade-in duration-300 overflow-hidden fixed z-[9999] origin-top-left xl:scale-100 lg:scale-90 md:scale-75"
               style={popupStyle}
             >
               <div className="overflow-y-auto no-scrollbar min-w-0">

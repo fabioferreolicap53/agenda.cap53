@@ -223,25 +223,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     useEffect(() => {
         const handleUnload = () => {
             if (user?.id && user?.status !== 'Offline') {
-                // Use fetch directly for beforeunload to avoid request cancellation
                 const data = JSON.stringify({ status: 'Offline', context_status: '' });
-                const blob = new Blob([data], { type: 'application/json' });
                 const url = `${pb.baseUrl}/api/collections/agenda_cap53_usuarios/records/${user.id}`;
                 
-                // navigator.sendBeacon is preferred for beforeunload, fallback to fetch with keepalive
-                if (navigator.sendBeacon) {
-                    navigator.sendBeacon(url, blob);
-                } else {
-                    fetch(url, {
-                        method: 'PATCH',
-                        headers: {
-                            'Authorization': pb.authStore.token,
-                            'Content-Type': 'application/json'
-                        },
-                        body: data,
-                        keepalive: true
-                    }).catch(() => {});
-                }
+                // navigator.sendBeacon uses POST and doesn't support custom headers (like Authorization),
+                // which causes ERR_FAILED or 400 Bad Request with PocketBase.
+                // We use fetch with keepalive: true instead to ensure the PATCH request completes.
+                fetch(url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': pb.authStore.token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: data,
+                    keepalive: true
+                }).catch(() => {});
             }
         };
         

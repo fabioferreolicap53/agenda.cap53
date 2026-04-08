@@ -715,7 +715,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
           <div 
             role="dialog"
             aria-label="Calendário e seletor de horário"
-            className="hidden md:flex absolute top-[calc(100%+8px)] left-0 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[110] p-5 animate-in zoom-in-95 fade-in duration-300 flex-row gap-6 w-[480px] overflow-hidden"
+            className="hidden md:flex absolute top-[calc(100%+8px)] left-0 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[110] p-5 animate-in zoom-in-95 fade-in duration-300 flex-row gap-6 w-[480px] origin-top-left xl:scale-100 lg:scale-90 md:scale-75 overflow-hidden"
           >
             <div className="flex-1 no-scrollbar flex flex-row gap-6">
               {/* Calendar Section */}

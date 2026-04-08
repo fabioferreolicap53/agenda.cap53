@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
+import { RESPONSIBILITY_LEVELS } from '../lib/constants';
 
 export interface MySpaceEvent {
   id: string;
@@ -325,12 +326,13 @@ export const useMySpace = () => {
         const isConfirmed = e.type === 'created' || e.participationStatus === 'accepted' || e.requestStatus === 'accepted';
         if (!isConfirmed) return;
 
-        // By Type (Category)
-        const type = e.nature || e.category || 'Não Definido';
+        // By Type (Category) - REUNIÃO, TREINAMENTO, etc.
+        const type = e.category || 'Não Definido';
         typeMap[type] = (typeMap[type] || 0) + 1;
 
-        // By Nature
-        const nature = e.nature || 'Não Definida';
+        // By Responsibility (Nature) - Interno, Coletivo, Externo
+        const resp = RESPONSIBILITY_LEVELS.find(l => l.value === e.event_responsibility);
+        const nature = resp ? resp.label : 'Outras Ações';
         natureMap[nature] = (natureMap[nature] || 0) + 1;
 
         // By Time (Month/Year)

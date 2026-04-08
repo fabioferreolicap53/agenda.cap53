@@ -230,7 +230,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
       </select>
 
       {isOpen && (
-        <div className="absolute top-full left-0 w-full min-w-[240px] mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ring-1 ring-black/5">
+        <div className="absolute top-full left-0 w-full min-w-[240px] mt-2 bg-white rounded-xl shadow-2xl border border-gray-100 z-[110] overflow-hidden animate-in fade-in zoom-in-95 duration-200 ring-1 ring-black/5 origin-top-left xl:scale-100 lg:scale-95 md:scale-90">
           {searchable && (
              <div className="p-2 border-b border-gray-100 sticky top-0 bg-white z-10">
                 <div className="relative">

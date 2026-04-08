@@ -103,10 +103,10 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({ analytics })
       <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Natureza dos Eventos</h3>
-            <p className="text-xs text-slate-400 mt-1">Classificação por natureza</p>
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Perfil de Responsabilidade</h3>
+            <p className="text-xs text-slate-400 mt-1">Natureza da atuação nos eventos</p>
           </div>
-          <span className="material-symbols-outlined text-slate-200">category</span>
+          <span className="material-symbols-outlined text-slate-200">account_tree</span>
         </div>
         
         <div className="flex-1 min-h-[300px]">
