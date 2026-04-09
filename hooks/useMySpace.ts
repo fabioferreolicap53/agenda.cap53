@@ -193,7 +193,7 @@ export const useMySpace = () => {
       });
 
       const allEvents = Array.from(uniqueEventsMap.values())
-        .sort((a, b) => new Date(b.date_start).getTime() - new Date(a.date_start).getTime());
+        .sort((a, b) => new Date(a.date_start).getTime() - new Date(b.date_start).getTime());
 
       setEvents(allEvents);
 
