@@ -25,6 +25,17 @@ const AlmacManagement: React.FC = () => {
     const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
     const scrollPositions = useRef<Record<string, number>>({});
+    const pendingRestoreScroll = useRef<number | null>(null);
+    const pendingAnchorId = useRef<string | null>(null);
+    const [restoreVersion, setRestoreVersion] = useState(0);
+
+    const getScrollStorageKey = (view: string) => `scroll:${location.pathname}:${view}`;
+    const getScrollContainer = () => document.getElementById('main-scroll-container');
+    const getCurrentScroll = () => getScrollContainer()?.scrollTop || 0;
+    const persistScroll = (view: string, value: number) => {
+        scrollPositions.current[view] = value;
+        sessionStorage.setItem(getScrollStorageKey(view), String(value));
+    };
 
     const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
     const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
@@ -40,17 +51,46 @@ const AlmacManagement: React.FC = () => {
     });
 
     useEffect(() => {
+        const container = getScrollContainer();
+        if (!container) return;
         const handleScroll = () => {
-            scrollPositions.current[activeView] = window.scrollY;
+            if (!loading) {
+                persistScroll(activeView, container.scrollTop);
+            }
         };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [activeView]);
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [activeView, loading, location.pathname]);
 
     useEffect(() => {
-        const savedPosition = scrollPositions.current[activeView] || 0;
-        window.scrollTo(0, savedPosition);
-    }, [activeView]);
+        if (loading) return;
+        const stored = sessionStorage.getItem(getScrollStorageKey(activeView));
+        const fallback = stored ? parseInt(stored, 10) : 0;
+        const target = pendingRestoreScroll.current ?? scrollPositions.current[activeView] ?? fallback;
+        pendingRestoreScroll.current = null;
+        if (!target) return;
+        const apply = (attempt = 0) => {
+            const container = getScrollContainer();
+            if (!container) return;
+            if (pendingAnchorId.current) {
+                const anchorEl = document.querySelector<HTMLElement>(`[data-anchor=\"event-${pendingAnchorId.current}\"]`);
+                if (anchorEl) {
+                    const containerRect = container.getBoundingClientRect();
+                    const elRect = anchorEl.getBoundingClientRect();
+                    const offset = elRect.top - containerRect.top + container.scrollTop - 16;
+                    container.scrollTo({ top: offset, behavior: 'instant' });
+                } else {
+                    container.scrollTo({ top: target, behavior: 'instant' });
+                }
+            } else {
+                container.scrollTo({ top: target, behavior: 'instant' });
+            }
+            if (attempt < 12 && Math.abs(container.scrollTop - target) > 2) {
+                requestAnimationFrame(() => apply(attempt + 1));
+            }
+        };
+        requestAnimationFrame(() => apply());
+    }, [activeView, loading, history.length, restoreVersion]);
 
     useEffect(() => {
         setSearchTerm(searchParams.get('search') || '');
@@ -64,13 +104,23 @@ const AlmacManagement: React.FC = () => {
             setActiveView('inventory');
         }
 
-        // Restore scroll position if navigating back from calendar
+        const targetView = view || 'inventory';
         const scrollParam = searchParams.get('scroll');
+        const stored = sessionStorage.getItem(getScrollStorageKey(targetView));
+        const anchor = searchParams.get('anchor');
+        if (anchor) {
+            pendingAnchorId.current = anchor;
+        }
         if (scrollParam) {
-            setTimeout(() => {
-                window.scrollTo(0, parseInt(scrollParam));
-                scrollPositions.current[view || 'inventory'] = parseInt(scrollParam);
-            }, 100); // Small delay to allow DOM to render
+            const parsed = parseInt(scrollParam, 10);
+            pendingRestoreScroll.current = parsed;
+            persistScroll(targetView, parsed);
+            setRestoreVersion(v => v + 1);
+        } else if (stored) {
+            const parsed = parseInt(stored, 10);
+            pendingRestoreScroll.current = parsed;
+            scrollPositions.current[targetView] = parsed;
+            setRestoreVersion(v => v + 1);
         }
     }, [searchParams]);
 
@@ -1171,7 +1221,7 @@ const AlmacManagement: React.FC = () => {
                                             const cancelTime = isCanceledOrDeleted ? new Date(group.updated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
                                             
                                             return (
-                                            <tr key={group.eventId} className="hover:bg-slate-50/30 transition-colors group/row text-sm">
+                                            <tr key={group.eventId} data-anchor={`event-${group.eventId}`} className="hover:bg-slate-50/30 transition-colors group/row text-sm">
                                                 <td className="px-6 py-6 align-top">
                                                     <div className="flex flex-col gap-1.5">
                                                         <span className="text-slate-900 font-black text-[15px]">{eventDate ? eventDate.toLocaleDateString('pt-BR') : new Date(group.created).toLocaleDateString('pt-BR')}</span>
@@ -1194,9 +1244,9 @@ const AlmacManagement: React.FC = () => {
                                                             const dateStr = eventDate ? `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}` : '';
                                                             return (
                                                                 <Link 
-                                                                    to={`/calendar?date=${dateStr}&view=day&eventId=${group.eventId}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}&scroll=${scrollPositions.current[activeView] || window.scrollY}`)}`}
+                                                                    to={`/calendar?date=${dateStr}&view=day&eventId=${group.eventId}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}&scroll=${scrollPositions.current[activeView] || getCurrentScroll()}&anchor=${group.eventId}`)}`}
                                                                     onClick={() => {
-                                                                        scrollPositions.current[activeView] = window.scrollY;
+                                                                        persistScroll(activeView, getCurrentScroll());
                                                                     }}
                                                                     className="text-slate-900 font-bold hover:text-primary transition-colors flex items-start gap-1.5 group/link text-base"
                                                                     title="Ver detalhes do evento na aba recursos"
@@ -1321,10 +1371,10 @@ const AlmacManagement: React.FC = () => {
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight">
                                                     <Link 
-                                                        to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}&scroll=${scrollPositions.current[activeView] || window.scrollY}`)}`} 
+                                                        to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}&scroll=${scrollPositions.current[activeView] || getCurrentScroll()}&anchor=${group.event.id}`)}`} 
                                                         className="hover:text-primary transition-colors"
                                                         onClick={() => {
-                                                            scrollPositions.current[activeView] = window.scrollY;
+                                                            persistScroll(activeView, getCurrentScroll());
                                                         }}
                                                     >
                                                         {group.event.title || 'Evento sem título'}

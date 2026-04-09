@@ -14,25 +14,65 @@ const TransportManagement: React.FC = () => {
     const highlightEventId = searchParams.get('eventId');
     const scrollRef = useRef<Record<string, HTMLDivElement | null>>({});
     const scrollPositions = useRef<Record<string, number>>({});
+    const pendingRestoreScroll = useRef<number | null>(null);
+    const [restoreVersion, setRestoreVersion] = useState(0);
     const [transportRequests, setTransportRequests] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [transportSubTab, setTransportSubTab] = useState<'pending' | 'history' | 'events'>(
         (searchParams.get('view') as any) || 'pending'
     );
     const [transportSearch, setTransportSearch] = useState('');
+    const getScrollStorageKey = (view: string) => `scroll:${location.pathname}:${view}`;
+    const getScrollContainer = () => document.getElementById('main-scroll-container');
+    const getCurrentScroll = () => getScrollContainer()?.scrollTop || 0;
+    const persistScroll = (view: string, value: number) => {
+        scrollPositions.current[view] = value;
+        sessionStorage.setItem(getScrollStorageKey(view), String(value));
+    };
 
     useEffect(() => {
+        const container = getScrollContainer();
+        if (!container) return;
         const handleScroll = () => {
-            scrollPositions.current[transportSubTab] = window.scrollY;
+            if (!loading) {
+                persistScroll(transportSubTab, container.scrollTop);
+            }
         };
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, [transportSubTab]);
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [transportSubTab, loading, location.pathname]);
 
     useEffect(() => {
-        const savedPosition = scrollPositions.current[transportSubTab] || 0;
-        window.scrollTo(0, savedPosition);
-    }, [transportSubTab]);
+        if (loading) return;
+        const stored = sessionStorage.getItem(getScrollStorageKey(transportSubTab));
+        const fallback = stored ? parseInt(stored, 10) : 0;
+        const target = pendingRestoreScroll.current ?? scrollPositions.current[transportSubTab] ?? fallback;
+        pendingRestoreScroll.current = null;
+        if (!target) return;
+        const apply = (attempt = 0) => {
+            const container = getScrollContainer();
+            if (!container) return;
+            const urlParams = new URLSearchParams(location.search);
+            const anchorId = urlParams.get('anchor');
+            if (anchorId) {
+                const anchorEl = document.querySelector<HTMLElement>(`[data-anchor=\"event-${anchorId}\"]`);
+                if (anchorEl) {
+                    const containerRect = container.getBoundingClientRect();
+                    const elRect = anchorEl.getBoundingClientRect();
+                    const offset = elRect.top - containerRect.top + container.scrollTop - 16;
+                    container.scrollTo({ top: offset, behavior: 'instant' });
+                } else {
+                    container.scrollTo({ top: target, behavior: 'instant' });
+                }
+            } else {
+                container.scrollTo({ top: target, behavior: 'instant' });
+            }
+            if (attempt < 12 && Math.abs(container.scrollTop - target) > 2) {
+                requestAnimationFrame(() => apply(attempt + 1));
+            }
+        };
+        requestAnimationFrame(() => apply());
+    }, [transportSubTab, loading, transportRequests.length, restoreVersion]);
 
     useEffect(() => {
         setTransportSearch(searchParams.get('search') || '');
@@ -46,12 +86,23 @@ const TransportManagement: React.FC = () => {
             setTransportSubTab('pending');
         }
 
+        const targetView = view || 'pending';
         const scrollParam = searchParams.get('scroll');
+        const stored = sessionStorage.getItem(getScrollStorageKey(targetView));
+        const anchor = searchParams.get('anchor');
+        if (anchor) {
+            // no-op here; handled on restore from location.search
+        }
         if (scrollParam) {
-            setTimeout(() => {
-                window.scrollTo(0, parseInt(scrollParam));
-                scrollPositions.current[view || 'pending'] = parseInt(scrollParam);
-            }, 100);
+            const parsed = parseInt(scrollParam, 10);
+            pendingRestoreScroll.current = parsed;
+            persistScroll(targetView, parsed);
+            setRestoreVersion(v => v + 1);
+        } else if (stored) {
+            const parsed = parseInt(stored, 10);
+            pendingRestoreScroll.current = parsed;
+            scrollPositions.current[targetView] = parsed;
+            setRestoreVersion(v => v + 1);
         }
     }, [searchParams]);
 
@@ -635,9 +686,9 @@ const TransportManagement: React.FC = () => {
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight">
                                                     <Link 
-                                                        to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || window.scrollY}`)}`}
+                                                        to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || getCurrentScroll()}&anchor=${event.id}`)}`}
                                                         onClick={() => {
-                                                            scrollPositions.current[transportSubTab] = window.scrollY;
+                                                            persistScroll(transportSubTab, getCurrentScroll());
                                                         }}
                                                         className="hover:text-primary transition-colors"
                                                     >
@@ -1059,7 +1110,7 @@ const TransportManagement: React.FC = () => {
                                                     const cancelTime = isCanceledOrDeleted ? new Date(event.updated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
                                                     
                                                     return (
-                                                    <tr key={event.id} ref={el => { if (el) scrollRef.current[event.id] = el; }} className={`hover:bg-slate-50/30 transition-colors group/row text-sm ${highlightEventId === event.id ? 'bg-primary/5' : ''}`}>
+                                                    <tr key={event.id} data-anchor={`event-${event.id}`} ref={el => { if (el) scrollRef.current[event.id] = el; }} className={`hover:bg-slate-50/30 transition-colors group/row text-sm ${highlightEventId === event.id ? 'bg-primary/5' : ''}`}>
                                                         <td className="px-6 py-6 align-top">
                                                             <div className="flex flex-col gap-1.5">
                                                                 <span className="text-slate-900 font-black text-[15px]">{eventDate ? eventDate.toLocaleDateString('pt-BR') : new Date(event.created).toLocaleDateString('pt-BR')}</span>
@@ -1082,9 +1133,9 @@ const TransportManagement: React.FC = () => {
                                                                     const dateStr = eventDate ? `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}` : '';
                                                                     return (
                                                                         <Link 
-                                                                            to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || window.scrollY}`)}`}
+                                                                            to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || getCurrentScroll()}&anchor=${event.id}`)}`}
                                                                             onClick={() => {
-                                                                                scrollPositions.current[transportSubTab] = window.scrollY;
+                                                                                persistScroll(transportSubTab, getCurrentScroll());
                                                                             }}
                                                                             className="text-slate-900 font-bold hover:text-primary transition-colors flex items-start gap-1.5 group/link text-base"
                                                                             title="Ver detalhes do evento na aba recursos"
@@ -1155,7 +1206,7 @@ const TransportManagement: React.FC = () => {
                                 {filteredTransportRequests.map((event) => (
                                     <div 
                                         key={event.id} 
-                                ref={el => { if (el) scrollRef.current[event.id] = el; }}
+                                data-anchor={`event-${event.id}`} ref={el => { if (el) scrollRef.current[event.id] = el; }}
                                 className={`group bg-white relative rounded-[24px] shadow-sm border overflow-hidden hover:shadow-xl hover:border-slate-200 transition-all duration-500 flex flex-col md:flex-row items-stretch ${
                                     transportSubTab === 'history' ? 'opacity-95' : ''
                                 } ${highlightEventId === event.id ? 'ring-2 ring-slate-900 ring-offset-2 border-slate-900 shadow-2xl shadow-slate-900/10' : 'border-slate-100'}`}
@@ -1192,9 +1243,9 @@ const TransportManagement: React.FC = () => {
                                             </div>
                                             <h3 className="font-black text-slate-900 text-lg leading-tight group-hover:text-primary transition-colors">
                                                 <Link 
-                                                    to={`/calendar?date=${new Date(event.date_start).toISOString().split('T')[0]}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || window.scrollY}`)}`}
+                                                    to={`/calendar?date=${new Date(event.date_start).toISOString().split('T')[0]}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || getCurrentScroll()}&anchor=${event.id}`)}`}
                                                     onClick={() => {
-                                                        scrollPositions.current[transportSubTab] = window.scrollY;
+                                                        persistScroll(transportSubTab, getCurrentScroll());
                                                     }}
                                                     className="hover:text-primary transition-colors flex items-center gap-1.5 group/link"
                                                 >
@@ -1315,7 +1366,10 @@ const TransportManagement: React.FC = () => {
                                                     const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
                                                     return (
                                                         <Link
-                                                            to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}`)}`}
+                                                            to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || getCurrentScroll()}&anchor=${event.id}`)}`}
+                                                            onClick={() => {
+                                                                persistScroll(transportSubTab, getCurrentScroll());
+                                                            }}
                                                             className="size-11 rounded-xl bg-slate-50 text-slate-500 hover:text-primary hover:bg-primary/5 border border-slate-100 hover:border-primary/20 transition-all flex items-center justify-center active:scale-[0.98]"
                                                             title="Ver detalhes do evento"
                                                         >

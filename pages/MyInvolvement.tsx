@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMySpace, MySpaceEvent } from '../hooks/useMySpace';
 import { useAuth } from '../components/AuthContext';
@@ -54,6 +54,19 @@ const MyInvolvement: React.FC = () => {
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableLocations, setAvailableLocations] = useState<string[]>([]);
 
+  // Scroll persistence (container-based)
+  const scrollPositions = useRef<Record<string, number>>({});
+  const pendingRestoreScroll = useRef<number | null>(null);
+  const pendingAnchorId = useRef<string | null>(null);
+  const [restoreVersion, setRestoreVersion] = useState(0);
+  const getScrollStorageKey = (tab: string) => `scroll:${location.pathname}:${tab}`;
+  const getScrollContainer = () => document.getElementById('main-scroll-container');
+  const getCurrentScroll = () => getScrollContainer()?.scrollTop || 0;
+  const persistScroll = (tab: string, value: number) => {
+    scrollPositions.current[tab] = value;
+    sessionStorage.setItem(getScrollStorageKey(tab), String(value));
+  };
+
   // Refusal Modal State for Event Cancellation
   const [refusalModalOpen, setRefusalModalOpen] = useState(false);
   const [eventToCancel, setEventToCancel] = useState<MySpaceEvent | null>(null);
@@ -74,6 +87,78 @@ const MyInvolvement: React.FC = () => {
     };
     fetchOptions();
   }, []);
+
+  // Listen and persist scroll continuously on container
+  useEffect(() => {
+    const container = getScrollContainer();
+    if (!container) return;
+    const onScroll = () => {
+      if (!loading) {
+        persistScroll(activeTab, container.scrollTop);
+      }
+    };
+    container.addEventListener('scroll', onScroll);
+    return () => container.removeEventListener('scroll', onScroll);
+  }, [activeTab, loading, location.pathname]);
+
+  // Apply restoration loop after loading and data render
+  useEffect(() => {
+    if (loading) return;
+    const stored = sessionStorage.getItem(getScrollStorageKey(activeTab));
+    const fallback = stored ? parseInt(stored, 10) : 0;
+    const target = pendingRestoreScroll.current ?? scrollPositions.current[activeTab] ?? fallback;
+    pendingRestoreScroll.current = null;
+    const apply = (attempt = 0) => {
+      const container = getScrollContainer();
+      if (!container) return;
+      if (pendingAnchorId.current) {
+        const el = document.querySelector<HTMLElement>(`[data-anchor="event-${pendingAnchorId.current}"]`);
+        if (el) {
+          const cr = container.getBoundingClientRect();
+          const er = el.getBoundingClientRect();
+          const offset = er.top - cr.top + container.scrollTop - 16;
+          container.scrollTo({ top: offset, behavior: 'instant' });
+        } else if (target) {
+          container.scrollTo({ top: target, behavior: 'instant' });
+        }
+      } else if (target) {
+        container.scrollTo({ top: target, behavior: 'instant' });
+      }
+      if (attempt < 12) {
+        requestAnimationFrame(() => apply(attempt + 1));
+      }
+    };
+    requestAnimationFrame(() => apply());
+  }, [activeTab, loading, events.length, restoreVersion]);
+
+  // Read scroll and tab parameters from URL when returning from Calendar
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get('tab');
+    const scrollParam = params.get('scroll');
+    const anchorParam = params.get('anchor');
+    if (tabParam && ['all','organizer','participant','pending','rejected'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
+    const targetTab = tabParam || activeTab;
+    if (anchorParam) {
+      pendingAnchorId.current = anchorParam;
+    }
+    if (scrollParam) {
+      const parsed = parseInt(scrollParam, 10);
+      pendingRestoreScroll.current = parsed;
+      persistScroll(targetTab, parsed);
+      setRestoreVersion(v => v + 1);
+    } else {
+      const stored = sessionStorage.getItem(getScrollStorageKey(targetTab));
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        pendingRestoreScroll.current = parsed;
+        scrollPositions.current[targetTab] = parsed;
+        setRestoreVersion(v => v + 1);
+      }
+    }
+  }, [location.search]);
 
   // Handlers
   const handleCancelEvent = async (event: MySpaceEvent) => {
@@ -138,7 +223,9 @@ const MyInvolvement: React.FC = () => {
   const handleOpenEventInCalendar = (event: MySpaceEvent) => {
     const eventDate = new Date(event.date_start);
     const dateStr = eventDate.toISOString().split('T')[0];
-    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=details&from=${location.pathname}`);
+    const scroll = getCurrentScroll();
+    persistScroll(activeTab, scroll);
+    navigate(`/calendar?date=${dateStr}&view=agenda&eventId=${event.id}&tab=details&from=${encodeURIComponent(`${location.pathname}?tab=${activeTab}&scroll=${scroll}&anchor=${event.id}`)}`);
   };
 
   const handleDuplicateEvent = (event: MySpaceEvent) => {

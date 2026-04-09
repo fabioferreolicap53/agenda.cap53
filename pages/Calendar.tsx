@@ -2059,12 +2059,16 @@ const Calendar: React.FC = () => {
             newParams.delete('from');
             setSearchParams(newParams, { replace: true });
 
-            // Scroll para o topo da página (especialmente se veio da busca global)
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
             if (returnPath) {
               const path = returnPath;
               setReturnPath(null);
+              const [returnBasePath, returnQuery = ''] = path.split('?');
+              const returnParams = new URLSearchParams(returnQuery);
+              const returnView = returnParams.get('tab') || returnParams.get('view') || 'history';
+              const returnScroll = returnParams.get('scroll');
+              if (returnScroll) {
+                sessionStorage.setItem(`scroll:${returnBasePath}:${returnView}`, returnScroll);
+              }
               
               // Se o path já possuir parâmetro view, usar ele. Senão tentar manter a aba histórico assumindo legado
               if (path.includes('/almoxarifado') || path.includes('/informatica') || path.includes('/transporte')) {
@@ -2074,14 +2078,13 @@ const Calendar: React.FC = () => {
                   navigate(path);
                 }
               } else if (path.startsWith('/chat')) {
-                // Ao voltar para o chat, precisamos forçar a navegação preservando a string inteira,
-                // mas como estamos usando HashRouter, precisamos ter cuidado com os prefixos.
-                // navigate(`/chat` já assume /#/chat)
                 navigate(path);
               } else {
-                // Ensure we navigate back preserving any query params from the returnPath
                 navigate(path);
               }
+            } else {
+                // Scroll para o topo da página apenas se não houver returnPath (ou seja, se permanecermos no calendário)
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }
           }}
           onCancel={handleCancelEvent}

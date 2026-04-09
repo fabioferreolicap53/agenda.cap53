@@ -87,7 +87,7 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
   const end = getSafeDate(event.date_end);
 
   return (
-    <div className="group relative bg-white border border-slate-100 hover:border-slate-200 rounded-xl p-4 transition-all duration-200 hover:shadow-sm">
+    <div data-anchor={`event-${event.id}`} className="group relative bg-white border border-slate-100 hover:border-slate-200 rounded-xl p-4 transition-all duration-200 hover:shadow-sm">
       <div className="flex flex-col sm:flex-row gap-4">
         {/* Date Block */}
         <div className="flex sm:flex-col items-center sm:items-center justify-center sm:justify-start min-w-[60px] sm:w-[70px] bg-slate-50 rounded-lg p-2 border border-slate-100/50 gap-3 sm:gap-0">
@@ -104,8 +104,15 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
                 {getStatusDot(event)}
                 {getRoleBadge(event)}
               </div>
-              <h3 className="text-base font-bold text-slate-800 sm:truncate leading-tight group-hover:text-primary transition-colors">
-                {event.title}
+              <h3 className="text-base font-bold text-slate-800 sm:truncate leading-tight">
+                <button 
+                  type="button"
+                  onClick={() => onOpenCalendar(event)} 
+                  className="text-left hover:text-primary transition-colors cursor-pointer"
+                  title="Abrir no Calendário"
+                >
+                  {event.title}
+                </button>
               </h3>
             </div>
             

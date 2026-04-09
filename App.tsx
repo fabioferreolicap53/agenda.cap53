@@ -62,12 +62,17 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 const ScrollToTop: React.FC = () => {
   const { pathname, search } = useLocation();
+  const previousPathRef = React.useRef(pathname);
   
   React.useEffect(() => {
+    const pathnameChanged = previousPathRef.current !== pathname;
+    previousPathRef.current = pathname;
+    if (!pathnameChanged) return;
     // Se houver um eventId na URL, não scrollamos para o topo pois o sistema 
     // está tentando focar no evento ou abrir o modal
+    // O mesmo vale se houver um parâmetro 'scroll' explícito
     const params = new URLSearchParams(search);
-    if (!params.get('eventId') && !params.get('openChat')) {
+    if (!params.get('eventId') && !params.get('openChat') && !params.get('scroll')) {
       // Primeiro tentamos scrollar a window (caso haja scroll global)
       window.scrollTo(0, 0);
       
