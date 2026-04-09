@@ -405,19 +405,19 @@ const InformaticsManagement: React.FC = () => {
     };
 
     const getEventStatusBadge = (event: any) => {
-        if (!event) return { label: 'Excluído', classes: 'bg-slate-100 text-slate-500 border-slate-200' };
+        if (!event) return { label: 'Excluído', icon: 'delete', classes: 'bg-slate-500 text-white shadow-sm' };
         
-        if (event.status === 'canceled') return { label: 'Cancelado', classes: 'bg-rose-50 text-rose-600 border-rose-100' };
+        if (event.status === 'canceled') return { label: 'Cancelado', icon: 'cancel', classes: 'bg-rose-500 text-white shadow-sm' };
         
         if (event.date_end) {
             const endDate = new Date(event.date_end.replace(' ', 'T'));
             const startDate = event.date_start ? new Date(event.date_start.replace(' ', 'T')) : null;
             const now = new Date();
             
-            if (endDate < now) return { label: 'Concluído', classes: 'bg-slate-100 text-slate-500 border-slate-200' };
-            if (startDate && startDate <= now && endDate >= now) return { label: 'Em andamento', classes: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+            if (endDate < now) return { label: 'Concluído', icon: 'check_circle', classes: 'bg-slate-500 text-white shadow-sm' };
+            if (startDate && startDate <= now && endDate >= now) return { label: 'Em andamento', icon: 'play_circle', classes: 'bg-emerald-500 text-white shadow-sm' };
         }
-        return { label: 'Planejado', classes: 'bg-blue-50 text-blue-600 border-blue-100' };
+        return { label: 'Planejado', icon: 'schedule', classes: 'bg-amber-500 text-white shadow-sm' };
     };
 
     const filteredHistoryGroups = React.useMemo(() => {
@@ -860,16 +860,16 @@ const InformaticsManagement: React.FC = () => {
                                     <span className="material-symbols-outlined text-slate-400 text-[16px]">calendar_month</span>
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
                                 </div>
-                                <div className="h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                                    <div className="flex items-center justify-center gap-2 flex-1 min-w-0 h-full">
+                                <div className="h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-hidden">
+                                    <div className="flex items-center justify-center flex-1 min-w-0 h-full">
                                         {/* Dropdown Mês */}
-                                        <div className="relative group/month flex-1 h-full flex items-center justify-center">
-                                            <div className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors">
-                                                <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{months[filterMonth]}</span>
-                                                <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+                                        <div className="relative group/month flex-1 h-full">
+                                            <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
+                                                <span className="text-xs font-black text-slate-700 uppercase tracking-widest truncate">{months[filterMonth]}</span>
+                                                <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
                                             </div>
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="px-3 py-2 border-b border-slate-50">
+                                            <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="px-4 py-2 border-b border-slate-50">
                                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
                                                 </div>
                                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
@@ -877,7 +877,7 @@ const InformaticsManagement: React.FC = () => {
                                                         <div 
                                                             key={month}
                                                             onClick={() => setFilterMonth(index)}
-                                                            className={`px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-xs font-bold ${filterMonth === index ? 'text-primary' : 'text-slate-600'}`}
+                                                            className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterMonth === index ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
                                                         >
                                                             {month}
                                                         </div>
@@ -886,16 +886,16 @@ const InformaticsManagement: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="w-px h-4 bg-slate-200 shrink-0" />
+                                        <div className="w-px h-6 bg-slate-200 shrink-0" />
 
                                         {/* Dropdown Ano */}
-                                        <div className="relative group/year flex-1 h-full flex items-center justify-center">
-                                            <div className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors">
+                                        <div className="relative group/year flex-1 h-full">
+                                            <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
                                                 <span className="text-xs font-black text-slate-700 outline-none">{filterYear}</span>
-                                                <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+                                                <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
                                             </div>
-                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="px-3 py-2 border-b border-slate-50">
+                                            <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="px-4 py-2 border-b border-slate-50">
                                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
                                                 </div>
                                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
@@ -903,7 +903,7 @@ const InformaticsManagement: React.FC = () => {
                                                         <div 
                                                             key={year}
                                                             onClick={() => setFilterYear(year)}
-                                                            className={`px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-xs font-bold ${filterYear === year ? 'text-primary' : 'text-slate-600'}`}
+                                                            className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterYear === year ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
                                                         >
                                                             {year}
                                                         </div>
@@ -1156,7 +1156,8 @@ const InformaticsManagement: React.FC = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-6 align-top">
-                                                    <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${eventStatusBadge.classes}`}>
+                                                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm transition-all duration-300 ${eventStatusBadge.classes}`}>
+                                                        <span className="material-symbols-outlined text-[16px]">{eventStatusBadge.icon}</span>
                                                         {eventStatusBadge.label}
                                                     </span>
                                                 </td>
