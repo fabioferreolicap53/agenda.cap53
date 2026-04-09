@@ -200,6 +200,22 @@ const MyInvolvement: React.FC = () => {
   };
 
   const handleDeleteEvent = async (event: MySpaceEvent) => {
+    // Prevent deletion if event has logistics or transport requests
+    // Using a quick check here. It might need a full query to be 100% accurate, 
+    // but we can check the expand or make a query.
+    try {
+      const eventDetails = await pb.collection('agenda_cap53_eventos').getOne(event.id);
+      const logisticsRequests = await pb.collection('agenda_cap53_almac_requests').getFullList({ filter: `event = "${event.id}"` });
+      
+      const hasLogisticsRequests = logisticsRequests.length > 0 || eventDetails.transporte_suporte === true;
+      if (hasLogisticsRequests) {
+          alert('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
+          return;
+      }
+    } catch (e) {
+      console.error('Error verifying logistics before delete', e);
+    }
+
     setConfirmationModalConfig({
       title: 'Excluir Evento',
       description: `Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"? Esta ação não pode ser desfeita e removerá todas as notificações vinculadas aos participantes.`,

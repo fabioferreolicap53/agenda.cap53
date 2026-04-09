@@ -857,6 +857,14 @@ const Calendar: React.FC = () => {
   };
 
   const handleDeleteEvent = async (event: CalendarEvent) => {
+    // Prevent deletion if event has logistics or transport requests
+    const hasLogisticsRequests = (event.almac_requests && event.almac_requests.length > 0) || event.transporte_suporte === true;
+    
+    if (hasLogisticsRequests) {
+        alert('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
+        return;
+    }
+
     setConfirmationModalConfig({
         title: 'Excluir Evento',
         description: `Tem certeza que deseja EXCLUIR permanentemente o evento "${event.title}"? Esta ação não pode ser desfeita e removerá todas as notificações vinculadas.`,

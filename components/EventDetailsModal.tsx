@@ -447,6 +447,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   const canEdit = !isCancelled && user?.role !== 'ALMC' && (user?.role === 'ADMIN' || event.user === user?.id);
   const startDate = new Date(event.date_start || (event as any).date);
   const endDate = new Date(event.date_end || '');
+  
+  // Deletion is blocked if there are logistics/transport requests
+  const hasLogisticsRequests = requests.length > 0 || event.transporte_suporte === true;
+  const canDelete = event.user === user?.id && !hasLogisticsRequests;
 
   const refreshEvent = async () => {
     if (!event?.id) return;
@@ -1759,8 +1763,19 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                     {event.user === user?.id && (
                         <button 
-                            onClick={() => onDelete(event)}
-                            className="flex-1 h-12 sm:h-10 rounded-xl bg-slate-50 text-slate-400 text-[10px] font-bold uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all flex items-center justify-center gap-2 border border-slate-200 hover:border-red-100"
+                            onClick={() => {
+                                if (hasLogisticsRequests) {
+                                    alert('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
+                                    return;
+                                }
+                                onDelete(event);
+                            }}
+                            className={`flex-1 h-12 sm:h-10 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 border ${
+                                hasLogisticsRequests 
+                                    ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed' 
+                                    : 'bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 border-slate-200 hover:border-red-100'
+                            }`}
+                            title={hasLogisticsRequests ? "Não é possível excluir: Cancele o evento" : "Excluir Evento"}
                         >
                             <span className="material-symbols-outlined text-lg">delete</span>
                             <span>Excluir</span>
