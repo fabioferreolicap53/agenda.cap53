@@ -1011,12 +1011,12 @@ const Calendar: React.FC = () => {
                     </button>
                   </div>
 
-                  <div className="h-[42px] flex items-center bg-slate-50 rounded-xl p-1 border border-slate-200 flex-1 md:flex-1 justify-center max-w-[280px]">
+                  <div className="h-[42px] flex items-center bg-slate-50/80 backdrop-blur-sm rounded-xl p-1 border border-slate-200 flex-1 md:flex-1 justify-center max-w-[280px] shadow-inner">
                     <button
                       onClick={() => handleNavigate('prev')}
-                      className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 shrink-0"
+                      className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 active:scale-95 shrink-0 group"
                     >
-                      <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                      <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">chevron_left</span>
                     </button>
                     
                     {/* Indicação de Mês e Ano */}
@@ -1028,9 +1028,9 @@ const Calendar: React.FC = () => {
 
                     <button
                       onClick={() => handleNavigate('next')}
-                      className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 shrink-0"
+                      className="h-full aspect-square flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-400 hover:text-primary transition-all duration-300 active:scale-95 shrink-0 group"
                     >
-                      <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                      <span className="material-symbols-outlined text-[20px] group-hover:translate-x-0.5 transition-transform">chevron_right</span>
                     </button>
                   </div>
 
@@ -1145,7 +1145,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Painel de Filtros - Otimizado para ocupar apenas uma linha no desktop */}
-            <div className={`${showFilters ? 'flex flex-col lg:flex-row p-4 mt-2 border border-slate-100 bg-slate-50/80 rounded-2xl animate-in slide-in-from-top-2 fade-in duration-300 shadow-inner' : 'hidden'} items-center lg:items-end gap-6 w-full z-[101] relative transition-all`}>
+            <div className={`${showFilters ? 'flex flex-col lg:flex-row p-4 mt-2 border border-white/80 bg-white/50 backdrop-blur-lg rounded-2xl animate-in slide-in-from-top-2 fade-in duration-300 shadow-lg shadow-slate-200/50' : 'hidden'} items-center lg:items-end gap-6 w-full z-[101] relative transition-all`}>
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-md md:max-w-none">
                   <div className="flex flex-col gap-1.5">
                     <label className="flex items-center justify-center md:justify-start gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 md:ml-1">
@@ -1238,18 +1238,18 @@ const Calendar: React.FC = () => {
         {/* Calendar Grid Container */}
         <div 
           {...swipeHandlers} 
-          className={`bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[500px] md:min-h-[750px] overflow-visible relative transition-all duration-300 ease-in-out transform touch-pan-y ${
+          className={`bg-white rounded-2xl border border-border-light shadow-sm flex-1 flex flex-col min-h-[500px] md:min-h-[750px] overflow-visible relative transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] transform touch-pan-y ${
             animStage === 'exiting' 
-              ? (animDirection === 'next' ? '-translate-x-10 opacity-0' : 'translate-x-10 opacity-0')
+              ? (animDirection === 'next' ? '-translate-x-12 scale-[0.98] opacity-0' : 'translate-x-12 scale-[0.98] opacity-0')
               : animStage === 'entering'
-                ? (animDirection === 'next' ? 'translate-x-10 opacity-0' : '-translate-x-10 opacity-0')
-                : 'translate-x-0 opacity-100'
+                ? (animDirection === 'next' ? 'translate-x-12 scale-[0.98] opacity-0' : '-translate-x-12 scale-[0.98] opacity-0')
+                : 'translate-x-0 scale-100 opacity-100'
           }`}
         >
           {viewType === 'month' && (
             <div className="flex-1 flex flex-col">
               {/* Header Section for Month View */}
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-white/40 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-white/60 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md hover:bg-white/60">
                 <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                   <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
                     <span className="material-symbols-outlined text-[28px] md:text-[36px] text-primary font-light">calendar_month</span>
@@ -1289,11 +1289,11 @@ const Calendar: React.FC = () => {
                       key={idx}
                       ref={dateKey === monthTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
                       onDoubleClick={() => handleDayDoubleClick(dateObj.date)}
-                      className={`flex flex-col p-2.5 relative group transition-all duration-300 cursor-default min-h-[140px] ${!isRightEdge ? 'border-r border-border-light/50' : ''} ${!isBottomEdge ? 'border-b border-border-light/50' : ''} ${scrollMarginClass} ${
+                      className={`flex flex-col p-2.5 relative group transition-all duration-500 ease-out cursor-default min-h-[140px] hover:z-10 ${!isRightEdge ? 'border-r border-border-light/50' : ''} ${!isBottomEdge ? 'border-b border-border-light/50' : ''} ${scrollMarginClass} ${
                         dateObj.type === 'current' 
                           ? (isToday 
-                              ? `bg-primary/[0.03] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.03)] ${shouldPulseToday ? 'animate-pulse border-primary/30 z-20' : ''}` 
-                              : (isWeekend ? 'bg-orange-50/20 hover:bg-orange-50/40' : 'bg-white hover:bg-slate-50/50')) 
+                              ? `bg-primary/[0.04] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.05)] ring-1 ring-primary/10 ${shouldPulseToday ? 'animate-pulse border-primary/40 z-20 shadow-lg shadow-primary/10' : ''}` 
+                              : (isWeekend ? 'bg-orange-50/20 hover:bg-orange-50/50 hover:shadow-md hover:-translate-y-0.5' : 'bg-white hover:bg-slate-50/80 hover:shadow-md hover:shadow-primary/5 hover:-translate-y-0.5')) 
                           : 'bg-slate-50/60 text-slate-400'
                       }`}
                     >
@@ -1324,7 +1324,7 @@ const Calendar: React.FC = () => {
                               e.stopPropagation();
                               updateURL('day', dateObj.date);
                             }}
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50 border border-slate-200/50 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 active:scale-95"
+                            className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-50/80 backdrop-blur-sm border border-slate-200/50 group/badge hover:bg-primary/10 hover:border-primary/30 transition-all duration-300 active:scale-95 hover:shadow-sm"
                           >
                             <span className="material-symbols-outlined text-[10px] text-slate-400 group-hover/badge:text-primary transition-colors">calendar_today</span>
                             <span className="text-[9px] font-black text-slate-500 group-hover/badge:text-primary transition-colors">
@@ -1366,10 +1366,10 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={dateKey === monthTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
-                    className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
+                    className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-lg relative ${scrollMarginClass} ${
                       isToday 
-                        ? `bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20 shadow-primary/20' : ''}` 
-                        : (isWeekend ? 'bg-orange-50/60 border-orange-200' : 'bg-white hover:bg-slate-50/50')
+                        ? `bg-primary/[0.05] border-2 border-primary/30 shadow-xl shadow-primary/10 ring-4 ring-primary/10 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20' : ''}` 
+                        : (isWeekend ? 'bg-orange-50/60 border-orange-200 hover:bg-orange-50/80' : 'bg-white hover:bg-slate-50/80')
                     }`}
                   >
                     {/* Subtil pattern for out-of-month days */}
@@ -1444,7 +1444,7 @@ const Calendar: React.FC = () => {
         {viewType === 'week' && (
           <div className={`flex-1 flex flex-col ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-50/30'}`}>
             {/* Header Section for Week View */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-white/40 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-white/60 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md hover:bg-white/60">
               <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                 <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
                   <span className="material-symbols-outlined text-[28px] md:text-[36px] text-primary font-light">view_week</span>
@@ -1515,13 +1515,13 @@ const Calendar: React.FC = () => {
                       key={idx}
                       ref={date.toDateString() === weekTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
                       onDoubleClick={() => handleDayDoubleClick(date)}
-                      className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-300 relative ${!isRightEdge ? 'border-r border-border-light/50' : ''} ${scrollMarginClass} ${
+                      className={`flex flex-col p-3 gap-2 min-h-[600px] cursor-default transition-all duration-500 ease-out hover:z-10 relative ${!isRightEdge ? 'border-r border-border-light/50' : ''} ${scrollMarginClass} ${
                         isToday 
-                          ? `bg-primary/[0.03] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.03)] ${shouldPulseToday ? 'animate-pulse ring-4 ring-inset ring-primary/20 z-20' : ''}` 
+                          ? `bg-primary/[0.04] shadow-[inset_0_0_20px_rgba(var(--color-primary-rgb),0.05)] ring-1 ring-primary/10 ${shouldPulseToday ? 'animate-pulse ring-4 ring-inset ring-primary/30 z-20 shadow-lg shadow-primary/10' : ''}` 
                           : isWeekend
-                            ? 'bg-orange-50/10 hover:bg-orange-50/30'
+                            ? 'bg-orange-50/10 hover:bg-orange-50/30 hover:shadow-md hover:-translate-y-0.5'
                             : isCurrentMonth 
-                              ? 'hover:bg-slate-50/50' 
+                              ? 'bg-white hover:bg-slate-50/80 hover:shadow-md hover:shadow-primary/5 hover:-translate-y-0.5' 
                               : 'bg-slate-50 text-slate-400'
                       }`}
                     >
@@ -1566,13 +1566,13 @@ const Calendar: React.FC = () => {
                   <div 
                     key={idx} 
                     ref={dateKey === weekTargetDateKey ? monthWeekTargetRef : (isToday ? todayRef : null)}
-                    className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-300 relative ${scrollMarginClass} ${
+                    className={`rounded-3xl border border-border-light shadow-sm overflow-hidden transition-all duration-500 ease-out hover:-translate-y-1 hover:shadow-lg relative ${scrollMarginClass} ${
                       isToday 
-                        ? 'bg-primary/[0.04] border-2 border-primary/20 shadow-xl shadow-primary/5 ring-4 ring-primary/5' 
+                        ? 'bg-primary/[0.05] border-2 border-primary/30 shadow-xl shadow-primary/10 ring-4 ring-primary/10' 
                         : isWeekend
-                          ? 'bg-orange-50/60 border-orange-200'
+                          ? 'bg-orange-50/60 border-orange-200 hover:bg-orange-50/80'
                           : isCurrentMonth 
-                            ? 'bg-white hover:bg-slate-50/50' 
+                            ? 'bg-white hover:bg-slate-50/80' 
                             : 'bg-slate-100/70'
                     }`}
                   >
@@ -1656,15 +1656,15 @@ const Calendar: React.FC = () => {
             <div 
               ref={isToday ? todayRef : dayViewRef}
               onDoubleClick={() => handleDayDoubleClick(currentDate)}
-              className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ${scrollMarginClass} ${
+              className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ease-out ${scrollMarginClass} ${
                 isToday 
-                  ? `bg-primary/[0.03] ring-inset ring-1 ring-primary/10 ${shouldPulseToday ? 'animate-pulse ring-4 ring-primary/20 z-20' : ''}` 
-                  : (isWeekend ? 'bg-orange-50/20' : 'bg-white')
+                  ? `bg-primary/[0.04] ring-inset ring-2 ring-primary/20 shadow-inner ${shouldPulseToday ? 'animate-pulse ring-4 ring-primary/30 z-20' : ''}` 
+                  : (isWeekend ? 'bg-orange-50/30' : 'bg-white')
               }`}
             >
               {/* Header Section for Day View */}
-              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md ${
-                isWeekend && !isToday ? 'bg-orange-50/60 border-orange-200' : 'bg-slate-50/50 border-slate-100'
+              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md backdrop-blur-md ${
+                isWeekend && !isToday ? 'bg-orange-50/60 border-orange-200 hover:bg-orange-50/80' : 'bg-white/40 border-white/60 hover:bg-white/60'
               }`}>
                 <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                   <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
@@ -1790,11 +1790,11 @@ const Calendar: React.FC = () => {
 
                       {/* Mobile View - Optimized Layout */}
                       <div 
-                        className={`md:hidden rounded-xl border shadow-sm p-3 flex gap-3 active:scale-[0.98] transition-transform ${event.status === 'canceled' 
-                          ? 'bg-red-50/40 border-red-200' 
+                        className={`md:hidden rounded-2xl border p-4 flex gap-3 active:scale-[0.98] transition-all duration-300 hover:shadow-md ${event.status === 'canceled' 
+                          ? 'bg-red-50/40 border-red-300 shadow-sm shadow-red-100/50' 
                           : isPast 
-                            ? 'bg-slate-50/60 border-slate-200 opacity-70' 
-                            : 'bg-white border-slate-100'}`}
+                            ? 'bg-slate-50/80 border-slate-300 opacity-80 shadow-sm' 
+                            : 'bg-white border-primary/30 hover:border-primary/60 shadow-sm shadow-primary/5'}`}
                         onClick={() => setSelectedEvent(event)}
                       >
                         {/* Time Column */}
@@ -1904,7 +1904,7 @@ const Calendar: React.FC = () => {
         {viewType === 'agenda' && (
           <div className="flex-1 flex flex-col bg-white relative">
             {/* Header Section for Agenda View */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-slate-50/50 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-white/40 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] border border-white/60 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md hover:bg-white/60">
               <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
                 <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
                   <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">view_agenda</span>
@@ -1953,13 +1953,13 @@ const Calendar: React.FC = () => {
                         <div 
                             key={dateStr} 
                             ref={dateStr === agendaTargetDateKey ? agendaTargetRef : (isToday ? todayRef : null)}
-                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 p-6 -mx-4 rounded-3xl transition-all relative overflow-hidden ${scrollMarginClass} ${
+                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out p-6 -mx-4 rounded-[2rem] transition-all relative overflow-hidden hover:z-10 ${scrollMarginClass} ${
                                 isToday 
-                                    ? `bg-primary/[0.04] border-2 border-primary/20 relative shadow-xl shadow-primary/5 ring-4 ring-primary/5 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20 shadow-primary/20' : ''}` 
+                                    ? `bg-primary/[0.04] border border-primary/30 relative shadow-xl shadow-primary/10 ring-2 ring-primary/10 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20' : ''}` 
                                     : isWeekend && isCurrentMonth
-                                        ? 'bg-orange-50/20 md:bg-orange-50/40 border border-orange-100 hover:bg-orange-50/40 md:hover:bg-orange-50/60'
+                                        ? 'bg-orange-50/30 border border-orange-100 hover:bg-orange-50/50 hover:shadow-lg hover:-translate-y-1'
                                         : isCurrentMonth 
-                                            ? 'bg-white border border-border-light hover:border-border-light/80 hover:shadow-md hover:-translate-y-0.5'
+                                            ? 'bg-white border border-border-light hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5 hover:-translate-y-1'
                                             : 'bg-slate-50 border border-border-light opacity-80'
                             }`}
                         >
@@ -2572,12 +2572,12 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
         setTooltipData(null);
         onSelect(event);
       }}
-      className={`w-full border-l-[3px] rounded-lg px-3 py-3 cursor-pointer transition-all duration-200 hover:translate-x-0.5 relative group ${isCancelled
-        ? 'bg-red-50/40 border-red-200 hover:border-red-300'
+      className={`w-full border-l-[4px] rounded-xl px-3 py-3 cursor-pointer transition-all duration-300 hover:-translate-y-0.5 hover:translate-x-0.5 relative group ${isCancelled
+        ? 'bg-red-50/40 border-red-300 hover:border-red-400 shadow-sm hover:shadow-md hover:shadow-red-200/50'
         : isPast 
-          ? 'bg-slate-50/60 border-slate-300/50 hover:border-slate-400/50 opacity-70'
-          : 'bg-white border-primary/40 hover:border-primary shadow-sm hover:shadow-md'
-        } ${detailed ? 'p-5' : ''}`}
+          ? 'bg-slate-50/80 border-slate-300 hover:border-slate-400 opacity-80 hover:opacity-100 shadow-sm hover:shadow-md'
+          : 'bg-white border-primary/50 hover:border-primary shadow-sm hover:shadow-lg hover:shadow-primary/10'
+        } ${detailed ? 'p-5 md:p-6' : ''}`}
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
