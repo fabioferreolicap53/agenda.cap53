@@ -934,6 +934,56 @@ const CreateEvent: React.FC = () => {
           // Copiar Quantidade de Participantes
           setEstimatedParticipants(event.estimated_participants ? String(event.estimated_participants) : '');
 
+          // Copiar Envolvimento de Unidades e Profissionais
+          setSelectedUnidades(event.unidades || []);
+          setSelectedCategorias(event.categorias_profissionais || []);
+          setEnvolverProfissionais(((event.unidades?.length || 0) > 0 || (event.categorias_profissionais?.length || 0) > 0));
+
+          // Copiar Logística e Transporte
+          setTransporteSuporte(!!event.transporte_suporte);
+          setTransporteOrigem(event.transporte_origem || '');
+          setTransporteDestino(event.transporte_destino || '');
+          setTransporteHorarioLevar(event.transporte_horario_levar || '');
+          setTransporteHorarioBuscar(event.transporte_horario_buscar || '');
+          setTransportePassageiros(event.transporte_passageiro ? String(event.transporte_passageiro) : '');
+          setTransporteObs(event.transporte_obs || '');
+
+          // Fetch items for Logística & Recursos
+          try {
+            const requests = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList({
+               filter: `event = "${duplicateIdParam}"`,
+               expand: 'item'
+            });
+            
+            const newAlmoxarifadoItems: string[] = [];
+            const newCopaItems: string[] = [];
+            const newInformaticaItems: string[] = [];
+            const newQuantities: {[key: string]: number} = {};
+            
+            requests.forEach((req: any) => {
+               const item = req.expand?.item;
+               if (item) {
+                  if (item.category === 'ALMOXARIFADO') {
+                     newAlmoxarifadoItems.push(item.id);
+                  } else if (item.category === 'COPA') {
+                     newCopaItems.push(item.id);
+                  } else if (item.category === 'INFORMATICA') {
+                     newInformaticaItems.push(item.id);
+                  }
+                  newQuantities[item.id] = req.quantity || 1;
+               }
+            });
+            
+            setAlmoxarifadoItems(newAlmoxarifadoItems);
+            setCopaItems(newCopaItems);
+            setInformaticaItems(newInformaticaItems);
+            setItemQuantities(newQuantities);
+            setConfirmedItems([...newAlmoxarifadoItems, ...newCopaItems, ...newInformaticaItems]);
+            setLogisticaRecursos(newAlmoxarifadoItems.length > 0 || newCopaItems.length > 0 || newInformaticaItems.length > 0 || !!event.transporte_suporte);
+          } catch (err) {
+            console.error("Erro ao buscar solicitações de logística para duplicação", err);
+          }
+
           // Configurar Datas Padrão (Hoje + 1h)
           const now = new Date();
           const startHour = now.getHours() + 1;

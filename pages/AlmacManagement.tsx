@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
-import { Navigate, useLocation, Link } from 'react-router-dom';
+import { Navigate, useLocation, Link, useSearchParams } from 'react-router-dom';
 import ConfirmationModal from '../components/ConfirmationModal';
 import { printEventDoc } from '../lib/printUtils';
 
 const AlmacManagement: React.FC = () => {
     const { user, loading: authLoading } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
     
     // Inventory State
     const [items, setItems] = useState<any[]>([]);
@@ -18,9 +19,12 @@ const AlmacManagement: React.FC = () => {
     const [newItemStock, setNewItemStock] = useState<number>(0);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeView, setActiveView] = useState<'inventory' | 'history' | 'events'>('inventory');
+    const [activeView, setActiveView] = useState<'inventory' | 'history' | 'events'>(
+        (searchParams.get('view') as any) || 'inventory'
+    );
     const location = useLocation();
     const [searchTerm, setSearchTerm] = useState('');
+    const scrollPositions = useRef<Record<string, number>>({});
 
     const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
     const [confirmationModalConfig, setConfirmationModalConfig] = useState<{
@@ -36,10 +40,22 @@ const AlmacManagement: React.FC = () => {
     });
 
     useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        setSearchTerm(params.get('search') || '');
+        const handleScroll = () => {
+            scrollPositions.current[activeView] = window.scrollY;
+        };
+        window.addEventListener('scroll', handleScroll);
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [activeView]);
+
+    useEffect(() => {
+        const savedPosition = scrollPositions.current[activeView] || 0;
+        window.scrollTo(0, savedPosition);
+    }, [activeView]);
+
+    useEffect(() => {
+        setSearchTerm(searchParams.get('search') || '');
         
-        const view = params.get('view');
+        const view = searchParams.get('view');
         if (view === 'history') {
             setActiveView('history');
         } else if (view === 'events') {
@@ -47,9 +63,64 @@ const AlmacManagement: React.FC = () => {
         } else if (view === 'inventory') {
             setActiveView('inventory');
         }
-    }, [location.search]);
+
+        // Restore scroll position if navigating back from calendar
+        const scrollParam = searchParams.get('scroll');
+        if (scrollParam) {
+            setTimeout(() => {
+                window.scrollTo(0, parseInt(scrollParam));
+                scrollPositions.current[view || 'inventory'] = parseInt(scrollParam);
+            }, 100); // Small delay to allow DOM to render
+        }
+    }, [searchParams]);
+
+    const handleViewChange = (view: 'inventory' | 'history' | 'events') => {
+        setSearchParams({ view });
+        setActiveView(view);
+    };
 
     const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ALMOXARIFADO' | 'COPA'>('ALL');
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'date', direction: 'asc' });
+
+    const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
+    const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+    const [filterRequesters, setFilterRequesters] = useState<string[]>([]);
+    const [filterStatuses, setFilterStatuses] = useState<string[]>(['Planejado', 'Em andamento', 'Concluído', 'Cancelado']);
+
+    const months = [
+        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+
+    const years = React.useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        return Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+    }, []);
+
+    const getEventStatusBadge = (event: any) => {
+        if (!event) return { label: 'Excluído', classes: 'bg-slate-100 text-slate-500 border-slate-200' };
+        
+        if (event.status === 'canceled') return { label: 'Cancelado', classes: 'bg-rose-50 text-rose-600 border-rose-100' };
+        
+        if (event.date_end) {
+            const endDate = new Date(event.date_end.replace(' ', 'T'));
+            const startDate = event.date_start ? new Date(event.date_start.replace(' ', 'T')) : null;
+            const now = new Date();
+            
+            if (endDate < now) return { label: 'Concluído', classes: 'bg-slate-100 text-slate-500 border-slate-200' };
+            if (startDate && startDate <= now && endDate >= now) return { label: 'Em andamento', classes: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+        }
+        return { label: 'Planejado', classes: 'bg-blue-50 text-blue-600 border-blue-100' };
+    };
+
+    const uniqueRequesters = React.useMemo(() => {
+        const requesters = new Set<string>();
+        history.forEach(req => {
+            const name = req.expand?.created_by?.name || req.expand?.created_by?.email;
+            if (name) requesters.add(name);
+        });
+        return Array.from(requesters).sort();
+    }, [history]);
 
     const filteredItems = items.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -58,16 +129,92 @@ const AlmacManagement: React.FC = () => {
         return matchesSearch && matchesCategory;
     });
 
-    const filteredHistory = history.filter(req => {
-        const lowerSearch = searchTerm.toLowerCase();
-        const eventTitle = (req.expand?.event?.title || '').toLowerCase();
-        const requesterName = (req.expand?.created_by?.name || '').toLowerCase();
-        const itemName = (req.expand?.item?.name || '').toLowerCase();
+    const filteredHistoryGroups = React.useMemo(() => {
+        let filtered = history.filter(req => {
+            const lowerSearch = searchTerm.toLowerCase();
+            const eventTitle = (req.expand?.event?.title || '').toLowerCase();
+            const requesterName = (req.expand?.created_by?.name || '').toLowerCase();
+            const itemName = (req.expand?.item?.name || '').toLowerCase();
+            
+            const matchesSearch = eventTitle.includes(lowerSearch) || 
+                   requesterName.includes(lowerSearch) ||
+                   itemName.includes(lowerSearch);
+
+            if (!matchesSearch) return false;
+
+            const eventDate = req.expand?.event?.date_start ? new Date(req.expand.event.date_start.replace(' ', 'T')) : new Date(req.created);
+            
+            if (eventDate.getMonth() !== filterMonth || eventDate.getFullYear() !== filterYear) return false;
+
+            const reqName = req.expand?.created_by?.name || req.expand?.created_by?.email;
+            if (filterRequesters.length > 0 && !filterRequesters.includes(reqName)) return false;
+
+            const statusLabel = getEventStatusBadge(req.expand?.event).label;
+            if (!filterStatuses.includes(statusLabel)) return false;
+
+            return true;
+        });
+
+        const groups = new Map();
+        filtered.forEach(req => {
+            const key = req.event || `no-event-${req.id}`;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    eventId: key,
+                    event: req.expand?.event,
+                    created_by: req.expand?.created_by,
+                    created: req.created,
+                    updated: req.updated,
+                    requests: []
+                });
+            }
+            groups.get(key).requests.push(req);
+        });
+
+        let result = Array.from(groups.values());
+
+        if (sortConfig !== null) {
+            result.sort((a, b) => {
+                let aValue: any;
+                let bValue: any;
+
+                switch (sortConfig.key) {
+                    case 'date':
+                        aValue = new Date(a.event?.date_start || a.created).getTime();
+                        bValue = new Date(b.event?.date_start || b.created).getTime();
+                        break;
+                    case 'title':
+                        aValue = (a.event?.title || '').toLowerCase();
+                        bValue = (b.event?.title || '').toLowerCase();
+                        break;
+                    case 'event_status':
+                        aValue = (a.event?.status || '').toLowerCase();
+                        bValue = (b.event?.status || '').toLowerCase();
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'asc' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'asc' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
         
-        return eventTitle.includes(lowerSearch) || 
-               requesterName.includes(lowerSearch) ||
-               itemName.includes(lowerSearch);
-    });
+        return result;
+    }, [history, searchTerm, sortConfig, filterMonth, filterYear, filterRequesters, filterStatuses]);
+
+    const handleSort = (key: string) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
 
     const availableItemsCount = items.filter(i => i.is_available === true || String(i.is_available) === 'true').length;
     const unavailableItemsCount = items.length - availableItemsCount;
@@ -387,7 +534,7 @@ const AlmacManagement: React.FC = () => {
 
                 <div className="flex items-center gap-2 p-1.5 bg-slate-100/80 backdrop-blur-sm rounded-2xl w-fit border border-slate-200/50 overflow-x-auto max-w-full">
                     <button
-                        onClick={() => setActiveView('events')}
+                        onClick={() => handleViewChange('events')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 whitespace-nowrap ${
                             activeView === 'events' 
                             ? 'bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0,05)] border border-slate-200/50' 
@@ -398,7 +545,7 @@ const AlmacManagement: React.FC = () => {
                         Agenda
                     </button>
                     <button
-                        onClick={() => setActiveView('inventory')}
+                        onClick={() => handleViewChange('inventory')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
                             activeView === 'inventory' 
                             ? 'bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0,05)] border border-slate-200/50' 
@@ -409,7 +556,7 @@ const AlmacManagement: React.FC = () => {
                         Estoque
                     </button>
                     <button
-                        onClick={() => setActiveView('history')}
+                        onClick={() => handleViewChange('history')}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
                             activeView === 'history' 
                             ? 'bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0,05)] border border-slate-200/50' 
@@ -698,22 +845,264 @@ const AlmacManagement: React.FC = () => {
             ) : activeView === 'history' ? (
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Search and Filters for History */}
-                    <div className="bg-white p-4 rounded-3xl border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-                        <div className="relative flex-1 w-full">
-                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                            <input
-                                type="text"
-                                placeholder="Buscar no histórico (evento ou solicitante)..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full bg-slate-50/50 border border-slate-100 rounded-2xl h-12 pl-12 pr-4 text-sm font-medium focus:ring-4 focus:ring-slate-900/5 focus:border-slate-900/20 outline-none transition-all"
-                            />
+                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-6">
+                        <div className="flex flex-col md:flex-row gap-6 items-stretch">
+                            {/* Busca Rápida */}
+                            <div className="flex-1 flex flex-col gap-2.5">
+                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">search</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Busca Rápida</span>
+                                </div>
+                                <div className="relative h-14 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm focus-within:bg-white focus-within:shadow-sm focus-within:border-slate-200">
+                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                                    <input
+                                        type="text"
+                                        placeholder="Filtrar por evento, solicitante ou item..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full h-full bg-transparent border-none pl-12 pr-4 text-xs font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-medium focus:ring-0 outline-none transition-all"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Resumo Analítico */}
+                            <div className="md:w-[480px] flex flex-col gap-2.5">
+                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">analytics</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Analítico</span>
+                                </div>
+                                <div className="h-14 flex items-center justify-between px-6 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-lg">description</span>
+                                        </div>
+                                        <div className="flex flex-col -space-y-0.5">
+                                            <span className="text-[11px] font-black text-slate-900">{filteredHistoryGroups.reduce((acc, g) => acc + g.requests.length, 0)}</span>
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Registros</span>
+                                        </div>
+                                    </div>
+                                    <div className="w-px h-6 bg-slate-200" />
+                                    <div className="flex items-center gap-3">
+                                        {[
+                                            { label: 'Planejado', color: 'bg-amber-500' },
+                                            { label: 'Em andamento', color: 'bg-emerald-500' },
+                                            { label: 'Concluído', color: 'bg-slate-500' },
+                                            { label: 'Cancelado', color: 'bg-rose-500' }
+                                        ].map(status => {
+                                            const count = filteredHistoryGroups.reduce((acc, g) => {
+                                                const eventStatus = getEventStatusBadge(g.event).label;
+                                                return eventStatus === status.label ? acc + g.requests.length : acc;
+                                            }, 0);
+                                            return (
+                                                <div key={status.label} className="flex flex-col items-center -space-y-1" title={status.label}>
+                                                    <span className="text-[11px] font-black text-slate-900">{count}</span>
+                                                    <div className={`w-3 h-1 rounded-full ${status.color}`} />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="w-px h-6 bg-slate-200" />
+                                    <div className="flex items-center gap-4">
+                                        <div className="size-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-lg">event</span>
+                                        </div>
+                                        <div className="flex flex-col -space-y-0.5">
+                                            <span className="text-[11px] font-black text-slate-900">{filteredHistoryGroups.length}</span>
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Eventos</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-400 bg-slate-50/50 px-4 py-2 rounded-2xl border border-slate-100">
-                            <span className="material-symbols-outlined text-lg">history</span>
-                            <span className="text-xs font-bold uppercase tracking-widest">{filteredHistory.length} Registros</span>
+
+                        <div className="flex flex-wrap items-stretch justify-between gap-6 border-t border-slate-50 pt-6">
+                            {/* Período */}
+                            <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
+                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">calendar_month</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
+                                </div>
+                                <div className="h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                    <div className="flex items-center justify-center gap-2 flex-1 min-w-0 h-full">
+                                        {/* Dropdown Mês */}
+                                        <div className="relative group/month flex-1 h-full flex items-center justify-center">
+                                            <div className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors">
+                                                <span className="text-xs font-black text-slate-700 uppercase tracking-widest">{months[filterMonth]}</span>
+                                                <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+                                            </div>
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="px-3 py-2 border-b border-slate-50">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
+                                                </div>
+                                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                    {months.map((month, index) => (
+                                                        <div 
+                                                            key={month}
+                                                            onClick={() => setFilterMonth(index)}
+                                                            className={`px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-xs font-bold ${filterMonth === index ? 'text-primary' : 'text-slate-600'}`}
+                                                        >
+                                                            {month}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-px h-4 bg-slate-200 shrink-0" />
+
+                                        {/* Dropdown Ano */}
+                                        <div className="relative group/year flex-1 h-full flex items-center justify-center">
+                                            <div className="flex items-center gap-1.5 cursor-pointer hover:text-primary transition-colors">
+                                                <span className="text-xs font-black text-slate-700 outline-none">{filterYear}</span>
+                                                <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+                                            </div>
+                                            <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
+                                                <div className="px-3 py-2 border-b border-slate-50">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
+                                                </div>
+                                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                    {years.map(year => (
+                                                        <div 
+                                                            key={year}
+                                                            onClick={() => setFilterYear(year)}
+                                                            className={`px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors text-xs font-bold ${filterYear === year ? 'text-primary' : 'text-slate-600'}`}
+                                                        >
+                                                            {year}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Solicitante */}
+                            <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
+                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">person</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
+                                </div>
+                                <div className="h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                    <div className="relative group/multi flex-1 h-full flex items-center">
+                                        <div className="flex items-center justify-between gap-2 cursor-pointer w-full px-1">
+                                            <span className="text-xs font-bold text-slate-600 truncate text-center flex-1">
+                                                {filterRequesters.length === 0 
+                                                    ? 'Todos' 
+                                                    : filterRequesters.length === 1 
+                                                        ? filterRequesters[0] 
+                                                        : `${filterRequesters.length} selecionados`}
+                                            </span>
+                                            <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                                        </div>
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/multi:block animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="px-3 py-2 border-b border-slate-50 flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
+                                                {filterRequesters.length > 0 && (
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setFilterRequesters([]);
+                                                        }}
+                                                        className="text-[10px] font-bold text-rose-500 hover:text-rose-600"
+                                                    >
+                                                        Limpar
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                {uniqueRequesters.map(req => (
+                                                    <label key={req} className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors group/label">
+                                                        <div className={`size-4 rounded border flex items-center justify-center transition-all ${
+                                                            filterRequesters.includes(req) 
+                                                                ? 'bg-primary border-primary text-white' 
+                                                                : 'border-slate-200 group-hover/label:border-primary/50 bg-white'
+                                                        }`}>
+                                                            {filterRequesters.includes(req) && <span className="material-symbols-outlined text-[12px] font-black">check</span>}
+                                                        </div>
+                                                        <input 
+                                                            type="checkbox" 
+                                                            className="hidden"
+                                                            checked={filterRequesters.includes(req)}
+                                                            onChange={() => {
+                                                                setFilterRequesters(prev => 
+                                                                    prev.includes(req) 
+                                                                        ? prev.filter(r => r !== req)
+                                                                        : [...prev, req]
+                                                                );
+                                                            }}
+                                                        />
+                                                        <span className={`text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
+                                                            {req}
+                                                        </span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Status */}
+                            <div className="flex-[1.5] min-w-[320px] flex flex-col gap-2.5">
+                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">done_all</span>
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Ativos</span>
+                                </div>
+                                <div className="h-14 flex items-center bg-slate-50/50 px-2 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                    <div className="flex items-center gap-1 flex-1 h-full py-2 overflow-x-auto lg:overflow-visible custom-scrollbar px-1">
+                                        {[
+                                            { label: 'Planejado', icon: 'schedule', color: 'amber' },
+                                            { label: 'Em andamento', icon: 'play_circle', color: 'emerald' },
+                                            { label: 'Concluído', icon: 'check_circle', color: 'slate' },
+                                            { label: 'Cancelado', icon: 'cancel', color: 'rose' }
+                                        ].map((status) => {
+                                            const isActive = filterStatuses.includes(status.label);
+                                            const colorClasses: Record<string, string> = {
+                                                amber: isActive ? 'bg-amber-500 text-white shadow-amber-200' : 'text-amber-500 hover:bg-amber-50',
+                                                emerald: isActive ? 'bg-emerald-500 text-white shadow-emerald-200' : 'text-emerald-400 hover:bg-emerald-50',
+                                                slate: isActive ? 'bg-slate-500 text-white shadow-slate-200' : 'text-slate-400 hover:bg-slate-50',
+                                                rose: isActive ? 'bg-rose-500 text-white shadow-rose-200' : 'text-rose-400 hover:bg-rose-50'
+                                            };
+
+                                            return (
+                                                <button
+                                                    key={status.label}
+                                                    onClick={() => {
+                                                        setFilterStatuses(prev => 
+                                                            prev.includes(status.label) 
+                                                                ? prev.filter(s => s !== status.label)
+                                                                : [...prev, status.label]
+                                                        );
+                                                    }}
+                                                    className={`flex items-center gap-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 shadow-sm border border-transparent h-full flex-1 min-w-fit justify-center text-center leading-none ${colorClasses[status.color]}`}
+                                                    title={`Filtrar por ${status.label}`}
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px] shrink-0">{status.icon}</span>
+                                                    <span className="whitespace-nowrap">{status.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {(filterMonth !== new Date().getMonth() || filterYear !== new Date().getFullYear() || filterRequesters.length > 0 || filterStatuses.length !== 4) && (
+                                <div className="w-full flex justify-center mt-2">
+                                    <button 
+                                        onClick={() => {
+                                            setFilterMonth(new Date().getMonth());
+                                            setFilterYear(new Date().getFullYear());
+                                            setFilterRequesters([]);
+                                            setFilterStatuses(['Planejado', 'Em andamento', 'Concluído', 'Cancelado']);
+                                        }}
+                                        className="text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all border border-rose-100/50"
+                                    >
+                                        Limpar Filtros
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    </div>
 
                         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
                             <div className="p-6 md:p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -733,13 +1122,24 @@ const AlmacManagement: React.FC = () => {
                                     <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Data/Hora</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Evento / Solicitante</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item / Qtd</th>
-                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                        <th onClick={() => handleSort('date')} className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-100/50 transition-colors w-[20%]">
+                                            <div className="flex items-center gap-1">Data/Hora Evento {sortConfig?.key === 'date' && <span className="material-symbols-outlined text-[14px]">{sortConfig.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'}</span>}</div>
+                                        </th>
+                                        <th onClick={() => handleSort('title')} className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-100/50 transition-colors w-[30%]">
+                                            <div className="flex items-center gap-1">Evento / Solicitante {sortConfig?.key === 'title' && <span className="material-symbols-outlined text-[14px]">{sortConfig.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'}</span>}</div>
+                                        </th>
+                                        <th onClick={() => handleSort('event_status')} className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-100/50 transition-colors w-[15%]">
+                                            <div className="flex items-center gap-1">Status Evento {sortConfig?.key === 'event_status' && <span className="material-symbols-outlined text-[14px]">{sortConfig.direction === 'asc' ? 'arrow_upward' : 'arrow_downward'}</span>}</div>
+                                        </th>
+                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest w-[35%]">
+                                            <div className="flex items-center justify-between">
+                                                <span>Recursos Solicitados</span>
+                                                <span>Status Liberação</span>
+                                            </div>
+                                        </th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-50">
+                                <tbody className="divide-y divide-slate-100">
                                     {loading ? (
                                         <tr>
                                             <td colSpan={4} className="px-6 py-20 text-center">
@@ -749,7 +1149,7 @@ const AlmacManagement: React.FC = () => {
                                                 </div>
                                             </td>
                                         </tr>
-                                    ) : filteredHistory.length === 0 ? (
+                                    ) : filteredHistoryGroups.length === 0 ? (
                                         <tr>
                                             <td colSpan={4} className="px-6 py-32 text-center">
                                                 <div className="flex flex-col items-center gap-3">
@@ -762,67 +1162,103 @@ const AlmacManagement: React.FC = () => {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredHistory.map((req) => (
-                                            <tr key={req.id} className="hover:bg-slate-50/50 transition-colors group text-sm">
-                                                <td className="px-6 py-5">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-slate-900 font-bold">{new Date(req.created).toLocaleDateString('pt-BR')}</span>
-                                                        <span className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">{new Date(req.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                        filteredHistoryGroups.map((group) => {
+                                            const eventDate = group.event?.date_start ? new Date(group.event.date_start.replace(' ', 'T')) : null;
+                                            const eventDateEnd = group.event?.date_end ? new Date(group.event.date_end.replace(' ', 'T')) : null;
+                                            const eventStatusBadge = getEventStatusBadge(group.event);
+                                            const isCanceledOrDeleted = !group.event || group.event.status === 'canceled';
+                                            const cancelDate = isCanceledOrDeleted ? new Date(group.updated).toLocaleDateString('pt-BR') : null;
+                                            const cancelTime = isCanceledOrDeleted ? new Date(group.updated).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : null;
+                                            
+                                            return (
+                                            <tr key={group.eventId} className="hover:bg-slate-50/30 transition-colors group/row text-sm">
+                                                <td className="px-6 py-6 align-top">
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <span className="text-slate-900 font-black text-[15px]">{eventDate ? eventDate.toLocaleDateString('pt-BR') : new Date(group.created).toLocaleDateString('pt-BR')}</span>
+                                                        <span className="inline-flex items-center gap-1.5 text-slate-500 font-bold text-xs bg-slate-100/80 px-2.5 py-1 rounded-md w-fit">
+                                                            <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                                            {eventDate ? eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                            {eventDateEnd ? ` - ${eventDateEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                                        </span>
+                                                        {isCanceledOrDeleted && (
+                                                            <div className="mt-2 flex flex-col gap-0.5">
+                                                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-500">Data de {group.event ? 'Cancelamento' : 'Exclusão'}:</span>
+                                                                <span className="text-xs font-bold text-rose-600">{cancelDate} às {cancelTime}</span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex flex-col">
-                                                        {req.event ? (() => {
-                                                            const eventDate = req.expand?.event?.date_start ? new Date(req.expand.event.date_start.replace(' ', 'T')) : new Date();
-                                                            const dateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+                                                <td className="px-6 py-6 align-top">
+                                                    <div className="flex flex-col gap-2">
+                                                        {group.event ? (() => {
+                                                            const dateStr = eventDate ? `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}` : '';
                                                             return (
                                                                 <Link 
-                                                                    to={`/calendar?date=${dateStr}&view=day&eventId=${req.event}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}`)}`}
-                                                                    className="text-slate-900 font-bold hover:text-primary transition-colors flex items-center gap-1 group/link"
+                                                                    to={`/calendar?date=${dateStr}&view=day&eventId=${group.eventId}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}&scroll=${scrollPositions.current[activeView] || window.scrollY}`)}`}
+                                                                    onClick={() => {
+                                                                        scrollPositions.current[activeView] = window.scrollY;
+                                                                    }}
+                                                                    className="text-slate-900 font-bold hover:text-primary transition-colors flex items-start gap-1.5 group/link text-base"
                                                                     title="Ver detalhes do evento na aba recursos"
                                                                 >
-                                                                    {req.expand?.event?.title || 'Evento não encontrado'}
-                                                                    <span className="material-symbols-outlined text-[14px] opacity-0 group-hover/link:opacity-100 transition-opacity">open_in_new</span>
+                                                                    <span className="leading-tight">{group.event.title || 'Evento não encontrado'}</span>
+                                                                    <span className="material-symbols-outlined text-[16px] opacity-0 group-hover/link:opacity-100 transition-opacity mt-0.5 text-primary">open_in_new</span>
                                                                 </Link>
                                                             );
                                                         })() : (
-                                                            <span className="text-slate-900 font-bold">{req.expand?.event?.title || 'Evento não encontrado'}</span>
+                                                            <span className="text-slate-900 font-bold text-base leading-tight line-through opacity-60" title="Evento Excluído">{group.requests[0]?.expand?.event?.title || 'Evento Excluído'}</span>
                                                         )}
-                                                        <span className="text-slate-400 text-[10px] font-medium uppercase tracking-widest">{req.expand?.created_by?.name || req.expand?.created_by?.email || 'Solicitante desconhecido'}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-900 font-black text-xs">
-                                                            {req.quantity || 1}
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-slate-900 font-bold">{req.expand?.item?.name || 'Item não encontrado'}</span>
-                                                            <span className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">{req.expand?.item?.unit || 'un'}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="size-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                                                                {(group.created_by?.name || group.created_by?.email || '?')[0].toUpperCase()}
+                                                            </div>
+                                                            <span className="text-slate-500 text-xs font-medium">{group.created_by?.name || group.created_by?.email || 'Solicitante desconhecido'}</span>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-5">
-                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
-                                                        req.status === 'approved' 
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                                        : req.status === 'rejected'
-                                                        ? 'bg-rose-50 text-rose-700 border-rose-100'
-                                                        : 'bg-amber-50 text-amber-600 border-amber-100'
-                                                    }`}>
-                                                        <span className={`size-1.5 rounded-full ${
-                                                            req.status === 'approved' ? 'bg-emerald-500 animate-pulse' : req.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
-                                                        }`}></span>
-                                                        {req.status === 'approved' ? 'Entregue' : req.status === 'rejected' ? 'Negado' : 'Pendente'}
+                                                <td className="px-6 py-6 align-top">
+                                                    <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm ${eventStatusBadge.classes}`}>
+                                                        {eventStatusBadge.label}
                                                     </span>
-                                                    {req.justification && (
-                                                        <p className="text-[10px] text-rose-500 mt-1.5 italic font-medium max-w-[150px] leading-relaxed">
-                                                            "{req.justification}"
-                                                        </p>
-                                                    )}
+                                                </td>
+                                                <td className="px-6 py-6 align-top">
+                                                    <div className="flex flex-col gap-3">
+                                                        {group.requests.map((req: any) => (
+                                                            <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all group/item">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-sm shadow-sm shrink-0">
+                                                                        {req.quantity || 1}
+                                                                    </div>
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-slate-900 font-bold">{req.expand?.item?.name || 'Item não encontrado'}</span>
+                                                                        <span className="text-slate-400 text-[10px] font-medium uppercase tracking-wider mt-0.5">Sol: {new Date(req.created).toLocaleDateString('pt-BR')} às {new Date(req.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                                                                        req.status === 'approved' 
+                                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                                                                        : req.status === 'rejected'
+                                                                        ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                                                        : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                                    }`}>
+                                                                        <span className={`size-1.5 rounded-full ${
+                                                                            req.status === 'approved' ? 'bg-emerald-500 animate-pulse' : req.status === 'rejected' ? 'bg-rose-500' : 'bg-amber-500 animate-pulse'
+                                                                        }`}></span>
+                                                                        {req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Negado' : 'Pendente'}
+                                                                    </span>
+                                                                    {req.justification && (
+                                                                        <p className="text-[10px] text-rose-500 italic font-medium max-w-[150px] truncate" title={req.justification}>
+                                                                            "{req.justification}"
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        ))
+                                        )})
                                     )}
                                 </tbody>
                             </table>
@@ -830,8 +1266,9 @@ const AlmacManagement: React.FC = () => {
                     </div>
                 </div>
             </div>
-            ) : (
-                <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        </div>
+    ) : (
+        <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 md:p-8">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                             <div className="flex items-center gap-4">
@@ -883,7 +1320,13 @@ const AlmacManagement: React.FC = () => {
                                                     <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
                                                 </div>
                                                 <h3 className="text-lg font-black text-slate-900 line-clamp-2 leading-tight">
-                                                    <Link to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}`)}`} className="hover:text-primary transition-colors">
+                                                    <Link 
+                                                        to={`/calendar?date=${eventDate.toISOString().split('T')[0]}&view=day&eventId=${group.event.id}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}&scroll=${scrollPositions.current[activeView] || window.scrollY}`)}`} 
+                                                        className="hover:text-primary transition-colors"
+                                                        onClick={() => {
+                                                            scrollPositions.current[activeView] = window.scrollY;
+                                                        }}
+                                                    >
                                                         {group.event.title || 'Evento sem título'}
                                                     </Link>
                                                 </h3>
