@@ -600,47 +600,58 @@ const TransportManagement: React.FC = () => {
                         </div>
 
                         {/* Resumo Analítico */}
-                        <div className="md:w-[480px] flex flex-col gap-2.5">
-                            <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
+                        <div className="md:w-[520px] flex flex-col gap-2.5">
+                            <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
                                 <span className="material-symbols-outlined text-slate-400 text-[16px]">analytics</span>
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Analítico</span>
                             </div>
-                            <div className="h-14 flex items-center justify-between px-6 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm">
-                                <div className="flex items-center gap-4">
-                                    <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-lg">description</span>
+                            <div className="h-14 flex items-center justify-between px-6 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm overflow-x-auto custom-scrollbar no-scrollbar-mobile">
+                                {/* Registros */}
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <div className="size-9 rounded-xl bg-slate-200/50 text-slate-600 flex items-center justify-center shadow-sm">
+                                        <span className="material-symbols-outlined text-xl">description</span>
                                     </div>
-                                    <div className="flex flex-col -space-y-0.5">
-                                        <span className="text-[11px] font-black text-slate-900">{filteredTransportRequests.length}</span>
-                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Registros</span>
+                                    <div className="flex flex-col -space-y-1">
+                                        <span className="text-[14px] font-black text-slate-900 leading-tight">
+                                            {filteredTransportRequests.length}
+                                        </span>
+                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Solicitações</span>
                                     </div>
                                 </div>
-                                <div className="w-px h-6 bg-slate-200" />
-                                <div className="flex items-center gap-3">
+
+                                <div className="w-px h-6 bg-slate-200 shrink-0 mx-4" />
+
+                                {/* Status Bars */}
+                                <div className="flex items-center gap-6 shrink-0">
                                     {[
-                                        { label: 'Planejado', color: 'bg-amber-500' },
-                                        { label: 'Em andamento', color: 'bg-emerald-500' },
-                                        { label: 'Concluído', color: 'bg-slate-500' },
-                                        { label: 'Cancelado', color: 'bg-rose-500' }
+                                        { label: 'Planejado', color: 'bg-amber-500', title: 'Planejado' },
+                                        { label: 'Em andamento', color: 'bg-emerald-500', title: 'Em andamento' },
+                                        { label: 'Concluído', color: 'bg-slate-500', title: 'Concluído' },
+                                        { label: 'Cancelado', color: 'bg-rose-500', title: 'Cancelado' }
                                     ].map(status => {
                                         const count = filteredTransportRequests.filter(r => 
                                             getEventStatusBadge(r).label === status.label
                                         ).length;
                                         return (
-                                            <div key={status.label} className="flex flex-col items-center -space-y-1" title={status.label}>
-                                                <span className="text-[11px] font-black text-slate-900">{count}</span>
-                                                <div className={`w-3 h-1 rounded-full ${status.color}`} />
+                                            <div key={status.label} className="flex flex-col items-center gap-1" title={status.title}>
+                                                <span className="text-[14px] font-black text-slate-900 leading-none">{count}</span>
+                                                <div className={`w-4 h-1 rounded-full ${status.color} shadow-sm`} />
                                             </div>
                                         );
                                     })}
                                 </div>
-                                <div className="w-px h-6 bg-slate-200" />
-                                <div className="flex items-center gap-4">
-                                    <div className="size-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-lg">event</span>
+
+                                <div className="w-px h-6 bg-slate-200 shrink-0 mx-4" />
+
+                                {/* Ativos */}
+                                <div className="flex items-center gap-3 shrink-0">
+                                    <div className="size-9 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-sm">
+                                        <span className="material-symbols-outlined text-xl">calendar_month</span>
                                     </div>
-                                    <div className="flex flex-col -space-y-0.5">
-                                        <span className="text-[11px] font-black text-slate-900">{transportRequests.filter(e => e.transporte_status === 'confirmed').length}</span>
+                                    <div className="flex flex-col -space-y-1">
+                                        <span className="text-[14px] font-black text-slate-900 leading-tight">
+                                            {transportRequests.filter(e => e.transporte_status === 'confirmed').length}
+                                        </span>
                                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Ativos</span>
                                     </div>
                                 </div>

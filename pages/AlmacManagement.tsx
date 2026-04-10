@@ -1061,48 +1061,58 @@ const AlmacManagement: React.FC = () => {
                             </div>
 
                             {/* Resumo Analítico */}
-                            <div className="xl:w-[480px] flex flex-col gap-2">
+                            <div className="xl:w-[520px] flex flex-col gap-2">
                                 <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
                                     <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">analytics</span>
                                     <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Analítico</span>
                                 </div>
                                 <div className="h-12 md:h-14 flex items-center justify-between px-4 md:px-6 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm overflow-x-auto custom-scrollbar no-scrollbar-mobile">
-                                    <div className="flex items-center gap-3 md:gap-4 shrink-0">
-                                        <div className="size-7 md:size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-base md:text-lg">description</span>
+                                    {/* Registros */}
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <div className="size-8 md:size-9 rounded-xl bg-slate-200/50 text-slate-600 flex items-center justify-center shadow-sm">
+                                            <span className="material-symbols-outlined text-lg md:text-xl">description</span>
                                         </div>
                                         <div className="flex flex-col -space-y-0.5 md:-space-y-1">
-                                            <span className="text-[10px] md:text-[11px] font-black text-slate-900">{filteredHistoryGroups.reduce((acc, g) => acc + g.requests.length, 0)}</span>
-                                            <span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest">Registros</span>
+                                            <span className="text-[12px] md:text-[14px] font-black text-slate-900 leading-tight">
+                                                {filteredHistoryGroups.reduce((acc, g) => acc + g.requests.length, 0)}
+                                            </span>
+                                            <span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest">Solicitações</span>
                                         </div>
                                     </div>
-                                    <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0 mx-2 md:mx-0" />
-                                    <div className="flex items-center gap-2 md:gap-3 shrink-0">
+
+                                    <div className="w-px h-6 bg-slate-200 shrink-0 mx-2 md:mx-4" />
+
+                                    {/* Status Bars */}
+                                    <div className="flex items-center gap-4 md:gap-6 shrink-0">
                                         {[
-                                            { label: 'Planejado', color: 'bg-amber-500' },
-                                            { label: 'Em andamento', color: 'bg-emerald-500' },
-                                            { label: 'Concluído', color: 'bg-slate-500' },
-                                            { label: 'Cancelado', color: 'bg-rose-500' }
+                                            { label: 'Planejado', color: 'bg-amber-500', title: 'Planejado' },
+                                            { label: 'Em andamento', color: 'bg-emerald-500', title: 'Em andamento' },
+                                            { label: 'Concluído', color: 'bg-slate-500', title: 'Concluído' },
+                                            { label: 'Cancelado', color: 'bg-rose-500', title: 'Cancelado' }
                                         ].map(status => {
-                                            const count = filteredHistoryGroups.reduce((acc, g) => {
-                                                const eventStatus = getEventStatusBadge(g.event).label;
-                                                return eventStatus === status.label ? acc + g.requests.length : acc;
-                                            }, 0);
+                                            const count = filteredHistoryGroups.filter(g => 
+                                                getEventStatusBadge(g.event).label === status.label
+                                            ).length;
                                             return (
-                                                <div key={status.label} className="flex flex-col items-center -space-y-0.5 md:-space-y-1" title={status.label}>
-                                                    <span className="text-[10px] md:text-[11px] font-black text-slate-900">{count}</span>
-                                                    <div className={`w-2.5 md:w-3 h-0.5 md:h-1 rounded-full ${status.color}`} />
+                                                <div key={status.label} className="flex flex-col items-center gap-1" title={status.title}>
+                                                    <span className="text-[12px] md:text-[14px] font-black text-slate-900 leading-none">{count}</span>
+                                                    <div className={`w-3 md:w-4 h-1 rounded-full ${status.color} shadow-sm`} />
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                    <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0 mx-2 md:mx-0" />
-                                    <div className="flex items-center gap-3 md:gap-4 shrink-0">
-                                        <div className="size-7 md:size-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-base md:text-lg">event</span>
+
+                                    <div className="w-px h-6 bg-slate-200 shrink-0 mx-2 md:mx-4" />
+
+                                    {/* Eventos */}
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <div className="size-8 md:size-9 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center shadow-sm">
+                                            <span className="material-symbols-outlined text-lg md:text-xl">calendar_month</span>
                                         </div>
                                         <div className="flex flex-col -space-y-0.5 md:-space-y-1">
-                                            <span className="text-[10px] md:text-[11px] font-black text-slate-900">{filteredHistoryGroups.length}</span>
+                                            <span className="text-[12px] md:text-[14px] font-black text-slate-900 leading-tight">
+                                                {filteredHistoryGroups.length}
+                                            </span>
                                             <span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest">Eventos</span>
                                         </div>
                                     </div>
