@@ -1992,9 +1992,9 @@ const CreateEvent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEnvolverProfissionais(!envolverProfissionais)}
-                className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${envolverProfissionais ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:h-auto'}`}
+                className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${envolverProfissionais ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:min-w-[420px]'}`}
               >
-                <div className="flex items-center gap-3 relative z-10">
+                <div className="flex items-center gap-3 relative z-10 sm:w-24">
                   <span className="relative flex h-2 w-2 shrink-0">
                     {envolverProfissionais && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
                     <span className={`relative inline-flex rounded-full h-2 w-2 ${envolverProfissionais ? 'bg-green-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></span>
@@ -2007,7 +2007,7 @@ const CreateEvent: React.FC = () => {
                     <div className="absolute inset-0 bg-amber-400/5 blur-md opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
                     <span className="material-symbols-outlined text-[16px] text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] group-hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.8)] transition-all relative z-10">lightbulb</span>
                     <span className="text-[10px] font-semibold normal-case tracking-normal text-amber-600/90 group-hover:text-amber-700 transition-colors relative z-10">
-                      Convide unidades ou categorias específicas
+                      Envolva unidades e categorias específicas
                     </span>
                   </div>
                 )}
@@ -2015,7 +2015,7 @@ const CreateEvent: React.FC = () => {
                   <div className="sm:hidden flex items-center justify-center gap-1.5 relative z-10 mt-1.5 bg-amber-50/80 px-3 py-1 rounded-full border border-amber-200/50 shadow-[0_0_10px_rgba(245,158,11,0.15)] w-[90%] max-w-[250px]">
                     <span className="material-symbols-outlined text-[14px] text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">lightbulb</span>
                     <span className="text-[9px] font-semibold normal-case tracking-normal text-amber-600/90 text-center">
-                      Convide unidades ou categorias
+                      Envolva unidades e categorias
                     </span>
                   </div>
                 )}
@@ -2192,9 +2192,9 @@ const CreateEvent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setLogisticaRecursos(!logisticaRecursos)}
-                className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${logisticaRecursos ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:h-auto'}`}
+                className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${logisticaRecursos ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:min-w-[420px]'}`}
               >
-                <div className="flex items-center gap-3 relative z-10">
+                <div className="flex items-center gap-3 relative z-10 sm:w-24">
                   <span className="relative flex h-2 w-2 shrink-0">
                     {logisticaRecursos && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
                     <span className={`relative inline-flex rounded-full h-2 w-2 ${logisticaRecursos ? 'bg-green-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></span>
