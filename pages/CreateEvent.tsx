@@ -1533,7 +1533,6 @@ const CreateEvent: React.FC = () => {
 
   const renderResourceItem = (item: any, selectedItems: string[], setSelectedItems: React.Dispatch<React.SetStateAction<string[]>>) => {
     const isSelected = selectedItems.includes(item.id);
-    const isConfirmed = confirmedItems.includes(item.id);
     const isAvailable = item.is_available ?? true;
     
     // An item is clickable if it's available OR if it's already selected (to allow deselecting)
@@ -1552,28 +1551,28 @@ const CreateEvent: React.FC = () => {
     }
 
     return (
-      <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center rounded-[20px] border-2 transition-all duration-300 min-h-[48px] py-2 sm:py-0 ${isSelected ? (isConfirmed ? 'bg-slate-900 border-slate-900 shadow-lg sm:pr-1.5' : 'bg-white border-slate-900 shadow-md sm:pr-1.5') : (isAvailable ? 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50' : 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed')}`}>
+      <div key={item.id} className={`flex flex-col sm:flex-row sm:items-center rounded-[20px] border-2 transition-all duration-300 min-h-[48px] py-2 sm:py-0 ${isSelected ? 'bg-slate-900 border-slate-900 shadow-lg sm:pr-1.5' : (isAvailable ? 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50' : 'bg-slate-50 border-slate-100 opacity-60 grayscale cursor-not-allowed')}`}>
         <button 
           type="button" 
           disabled={!isClickable}
           onClick={() => toggleArrayItem(selectedItems, setSelectedItems, item.id)}
-          className={`flex-1 h-full px-4 py-2 sm:py-0 text-[11px] font-bold uppercase tracking-wider text-left transition-all ${isSelected ? (isConfirmed ? 'text-white' : 'text-slate-800') : (isAvailable ? 'text-slate-600' : 'text-slate-300')}`}
+          className={`flex-1 h-full px-4 py-2 sm:py-0 text-[11px] font-bold uppercase tracking-wider text-left transition-all ${isSelected ? 'text-white' : (isAvailable ? 'text-slate-600' : 'text-slate-300')}`}
         >
           <div className="flex flex-col leading-tight">
             <span className={!isAvailable && isSelected ? 'line-through opacity-70' : ''}>{item.name}</span>
-            <span className={`text-[8px] normal-case font-medium ${!isAvailable ? 'text-red-500 font-bold' : 'text-emerald-500 font-bold'}`}>
-              {isAvailable ? 'Disponível' : (isSelected ? 'Indisponível (Remover)' : 'Indisponível')}
+            <span className={`text-[8px] normal-case font-medium ${!isAvailable ? 'text-red-500 font-bold' : (isSelected ? 'text-emerald-400 font-bold' : 'text-emerald-500 font-bold')}`}>
+              {isAvailable ? (isSelected ? 'Selecionado' : 'Disponível') : (isSelected ? 'Indisponível (Remover)' : 'Indisponível')}
             </span>
           </div>
         </button>
         
-        {isSelected && !isConfirmed && (
-          <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-0 sm:pb-0 sm:pr-2 h-full animate-in fade-in zoom-in-95 duration-200 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 mt-1 sm:mt-0">
-              <div className="flex items-center bg-slate-100/50 rounded-xl border border-slate-200 p-1">
+        {isSelected && (
+          <div className="flex flex-wrap items-center gap-2 px-4 pb-2 sm:px-0 sm:pb-0 sm:pr-2 h-full animate-in fade-in zoom-in-95 duration-200 border-t sm:border-t-0 border-white/10 pt-2 sm:pt-0 mt-1 sm:mt-0">
+              <div className="flex items-center bg-white/10 rounded-xl border border-white/20 p-1">
                 <button 
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, (itemQuantities[item.id] || 1) - 1); }}
-                  className="size-6 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all"
+                  className="size-6 flex items-center justify-center rounded-lg hover:bg-white/20 hover:shadow-sm text-white/70 hover:text-white transition-all"
                 >
                   <span className="material-symbols-outlined text-[16px]">remove</span>
                 </button>
@@ -1583,46 +1582,18 @@ const CreateEvent: React.FC = () => {
                   value={itemQuantities[item.id] || 1}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => handleQuantityChange(item, parseInt(e.target.value) || 1)}
-                  className="w-8 h-6 text-[11px] font-bold text-center bg-transparent text-slate-800 outline-none border-none"
+                  className="w-8 h-6 text-[11px] font-bold text-center bg-transparent text-white outline-none border-none"
                 />
                 <button 
                   type="button"
                   onClick={(e) => { e.stopPropagation(); handleQuantityChange(item, (itemQuantities[item.id] || 1) + 1); }}
-                  className="size-6 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all"
+                  className="size-6 flex items-center justify-center rounded-lg hover:bg-white/20 hover:shadow-sm text-white/70 hover:text-white transition-all"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
                 </button>
               </div>
-              {item.unit && <span className="text-[10px] font-bold text-slate-400 min-w-[24px]">{item.unit}</span>}
-              <div className="flex items-center ml-auto sm:ml-0">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2 mr-1 hidden sm:inline-block">Confirmar item</span>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-1 sm:hidden">Confirmar</span>
-                <button 
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); setConfirmedItems(prev => [...prev, item.id]); }}
-                  className="size-8 rounded-xl bg-slate-900 text-white flex items-center justify-center hover:bg-slate-800 shadow-sm transition-all active:scale-90 ml-1"
-                  title="Confirmar item"
-                >
-                  <span className="material-symbols-outlined text-[18px]">check</span>
-                </button>
-              </div>
+              {item.unit && <span className="text-[10px] font-bold text-white/50 min-w-[24px]">{item.unit}</span>}
           </div>
-        )}
-
-        {isSelected && isConfirmed && (
-           <div 
-              onClick={(e) => { e.stopPropagation(); setConfirmedItems(prev => prev.filter(id => id !== item.id)); }}
-              className="flex items-center justify-between sm:justify-start gap-2.5 px-4 py-2 sm:py-0 h-full cursor-pointer hover:bg-white/10 rounded-b-[18px] sm:rounded-b-none sm:rounded-r-[18px] transition-colors border-t sm:border-t-0 sm:border-l border-white/20 group bg-white/5 sm:bg-transparent mt-1 sm:mt-0"
-              title="Clique para editar"
-           >
-              <div className="flex items-center gap-1.5">
-                <span className="text-[9px] font-bold text-white uppercase tracking-widest opacity-80 mr-1 hidden sm:inline-block">Selecionado</span>
-                <span className="text-[11px] font-bold text-emerald-400 group-hover:text-white transition-colors">
-                  {itemQuantities[item.id] || 1} {item.unit || ''}
-                </span>
-              </div>
-              <span className="material-symbols-outlined text-[16px] text-white/50 group-hover:text-white transition-colors ml-1">edit</span>
-           </div>
         )}
       </div>
     );
@@ -2021,13 +1992,33 @@ const CreateEvent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEnvolverProfissionais(!envolverProfissionais)}
-                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${envolverProfissionais ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${envolverProfissionais ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:h-auto'}`}
               >
-                <span className="relative flex h-2 w-2">
-                  {envolverProfissionais && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${envolverProfissionais ? 'bg-green-500' : 'bg-slate-300'}`}></span>
-                </span>
-                {envolverProfissionais ? 'ATIVADO' : 'ATIVAR'}
+                <div className="flex items-center gap-3 relative z-10">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    {envolverProfissionais && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${envolverProfissionais ? 'bg-green-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></span>
+                  </span>
+                  <span>{envolverProfissionais ? 'ATIVADO' : 'ATIVAR'}</span>
+                </div>
+                
+                {!envolverProfissionais && (
+                  <div className="hidden sm:flex items-center gap-2 relative z-10 ml-3 pl-4 border-l border-amber-200/50 group-hover:border-amber-300/80 transition-colors">
+                    <div className="absolute inset-0 bg-amber-400/5 blur-md opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
+                    <span className="material-symbols-outlined text-[16px] text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] group-hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.8)] transition-all relative z-10">lightbulb</span>
+                    <span className="text-[10px] font-semibold normal-case tracking-normal text-amber-600/90 group-hover:text-amber-700 transition-colors relative z-10">
+                      Convide unidades ou categorias específicas
+                    </span>
+                  </div>
+                )}
+                {!envolverProfissionais && (
+                  <div className="sm:hidden flex items-center justify-center gap-1.5 relative z-10 mt-1.5 bg-amber-50/80 px-3 py-1 rounded-full border border-amber-200/50 shadow-[0_0_10px_rgba(245,158,11,0.15)] w-[90%] max-w-[250px]">
+                    <span className="material-symbols-outlined text-[14px] text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">lightbulb</span>
+                    <span className="text-[9px] font-semibold normal-case tracking-normal text-amber-600/90 text-center">
+                      Convide unidades ou categorias
+                    </span>
+                  </div>
+                )}
               </button>
             </div>
 
@@ -2201,13 +2192,33 @@ const CreateEvent: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setLogisticaRecursos(!logisticaRecursos)}
-                className={`group flex items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 ${logisticaRecursos ? 'bg-primary text-white shadow-xl shadow-primary/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
+                className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${logisticaRecursos ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:h-auto'}`}
               >
-                <span className="relative flex h-2 w-2">
-                  {logisticaRecursos && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
-                  <span className={`relative inline-flex rounded-full h-2 w-2 ${logisticaRecursos ? 'bg-green-500' : 'bg-slate-300'}`}></span>
-                </span>
-                {logisticaRecursos ? 'ATIVADO' : 'ATIVAR'}
+                <div className="flex items-center gap-3 relative z-10">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    {logisticaRecursos && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${logisticaRecursos ? 'bg-green-500' : 'bg-slate-300 group-hover:bg-slate-400'}`}></span>
+                  </span>
+                  <span>{logisticaRecursos ? 'ATIVADO' : 'ATIVAR'}</span>
+                </div>
+
+                {!logisticaRecursos && (
+                  <div className="hidden sm:flex items-center gap-2 relative z-10 ml-3 pl-4 border-l border-amber-200/50 group-hover:border-amber-300/80 transition-colors">
+                    <div className="absolute inset-0 bg-amber-400/5 blur-md opacity-0 group-hover:opacity-100 transition-opacity rounded-full" />
+                    <span className="material-symbols-outlined text-[16px] text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)] group-hover:drop-shadow-[0_0_12px_rgba(245,158,11,0.8)] transition-all relative z-10">lightbulb</span>
+                    <span className="text-[10px] font-semibold normal-case tracking-normal text-amber-600/90 group-hover:text-amber-700 transition-colors relative z-10">
+                      Solicite itens, veículos e coffeebreak
+                    </span>
+                  </div>
+                )}
+                {!logisticaRecursos && (
+                  <div className="sm:hidden flex items-center justify-center gap-1.5 relative z-10 mt-1.5 bg-amber-50/80 px-3 py-1 rounded-full border border-amber-200/50 shadow-[0_0_10px_rgba(245,158,11,0.15)] w-[90%] max-w-[250px]">
+                    <span className="material-symbols-outlined text-[14px] text-amber-500 drop-shadow-[0_0_5px_rgba(245,158,11,0.5)]">lightbulb</span>
+                    <span className="text-[9px] font-semibold normal-case tracking-normal text-amber-600/90 text-center">
+                      Solicite itens, copa ou viaturas
+                    </span>
+                  </div>
+                )}
               </button>
             </div>
 
@@ -2441,6 +2452,59 @@ const CreateEvent: React.FC = () => {
 
         </form>
       </div>
+
+      {/* Floating Summary - Premium Minimalist */}
+      {(envolverProfissionais || logisticaRecursos) && (
+        <div className="fixed bottom-24 md:bottom-10 left-1/2 -translate-x-1/2 z-[90] animate-in slide-in-from-bottom-10 fade-in duration-500 pointer-events-none">
+          <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/60 shadow-xl rounded-full p-1 md:p-1.5 flex items-center gap-1.5 md:gap-2 relative pointer-events-auto transition-all duration-300 hover:bg-slate-900 hover:scale-105">
+            
+            {/* Glow under the pill - More subtle */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/20 via-transparent to-emerald-500/20 rounded-full blur-[12px] pointer-events-none opacity-40" />
+
+            {envolverProfissionais && (
+              <div className="flex items-center gap-1.5 md:gap-2.5 px-2.5 py-1.5 md:px-4 md:py-2 rounded-full bg-slate-800/80 border border-slate-600/50 relative overflow-hidden group/env shadow-inner">
+                <div className="absolute inset-0 bg-indigo-500/10 blur-md transition-opacity group-hover/env:opacity-100 opacity-60" />
+                <span className="material-symbols-outlined text-[16px] md:text-[18px] text-indigo-300 relative z-10 drop-shadow-[0_0_8px_rgba(129,140,248,0.8)]">groups</span>
+                <div className="flex items-center gap-1 md:gap-1.5 text-white font-bold text-[10px] md:text-[12px] relative z-10 tracking-wide">
+                  <span className={selectedUnidades.length > 0 ? 'text-white' : 'text-slate-400 font-medium'}>
+                    {selectedUnidades.length} <span className="text-indigo-200/80 font-bold">UNID</span>
+                  </span>
+                  <span className="text-slate-500 mx-0 md:mx-0.5">•</span>
+                  <span className={selectedCategorias.length > 0 ? 'text-white' : 'text-slate-400 font-medium'}>
+                    {selectedCategorias.length} <span className="text-indigo-200/80 font-bold">CAT</span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {logisticaRecursos && (
+              <div className="flex items-center gap-1.5 md:gap-2.5 px-2.5 py-1.5 md:px-4 md:py-2 rounded-full bg-slate-800/80 border border-slate-600/50 relative overflow-hidden group/log shadow-inner">
+                <div className="absolute inset-0 bg-emerald-500/10 blur-md transition-opacity group-hover/log:opacity-100 opacity-60" />
+                <span className="material-symbols-outlined text-[16px] md:text-[18px] text-emerald-300 relative z-10 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]">inventory_2</span>
+                <div className="flex items-center gap-1 md:gap-1.5 text-white font-bold text-[10px] md:text-[12px] relative z-10 tracking-wide">
+                  {(almoxarifadoItems.length === 0 && copaItems.length === 0 && informaticaItems.length === 0 && !transporteOrigem && !transporteDestino) ? (
+                    <span className="text-slate-400 font-medium">Vazio</span>
+                  ) : (
+                    <>
+                      {almoxarifadoItems.length > 0 && <span>{almoxarifadoItems.length} <span className="text-emerald-200/80 font-bold">ALMX</span></span>}
+                      {almoxarifadoItems.length > 0 && (copaItems.length > 0 || informaticaItems.length > 0 || transporteOrigem || transporteDestino) && <span className="text-slate-500 mx-0 md:mx-0.5">•</span>}
+                      
+                      {copaItems.length > 0 && <span>{copaItems.length} <span className="text-emerald-200/80 font-bold">COPA</span></span>}
+                      {copaItems.length > 0 && (informaticaItems.length > 0 || transporteOrigem || transporteDestino) && <span className="text-slate-500 mx-0 md:mx-0.5">•</span>}
+                      
+                      {informaticaItems.length > 0 && <span>{informaticaItems.length} <span className="text-emerald-200/80 font-bold">INFO</span></span>}
+                      {informaticaItems.length > 0 && (transporteOrigem || transporteDestino) && <span className="text-slate-500 mx-0 md:mx-0.5">•</span>}
+                      
+                      {(transporteOrigem || transporteDestino) && <span className="text-emerald-200 drop-shadow-[0_0_6px_rgba(52,211,153,0.6)] font-bold">TRANSP</span>}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
 
       <ConflictModal
         isOpen={isConflictModalOpen}
