@@ -55,7 +55,7 @@ const TransportManagement: React.FC = () => {
             const urlParams = new URLSearchParams(location.search);
             const anchorId = urlParams.get('anchor');
             if (anchorId) {
-                const anchorEl = document.querySelector<HTMLElement>(`[data-anchor=\"event-${anchorId}\"]`);
+                const anchorEl = document.querySelector<HTMLElement>(`[data-anchor="event-${anchorId}"]`);
                 if (anchorEl) {
                     const containerRect = container.getBoundingClientRect();
                     const elRect = anchorEl.getBoundingClientRect();
@@ -99,7 +99,7 @@ const TransportManagement: React.FC = () => {
             persistScroll(targetView, parsed);
             setRestoreVersion(v => v + 1);
         } else if (stored) {
-            const parsed = parseInt(stored, 10);
+            const parsed = parseInt(scrollParam || '0', 10) || parseInt(stored, 10);
             pendingRestoreScroll.current = parsed;
             scrollPositions.current[targetView] = parsed;
             setRestoreVersion(v => v + 1);
@@ -501,8 +501,6 @@ const TransportManagement: React.FC = () => {
 
     return (
         <div className="flex flex-col gap-8 max-w-[1400px] mx-auto w-full p-4 md:p-8">
-            {/* Bloco de notificação removido conforme solicitação */}
-            
             <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4">
                 <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-6">
                     <div className="flex flex-col md:flex-row gap-6 items-end justify-between">
@@ -813,25 +811,25 @@ const TransportManagement: React.FC = () => {
                     <>
                         {transportSubTab === 'history' ? (
                             <div className="space-y-6">
-                                <div className="bg-white p-6 rounded-[32px] border border-slate-100 shadow-sm flex flex-col gap-6">
-                                    <div className="flex flex-wrap items-stretch justify-between gap-6 border-t border-slate-100 pt-6">
+                                <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4 md:gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-row xl:items-stretch xl:justify-between gap-4 md:gap-6 border-t border-slate-50 pt-4 md:pt-6">
                                         {/* Período */}
-                                        <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
-                                            <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                                <span className="material-symbols-outlined text-slate-400 text-[16px]">calendar_month</span>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
+                                        <div className="flex flex-col gap-2 md:w-full">
+                                            <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                                <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">calendar_month</span>
+                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
                                             </div>
-                                            <div className="h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-hidden">
+                                            <div className="h-12 md:h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-hidden">
                                                 <div className="flex items-center justify-center flex-1 min-w-0 h-full">
                                                     {/* Dropdown Mês */}
                                                     <div className="relative group/month flex-1 h-full">
                                                         <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
-                                                            <span className="text-xs font-black text-slate-700 uppercase tracking-widest truncate">{months[filterMonth]}</span>
-                                                            <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                                                            <span className="text-[10px] md:text-xs font-black text-slate-700 uppercase tracking-widest truncate">{months[filterMonth]}</span>
+                                                            <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
                                                         </div>
-                                                        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
+                                                        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
                                                             <div className="px-4 py-2 border-b border-slate-50">
-                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
+                                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
                                                             </div>
                                                             <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                                                 {months.map((month, index) => (
@@ -847,17 +845,17 @@ const TransportManagement: React.FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    <div className="w-px h-6 bg-slate-200 shrink-0" />
+                                                    <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0" />
 
                                                     {/* Dropdown Ano */}
                                                     <div className="relative group/year flex-1 h-full">
                                                         <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
-                                                            <span className="text-xs font-black text-slate-700 outline-none">{filterYear}</span>
-                                                            <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                                                            <span className="text-[10px] md:text-xs font-black text-slate-700 outline-none">{filterYear}</span>
+                                                            <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
                                                         </div>
-                                                        <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
+                                                        <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
                                                             <div className="px-4 py-2 border-b border-slate-50">
-                                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
+                                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
                                                             </div>
                                                             <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                                                 {years.map(year => (
@@ -877,33 +875,33 @@ const TransportManagement: React.FC = () => {
                                         </div>
                                         
                                         {/* Solicitante */}
-                                        <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
-                                            <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                                <span className="material-symbols-outlined text-slate-400 text-[16px]">person</span>
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
+                                        <div className="flex flex-col gap-2 md:w-full">
+                                            <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                                <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">person</span>
+                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
                                             </div>
-                                            <div className="h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                            <div className="h-12 md:h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
                                                 <div className="relative group/multi flex-1 h-full flex items-center">
                                                     <div className="flex items-center justify-between gap-2 cursor-pointer w-full px-1">
-                                                        <span className="text-xs font-bold text-slate-600 truncate text-center flex-1">
+                                                        <span className="text-[10px] md:text-xs font-bold text-slate-600 truncate text-center flex-1">
                                                             {filterRequesters.length === 0 
                                                                 ? 'Todos' 
                                                                 : filterRequesters.length === 1 
                                                                     ? filterRequesters[0] 
                                                                     : `${filterRequesters.length} selecionados`}
                                                         </span>
-                                                        <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                                                        <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
                                                     </div>
-                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/multi:block animate-in fade-in zoom-in-95 duration-200">
+                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/multi:block animate-in fade-in zoom-in-95 duration-200">
                                                         <div className="px-3 py-2 border-b border-slate-50 flex items-center justify-between">
-                                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
+                                                            <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
                                                             {filterRequesters.length > 0 && (
                                                                 <button 
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         setFilterRequesters([]);
                                                                     }}
-                                                                    className="text-[10px] font-bold text-rose-500 hover:text-rose-600"
+                                                                    className="text-[9px] md:text-[10px] font-bold text-rose-500 hover:text-rose-600"
                                                                 >
                                                                     Limpar
                                                                 </button>
@@ -931,7 +929,7 @@ const TransportManagement: React.FC = () => {
                                                                             );
                                                                         }}
                                                                     />
-                                                                    <span className={`text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
+                                                                    <span className={`text-[11px] md:text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
                                                                         {req}
                                                                     </span>
                                                                 </label>
@@ -942,125 +940,52 @@ const TransportManagement: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {(filterMonth !== new Date().getMonth() || filterYear !== new Date().getFullYear() || filterRequesters.length > 0 || filterStatuses.length !== 4) && (
-                                            <div className="flex justify-center">
-                                                <button 
-                                                    onClick={() => {
-                                                        setFilterMonth(new Date().getMonth());
-                                                        setFilterYear(new Date().getFullYear());
-                                                        setFilterRequesters([]);
-                                                        setFilterStatuses(['Planejado', 'Em andamento', 'Concluído', 'Cancelado']);
-                                                    }}
-                                                    className="flex items-center gap-2 px-4 py-2 text-rose-500 hover:text-rose-600 font-bold text-[10px] uppercase tracking-widest transition-colors"
-                                                >
-                                                    <span className="material-symbols-outlined text-[18px]">filter_alt_off</span>
-                                                    Limpar Filtros
-                                                </button>
-                                            </div>
-                                        )}
-                                        <div className="flex-1 min-w-[280px] lg:flex-none lg:w-[280px] h-14 flex items-center gap-2 bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                                            <span className="material-symbols-outlined text-slate-400 text-[18px]">person</span>
-                                            <div className="relative group/multi flex-1 h-full flex items-center">
-                                                <div className="flex items-center justify-between gap-2 cursor-pointer w-full">
-                                                    <span className="text-xs font-bold text-slate-600 truncate max-w-[200px]">
-                                                        {filterRequesters.length === 0 
-                                                            ? 'Todos os Solicitantes' 
-                                                            : filterRequesters.length === 1 
-                                                                ? filterRequesters[0] 
-                                                                : `${filterRequesters.length} Solicitantes selecionados`}
-                                                    </span>
-                                                    <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
-                                                </div>
-                                                <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/multi:block animate-in fade-in zoom-in-95 duration-200">
-                                                    <div className="px-3 py-2 border-b border-slate-50 flex items-center justify-between">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
-                                                        {filterRequesters.length > 0 && (
-                                                            <button 
-                                                                onClick={() => setFilterRequesters([])}
-                                                                className="text-[10px] font-bold text-rose-500 hover:text-rose-600"
-                                                            >
-                                                                Limpar
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                        {uniqueRequesters.map(req => (
-                                                            <label key={req} className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors group/label">
-                                                                <div className={`size-4 rounded border flex items-center justify-center transition-all ${
-                                                                    filterRequesters.includes(req) 
-                                                                        ? 'bg-primary border-primary text-white' 
-                                                                        : 'border-slate-200 group-hover/label:border-primary/50 bg-white'
-                                                                }`}>
-                                                                    {filterRequesters.includes(req) && <span className="material-symbols-outlined text-[12px] font-black">check</span>}
-                                                                </div>
-                                                                <input 
-                                                                    type="checkbox" 
-                                                                    className="hidden"
-                                                                    checked={filterRequesters.includes(req)}
-                                                                    onChange={() => {
-                                                                        setFilterRequesters(prev => 
-                                                                            prev.includes(req) 
-                                                                                ? prev.filter(r => r !== req)
-                                                                                : [...prev, req]
-                                                                        );
-                                                                    }}
-                                                                />
-                                                                <span className={`text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
-                                                                    {req}
-                                                                </span>
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         {/* Status */}
-                                         <div className="flex-[1.5] min-w-[320px] flex flex-col gap-2.5">
-                                             <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                                 <span className="material-symbols-outlined text-slate-400 text-[16px]">done_all</span>
-                                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Ativos</span>
-                                             </div>
-                                            <div className="h-14 flex items-center bg-slate-50/50 px-2 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                                                <div className="flex items-center gap-1 flex-1 h-full py-2 overflow-x-auto lg:overflow-visible custom-scrollbar px-1">
-                                                {[
-                                                    { label: 'Planejado', icon: 'schedule', color: 'amber' },
-                                                    { label: 'Em andamento', icon: 'play_circle', color: 'emerald' },
-                                                    { label: 'Concluído', icon: 'check_circle', color: 'slate' },
-                                                    { label: 'Cancelado', icon: 'cancel', color: 'rose' }
-                                                ].map((status) => {
-                                                    const isActive = filterStatuses.includes(status.label);
-                                                    const colorClasses: Record<string, string> = {
-                                                        amber: isActive ? 'bg-amber-500 text-white shadow-amber-200' : 'text-amber-500 hover:bg-amber-50',
-                                                        emerald: isActive ? 'bg-emerald-500 text-white shadow-emerald-200' : 'text-emerald-400 hover:bg-emerald-50',
-                                                        slate: isActive ? 'bg-slate-500 text-white shadow-slate-200' : 'text-slate-400 hover:bg-slate-50',
-                                                        rose: isActive ? 'bg-rose-500 text-white shadow-rose-200' : 'text-rose-400 hover:bg-rose-50'
-                                                    };
-
-                                                    return (
-                                                        <button
-                                                            key={status.label}
-                                                            onClick={() => {
-                                                                setFilterStatuses(prev => 
-                                                                    prev.includes(status.label) 
-                                                                        ? prev.filter(s => s !== status.label)
-                                                                        : [...prev, status.label]
-                                                                );
-                                                            }}
-                                                            className={`flex items-center gap-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 shadow-sm border border-transparent h-full flex-1 min-w-fit justify-center text-center leading-none ${colorClasses[status.color]}`}
-                                                            title={`Filtrar por ${status.label}`}
-                                                        >
-                                                            <span className="material-symbols-outlined text-[16px] shrink-0">{status.icon}</span>
-                                                            <span className="whitespace-nowrap">{status.label}</span>
-                                                        </button>
-                                                    );
-                                                })}
+                                        <div className="flex flex-col gap-2 md:col-span-2 lg:col-span-1 xl:flex-[1.5]">
+                                            <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                                <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">done_all</span>
+                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Ativos</span>
                                             </div>
+                                            <div className="h-12 md:h-14 flex items-center bg-slate-50/50 px-2 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                                <div className="flex items-center gap-1 flex-1 h-full py-2 overflow-x-auto custom-scrollbar px-1 no-scrollbar-mobile">
+                                                    {[
+                                                        { label: 'Planejado', icon: 'schedule', color: 'amber' },
+                                                        { label: 'Em andamento', icon: 'play_circle', color: 'emerald' },
+                                                        { label: 'Concluído', icon: 'check_circle', color: 'slate' },
+                                                        { label: 'Cancelado', icon: 'cancel', color: 'rose' }
+                                                    ].map((status) => {
+                                                        const isActive = filterStatuses.includes(status.label);
+                                                        const colorClasses: Record<string, string> = {
+                                                            amber: isActive ? 'bg-amber-500 text-white shadow-amber-200' : 'text-amber-500 hover:bg-amber-50',
+                                                            emerald: isActive ? 'bg-emerald-500 text-white shadow-emerald-200' : 'text-emerald-400 hover:bg-emerald-50',
+                                                            slate: isActive ? 'bg-slate-500 text-white shadow-slate-200' : 'text-slate-400 hover:bg-slate-50',
+                                                            rose: isActive ? 'bg-rose-500 text-white shadow-rose-200' : 'text-rose-400 hover:bg-rose-50'
+                                                        };
+
+                                                        return (
+                                                            <button
+                                                                key={status.label}
+                                                                onClick={() => {
+                                                                    setFilterStatuses(prev => 
+                                                                        prev.includes(status.label) 
+                                                                            ? prev.filter(s => s !== status.label)
+                                                                            : [...prev, status.label]
+                                                                    );
+                                                                }}
+                                                                className={`flex items-center gap-2 px-3 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-wider transition-all duration-300 shadow-sm border border-transparent h-full flex-1 min-w-fit justify-center text-center leading-none ${colorClasses[status.color]}`}
+                                                                title={`Filtrar por ${status.label}`}
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px] md:text-[16px] shrink-0">{status.icon}</span>
+                                                                <span className="whitespace-nowrap">{status.label}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
                                         
                                         {(filterMonth !== new Date().getMonth() || filterYear !== new Date().getFullYear() || filterRequesters.length > 0 || filterStatuses.length !== 4) && (
-                                            <div className="w-full flex justify-center mt-2">
+                                            <div className="w-full flex justify-center mt-2 md:col-span-2 lg:col-span-3 xl:col-auto xl:w-fit xl:mt-0 xl:self-end">
                                                 <button 
                                                     onClick={() => {
                                                         setFilterMonth(new Date().getMonth());
@@ -1068,7 +993,7 @@ const TransportManagement: React.FC = () => {
                                                         setFilterRequesters([]);
                                                         setFilterStatuses(['Planejado', 'Em andamento', 'Concluído', 'Cancelado']);
                                                     }}
-                                                    className="text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all border border-rose-100/50"
+                                                    className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all border border-rose-100/50 whitespace-nowrap"
                                                 >
                                                     Limpar Filtros
                                                 </button>
@@ -1076,11 +1001,133 @@ const TransportManagement: React.FC = () => {
                                         )}
                                     </div>
                                 </div>
+
                                 <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
                                     <div className="overflow-x-auto -mx-4 md:mx-0">
+                                        {/* Mobile/Tablet Card View (desativado para exibir tabela completa em todas as telas) */}
+                                        <div className="hidden p-4 space-y-4">
+                                            {filteredTransportRequests.length === 0 ? (
+                                                <div className="flex flex-col items-center gap-3 py-20 text-center">
+                                                    <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                                                        <span className="material-symbols-outlined text-3xl text-slate-200">history_toggle_off</span>
+                                                    </div>
+                                                    <p className="text-slate-900 font-black text-sm">Nenhum registro encontrado</p>
+                                                    <p className="text-slate-400 font-medium text-xs max-w-xs mx-auto text-balance">Não encontramos solicitações com os termos pesquisados.</p>
+                                                </div>
+                                            ) : (
+                                                filteredTransportRequests.map((event) => {
+                                                    const eventDate = event.date_start ? new Date(event.date_start.replace(' ', 'T')) : null;
+                                                    const eventDateEnd = event.date_end ? new Date(event.date_end.replace(' ', 'T')) : null;
+                                                    const eventStatusBadge = getEventStatusBadge(event);
+                                                    const isCanceledOrDeleted = event.status === 'canceled';
+                                                    
+                                                    return (
+                                                        <div 
+                                                            key={event.id} 
+                                                            data-anchor={`event-${event.id}`}
+                                                            className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-all active:scale-[0.99]"
+                                                        >
+                                                            {/* Card Header: Date & Status */}
+                                                            <div className="bg-slate-50/50 p-4 border-b border-slate-100 flex items-center justify-between gap-3">
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <span className="text-slate-900 font-black text-sm">{eventDate ? eventDate.toLocaleDateString('pt-BR') : new Date(event.created).toLocaleDateString('pt-BR')}</span>
+                                                                    <div className="flex items-center gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-wider">
+                                                                        <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                                                        {eventDate ? eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                                        {eventDateEnd ? ` - ${eventDateEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                                                    </div>
+                                                                </div>
+                                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm ${eventStatusBadge.classes}`}>
+                                                                    <span className="material-symbols-outlined text-[14px]">{eventStatusBadge.icon}</span>
+                                                                    {eventStatusBadge.label}
+                                                                </span>
+                                                            </div>
 
-                                    <div className="min-w-[1000px] md:min-w-full">
-                                        <table className="w-full border-collapse">
+                                                            {/* Card Body: Title & Requester */}
+                                                            <div className="p-4 flex flex-col gap-3">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Evento</span>
+                                                                    {(() => {
+                                                                        const dateStr = eventDate ? `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}` : '';
+                                                                        return (
+                                                                            <Link 
+                                                                                to={`/calendar?date=${dateStr}&view=day&eventId=${event.id}&tab=transport&from=${encodeURIComponent(`${location.pathname}?view=${transportSubTab}&scroll=${scrollPositions.current[transportSubTab] || getCurrentScroll()}&anchor=${event.id}`)}`}
+                                                                                onClick={() => {
+                                                                                    persistScroll(transportSubTab, getCurrentScroll());
+                                                                                }}
+                                                                                className="text-slate-900 font-bold hover:text-primary transition-colors flex items-start gap-1.5 text-base leading-tight"
+                                                                            >
+                                                                                {event.title || 'Evento não encontrado'}
+                                                                                <span className="material-symbols-outlined text-[14px] text-primary mt-1">open_in_new</span>
+                                                                            </Link>
+                                                                        );
+                                                                    })()}
+                                                                </div>
+
+                                                                <div className="flex items-center justify-between gap-4 py-2 border-y border-slate-50">
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="size-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                                                                                {(event.expand?.user?.name || event.expand?.user?.email || '?')[0].toUpperCase()}
+                                                                            </div>
+                                                                            <span className="text-slate-600 text-xs font-bold truncate max-w-[150px]">{event.expand?.user?.name || event.expand?.user?.email || 'Solicitante desconhecido'}</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    {isCanceledOrDeleted && (
+                                                                        <div className="flex flex-col items-end gap-1">
+                                                                            <span className="text-[9px] font-black uppercase tracking-widest text-rose-500">Cancelamento</span>
+                                                                            <span className="text-[10px] font-bold text-rose-600">{new Date(event.updated).toLocaleDateString('pt-BR')}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Logistics Details in Card */}
+                                                                <div className="flex flex-col gap-2 pt-1">
+                                                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Logística Solicitada</span>
+                                                                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-3">
+                                                                        <div className="flex items-start gap-3">
+                                                                            <div className="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-sm shadow-sm shrink-0">
+                                                                                <span className="material-symbols-outlined text-[20px] text-slate-600">directions_car</span>
+                                                                            </div>
+                                                                            <div className="flex flex-col gap-1">
+                                                                                <span className="text-slate-900 font-bold text-xs">{event.transporte_origem || '---'} <span className="text-slate-400 font-normal mx-1">→</span> {event.transporte_destino || '---'}</span>
+                                                                                <span className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">
+                                                                                    Ida: {event.transporte_horario_levar || '--:--'} | Retorno: {event.transporte_horario_buscar || '--:--'} | {event.transporte_passageiro || '?'} Pax
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="flex items-center justify-between pt-2 border-t border-slate-200/50">
+                                                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
+                                                                                event.transporte_status === 'confirmed' 
+                                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                                                                                : event.transporte_status === 'rejected'
+                                                                                ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                                                                : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                                            }`}>
+                                                                                {event.transporte_status === 'confirmed' ? 'Liberado' : event.transporte_status === 'rejected' ? 'Negado' : 'Pendente'}
+                                                                            </span>
+                                                                            <span className="text-[9px] font-medium text-slate-400 uppercase tracking-wider">
+                                                                                Sol: {new Date(event.created).toLocaleDateString('pt-BR')}
+                                                                            </span>
+                                                                        </div>
+                                                                        {event.transporte_justification && (
+                                                                            <p className="text-[10px] text-rose-500 italic font-medium pt-1 leading-tight">
+                                                                                "{event.transporte_justification}"
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
+
+                                        {/* Table View (visível em todas as telas com rolagem horizontal) */}
+                                        <div className="block min-w-[1000px] md:min-w-full">
+                                            <table className="w-full border-collapse">
                                             <thead>
                                                 <tr className="bg-slate-50/50 border-b border-slate-100">
                                                     <th onClick={() => handleSort('date')} className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:bg-slate-100/50 transition-colors w-[20%]">
@@ -1208,9 +1255,7 @@ const TransportManagement: React.FC = () => {
                                     <div 
                                         key={event.id} 
                                 data-anchor={`event-${event.id}`} ref={el => { if (el) scrollRef.current[event.id] = el; }}
-                                className={`group bg-white relative rounded-[24px] shadow-sm border overflow-hidden hover:shadow-xl hover:border-slate-200 transition-all duration-500 flex flex-col md:flex-row items-stretch ${
-                                    transportSubTab === 'history' ? 'opacity-95' : ''
-                                } ${highlightEventId === event.id ? 'ring-2 ring-slate-900 ring-offset-2 border-slate-900 shadow-2xl shadow-slate-900/10' : 'border-slate-100'}`}
+                                className={`group bg-white relative rounded-[24px] shadow-sm border overflow-hidden hover:shadow-xl hover:border-slate-200 transition-all duration-500 flex flex-col md:flex-row items-stretch ${highlightEventId === event.id ? 'ring-2 ring-slate-900 ring-offset-2 border-slate-900 shadow-2xl shadow-slate-900/10' : 'border-slate-100'}`}
                             >
                                 {rerequestIds.has(event.id) && (
                                     <div className="absolute top-4 right-6 px-3 py-1 bg-amber-100 text-amber-700 border border-amber-200 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm z-20 animate-pulse">
@@ -1388,48 +1433,53 @@ const TransportManagement: React.FC = () => {
                                                         <span className="material-symbols-outlined text-[20px]">chat</span>
                                                     </button>
                                                 )}
+                                                
+                                                {transportSubTab === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleTransportDecision(event.id, 'confirmed')}
+                                                            className="size-11 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white border border-emerald-100 transition-all flex items-center justify-center active:scale-[0.98]"
+                                                            title="Aprovar transporte"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">check</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleTransportDecision(event.id, 'rejected')}
+                                                            className="size-11 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-500 hover:text-white border border-rose-100 transition-all flex items-center justify-center active:scale-[0.98]"
+                                                            title="Recusar transporte"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[20px]">close</span>
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* Observation/Footer Section */}
-                                    {(event.transporte_obs || (transportSubTab === 'history' && event.transporte_justification)) && (
+                                    {event.transporte_obs && (
                                         <div className="flex flex-col gap-4 border-t border-slate-100/80 pt-6 mt-2">
-                                            {event.transporte_obs && (
-                                                <div className="flex flex-col gap-2.5 p-5 bg-slate-50/50 rounded-[20px] border border-slate-200/40 shadow-inner">
-                                                    <div className="flex items-center gap-2 text-slate-400">
-                                                        <span className="material-symbols-outlined text-[18px]">info</span>
-                                                        <span className="text-[10px] font-black uppercase tracking-[0.15em]">Observações do Solicitante</span>
-                                                    </div>
-                                                    <p className="text-[13px] text-slate-600 font-medium leading-relaxed italic pl-1 whitespace-pre-wrap border-l-2 border-slate-200 ml-1.5 pl-4">
-                                                        "{event.transporte_obs}"
-                                                    </p>
+                                            <div className="flex flex-col gap-2.5 p-5 bg-slate-50/50 rounded-[20px] border border-slate-200/40 shadow-inner">
+                                                <div className="flex items-center gap-2 text-slate-400">
+                                                    <span className="material-symbols-outlined text-[18px]">info</span>
+                                                    <span className="text-[10px] font-black uppercase tracking-[0.15em]">Observações do Solicitante</span>
                                                 </div>
-                                            )}
-
-                                            {transportSubTab === 'history' && event.transporte_justification && (
-                                                <div className="flex flex-col gap-2.5 p-5 bg-rose-50/40 rounded-[20px] border border-rose-100/50">
-                                                    <div className="flex items-center gap-2 text-rose-500/80">
-                                                        <span className="material-symbols-outlined text-[18px]">report</span>
-                                                        <span className="text-[10px] font-black uppercase tracking-[0.15em]">Motivo da Recusa</span>
-                                                    </div>
-                                                    <p className="text-[13px] text-rose-800/80 font-bold leading-relaxed italic pl-1 whitespace-pre-wrap border-l-2 border-rose-200/60 ml-1.5 pl-4">
-                                                        "{event.transporte_justification}"
-                                                    </p>
-                                                </div>
-                                            )}
+                                                <p className="text-[13px] text-slate-600 font-medium leading-relaxed italic pl-1 whitespace-pre-wrap border-l-2 border-slate-200 ml-1.5 pl-4">
+                                                    "{event.transporte_obs}"
+                                                </p>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
-            </>
-        )}
-        </div>
+            </div>
 
-    {refusalModalOpen && (
+            {refusalModalOpen && (
                 <RefusalModal
                     onClose={() => {
                         setRefusalModalOpen(false);
@@ -1460,4 +1510,3 @@ const TransportManagement: React.FC = () => {
 };
 
 export default TransportManagement;
-

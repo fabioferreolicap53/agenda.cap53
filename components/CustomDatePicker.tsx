@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 
 interface CustomDatePickerProps {
   value: string;
@@ -384,16 +385,20 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
     }
   }, [isOpen]);
 
-  // Close on click outside
+  // O fechamento é controlado pelo backdrop; removido o listener global para evitar
+  // fechamento indevido quando o popup é renderizado via portal.
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+    const original = document.body.style.overflow;
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = original;
+    }
+    return () => {
+      document.body.style.overflow = original;
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [isOpen]);
 
   // Calendar Logic
   const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
@@ -541,207 +546,38 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
         tabIndex={-1}
       />
 
-      {/* Popup */}
-      {isOpen && (
-        <>
-          {/* Mobile Center Wrapper */}
-          <div className="fixed inset-0 z-[1200] md:hidden flex items-center justify-center p-4">
-            <div 
-              className="absolute inset-0 bg-black/20 backdrop-blur-[2px]"
-              onClick={() => setIsOpen(false)}
-            />
-            <div 
-              role="dialog"
-              aria-label="Calendário e seletor de horário"
-              className="relative bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 p-3 animate-in zoom-in-95 fade-in duration-300 flex flex-col gap-2 w-full max-h-[90vh] overflow-hidden"
-            >
-              <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col gap-4">
-                {/* Calendar Section */}
-                <div className="flex-[1.2] min-w-0">
-                  {/* Header */}
-                  <div className="flex items-center justify-between mb-2 px-1">
-                    <div className="flex flex-col">
-                      <span className="font-bold text-lg text-slate-800 tracking-tight capitalize">
-                        {MONTHS[viewDate.getMonth()]}
-                      </span>
-                      <span className="text-slate-400 text-[10px] font-medium tracking-wider">
-                        {viewDate.getFullYear()}
-                      </span>
-                    </div>
-                    <div className="flex gap-1">
-                      <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                        <span className="material-symbols-outlined text-lg">chevron_left</span>
-                      </button>
-                      <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                        <span className="material-symbols-outlined text-lg">chevron_right</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quick Actions */}
-                  <div className="flex gap-2 mb-3 overflow-x-auto no-scrollbar pb-0.5">
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        const today = new Date();
-                        setViewDate(today);
-                        handleDateSelect(today.getDate());
-                      }}
-                      className="whitespace-nowrap px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-[10px] font-bold hover:bg-slate-800 hover:text-white transition-all"
-                    >
-                      HOJE
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.preventDefault();
-                        const tomorrow = new Date();
-                        tomorrow.setDate(tomorrow.getDate() + 1);
-                        setViewDate(tomorrow);
-                        handleDateSelect(tomorrow.getDate());
-                      }}
-                      className="whitespace-nowrap px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-[10px] font-bold hover:bg-slate-800 hover:text-white transition-all"
-                    >
-                      AMANHÃ
-                    </button>
-                  </div>
-
-                  {/* Calendar Grid */}
-                  <div className="grid grid-cols-7 gap-px mb-2">
-                    {DAYS_OF_WEEK.map((day, index) => {
-                      const isWeekend = index === 0 || index === 6;
-                      return (
-                        <div key={`header-mobile-${index}`} className={`text-center text-[10px] font-black py-2 uppercase tracking-widest ${isWeekend ? 'text-orange-500/30' : 'text-slate-200'}`}>
-                          {day}
-                        </div>
-                      );
-                    })}
-                    {renderCalendarDays()}
-                  </div>
-                </div>
-
-                <div className="h-px bg-slate-100/60 my-1 mx-1" />
-
-                {/* Time Section */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2 px-1">
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Horário</h3>
-                    <div className="px-2 py-0.5 bg-slate-50 rounded-lg border border-slate-100">
-                      <span className="text-xs font-bold text-slate-700">
-                        {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1 h-[140px] relative bg-transparent rounded-2xl overflow-hidden">
-                    {/* Hours */}
-                    <div 
-                      ref={hoursRef}
-                      className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
-                    >
-                      <div className="flex flex-col gap-1 py-12 px-0.5">
-                        {hours.map(h => {
-                          const isSel = h === currentHour;
-                          return (
-                            <button
-                              key={h}
-                              data-selected={isSel}
-                              onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
-                              className={`
-                                flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
-                                ${isSel 
-                                  ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
-                                  : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
-                              `}
-                            >
-                              {String(h).padStart(2, '0')}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
-
-                    {/* Minutes */}
-                    <div 
-                      ref={minutesRef}
-                      className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
-                    >
-                      <div className="flex flex-col gap-1 py-12 px-0.5">
-                        {allMinutes.map(m => {
-                          const isSel = m === currentMinute;
-                          return (
-                            <button
-                              key={m}
-                              data-selected={isSel}
-                              onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
-                              className={`
-                                flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
-                                ${isSel 
-                                  ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
-                                  : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
-                              `}
-                            >
-                              {String(m).padStart(2, '0')}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    
-                    {/* Overlays for better depth */}
-                    <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
-                    <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
-                    
-                    {/* Center Indicator */}
-                    <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="pt-2 border-t border-slate-100">
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="w-full py-3 bg-primary text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-lg hover:bg-primary-hover transition-all active:scale-95 shadow-primary/20"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Desktop Popup */}
+      {isOpen && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 md:p-6">
+          <div 
+            className="absolute inset-0 bg-black/30"
+            onClick={() => setIsOpen(false)}
+          />
           <div 
             role="dialog"
             aria-label="Calendário e seletor de horário"
-            className="hidden md:flex absolute top-[calc(100%+8px)] left-0 bg-white rounded-[24px] shadow-[0_10px_40px_rgba(0,0,0,0.1)] border border-slate-100 z-[110] p-5 animate-in zoom-in-95 fade-in duration-300 flex-row gap-6 w-[480px] origin-top-left xl:scale-100 lg:scale-90 md:scale-75 overflow-hidden"
+            className="relative bg-white rounded-[20px] shadow-lg border border-slate-100 w-full max-w-[440px] md:max-w-[560px] p-3 md:p-5 max-h-[90vh] overflow-hidden"
           >
-            <div className="flex-1 no-scrollbar flex flex-row gap-6">
-              {/* Calendar Section */}
+            <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col md:flex-row gap-4 md:gap-6">
               <div className="flex-[1.2] min-w-0">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4 px-1">
+                <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
                   <div className="flex flex-col">
-                    <span className="font-bold text-xl text-slate-800 tracking-tight capitalize">
+                    <span className="font-bold text-base md:text-lg text-slate-800 tracking-tight capitalize">
                       {MONTHS[viewDate.getMonth()]}
                     </span>
-                    <span className="text-slate-400 text-xs font-medium tracking-wider">
+                    <span className="text-slate-400 text-[10px] md:text-[11px] font-medium tracking-wider">
                       {viewDate.getFullYear()}
                     </span>
                   </div>
                   <div className="flex gap-1">
-                    <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-10 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                      <span className="material-symbols-outlined text-xl">chevron_left</span>
+                    <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                      <span className="material-symbols-outlined text-lg md:text-xl">chevron_left</span>
                     </button>
-                    <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-10 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                      <span className="material-symbols-outlined text-xl">chevron_right</span>
+                    <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                      <span className="material-symbols-outlined text-lg md:text-xl">chevron_right</span>
                     </button>
                   </div>
                 </div>
-
-                {/* Quick Actions */}
-                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-0.5">
+                <div className="flex gap-2 mb-3 md:mb-3 overflow-x-auto no-scrollbar pb-0.5">
                   <button
                     onClick={(e) => {
                       e.preventDefault();
@@ -749,7 +585,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                       setViewDate(today);
                       handleDateSelect(today.getDate());
                     }}
-                    className="whitespace-nowrap px-4 py-1.5 rounded-full bg-slate-50 text-slate-500 text-xs font-bold hover:bg-slate-800 hover:text-white transition-all"
+                    className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
                   >
                     HOJE
                   </button>
@@ -761,18 +597,16 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                       setViewDate(tomorrow);
                       handleDateSelect(tomorrow.getDate());
                     }}
-                    className="whitespace-nowrap px-4 py-1.5 rounded-full bg-slate-50 text-slate-500 text-xs font-bold hover:bg-slate-800 hover:text-white transition-all"
+                    className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
                   >
                     AMANHÃ
                   </button>
                 </div>
-
-                {/* Calendar Grid */}
                 <div className="grid grid-cols-7 gap-px mb-2">
                   {DAYS_OF_WEEK.map((day, index) => {
                     const isWeekend = index === 0 || index === 6;
                     return (
-                      <div key={`header-desktop-${index}`} className={`text-center text-[11px] font-black py-3 uppercase tracking-widest ${isWeekend ? 'text-orange-500/30' : 'text-slate-200'}`}>
+                      <div key={`header-unified-${index}`} className={`text-center text-[10px] md:text-[11px] font-black py-2 md:py-2.5 uppercase tracking-widest ${isWeekend ? 'text-orange-500/30' : 'text-slate-200'}`}>
                         {day}
                       </div>
                     );
@@ -780,22 +614,17 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                   {renderCalendarDays()}
                 </div>
               </div>
-
-              <div className="w-px bg-slate-100/60 my-2" />
-
-              {/* Time Section */}
+              <div className="h-px md:w-px md:h-auto bg-slate-100/60 my-1 mx-1 md:my-0 md:mx-2" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-4 px-1">
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Horário</h3>
-                  <div className="px-3 py-1 bg-slate-50 rounded-xl border border-slate-100">
-                    <span className="text-sm font-bold text-slate-700">
+                <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
+                  <h3 className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Horário</h3>
+                  <div className="px-2 md:px-2.5 py-0.5 md:py-1 bg-slate-50 rounded-lg md:rounded-xl border border-slate-100">
+                    <span className="text-xs md:text-[13px] font-bold text-slate-700">
                       {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
                     </span>
                   </div>
                 </div>
-
-                <div className="flex gap-1 h-[220px] relative bg-transparent rounded-2xl overflow-hidden">
-                  {/* Hours */}
+                <div className="flex gap-1 h-[120px] md:h-[180px] relative bg-transparent rounded-2xl overflow-hidden">
                   <div 
                     ref={hoursRef}
                     className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
@@ -809,7 +638,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                             data-selected={isSel}
                             onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
                             className={`
-                              flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                              flex-shrink-0 h-9 md:h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                               ${isSel 
                                 ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
                                 : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
@@ -821,10 +650,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                       })}
                     </div>
                   </div>
-
                   <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
-
-                  {/* Minutes */}
                   <div 
                     ref={minutesRef}
                     className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
@@ -838,7 +664,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                             data-selected={isSel}
                             onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
                             className={`
-                              flex-shrink-0 h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                              flex-shrink-0 h-9 md:h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
                               ${isSel 
                                 ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
                                 : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
@@ -850,27 +676,23 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                       })}
                     </div>
                   </div>
-                  
-                  {/* Overlays for better depth */}
-                  <div className="absolute top-0 left-0 right-0 h-12 bg-gradient-to-b from-white to-transparent pointer-events-none z-20"></div>
-                  <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none z-20"></div>
-                  
-                  {/* Center Indicator */}
+                  <div className="absolute top-0 left-0 right-0 h-8 md:h-10 bg-gradient-to-b from-white to-transparent pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 right-0 h-8 md:h-10 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
                   <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
-                </div>
-                
-                <div className="mt-6">
-                  <button
-                    onClick={() => setIsOpen(false)}
-                    className="w-full py-3.5 bg-slate-800 text-white rounded-2xl font-bold text-[11px] uppercase tracking-widest shadow-lg hover:bg-slate-900 transition-all active:scale-95"
-                  >
-                    Confirmar
-                  </button>
                 </div>
               </div>
             </div>
+            <div className="pt-2 md:pt-3 border-t border-slate-100">
+              <button
+                onClick={() => setIsOpen(false)}
+                className="w-full py-3 md:py-3 bg-primary text-white rounded-2xl font-bold text-xs md:text-[11px] uppercase tracking-widest shadow-md hover:bg-primary-hover transition-all active:scale-95"
+              >
+                Confirmar
+              </button>
+            </div>
           </div>
-        </>
+        </div>,
+        document.body
       )}
     </div>
   );

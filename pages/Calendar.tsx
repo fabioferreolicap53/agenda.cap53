@@ -973,9 +973,9 @@ const Calendar: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col min-h-screen w-full">
+    <div className="flex flex-col min-h-[100dvh] w-full">
       {/* Filters Bar - Fixed Top of Page */}
-      <div className="sticky top-0 z-[100] bg-white/80 backdrop-blur-md border-b border-border-light shadow-sm w-full">
+      <div className="sticky top-0 z-[50] bg-white/80 backdrop-blur-md border-b border-border-light shadow-sm w-full">
         <div className="max-w-[1920px] mx-auto px-2 md:px-4 py-2">
           <div className="flex flex-col gap-3">
             {/* Barra Principal: Navegação + Tipos de View */}
@@ -1145,7 +1145,7 @@ const Calendar: React.FC = () => {
             </div>
 
             {/* Painel de Filtros - Otimizado para ocupar apenas uma linha no desktop */}
-            <div className={`${showFilters ? 'flex flex-col lg:flex-row p-4 mt-2 border border-white/80 bg-white/50 backdrop-blur-lg rounded-2xl animate-in slide-in-from-top-2 fade-in duration-300 shadow-lg shadow-slate-200/50' : 'hidden'} items-center lg:items-end gap-6 w-full z-[101] relative transition-all`}>
+            <div className={`${showFilters ? 'flex flex-col lg:flex-row p-4 mt-2 border border-white/80 bg-white/50 backdrop-blur-lg rounded-2xl animate-in slide-in-from-top-2 fade-in duration-300 shadow-lg shadow-slate-200/50' : 'hidden'} items-center lg:items-end gap-6 w-full z-[60] relative transition-all`}>
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full max-w-md md:max-w-none">
                   <div className="flex flex-col gap-1.5">
                     <label className="flex items-center justify-center md:justify-start gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 md:ml-1">

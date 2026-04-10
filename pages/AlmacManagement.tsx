@@ -619,7 +619,7 @@ const AlmacManagement: React.FC = () => {
                 </div>
             </div>
 
-            {activeView === 'inventory' ? (
+            {activeView === 'inventory' && (
                 <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4">
                     {/* Stats Overview */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -885,54 +885,184 @@ const AlmacManagement: React.FC = () => {
                                                 ))
                                             )}
                                         </tbody>
-                                    </table>
-                                    </div>
+                            </table>
                                 </div>
+
+                                {/* Mobile/Tablet Card View (desativado para exibir tabela completa em todas as telas) */}
+                                <div className="hidden p-4 space-y-4">
+                                    {loading ? (
+                                        <div className="flex flex-col items-center gap-3 py-10">
+                                            <div className="size-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin"></div>
+                                            <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Carregando histórico...</p>
+                                        </div>
+                                    ) : filteredHistoryGroups.length === 0 ? (
+                                        <div className="flex flex-col items-center gap-3 py-16 text-center">
+                                            <div className="size-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+                                                <span className="material-symbols-outlined text-3xl text-slate-200">history_toggle_off</span>
+                                            </div>
+                                            <p className="text-slate-900 font-black text-sm">Nenhum registro encontrado</p>
+                                            <p className="text-slate-400 font-medium text-xs max-w-xs mx-auto text-balance">Não encontramos solicitações com os termos pesquisados.</p>
+                                        </div>
+                                    ) : (
+                                        filteredHistoryGroups.map((group) => {
+                                            const eventDate = group.event?.date_start ? new Date(group.event.date_start.replace(' ', 'T')) : null;
+                                            const eventDateEnd = group.event?.date_end ? new Date(group.event.date_end.replace(' ', 'T')) : null;
+                                            const eventStatusBadge = getEventStatusBadge(group.event);
+                                            const isCanceledOrDeleted = !group.event || group.event.status === 'canceled';
+                                            
+                                            return (
+                                                <div 
+                                                    key={group.eventId} 
+                                                    data-anchor={`event-${group.eventId}`}
+                                                    className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col transition-all active:scale-[0.99]"
+                                                >
+                                                    {/* Card Header: Date & Status */}
+                                                    <div className="bg-slate-50/50 p-4 border-b border-slate-100 flex items-center justify-between gap-3">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-slate-900 font-black text-sm">{eventDate ? eventDate.toLocaleDateString('pt-BR') : new Date(group.created).toLocaleDateString('pt-BR')}</span>
+                                                            <div className="flex items-center gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-wider">
+                                                                <span className="material-symbols-outlined text-[14px]">schedule</span>
+                                                                {eventDate ? eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                                {eventDateEnd ? ` - ${eventDateEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                                            </div>
+                                                        </div>
+                                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm ${eventStatusBadge.classes}`}>
+                                                            <span className="material-symbols-outlined text-[14px]">{eventStatusBadge.icon}</span>
+                                                            {eventStatusBadge.label}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Card Body: Title & Requester */}
+                                                    <div className="p-4 flex flex-col gap-3">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Evento</span>
+                                                            {group.event ? (() => {
+                                                                const dateStr = eventDate ? `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}` : '';
+                                                                return (
+                                                                    <Link 
+                                                                        to={`/calendar?date=${dateStr}&view=day&eventId=${group.eventId}&tab=resources&from=${encodeURIComponent(`${location.pathname}?view=${activeView}&scroll=${scrollPositions.current[activeView] || getCurrentScroll()}&anchor=${group.eventId}`)}`}
+                                                                        onClick={() => {
+                                                                            persistScroll(activeView, getCurrentScroll());
+                                                                        }}
+                                                                        className="text-slate-900 font-bold hover:text-primary transition-colors flex items-start gap-1.5 text-base leading-tight"
+                                                                    >
+                                                                        {group.event.title || 'Evento não encontrado'}
+                                                                        <span className="material-symbols-outlined text-[14px] text-primary mt-1">open_in_new</span>
+                                                                    </Link>
+                                                                );
+                                                            })() : (
+                                                                <span className="text-slate-900 font-bold text-base leading-tight line-through opacity-60">Evento Excluído</span>
+                                                            )}
+                                                        </div>
+
+                                                        <div className="flex items-center justify-between gap-4 py-2 border-y border-slate-50">
+                                                            <div className="flex flex-col gap-1">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="size-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 shrink-0">
+                                                                        {(group.created_by?.name || group.created_by?.email || '?')[0].toUpperCase()}
+                                                                    </div>
+                                                                    <span className="text-slate-600 text-xs font-bold truncate max-w-[150px]">{group.created_by?.name || group.created_by?.email || 'Solicitante desconhecido'}</span>
+                                                                </div>
+                                                            </div>
+                                                            {isCanceledOrDeleted && (
+                                                                <div className="flex flex-col items-end gap-1">
+                                                                    <span className="text-[9px] font-black uppercase tracking-widest text-rose-500">Cancelamento</span>
+                                                                    <span className="text-[10px] font-bold text-rose-600">{new Date(group.updated).toLocaleDateString('pt-BR')}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Resources List in Card */}
+                                                        <div className="flex flex-col gap-2 pt-1">
+                                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Recursos Solicitados</span>
+                                                            <div className="space-y-2">
+                                                                {group.requests.map((req: any) => (
+                                                                    <div key={req.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-2">
+                                                                        <div className="flex items-center justify-between gap-3">
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="size-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-xs shadow-sm shrink-0">
+                                                                                    {req.quantity || 1}
+                                                                                </div>
+                                                                                <span className="text-slate-800 font-bold text-xs">{req.expand?.item?.name || 'Item não encontrado'}</span>
+                                                                            </div>
+                                                                            <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
+                                                                                req.status === 'approved' 
+                                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                                                                                : req.status === 'rejected'
+                                                                                ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                                                                : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                                            }`}>
+                                                                                {req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Negado' : 'Pendente'}
+                                                                            </span>
+                                                                        </div>
+                                                                        {req.justification && (
+                                                                            <p className="text-[9px] text-rose-500 italic font-medium px-1 leading-tight">
+                                                                                "{req.justification}"
+                                                                            </p>
+                                                                        )}
+                                                                        <div className="flex justify-end pt-1">
+                                                                            <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                                                                                {new Date(req.created).toLocaleDateString('pt-BR')} às {new Date(req.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            ) : activeView === 'history' ? (
+            )}
+            {activeView === 'history' && (
                 <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     {/* Search and Filters for History */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-6">
-                        <div className="flex flex-col md:flex-row gap-6 items-stretch">
+                    <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4 md:gap-6">
+                        <div className="flex flex-col xl:flex-row gap-4 md:gap-6 items-stretch">
                             {/* Busca Rápida */}
-                            <div className="flex-1 flex flex-col gap-2.5">
-                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">search</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Busca Rápida</span>
+                            <div className="flex-1 flex flex-col gap-2">
+                                <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">search</span>
+                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Busca Rápida</span>
                                 </div>
-                                <div className="relative h-14 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm focus-within:bg-white focus-within:shadow-sm focus-within:border-slate-200">
-                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                                <div className="relative h-12 md:h-14 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm focus-within:bg-white focus-within:shadow-sm focus-within:border-slate-200">
+                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg md:text-xl">search</span>
                                     <input
                                         type="text"
                                         placeholder="Filtrar por evento, solicitante ou item..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full h-full bg-transparent border-none pl-12 pr-4 text-xs font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-medium focus:ring-0 outline-none transition-all"
+                                        className="w-full h-full bg-transparent border-none pl-11 md:pl-12 pr-4 text-[11px] md:text-xs font-bold text-slate-700 placeholder:text-slate-400 placeholder:font-medium focus:ring-0 outline-none transition-all"
                                     />
                                 </div>
                             </div>
 
                             {/* Resumo Analítico */}
-                            <div className="md:w-[480px] flex flex-col gap-2.5">
-                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">analytics</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Analítico</span>
+                            <div className="xl:w-[480px] flex flex-col gap-2">
+                                <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">analytics</span>
+                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Analítico</span>
                                 </div>
-                                <div className="h-14 flex items-center justify-between px-6 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm">
-                                    <div className="flex items-center gap-4">
-                                        <div className="size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-lg">description</span>
+                                <div className="h-12 md:h-14 flex items-center justify-between px-4 md:px-6 bg-slate-50/50 border border-slate-100 rounded-2xl transition-all hover:bg-white hover:shadow-sm overflow-x-auto custom-scrollbar no-scrollbar-mobile">
+                                    <div className="flex items-center gap-3 md:gap-4 shrink-0">
+                                        <div className="size-7 md:size-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-base md:text-lg">description</span>
                                         </div>
-                                        <div className="flex flex-col -space-y-0.5">
-                                            <span className="text-[11px] font-black text-slate-900">{filteredHistoryGroups.reduce((acc, g) => acc + g.requests.length, 0)}</span>
-                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Registros</span>
+                                        <div className="flex flex-col -space-y-0.5 md:-space-y-1">
+                                            <span className="text-[10px] md:text-[11px] font-black text-slate-900">{filteredHistoryGroups.reduce((acc, g) => acc + g.requests.length, 0)}</span>
+                                            <span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest">Registros</span>
                                         </div>
                                     </div>
-                                    <div className="w-px h-6 bg-slate-200" />
-                                    <div className="flex items-center gap-3">
+                                    <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0 mx-2 md:mx-0" />
+                                    <div className="flex items-center gap-2 md:gap-3 shrink-0">
                                         {[
                                             { label: 'Planejado', color: 'bg-amber-500' },
                                             { label: 'Em andamento', color: 'bg-emerald-500' },
@@ -944,45 +1074,45 @@ const AlmacManagement: React.FC = () => {
                                                 return eventStatus === status.label ? acc + g.requests.length : acc;
                                             }, 0);
                                             return (
-                                                <div key={status.label} className="flex flex-col items-center -space-y-1" title={status.label}>
-                                                    <span className="text-[11px] font-black text-slate-900">{count}</span>
-                                                    <div className={`w-3 h-1 rounded-full ${status.color}`} />
+                                                <div key={status.label} className="flex flex-col items-center -space-y-0.5 md:-space-y-1" title={status.label}>
+                                                    <span className="text-[10px] md:text-[11px] font-black text-slate-900">{count}</span>
+                                                    <div className={`w-2.5 md:w-3 h-0.5 md:h-1 rounded-full ${status.color}`} />
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                    <div className="w-px h-6 bg-slate-200" />
-                                    <div className="flex items-center gap-4">
-                                        <div className="size-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-lg">event</span>
+                                    <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0 mx-2 md:mx-0" />
+                                    <div className="flex items-center gap-3 md:gap-4 shrink-0">
+                                        <div className="size-7 md:size-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-base md:text-lg">event</span>
                                         </div>
-                                        <div className="flex flex-col -space-y-0.5">
-                                            <span className="text-[11px] font-black text-slate-900">{filteredHistoryGroups.length}</span>
-                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Eventos</span>
+                                        <div className="flex flex-col -space-y-0.5 md:-space-y-1">
+                                            <span className="text-[10px] md:text-[11px] font-black text-slate-900">{filteredHistoryGroups.length}</span>
+                                            <span className="text-[7px] md:text-[8px] font-black text-slate-400 uppercase tracking-widest">Eventos</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-stretch justify-between gap-6 border-t border-slate-50 pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-row xl:items-stretch xl:justify-between gap-4 md:gap-6 border-t border-slate-50 pt-4 md:pt-6">
                             {/* Período */}
-                            <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
-                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">calendar_month</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
+                            <div className="flex flex-col gap-2 md:w-full">
+                                <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">calendar_month</span>
+                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
                                 </div>
-                                <div className="h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-hidden">
+                                <div className="h-12 md:h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-hidden">
                                     <div className="flex items-center justify-center flex-1 min-w-0 h-full">
                                         {/* Dropdown Mês */}
                                         <div className="relative group/month flex-1 h-full">
                                             <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
-                                                <span className="text-xs font-black text-slate-700 uppercase tracking-widest truncate">{months[filterMonth]}</span>
-                                                <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                                                <span className="text-[10px] md:text-xs font-black text-slate-700 uppercase tracking-widest truncate">{months[filterMonth]}</span>
+                                                <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
                                             </div>
-                                            <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
                                                 <div className="px-4 py-2 border-b border-slate-50">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
+                                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
                                                 </div>
                                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                                     {months.map((month, index) => (
@@ -998,17 +1128,17 @@ const AlmacManagement: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        <div className="w-px h-6 bg-slate-200 shrink-0" />
+                                        <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0" />
 
                                         {/* Dropdown Ano */}
                                         <div className="relative group/year flex-1 h-full">
                                             <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
-                                                <span className="text-xs font-black text-slate-700 outline-none">{filterYear}</span>
-                                                <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                                                <span className="text-[10px] md:text-xs font-black text-slate-700 outline-none">{filterYear}</span>
+                                                <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
                                             </div>
-                                            <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
+                                            <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
                                                 <div className="px-4 py-2 border-b border-slate-50">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
+                                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
                                                 </div>
                                                 <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                                     {years.map(year => (
@@ -1028,33 +1158,33 @@ const AlmacManagement: React.FC = () => {
                             </div>
                             
                             {/* Solicitante */}
-                            <div className="flex-1 min-w-[240px] flex flex-col gap-2.5">
-                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">person</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
+                            <div className="flex flex-col gap-2 md:w-full">
+                                <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">person</span>
+                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
                                 </div>
-                                <div className="h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                <div className="h-12 md:h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
                                     <div className="relative group/multi flex-1 h-full flex items-center">
                                         <div className="flex items-center justify-between gap-2 cursor-pointer w-full px-1">
-                                            <span className="text-xs font-bold text-slate-600 truncate text-center flex-1">
+                                            <span className="text-[10px] md:text-xs font-bold text-slate-600 truncate text-center flex-1">
                                                 {filterRequesters.length === 0 
                                                     ? 'Todos' 
                                                     : filterRequesters.length === 1 
                                                         ? filterRequesters[0] 
                                                         : `${filterRequesters.length} selecionados`}
                                             </span>
-                                            <span className="material-symbols-outlined text-slate-400 text-[18px] shrink-0">expand_more</span>
+                                            <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
                                         </div>
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-50 py-2 hidden group-hover/multi:block animate-in fade-in zoom-in-95 duration-200">
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/multi:block animate-in fade-in zoom-in-95 duration-200">
                                             <div className="px-3 py-2 border-b border-slate-50 flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
+                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
                                                 {filterRequesters.length > 0 && (
                                                     <button 
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setFilterRequesters([]);
                                                         }}
-                                                        className="text-[10px] font-bold text-rose-500 hover:text-rose-600"
+                                                        className="text-[9px] md:text-[10px] font-bold text-rose-500 hover:text-rose-600"
                                                     >
                                                         Limpar
                                                     </button>
@@ -1082,7 +1212,7 @@ const AlmacManagement: React.FC = () => {
                                                                 );
                                                             }}
                                                         />
-                                                        <span className={`text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
+                                                        <span className={`text-[11px] md:text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
                                                             {req}
                                                         </span>
                                                     </label>
@@ -1094,13 +1224,13 @@ const AlmacManagement: React.FC = () => {
                             </div>
 
                             {/* Status */}
-                            <div className="flex-[1.5] min-w-[320px] flex flex-col gap-2.5">
-                                <div className="flex items-center justify-center gap-2 px-1 shrink-0 h-4">
-                                    <span className="material-symbols-outlined text-slate-400 text-[16px]">done_all</span>
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Ativos</span>
+                            <div className="flex flex-col gap-2 md:col-span-2 lg:col-span-1 xl:flex-[1.5]">
+                                <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
+                                    <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">done_all</span>
+                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Status Ativos</span>
                                 </div>
-                                <div className="h-14 flex items-center bg-slate-50/50 px-2 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                                    <div className="flex items-center gap-1 flex-1 h-full py-2 overflow-x-auto lg:overflow-visible custom-scrollbar px-1">
+                                <div className="h-12 md:h-14 flex items-center bg-slate-50/50 px-2 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
+                                    <div className="flex items-center gap-1 flex-1 h-full py-2 overflow-x-auto custom-scrollbar px-1 no-scrollbar-mobile">
                                         {[
                                             { label: 'Planejado', icon: 'schedule', color: 'amber' },
                                             { label: 'Em andamento', icon: 'play_circle', color: 'emerald' },
@@ -1125,10 +1255,10 @@ const AlmacManagement: React.FC = () => {
                                                                 : [...prev, status.label]
                                                         );
                                                     }}
-                                                    className={`flex items-center gap-2 px-3 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all duration-300 shadow-sm border border-transparent h-full flex-1 min-w-fit justify-center text-center leading-none ${colorClasses[status.color]}`}
+                                                    className={`flex items-center gap-2 px-3 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-wider transition-all duration-300 shadow-sm border border-transparent h-full flex-1 min-w-fit justify-center text-center leading-none ${colorClasses[status.color]}`}
                                                     title={`Filtrar por ${status.label}`}
                                                 >
-                                                    <span className="material-symbols-outlined text-[16px] shrink-0">{status.icon}</span>
+                                                    <span className="material-symbols-outlined text-[14px] md:text-[16px] shrink-0">{status.icon}</span>
                                                     <span className="whitespace-nowrap">{status.label}</span>
                                                 </button>
                                             );
@@ -1138,7 +1268,7 @@ const AlmacManagement: React.FC = () => {
                             </div>
                             
                             {(filterMonth !== new Date().getMonth() || filterYear !== new Date().getFullYear() || filterRequesters.length > 0 || filterStatuses.length !== 4) && (
-                                <div className="w-full flex justify-center mt-2">
+                                <div className="w-full flex justify-center mt-2 md:col-span-2 lg:col-span-3 xl:col-auto xl:w-fit xl:mt-0 xl:self-end">
                                     <button 
                                         onClick={() => {
                                             setFilterMonth(new Date().getMonth());
@@ -1146,13 +1276,14 @@ const AlmacManagement: React.FC = () => {
                                             setFilterRequesters([]);
                                             setFilterStatuses(['Planejado', 'Em andamento', 'Concluído', 'Cancelado']);
                                         }}
-                                        className="text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all border border-rose-100/50"
+                                        className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all border border-rose-100/50 whitespace-nowrap"
                                     >
                                         Limpar Filtros
                                     </button>
                                 </div>
                             )}
                         </div>
+                    </div>
 
                         <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
                             <div className="p-6 md:p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -1168,7 +1299,8 @@ const AlmacManagement: React.FC = () => {
                             </div>
 
                             <div className="overflow-x-auto -mx-4 md:mx-0">
-                                <div className="min-w-[1000px] md:min-w-full">
+                                {/* Table View (visível em todas as telas com rolagem horizontal) */}
+                                <div className="block min-w-[1000px] md:min-w-full">
                                     <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -1317,8 +1449,8 @@ const AlmacManagement: React.FC = () => {
                     </div>
                 </div>
             </div>
-        </div>
-    ) : (
+            )}
+            {activeView === 'events' && (
         <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden p-6 md:p-8">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">

@@ -242,13 +242,13 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-border-light px-4 md:px-6 py-3 md:py-4 flex-shrink-0 sticky top-0 z-[100]">
-      <div className="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 md:gap-4">
+    <header className="bg-white border-b border-border-light px-4 md:px-6 py-3 md:py-4 flex-shrink-0 sticky top-0 z-[110] w-full">
+      <div className="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-2 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1 md:flex-none">
           {/* Hamburger Button Mobile */}
           <button
             onClick={() => setSidebarOpen(true)}
-            className="lg:hidden relative flex items-center justify-center size-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95 transition-all z-[101]"
+            className="lg:hidden relative flex items-center justify-center size-10 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100 active:scale-95 transition-all z-[111] shrink-0"
           >
             <span className="material-symbols-outlined text-[24px]">menu</span>
             {unreadCount > 0 && (
@@ -261,19 +261,19 @@ const Header: React.FC = () => {
           {location.pathname !== '/calendar' && (
             <button
               onClick={() => navigate(-1)}
-              className="hidden md:flex items-center justify-center size-10 rounded-full bg-white border border-slate-200/60 text-slate-500 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 shadow-sm active:scale-90 group"
+              className="hidden md:flex items-center justify-center size-10 rounded-full bg-white border border-slate-200/60 text-slate-500 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 shadow-sm active:scale-90 group shrink-0"
             >
               <span className="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
             </button>
           )}
           
-          <div className="flex flex-col">
+          <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <h2 className="text-text-main text-lg md:text-2xl font-black leading-tight tracking-tight">
+              <h2 className="text-text-main text-base md:text-2xl font-black leading-tight tracking-tight truncate">
                 {getTitle()}
               </h2>
             </div>
-            <p className="text-text-secondary text-xs md:text-sm font-normal hidden md:block mt-0.5">
+            <p className="text-text-secondary text-[10px] md:text-sm font-normal hidden md:block mt-0.5 truncate">
               {getDescription()}
             </p>
           </div>
