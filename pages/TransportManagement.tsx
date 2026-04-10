@@ -21,6 +21,8 @@ const TransportManagement: React.FC = () => {
     const [transportSubTab, setTransportSubTab] = useState<'pending' | 'history' | 'events'>(
         (searchParams.get('view') as 'pending' | 'history' | 'events') || 'pending'
     );
+    const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
     const [transportSearch, setTransportSearch] = useState('');
     const getScrollStorageKey = (view: string) => `scroll:${location.pathname}:${view}`;
     const getScrollContainer = () => document.getElementById('main-scroll-container');
@@ -29,6 +31,19 @@ const TransportManagement: React.FC = () => {
         scrollPositions.current[view] = value;
         sessionStorage.setItem(getScrollStorageKey(view), String(value));
     };
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (activeDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setActiveDropdown(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [activeDropdown]);
 
     useEffect(() => {
         const container = getScrollContainer();
@@ -812,63 +827,82 @@ const TransportManagement: React.FC = () => {
                         {transportSubTab === 'history' ? (
                             <div className="space-y-6">
                                 <div className="bg-white p-4 md:p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4 md:gap-6">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-row xl:items-stretch xl:justify-between gap-4 md:gap-6 border-t border-slate-50 pt-4 md:pt-6">
+                                    <div 
+                                        ref={dropdownRef}
+                                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-row xl:items-stretch xl:justify-between gap-4 md:gap-6 border-t border-slate-50 pt-4 md:pt-6"
+                                    >
                                         {/* Período */}
                                         <div className="flex flex-col gap-2 md:w-full">
                                             <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
                                                 <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">calendar_month</span>
                                                 <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
                                             </div>
-                                            <div className="h-12 md:h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-hidden">
+                                            <div className="h-12 md:h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-visible">
                                                 <div className="flex items-center justify-center flex-1 min-w-0 h-full">
                                                     {/* Dropdown Mês */}
-                                                    <div className="relative group/month flex-1 h-full">
-                                                        <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
+                                                    <div className="relative flex-1 h-full">
+                                                        <div 
+                                                            onClick={() => setActiveDropdown(activeDropdown === 'month' ? null : 'month')}
+                                                            className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2"
+                                                        >
                                                             <span className="text-[10px] md:text-xs font-black text-slate-700 uppercase tracking-widest truncate">{months[filterMonth]}</span>
-                                                            <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
+                                                            <span className={`material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0 transition-transform ${activeDropdown === 'month' ? 'rotate-180' : ''}`}>expand_more</span>
                                                         </div>
-                                                        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/month:block animate-in fade-in zoom-in-95 duration-200">
-                                                            <div className="px-4 py-2 border-b border-slate-50">
-                                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
+                                                        {activeDropdown === 'month' && (
+                                                            <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 animate-in fade-in zoom-in-95 duration-200">
+                                                                <div className="px-4 py-2 border-b border-slate-50">
+                                                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
+                                                                </div>
+                                                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                                    {months.map((month, index) => (
+                                                                        <div 
+                                                                            key={month}
+                                                                            onClick={() => {
+                                                                                setFilterMonth(index);
+                                                                                setActiveDropdown(null);
+                                                                            }}
+                                                                            className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterMonth === index ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
+                                                                        >
+                                                                            {month}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                                {months.map((month, index) => (
-                                                                    <div 
-                                                                        key={month}
-                                                                        onClick={() => setFilterMonth(index)}
-                                                                        className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterMonth === index ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
-                                                                    >
-                                                                        {month}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
+                                                        )}
                                                     </div>
 
                                                     <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0" />
 
                                                     {/* Dropdown Ano */}
-                                                    <div className="relative group/year flex-1 h-full">
-                                                        <div className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2">
+                                                    <div className="relative flex-1 h-full">
+                                                        <div 
+                                                            onClick={() => setActiveDropdown(activeDropdown === 'year' ? null : 'year')}
+                                                            className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2"
+                                                        >
                                                             <span className="text-[10px] md:text-xs font-black text-slate-700 outline-none">{filterYear}</span>
-                                                            <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
+                                                            <span className={`material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0 transition-transform ${activeDropdown === 'year' ? 'rotate-180' : ''}`}>expand_more</span>
                                                         </div>
-                                                        <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/year:block animate-in fade-in zoom-in-95 duration-200">
-                                                            <div className="px-4 py-2 border-b border-slate-50">
-                                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
+                                                        {activeDropdown === 'year' && (
+                                                            <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 animate-in fade-in zoom-in-95 duration-200">
+                                                                <div className="px-4 py-2 border-b border-slate-50">
+                                                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
+                                                                </div>
+                                                                <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                                    {years.map(year => (
+                                                                        <div 
+                                                                            key={year}
+                                                                            onClick={() => {
+                                                                                setFilterYear(year);
+                                                                                setActiveDropdown(null);
+                                                                            }}
+                                                                            className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterYear === year ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
+                                                                        >
+                                                                            {year}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
-                                                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                                {years.map(year => (
-                                                                    <div 
-                                                                        key={year}
-                                                                        onClick={() => setFilterYear(year)}
-                                                                        className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterYear === year ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
-                                                                    >
-                                                                        {year}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -880,9 +914,12 @@ const TransportManagement: React.FC = () => {
                                                 <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">person</span>
                                                 <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Solicitante</span>
                                             </div>
-                                            <div className="h-12 md:h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm">
-                                                <div className="relative group/multi flex-1 h-full flex items-center">
-                                                    <div className="flex items-center justify-between gap-2 cursor-pointer w-full px-1">
+                                            <div className="h-12 md:h-14 flex items-center bg-slate-50/50 px-4 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-visible">
+                                                <div className="relative flex-1 h-full flex items-center">
+                                                    <div 
+                                                        onClick={() => setActiveDropdown(activeDropdown === 'requester' ? null : 'requester')}
+                                                        className="flex items-center justify-between gap-2 cursor-pointer w-full px-1"
+                                                    >
                                                         <span className="text-[10px] md:text-xs font-bold text-slate-600 truncate text-center flex-1">
                                                             {filterRequesters.length === 0 
                                                                 ? 'Todos' 
@@ -890,52 +927,55 @@ const TransportManagement: React.FC = () => {
                                                                     ? filterRequesters[0] 
                                                                     : `${filterRequesters.length} selecionados`}
                                                         </span>
-                                                        <span className="material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0">expand_more</span>
+                                                        <span className={`material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0 transition-transform ${activeDropdown === 'requester' ? 'rotate-180' : ''}`}>expand_more</span>
                                                     </div>
-                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 hidden group-hover/multi:block animate-in fade-in zoom-in-95 duration-200">
-                                                        <div className="px-3 py-2 border-b border-slate-50 flex items-center justify-between">
-                                                            <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
-                                                            {filterRequesters.length > 0 && (
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setFilterRequesters([]);
-                                                                    }}
-                                                                    className="text-[9px] md:text-[10px] font-bold text-rose-500 hover:text-rose-600"
-                                                                >
-                                                                    Limpar
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                        <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                            {uniqueRequesters.map(req => (
-                                                                <label key={req} className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors group/label">
-                                                                    <div className={`size-4 rounded border flex items-center justify-center transition-all ${
-                                                                        filterRequesters.includes(req) 
-                                                                            ? 'bg-primary border-primary text-white' 
-                                                                            : 'border-slate-200 group-hover/label:border-primary/50 bg-white'
-                                                                    }`}>
-                                                                        {filterRequesters.includes(req) && <span className="material-symbols-outlined text-[12px] font-black">check</span>}
-                                                                    </div>
-                                                                    <input 
-                                                                        type="checkbox" 
-                                                                        className="hidden"
-                                                                        checked={filterRequesters.includes(req)}
-                                                                        onChange={() => {
-                                                                            setFilterRequesters(prev => 
-                                                                                prev.includes(req) 
-                                                                                    ? prev.filter(r => r !== req)
-                                                                                    : [...prev, req]
-                                                                            );
+                                                    {activeDropdown === 'requester' && (
+                                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 animate-in fade-in zoom-in-95 duration-200">
+                                                            <div className="px-3 py-2 border-b border-slate-50 flex items-center justify-between">
+                                                                <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar</span>
+                                                                {filterRequesters.length > 0 && (
+                                                                    <button 
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            setFilterRequesters([]);
                                                                         }}
-                                                                    />
-                                                                    <span className={`text-[11px] md:text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
-                                                                        {req}
-                                                                    </span>
-                                                                </label>
-                                                            ))}
+                                                                        className="text-[9px] md:text-[10px] font-bold text-rose-500 hover:text-rose-600"
+                                                                    >
+                                                                        Limpar
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                                {uniqueRequesters.map(req => (
+                                                                    <label key={req} className="flex items-center gap-3 px-4 py-2 hover:bg-slate-50 cursor-pointer transition-colors group/label">
+                                                                        <div className={`size-4 rounded border flex items-center justify-center transition-all ${
+                                                                            filterRequesters.includes(req) 
+                                                                                ? 'bg-primary border-primary text-white' 
+                                                                                : 'border-slate-200 group-hover/label:border-primary/50 bg-white'
+                                                                        }`}>
+                                                                            {filterRequesters.includes(req) && <span className="material-symbols-outlined text-[12px] font-black">check</span>}
+                                                                        </div>
+                                                                        <input 
+                                                                            type="checkbox" 
+                                                                            className="hidden"
+                                                                            checked={filterRequesters.includes(req)}
+                                                                            onChange={(e) => {
+                                                                                e.stopPropagation();
+                                                                                setFilterRequesters(prev => 
+                                                                                    prev.includes(req) 
+                                                                                        ? prev.filter(r => r !== req)
+                                                                                        : [...prev, req]
+                                                                                );
+                                                                            }}
+                                                                        />
+                                                                        <span className={`text-[11px] md:text-xs font-bold transition-colors ${filterRequesters.includes(req) ? 'text-slate-900' : 'text-slate-500'}`}>
+                                                                            {req}
+                                                                        </span>
+                                                                    </label>
+                                                                ))}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
