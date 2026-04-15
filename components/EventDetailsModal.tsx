@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
 import { 
@@ -862,12 +863,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   };
 
   return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 md:p-4 bg-slate-900/20 backdrop-blur-md animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 md:p-4 bg-slate-900/20 backdrop-blur-md animate-in fade-in duration-300 print:bg-white print:backdrop-blur-none print:p-0">
         <div 
           onTouchStart={onTouchStart}
           onTouchMove={onTouchMove}
           onTouchEnd={onTouchEnd}
-          className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-slate-100"
+          className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] border border-slate-100 print:hidden"
         >
             {/* Header - Refined Minimalist */}
             <div className="px-4 md:px-8 pt-4 md:pt-8 pb-2 md:pb-6 flex flex-col gap-3 md:gap-6 shrink-0">
@@ -904,7 +905,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 )}
                             </button>
                         )}
-                        <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-slate-50 rounded-full transition-colors bg-slate-50 sm:bg-transparent">
+                        <button 
+                            onClick={() => window.print()}
+                            className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all duration-200 border border-slate-200 group print:hidden"
+                            title="Imprimir Detalhes"
+                        >
+                            <span className="material-symbols-outlined text-base sm:text-lg group-hover:scale-110 transition-transform">print</span>
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider hidden sm:inline">Imprimir</span>
+                        </button>
+                        <button onClick={onClose} className="p-1.5 sm:p-2 hover:bg-slate-50 rounded-full transition-colors bg-slate-50 sm:bg-transparent print:hidden">
                             <span className="material-symbols-outlined text-slate-400 text-lg sm:text-xl">close</span>
                         </button>
                     </div>
@@ -1793,6 +1802,191 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                 </button>
             </div>
         </div>
+
+            {/* Print Layout - Compact A4 Format (Renderizado fora do #root para evitar tela branca) */}
+            {createPortal(
+                <div className="hidden print:flex print:fixed print:inset-0 print:z-[999999] print:bg-white print:text-black font-sans print:items-start print:justify-center">
+                    <style dangerouslySetInnerHTML={{__html: `
+                        @media print {
+                            @page { margin: 10mm; size: A4 portrait; }
+                            body { 
+                                -webkit-print-color-adjust: exact !important; 
+                                print-color-adjust: exact !important; 
+                                background: white !important; 
+                                margin: 0; 
+                                padding: 0; 
+                                overflow: visible !important;
+                                height: auto !important;
+                            }
+                            /* Oculta tudo que pertence ao app original (para não poluir nem causar tela branca) */
+                            #root { display: none !important; }
+                        }
+                    `}} />
+                    
+                    <div className="w-full max-w-[210mm] mx-auto p-2 sm:p-4 bg-white">
+                        {/* Print Header */}
+                        <div className="border-b-2 border-slate-800 pb-2 mb-2 flex justify-between items-end">
+                        <div>
+                            <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-tight">{event.title}</h1>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                    {isCancelled ? 'Cancelado' : 'Ativo'}
+                                </span>
+                                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                                    {event.expand?.type?.name || (event as any).nature || event.type || 'Evento'}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="text-right flex flex-col items-end gap-1">
+                            <div>
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">Criado por</p>
+                                <p className="text-[11px] font-black text-slate-800 leading-none">{event.expand?.user?.name || event.expand?.user?.email || 'Sistema'}</p>
+                            </div>
+                            <div>
+                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">Criado em</p>
+                                <p className="text-[11px] font-black text-slate-800 leading-none">
+                                    {event.created ? new Date(event.created.replace(' ', 'T') + (event.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---'}
+                                </p>
+                            </div>
+                            <div className="mt-1 pt-1 border-t border-slate-100">
+                                <p className="text-[7px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-0.5">Relatório Gerado</p>
+                                <p className="text-[9px] font-black text-slate-600 leading-none">{new Date().toLocaleDateString('pt-BR')} {new Date().toLocaleTimeString('pt-BR')}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Print Grid - General Info */}
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="space-y-2">
+                            <div>
+                                <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Data e Horário</h3>
+                                <p className="text-[12px] font-bold text-slate-800 mt-0.5">
+                                    {startDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
+                                </p>
+                                <p className="text-[11px] font-bold text-slate-600">
+                                    {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                    {event.date_end && !isNaN(endDate.getTime()) && ` - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                                </p>
+                            </div>
+                            <div>
+                                <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Localização</h3>
+                                <p className="text-[12px] font-bold text-slate-800 mt-0.5">{event.expand?.location?.name || event.custom_location || 'Não definido'}</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div>
+                                <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Responsabilidade / Envolvimento</h3>
+                                <p className="text-[11px] font-bold text-slate-500 mt-0.5">Resp: <span className="font-bold text-slate-800">{RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label || event.event_responsibility || 'Não definido'}</span></p>
+                                <p className="text-[11px] font-bold text-slate-500">Env: <span className="font-bold text-slate-800">{INVOLVEMENT_LEVELS.find(l => l.value === event.event_involvement)?.label || event.event_involvement || 'Não definido'}</span></p>
+                            </div>
+                            <div>
+                                <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Detalhes de Acesso</h3>
+                                <p className="text-[11px] font-bold text-slate-500 mt-0.5">Público: <span className="font-bold text-slate-800">{getEstimatedParticipants(event)}</span></p>
+                                <p className="text-[11px] font-bold text-slate-500">Acesso: <span className="font-bold text-slate-800">{event.is_open_event ? 'Aberto (Livre)' : 'Restrito (Convidados)'}</span></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Print Observations */}
+                    {event.description && (
+                        <div className="mb-3">
+                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-100 pb-0.5">Observações</h3>
+                            <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                <p className="text-[11px] font-medium text-slate-700 whitespace-pre-wrap leading-snug">{event.description}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Print Participants */}
+                    <div className="mb-3 break-inside-avoid">
+                        <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-100 pb-0.5">
+                            Participantes Confirmados / Convidados
+                        </h3>
+                        {event.expand?.participants && event.expand.participants.length > 0 ? (
+                            <div className="grid grid-cols-3 gap-x-4 gap-y-1">
+                                {event.expand.participants.map(p => (
+                                    <div key={p.id} className="flex items-center justify-between text-[10px] border-b border-slate-50 pb-0.5">
+                                        <span className="font-bold text-slate-800 truncate pr-2">{p.name || 'Usuário'}</span>
+                                        <span className={`text-[8px] font-black uppercase tracking-widest shrink-0 ${
+                                            participantStatus[p.id] === 'accepted' ? 'text-emerald-600' : 
+                                            participantStatus[p.id] === 'rejected' ? 'text-red-600' : 'text-slate-400'
+                                        }`}>
+                                            {participantStatus[p.id] === 'accepted' ? 'Confirmado' : participantStatus[p.id] === 'rejected' ? 'Recusado' : 'Pendente'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-[10px] font-bold text-slate-400">Nenhum participante registrado.</p>
+                        )}
+                    </div>
+
+                    {/* Print Logistics */}
+                    {(requests.length > 0 || event.transporte_suporte) && (
+                        <div className="break-inside-avoid mt-3">
+                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-100 pb-0.5">
+                                Logística e Recursos Solicitados
+                            </h3>
+                            
+                            <div className="grid grid-cols-2 gap-3">
+                                {requests.length > 0 && (
+                                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                        <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Itens & Serviços</h4>
+                                        <ul className="space-y-1">
+                                            {requests.map(r => (
+                                                <li key={r.id} className="flex justify-between items-center text-[10px]">
+                                                    <div className="truncate pr-2">
+                                                        <span className="font-black text-slate-800 mr-1.5">{r.quantity}x</span>
+                                                        <span className="font-bold text-slate-600">{r.expand?.item?.name}</span>
+                                                    </div>
+                                                    <span className={`text-[8px] font-black uppercase tracking-widest shrink-0 ${
+                                                        r.status === 'approved' ? 'text-emerald-600' : 
+                                                        r.status === 'rejected' ? 'text-red-600' : 'text-slate-400'
+                                                    }`}>
+                                                        {r.status === 'approved' ? 'Aprovado' : r.status === 'rejected' ? 'Recusado' : 'Pendente'}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+
+                                {event.transporte_suporte && (
+                                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                        <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 flex items-center">
+                                            Transporte & Viaturas
+                                            <span className={`ml-1.5 px-1 py-0.5 rounded text-[8px] ${
+                                                event.transporte_status === 'confirmed' ? 'bg-emerald-100 text-emerald-700' : 
+                                                event.transporte_status === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-600'
+                                            }`}>
+                                                {event.transporte_status === 'confirmed' ? 'Confirmado' : event.transporte_status === 'rejected' ? 'Recusado' : 'Pendente'}
+                                            </span>
+                                        </h4>
+                                        <div className="space-y-1 text-[10px] font-bold text-slate-500">
+                                            <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Origem:</span> <span className="text-slate-800 truncate pl-2">{event.transporte_origem || '-'}</span></p>
+                                            <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Destino:</span> <span className="text-slate-800 truncate pl-2">{event.transporte_destino || '-'}</span></p>
+                                            {event.transporte_data_ida && <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Ida:</span> <span className="text-slate-800">{new Date(event.transporte_data_ida).toLocaleDateString('pt-BR')} {new Date(event.transporte_data_ida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span></p>}
+                                            {event.transporte_data_volta && <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Volta:</span> <span className="text-slate-800">{new Date(event.transporte_data_volta).toLocaleDateString('pt-BR')} {new Date(event.transporte_data_volta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span></p>}
+                                            <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Passageiros:</span> <span className="text-slate-800">{event.transporte_passageiros || '-'}</span></p>
+                                            {event.driver_name && <p className="flex justify-between border-b border-slate-200/50 pb-1"><span className="uppercase text-[9px]">Motorista:</span> <span className="text-slate-800">{event.driver_name}</span></p>}
+                                            {event.vehicle_plate && <p className="flex justify-between border-b border-slate-200/50 pb-1"><span className="uppercase text-[9px]">Veículo:</span> <span className="text-slate-800">{event.vehicle_plate}</span></p>}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Footer */}
+                    <div className="mt-8 pt-2 border-t border-slate-200 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Documento oficial gerado pelo sistema Agenda CAP 5.3</p>
+                    </div>
+                </div>
+            </div>,
+            document.body
+        )}
+
             {isChatOpen && (
                 <EventChatModal 
                     event={event} 
