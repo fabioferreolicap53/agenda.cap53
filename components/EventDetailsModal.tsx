@@ -1878,12 +1878,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             <div>
                                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Responsabilidade / Envolvimento</h3>
                                 <p className="text-[11px] font-bold text-slate-500 mt-0.5">Resp: <span className="font-bold text-slate-800">{RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label || event.event_responsibility || 'Não definido'}</span></p>
-                                <p className="text-[11px] font-bold text-slate-500">Env: <span className="font-bold text-slate-800">{INVOLVEMENT_LEVELS.find(l => l.value === event.event_involvement)?.label || event.event_involvement || 'Não definido'}</span></p>
+                                <p className="text-[11px] font-bold text-slate-500">Env: <span className="font-bold text-slate-800">{INVOLVEMENT_LEVELS.find(l => l.value === event.creator_role)?.label || event.creator_role || 'Não definido'}</span></p>
                             </div>
                             <div>
                                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Detalhes de Acesso</h3>
                                 <p className="text-[11px] font-bold text-slate-500 mt-0.5">Público: <span className="font-bold text-slate-800">{getEstimatedParticipants(event)}</span></p>
-                                <p className="text-[11px] font-bold text-slate-500">Acesso: <span className="font-bold text-slate-800">{event.is_open_event ? 'Aberto (Livre)' : 'Restrito (Convidados)'}</span></p>
+                                <p className="text-[11px] font-bold text-slate-500">Acesso: <span className="font-bold text-slate-800">{!event.is_restricted ? 'Aberto (Livre)' : 'Restrito (Convidados)'}</span></p>
                             </div>
                         </div>
                     </div>
@@ -1966,11 +1966,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         <div className="space-y-1 text-[10px] font-bold text-slate-500">
                                             <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Origem:</span> <span className="text-slate-800 truncate pl-2">{event.transporte_origem || '-'}</span></p>
                                             <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Destino:</span> <span className="text-slate-800 truncate pl-2">{event.transporte_destino || '-'}</span></p>
-                                            {event.transporte_data_ida && <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Ida:</span> <span className="text-slate-800">{new Date(event.transporte_data_ida).toLocaleDateString('pt-BR')} {new Date(event.transporte_data_ida).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span></p>}
-                                            {event.transporte_data_volta && <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Volta:</span> <span className="text-slate-800">{new Date(event.transporte_data_volta).toLocaleDateString('pt-BR')} {new Date(event.transporte_data_volta).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span></p>}
-                                            <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Passageiros:</span> <span className="text-slate-800">{event.transporte_passageiros || '-'}</span></p>
-                                            {event.driver_name && <p className="flex justify-between border-b border-slate-200/50 pb-1"><span className="uppercase text-[9px]">Motorista:</span> <span className="text-slate-800">{event.driver_name}</span></p>}
-                                            {event.vehicle_plate && <p className="flex justify-between border-b border-slate-200/50 pb-1"><span className="uppercase text-[9px]">Veículo:</span> <span className="text-slate-800">{event.vehicle_plate}</span></p>}
+                                            {event.transporte_horario_levar && <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Ida:</span> <span className="text-slate-800">{event.transporte_horario_levar}</span></p>}
+                                            {event.transporte_horario_buscar && <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Volta:</span> <span className="text-slate-800">{event.transporte_horario_buscar}</span></p>}
+                                            <p className="flex justify-between border-b border-slate-200/50 pb-0.5"><span className="uppercase text-[8px]">Passageiros:</span> <span className="text-slate-800">{event.transporte_passageiro || '-'}</span></p>
                                         </div>
                                     </div>
                                 )}

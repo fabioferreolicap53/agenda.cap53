@@ -47,12 +47,12 @@ const Sidebar: React.FC = () => {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors group ${isActive
-      ? 'bg-primary/10 text-primary'
-      : 'hover:bg-primary/[0.02] text-text-secondary hover:text-primary'
+      ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm shadow-primary/5'
+      : 'hover:bg-primary/[0.04] text-text-secondary hover:text-primary border border-transparent'
     }`;
 
   const iconClass = (isActive: boolean) =>
-    `material-symbols-outlined text-2xl ${isActive ? 'text-primary' : 'text-text-secondary group-hover:text-primary'
+    `material-symbols-outlined text-2xl transition-all ${isActive ? 'text-primary scale-110' : 'text-slate-500 group-hover:text-primary group-hover:scale-110'
     }`;
 
   const canSee = (role: UserRole | 'ALL') => {

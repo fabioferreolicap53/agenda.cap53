@@ -1614,12 +1614,12 @@ const CreateEvent: React.FC = () => {
           {/* Row 1: Essential Data & Participants (Balanced Height) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch relative z-30">
             {/* Essential Information Card */}
-            <section className="lg:col-span-8 relative z-20 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-6">
-              <div className="flex items-center gap-3 pb-2 border-b border-slate-100/50">
+            <section className="lg:col-span-8 relative z-20 bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-6">
+              <div className="flex items-center gap-3 pb-2 border-b border-slate-200">
                 <div className="size-12 rounded-2xl bg-primary text-white shadow-lg transition-all duration-500 flex items-center justify-center">
                   <span className="material-symbols-outlined text-2xl font-bold">bolt</span>
                 </div>
-                <h3 className="text-lg font-bold tracking-tight text-slate-800">Dados Essenciais</h3>
+                <h3 className="text-lg font-bold tracking-tight text-slate-900">Dados Essenciais</h3>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
@@ -1627,7 +1627,7 @@ const CreateEvent: React.FC = () => {
                   <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Título da Atividade</label>
                   <input
                     required value={title} onChange={(e) => setTitle(e.target.value)}
-                    className="w-full h-14 px-6 rounded-2xl bg-white border border-slate-300 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-800 transition-all duration-300 placeholder:text-slate-400"
+                    className="w-full h-14 px-6 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500"
                     placeholder="Ex: Reunião Geral de Indicadores"
                   />
                 </div>
@@ -1744,7 +1744,7 @@ const CreateEvent: React.FC = () => {
                     value={observacoes}
                     onChange={(e) => setObservacoes(e.target.value)}
                     placeholder="Informações relevantes sobre o evento (objetivos, pautas, orientações)..."
-                    className="w-full min-h-[120px] p-5 rounded-2xl bg-white border border-slate-300 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-800 transition-all duration-300 placeholder:text-slate-400 resize-none"
+                    className="w-full min-h-[120px] p-5 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 resize-none"
                   />
                 </div>
 
@@ -1754,24 +1754,24 @@ const CreateEvent: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsRestricted(!isRestricted)}
-                    className={`w-full h-20 flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 ${isRestricted ? 'bg-amber-50/40 border-amber-100 shadow-sm' : 'bg-slate-50/30 border-slate-100/60 hover:border-slate-200/40'}`}
+                    className={`w-full h-20 flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 ${isRestricted ? 'bg-amber-50/60 border-amber-200 shadow-sm' : 'bg-slate-100/50 border-slate-300 hover:border-slate-400'}`}
                   >
                     <div className="flex items-center gap-4 text-left">
-                      <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 text-white shadow-lg shadow-amber-100' : 'bg-slate-100 text-slate-400'}`}>
+                      <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 text-white shadow-lg shadow-amber-100' : 'bg-slate-200 text-slate-600'}`}>
                         <span className="material-symbols-outlined text-[22px]">{isRestricted ? 'lock' : 'lock_open'}</span>
                       </div>
                       <div>
-                        <h4 className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isRestricted ? 'text-amber-800' : 'text-slate-700'}`}>
+                        <h4 className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isRestricted ? 'text-amber-900' : 'text-slate-900'}`}>
                           {isRestricted ? 'Evento Restrito' : 'Evento Aberto'}
                         </h4>
-                        <p className={`text-[10px] font-semibold leading-relaxed ${isRestricted ? 'text-amber-600/70' : 'text-slate-400'}`}>
+                        <p className={`text-[10px] font-bold leading-relaxed ${isRestricted ? 'text-amber-700' : 'text-slate-600'}`}>
                           {isRestricted 
                             ? 'Apenas convidados podem participar.' 
                             : 'Usuários podem solicitar participação.'}
                         </p>
                       </div>
                     </div>
-                    <div className={`size-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 border-amber-500 shadow-sm' : 'border-slate-200'}`}>
+                    <div className={`size-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 border-amber-600 shadow-sm' : 'border-slate-400'}`}>
                       {isRestricted && <span className="material-symbols-outlined text-white text-[18px] font-bold">check</span>}
                     </div>
                   </button>
@@ -1779,19 +1779,19 @@ const CreateEvent: React.FC = () => {
 
                 <div className="md:col-span-1 space-y-2 pt-2">
                   <div className="h-4" /> {/* Spacer for label alignment */}
-                  <div className={`w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-100/60 bg-slate-50/60 opacity-60 cursor-not-allowed' : 'border-slate-300 bg-white focus-within:border-primary/30 focus-within:ring-4 focus-within:ring-primary/5'}`}>
-                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-100 text-slate-300' : 'bg-slate-100 text-slate-500'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
+                  <div className={`w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed' : 'border-slate-400 bg-white focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/5'}`}>
+                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-600'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
                       <span className="material-symbols-outlined text-[24px]">groups</span>
                     </div>
                     <div className="flex-1 flex flex-col justify-center min-w-0">
-                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.1em] truncate mb-0.5">Qtd. Estimada de Presentes</label>
+                      <label className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.1em] truncate mb-0.5">Qtd. Estimada de Presentes</label>
                       <input
                         type="number"
                         min="1"
                         value={estimatedParticipants}
                         onChange={(e) => setEstimatedParticipants(e.target.value)}
                         disabled={responsibility === 'EXTERNO_COMPROMISSO'}
-                        className={`w-full bg-transparent border-none outline-none font-semibold text-sm p-0 h-5 placeholder:text-slate-400 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'text-slate-400' : 'text-slate-800'}`}
+                        className={`w-full bg-transparent border-none outline-none font-black text-sm p-0 h-5 placeholder:text-slate-500 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'text-slate-500' : 'text-slate-900'}`}
                         placeholder="Ex: 50"
                         title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : undefined}
                       />
@@ -1802,34 +1802,34 @@ const CreateEvent: React.FC = () => {
             </section>
 
             {/* Participants Picker */}
-            <section className="lg:col-span-4 relative z-10 bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-5">
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+            <section className="lg:col-span-4 relative z-10 bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] h-full flex flex-col gap-5">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                 <div className="flex items-center gap-3">
                   <div className="size-10 rounded-xl bg-primary text-white shadow-lg flex items-center justify-center">
                     <span className="material-symbols-outlined text-xl">person_add</span>
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold tracking-tight text-slate-800 uppercase tracking-widest">Convidar</h3>
-                    <p className="text-[9px] font-medium text-slate-400 uppercase tracking-tighter">Participantes</p>
+                    <h3 className="text-sm font-bold tracking-tight text-slate-900 uppercase tracking-widest">Convidar</h3>
+                    <p className="text-[9px] font-black text-slate-500 uppercase tracking-tighter">Participantes</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest border border-primary/10">
+                  <div className="text-[10px] font-bold text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest border border-primary/20">
                     {selectedParticipants.length}
                   </div>
                 </div>
               </div>
 
               <div className="relative group">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors duration-300">person_search</span>
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors duration-300">person_search</span>
                 <input
                   type="text" placeholder="Pesquisar..." value={participantSearch} onChange={(e) => setParticipantSearch(e.target.value)}
-                  className="w-full h-11 pl-11 pr-10 rounded-xl bg-white border border-slate-300 outline-none font-semibold text-sm text-slate-800 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-300 placeholder:text-slate-400"
+                  className="w-full h-11 pl-11 pr-10 rounded-xl bg-white border border-slate-400 outline-none font-bold text-sm text-slate-900 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all duration-300 placeholder:text-slate-500"
                 />
                 {participantSearch && (
                   <button 
                     onClick={() => setParticipantSearch('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-400 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 size-6 flex items-center justify-center rounded-full hover:bg-slate-200 text-slate-500 transition-colors"
                   >
                     <span className="material-symbols-outlined text-sm">close</span>
                   </button>
@@ -1838,21 +1838,21 @@ const CreateEvent: React.FC = () => {
 
               <div className="grid grid-cols-1 gap-2 overflow-y-auto pr-1.5 custom-scrollbar flex-1 -mx-1 px-1 min-h-0">
                 {loadingUsers ? (
-                  <div className="flex flex-col items-center justify-center p-12 text-slate-400 gap-4">
+                  <div className="flex flex-col items-center justify-center p-12 text-slate-500 gap-4">
                     <div className="size-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest animate-pulse text-primary/60">Carregando usuários...</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest animate-pulse text-primary/70">Carregando usuários...</span>
                   </div>
                 ) : (
                   <>
                     {availableUsers.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-8 text-slate-400 gap-2">
-                        <span className="material-symbols-outlined text-4xl opacity-20 text-primary">group_off</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/40">Nenhum usuário disponível</span>
+                      <div className="flex flex-col items-center justify-center p-8 text-slate-500 gap-2">
+                        <span className="material-symbols-outlined text-4xl opacity-30 text-primary">group_off</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-primary/60">Nenhum usuário disponível</span>
                       </div>
                     ) : sortedFilteredUsers.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center p-8 text-slate-400 gap-2">
-                        <span className="material-symbols-outlined text-4xl opacity-20">search_off</span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Nenhum resultado encontrado</span>
+                      <div className="flex flex-col items-center justify-center p-8 text-slate-500 gap-2">
+                        <span className="material-symbols-outlined text-4xl opacity-30">search_off</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600">Nenhum resultado encontrado</span>
                       </div>
                     ) : (
                       <>
@@ -1874,35 +1874,35 @@ const CreateEvent: React.FC = () => {
                             }}
                             className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all duration-300 ${!isCreatorUser ? 'cursor-pointer' : ''} ${
                               isSel 
-                                ? 'bg-primary/5 border-primary/20 shadow-sm translate-x-1' 
+                                ? 'bg-primary/5 border-primary/30 shadow-sm translate-x-1' 
                                 : isCreatorUser
-                                  ? 'bg-slate-50 border-slate-100 opacity-80 cursor-default'
-                                  : 'bg-white border-slate-100 hover:border-primary/40 hover:bg-slate-50/50 hover:shadow-sm'
+                                  ? 'bg-slate-100 border-slate-200 opacity-90 cursor-default'
+                                  : 'bg-white border-slate-200 hover:border-primary/50 hover:bg-slate-50 hover:shadow-sm'
                             }`}
                           >
                             <div className="flex items-center gap-3">
-                              <div className={`size-10 rounded-full bg-cover bg-center border-2 ${isSel ? 'border-primary/20' : 'border-white shadow-sm'}`} style={{ backgroundImage: `url(${avatarUrl})` }} />
+                              <div className={`size-10 rounded-full bg-cover bg-center border-2 ${isSel ? 'border-primary/30' : 'border-white shadow-sm'}`} style={{ backgroundImage: `url(${avatarUrl})` }} />
                               <div className="flex flex-col items-start min-w-0 flex-1 gap-0.5">
-                                <span className={`text-xs font-bold uppercase tracking-tight truncate w-full ${isSel ? 'text-primary' : 'text-slate-700'}`}>
+                                <span className={`text-xs font-black uppercase tracking-tight truncate w-full ${isSel ? 'text-primary' : 'text-slate-900'}`}>
                                   {u.name || (u.email ? u.email.split('@')[0] : 'Usuário')}
                                 </span>
                                 <div className="flex items-center gap-1.5 w-full">
                                   {u.sector && (
-                                    <span className={`text-[10px] font-medium uppercase tracking-tight truncate ${isSel ? 'text-primary/40' : 'text-slate-400/70'}`}>
+                                    <span className={`text-[10px] font-bold uppercase tracking-tight truncate ${isSel ? 'text-primary/60' : 'text-slate-600'}`}>
                                       {u.sector}
                                     </span>
                                   )}
                                 </div>
                               </div>
                               {isCreatorUser ? (
-                                <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/10 shrink-0">
+                                <div className="bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20 shrink-0">
                                   <span className="text-[10px] font-black uppercase tracking-widest">Você</span>
                                 </div>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => toggleArrayItem(selectedParticipants, setSelectedParticipants, u.id)}
-                                  className={`material-symbols-outlined text-xl transition-all duration-300 shrink-0 ${isSel ? 'text-primary scale-110' : 'text-slate-300 hover:text-primary/40'}`}
+                                  className={`material-symbols-outlined text-xl transition-all duration-300 shrink-0 ${isSel ? 'text-primary scale-110' : 'text-slate-400 hover:text-primary/60'}`}
                                 >
                                   {isSel ? 'check_circle' : 'add_circle'}
                                 </button>
@@ -1910,10 +1910,10 @@ const CreateEvent: React.FC = () => {
                             </div>
                             
                             {isSel && !isCreatorUser && (
-                              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-primary/10">
+                              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-primary/20">
                                 <div className="flex items-center justify-between">
-                                  <span className="text-[9px] font-bold text-primary/60 uppercase tracking-widest">Nível de Envolvimento:</span>
-                                  <span className="text-[9px] font-bold text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                  <span className="text-[9px] font-black text-primary/70 uppercase tracking-widest">Nível de Envolvimento:</span>
+                                  <span className="text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
                                     {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || 'PARTICIPANTE'))?.label || 'Selecione'}
                                   </span>
                                 </div>
@@ -1941,13 +1941,13 @@ const CreateEvent: React.FC = () => {
                                         className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg transition-all duration-300 border ${
                                           isSelected
                                             ? 'bg-primary text-white border-primary shadow-sm shadow-primary/20 scale-[1.02] z-10'
-                                            : 'bg-slate-50 text-slate-500 border-slate-100 hover:border-primary/30 hover:bg-white hover:text-primary active:scale-95'
+                                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:border-primary/40 hover:bg-white hover:text-primary active:scale-95'
                                         }`}
                                       >
-                                        <span className={`material-symbols-outlined text-[14px] mb-0.5 ${isSelected ? 'text-white' : 'text-slate-400'}`}>
+                                        <span className={`material-symbols-outlined text-[14px] mb-0.5 ${isSelected ? 'text-white' : 'text-slate-500'}`}>
                                           {getIcon(level.value)}
                                         </span>
-                                        <span className="text-[7px] font-bold uppercase tracking-tight leading-none text-center">
+                                        <span className="text-[7px] font-black uppercase tracking-tight leading-none text-center">
                                           {level.label}
                                         </span>
                                       </button>
@@ -1963,7 +1963,7 @@ const CreateEvent: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setVisibleParticipantsCount(prev => prev + 5)}
-                          className="w-full py-2.5 text-[10px] font-bold text-primary/70 uppercase tracking-widest hover:bg-primary/5 hover:text-primary rounded-xl transition-colors border border-primary/10 border-dashed mt-2 flex items-center justify-center gap-2 group"
+                          className="w-full py-2.5 text-[10px] font-black text-primary/80 uppercase tracking-widest hover:bg-primary/5 hover:text-primary rounded-xl transition-colors border border-primary/20 border-dashed mt-2 flex items-center justify-center gap-2 group"
                         >
                           <span className="material-symbols-outlined text-base group-hover:translate-y-0.5 transition-transform">expand_more</span>
                           <span>Carregar mais ({sortedFilteredUsers.length - visibleParticipantsCount})</span>
@@ -1978,15 +1978,15 @@ const CreateEvent: React.FC = () => {
           </div>
 
           {/* Row 2: Professional Scope (Full Width) - SWAPPED TO TOP */}
-          <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!envolverProfissionais && 'opacity-90'}`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100/50">
+          <section className={`bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!envolverProfissionais && 'opacity-90'}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
               <div className="flex items-center gap-4">
-                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${envolverProfissionais ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${envolverProfissionais ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-200 text-slate-600'}`}>
                   <span className="material-symbols-outlined text-2xl font-bold">groups</span>
                 </div>
                 <div>
-                  <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${envolverProfissionais ? 'text-slate-800' : 'text-slate-400'}`}>Envolvimento de Unidades e Profissionais</h3>
-                  <p className="text-[10px] font-medium text-slate-400 mt-0.5">Clique no botão ao lado para ativar e definir o público-alvo nas unidades</p>
+                  <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${envolverProfissionais ? 'text-slate-900' : 'text-slate-500'}`}>Envolvimento de Unidades e Profissionais</h3>
+                  <p className="text-[10px] font-bold text-slate-500 mt-0.5">Clique no botão ao lado para ativar e definir o público-alvo nas unidades</p>
                 </div>
               </div>
               <button
@@ -2027,7 +2027,7 @@ const CreateEvent: React.FC = () => {
                 <div className="space-y-6">
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 ml-1 mb-1">
-                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.2em]">Unidades Envolvidas</label>
+                      <label className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em]">Unidades Envolvidas</label>
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                         <button
                           type="button"
@@ -2045,7 +2045,7 @@ const CreateEvent: React.FC = () => {
                               setSelectedUnidades(prev => Array.from(new Set([...prev, ...filteredUnits])));
                             }
                           }}
-                          className="text-[9px] font-bold text-primary hover:text-primary/70 uppercase tracking-widest transition-colors px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10"
+                          className="text-[9px] font-bold text-primary hover:text-primary/70 uppercase tracking-widest transition-colors px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20"
                         >
                           {(() => {
                             const filteredUnits = Array.from(new Set([...UNIDADES, ...selectedUnidades]))
@@ -2054,17 +2054,17 @@ const CreateEvent: React.FC = () => {
                             return allSelected ? 'Desmarcar Tudo' : 'Selecionar Tudo';
                           })()}
                         </button>
-                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full whitespace-nowrap">{selectedUnidades.length} selecionadas</span>
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-200 px-2 py-0.5 rounded-full whitespace-nowrap">{selectedUnidades.length} selecionadas</span>
                       </div>
                     </div>
                     <div className="relative group">
-                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-400 group-focus-within:text-slate-500 transition-colors">search</span>
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-500 group-focus-within:text-slate-600 transition-colors">search</span>
                       <input
                         type="text"
                         placeholder="Pesquisar unidade..."
                         value={unitSearch}
                         onChange={(e) => setUnitSearch(e.target.value)}
-                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-white border border-slate-300 outline-none font-semibold text-sm text-slate-800 focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
+                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-white border border-slate-400 outline-none font-bold text-sm text-slate-900 focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
                       />
                     </div>
                   </div>
@@ -2077,7 +2077,7 @@ const CreateEvent: React.FC = () => {
                           toggleArrayItem(selectedUnidades, setSelectedUnidades, newUnit);
                           setUnitSearch('');
                         }}
-                        className="p-3 rounded-2xl border-2 border-dashed border-slate-200 bg-white text-slate-400 text-[10px] font-bold transition-all duration-300 text-center hover:border-slate-400 hover:text-slate-600 flex items-center justify-center gap-2 group"
+                        className="p-3 rounded-2xl border-2 border-dashed border-slate-300 bg-white text-slate-600 text-[10px] font-bold transition-all duration-300 text-center hover:border-slate-500 hover:text-slate-800 flex items-center justify-center gap-2 group"
                       >
                         <span className="material-symbols-outlined text-sm group-hover:rotate-90 transition-transform">add</span>
                         ADICIONAR "{unitSearch.toUpperCase()}"
@@ -2090,11 +2090,11 @@ const CreateEvent: React.FC = () => {
                       <button
                         key={u} type="button"
                         onClick={() => toggleArrayItem(selectedUnidades, setSelectedUnidades, u)}
-                        className={`p-3.5 rounded-2xl border text-[10px] font-bold transition-all duration-300 text-center relative overflow-hidden group ${selectedUnidades.includes(u) ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-white border-slate-100 text-slate-500 hover:border-primary/30 hover:bg-slate-50'}`}
+                        className={`p-3.5 rounded-2xl border text-[10px] font-bold transition-all duration-300 text-center relative overflow-hidden group ${selectedUnidades.includes(u) ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02]' : 'bg-white border-slate-200 text-slate-600 hover:border-primary/50 hover:bg-slate-50'}`}
                       >
                         <span className="relative z-10">{u}</span>
                         {selectedUnidades.includes(u) && (
-                          <span className="absolute top-1 right-1 material-symbols-outlined text-[12px] opacity-50">check</span>
+                          <span className="absolute top-1 right-1 material-symbols-outlined text-[12px] opacity-70">check</span>
                         )}
                       </button>
                     ))}
@@ -2104,7 +2104,7 @@ const CreateEvent: React.FC = () => {
                 <div className="space-y-6 relative">
                   <div className={`flex flex-col gap-3 transition-opacity duration-500 ${selectedUnidades.length === 0 ? 'opacity-40 grayscale pointer-events-none' : 'opacity-100'}`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 ml-1 mb-1">
-                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-[0.2em]">Categorias Profissionais</label>
+                      <label className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.2em]">Categorias Profissionais</label>
                       <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                         <button
                           type="button"
@@ -2120,7 +2120,7 @@ const CreateEvent: React.FC = () => {
                               setSelectedCategorias(prev => Array.from(new Set([...prev, ...filteredCats])));
                             }
                           }}
-                          className="text-[9px] font-bold text-primary hover:text-primary/70 uppercase tracking-widest transition-colors px-2 py-0.5 rounded-md bg-primary/5 border border-primary/10"
+                          className="text-[9px] font-bold text-primary hover:text-primary/70 uppercase tracking-widest transition-colors px-2 py-0.5 rounded-md bg-primary/10 border border-primary/20"
                         >
                           {(() => {
                             const filteredCats = CATEGORIAS_PROFISSIONAIS
@@ -2129,29 +2129,29 @@ const CreateEvent: React.FC = () => {
                             return allSelected ? 'Desmarcar Tudo' : 'Selecionar Tudo';
                           })()}
                         </button>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${selectedCategorias.length > 0 ? 'text-slate-400 bg-slate-100' : 'text-red-500 bg-red-50 animate-pulse'}`}>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full whitespace-nowrap ${selectedCategorias.length > 0 ? 'text-slate-600 bg-slate-200' : 'text-red-600 bg-red-50 animate-pulse'}`}>
                           {selectedCategorias.length > 0 ? `${selectedCategorias.length} selecionadas` : 'OBRIGATÓRIO'}
                         </span>
                       </div>
                     </div>
                     <div className="relative group">
-                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-400 group-focus-within:text-slate-500 transition-colors">search</span>
+                      <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-slate-500 group-focus-within:text-slate-600 transition-colors">search</span>
                       <input
                         type="text"
                         placeholder="Pesquisar categoria..."
                         value={categorySearch}
                         onChange={(e) => setCategorySearch(e.target.value)}
-                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-white border border-slate-300 outline-none font-semibold text-sm text-slate-800 focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
+                        className="w-full h-12 pl-10 pr-4 rounded-2xl bg-white border border-slate-400 outline-none font-bold text-sm text-slate-900 focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
                       />
                     </div>
                   </div>
                   
                   {selectedUnidades.length === 0 && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/40 backdrop-blur-[1px] rounded-2xl z-10 p-6 text-center animate-in fade-in duration-500">
-                      <div className="size-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mb-3">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-2xl z-10 p-6 text-center animate-in fade-in duration-500">
+                      <div className="size-12 rounded-2xl bg-slate-200 text-slate-500 flex items-center justify-center mb-3">
                         <span className="material-symbols-outlined text-2xl">lock</span>
                       </div>
-                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
+                      <p className="text-[11px] font-black text-slate-600 uppercase tracking-widest leading-relaxed">
                         Selecione pelo menos uma unidade<br/>para liberar as categorias
                       </p>
                     </div>
@@ -2162,10 +2162,10 @@ const CreateEvent: React.FC = () => {
                       <button
                         key={cp} type="button"
                         onClick={() => toggleArrayItem(selectedCategorias, setSelectedCategorias, cp)}
-                        className={`w-full text-left p-4 rounded-2xl border text-[10px] font-bold transition-all duration-300 flex items-center justify-between group ${selectedCategorias.includes(cp) ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white border-slate-100 text-slate-500 hover:border-primary/30 hover:bg-slate-50'}`}
+                        className={`w-full text-left p-4 rounded-2xl border-2 text-[10px] font-bold transition-all duration-300 flex items-center justify-between group ${selectedCategorias.includes(cp) ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'bg-white border-slate-200 text-slate-600 hover:border-primary/50 hover:bg-slate-50'}`}
                       >
                         <span className="uppercase tracking-tight">{cp}</span>
-                        <span className={`material-symbols-outlined text-[16px] transition-all ${selectedCategorias.includes(cp) ? 'text-white rotate-0' : 'text-slate-200 rotate-90 opacity-0 group-hover:opacity-100'}`}>
+                        <span className={`material-symbols-outlined text-[16px] transition-all ${selectedCategorias.includes(cp) ? 'text-white rotate-0' : 'text-slate-300 rotate-90 opacity-0 group-hover:opacity-100'}`}>
                           {selectedCategorias.includes(cp) ? 'check_circle' : 'add_circle'}
                         </span>
                       </button>
@@ -2177,15 +2177,15 @@ const CreateEvent: React.FC = () => {
           </section>
 
           {/* Row 3: Logistics (Full Width) - SWAPPED TO BOTTOM */}
-          <section className={`bg-white/60 backdrop-blur-2xl border border-slate-200 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!logisticaRecursos && 'opacity-90'}`}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100/50">
+          <section className={`bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!logisticaRecursos && 'opacity-90'}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
               <div className="flex items-center gap-4">
-                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${logisticaRecursos ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-100 text-slate-400'}`}>
+                <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${logisticaRecursos ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-200 text-slate-600'}`}>
                   <span className="material-symbols-outlined text-2xl font-bold">inventory_2</span>
                 </div>
                 <div>
-                  <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${logisticaRecursos ? 'text-slate-800' : 'text-slate-400'}`}>Logística & Recursos</h3>
-                  <p className="text-[10px] font-medium text-slate-400 mt-0.5">Clique no botão ao lado para ativar e solicitar insumos e apoio para o evento</p>
+                  <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${logisticaRecursos ? 'text-slate-900' : 'text-slate-500'}`}>Logística & Recursos</h3>
+                  <p className="text-[10px] font-bold text-slate-500 mt-0.5">Clique no botão ao lado para ativar e solicitar insumos e apoio para o evento</p>
                 </div>
               </div>
 
@@ -2225,11 +2225,11 @@ const CreateEvent: React.FC = () => {
             {logisticaRecursos && (
               <div className="animate-in fade-in slide-in-from-top-4 duration-500 flex flex-col gap-8">
                 {/* Tabs Navigation */}
-                <div className="flex flex-wrap gap-2 p-1.5 bg-slate-100/50 rounded-[22px] w-fit">
+                <div className="flex flex-wrap gap-2 p-1.5 bg-slate-200 rounded-[22px] w-fit shadow-inner">
                   <button
                     type="button"
                     onClick={() => setActiveTab('almoxarifado')}
-                    className={`px-6 py-3 rounded-[18px] text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'almoxarifado' ? 'bg-white text-slate-800 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'almoxarifado' ? 'bg-white text-slate-900 shadow-md border border-slate-300 scale-105' : 'text-slate-600 hover:text-slate-800 hover:bg-white/50'}`}
                   >
                     <span className="material-symbols-outlined text-[20px]">inventory_2</span>
                     Almoxarifado
@@ -2237,7 +2237,7 @@ const CreateEvent: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('copa')}
-                    className={`px-6 py-3 rounded-[18px] text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'copa' ? 'bg-white text-slate-800 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'copa' ? 'bg-white text-slate-900 shadow-md border border-slate-300 scale-105' : 'text-slate-600 hover:text-slate-800 hover:bg-white/50'}`}
                   >
                     <span className="material-symbols-outlined text-[20px]">local_cafe</span>
                     Serviços de Copa
@@ -2245,7 +2245,7 @@ const CreateEvent: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('informatica')}
-                    className={`px-6 py-3 rounded-[18px] text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'informatica' ? 'bg-white text-slate-800 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'informatica' ? 'bg-white text-slate-900 shadow-md border border-slate-300 scale-105' : 'text-slate-600 hover:text-slate-800 hover:bg-white/50'}`}
                   >
                     <span className="material-symbols-outlined text-[20px]">laptop_mac</span>
                     Informática
@@ -2253,7 +2253,7 @@ const CreateEvent: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveTab('transporte')}
-                    className={`px-6 py-3 rounded-[18px] text-[10px] font-bold uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'transporte' ? 'bg-white text-slate-800 shadow-sm border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`px-6 py-3 rounded-[18px] text-[10px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-2.5 ${activeTab === 'transporte' ? 'bg-white text-slate-900 shadow-md border border-slate-300 scale-105' : 'text-slate-600 hover:text-slate-800 hover:bg-white/50'}`}
                   >
                     <span className="material-symbols-outlined text-[20px]">directions_car</span>
                     Transporte
@@ -2264,11 +2264,11 @@ const CreateEvent: React.FC = () => {
                   {/* Almoxarifado */}
                   {activeTab === 'almoxarifado' && (
                     <div className="space-y-6">
-                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-200 shadow-xl shadow-slate-100">
+                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-400 shadow-xl shadow-slate-200">
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col">
-                            <span className="text-[14px] font-bold uppercase tracking-tight text-slate-800">Almoxarifado</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Insumos extras para a atividade</span>
+                            <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Almoxarifado</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Insumos extras para a atividade</span>
                           </div>
                         </div>
                         
@@ -2284,11 +2284,11 @@ const CreateEvent: React.FC = () => {
                   {/* Copa */}
                   {activeTab === 'copa' && (
                     <div className="space-y-6">
-                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-200 shadow-xl shadow-slate-100">
+                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-400 shadow-xl shadow-slate-200">
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col">
-                            <span className="text-[14px] font-bold uppercase tracking-tight text-slate-800">Serviço de Copa</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Coffee, lanches e descartáveis</span>
+                            <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Serviço de Copa</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Coffee, lanches e descartáveis</span>
                           </div>
                         </div>
                         
@@ -2304,11 +2304,11 @@ const CreateEvent: React.FC = () => {
                   {/* Informática */}
                   {activeTab === 'informatica' && (
                     <div className="space-y-6">
-                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-200 shadow-xl shadow-slate-100">
+                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-400 shadow-xl shadow-slate-200">
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col">
-                            <span className="text-[14px] font-bold uppercase tracking-tight text-slate-800">Informática</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Recursos tecnológicos e apoio técnico</span>
+                            <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Informática</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Recursos tecnológicos e apoio técnico</span>
                           </div>
                         </div>
                         
@@ -2324,17 +2324,17 @@ const CreateEvent: React.FC = () => {
                   {/* Transporte */}
                   {activeTab === 'transporte' && (
                     <div className="space-y-6">
-                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-200 shadow-xl shadow-slate-100">
+                      <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-400 shadow-xl shadow-slate-200">
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col">
-                            <span className="text-[14px] font-bold uppercase tracking-tight text-slate-800">Transporte</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Veículos, deslocamento e apoio logístico</span>
+                            <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Transporte</span>
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Veículos, deslocamento e apoio logístico</span>
                           </div>
                         </div>
                         
                         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
                           <div className="space-y-2.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Local de Origem *</label>
+                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest ml-1">Local de Origem *</label>
                             <input 
                               type="text"
                               value={transporteOrigem}
@@ -2344,11 +2344,11 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="De onde o veículo deve sair?"
-                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
+                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
                             />
                           </div>
                           <div className="space-y-2.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Local de Destino *</label>
+                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest ml-1">Local de Destino *</label>
                             <input 
                               type="text"
                               value={transporteDestino}
@@ -2358,7 +2358,7 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="Para onde o veículo deve ir?"
-                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
+                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
                             />
                           </div>
 
@@ -2383,7 +2383,7 @@ const CreateEvent: React.FC = () => {
                             }}
                           />
                           <div className="md:col-span-2 space-y-2.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Passageiros *</label>
+                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest ml-1">Passageiros *</label>
                             <input 
                               type="number"
                               min="1"
@@ -2394,21 +2394,21 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="Qtd."
-                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400"
+                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
                             />
                           </div>
 
                           {isTransportTimeInvalid && (
                             <div className="md:col-span-2 animate-in fade-in slide-in-from-top-2 duration-300">
-                              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-600">
+                              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-red-100 border border-red-200 text-red-700 shadow-sm">
                                 <span className="material-symbols-outlined text-lg">error</span>
-                                <span className="text-xs font-bold uppercase tracking-wider">O horário de ida não pode ser posterior ou igual ao horário de volta.</span>
+                                <span className="text-xs font-black uppercase tracking-wider">O horário de ida não pode ser posterior ou igual ao horário de volta.</span>
                               </div>
                             </div>
                           )}
 
                           <div className="md:col-span-2 space-y-2.5">
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Observações Adicionais</label>
+                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest ml-1">Observações Adicionais</label>
                             <textarea 
                               value={transporteObs}
                               tabIndex={activeTab === 'transporte' ? 0 : -1}
@@ -2417,7 +2417,7 @@ const CreateEvent: React.FC = () => {
                                 if (e.target.value) setTransporteSuporte(true);
                               }}
                               placeholder="Ex: Quantidade de passageiros, volume de carga, ponto de referência específico..."
-                              className="w-full min-h-[100px] p-5 rounded-2xl bg-white border border-slate-300 text-slate-800 font-semibold text-sm focus:outline-none focus:border-slate-400 transition-all duration-300 placeholder:text-slate-400 resize-none"
+                              className="w-full min-h-[100px] p-5 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500 resize-none"
                             />
                           </div>
                         </div>
