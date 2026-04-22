@@ -1248,20 +1248,6 @@ const Calendar: React.FC = () => {
         >
           {viewType === 'month' && (
             <div className="flex-1 flex flex-col">
-              {/* Header Section for Month View */}
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-white/80 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-slate-300/60 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md hover:bg-white/90">
-                <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
-                  <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
-                    <span className="material-symbols-outlined text-[28px] md:text-[36px] text-primary font-light">calendar_month</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg md:text-xl font-black text-text-main leading-tight">Visualização Mensal</h3>
-                    <p className="hidden md:block text-[10px] text-text-secondary font-black uppercase tracking-[0.2em]">Visão geral do mês selecionado</p>
-                    <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest mt-1">Navegue pelos dias do mês</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Desktop Grid View */}
               <div className="hidden md:flex flex-col flex-1 px-4 md:px-8 mt-4 pb-8">
                 <div className="grid grid-cols-7 border border-border-light rounded-t-3xl bg-slate-100/90 backdrop-blur-md sticky top-[120px] md:top-[64px] z-[90] shadow-sm overflow-hidden">
@@ -1443,20 +1429,6 @@ const Calendar: React.FC = () => {
 
         {viewType === 'week' && (
           <div className={`flex-1 flex flex-col ${isCurrentWeek(currentDate) ? 'bg-white' : 'bg-slate-100/30'}`}>
-            {/* Header Section for Week View */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 bg-white/80 backdrop-blur-md rounded-[1.5rem] md:rounded-[2rem] border border-slate-300/60 shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md hover:bg-white/90">
-              <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
-                <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
-                  <span className="material-symbols-outlined text-[28px] md:text-[36px] text-primary font-light">view_week</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg md:text-xl font-black text-text-main leading-tight">Visualização Semanal</h3>
-                  <p className="hidden md:block text-[10px] text-text-secondary font-black uppercase tracking-[0.2em]">Confira os compromissos da semana</p>
-                  <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest mt-1">Organize sua rotina semanal</p>
-                </div>
-              </div>
-            </div>
-
             <div className="hidden md:flex flex-col flex-1 px-4 md:px-8 mt-4 pb-8">
               <div className="grid grid-cols-7 border border-border-light rounded-t-3xl bg-slate-100/90 backdrop-blur-md sticky top-[120px] md:top-[64px] z-[90] shadow-sm overflow-hidden">
                 {getDatesForWeek(currentDate).map((date, idx) => {
@@ -1662,26 +1634,6 @@ const Calendar: React.FC = () => {
                   : (isWeekend ? 'bg-orange-50/30' : 'bg-white')
               }`}
             >
-              {/* Header Section for Day View */}
-              <div className={`flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-4 rounded-[1.5rem] md:rounded-[2rem] border shadow-sm mx-2 md:mx-8 mt-2 md:mt-4 transition-all duration-500 hover:shadow-md backdrop-blur-md ${
-                isWeekend && !isToday ? 'bg-orange-50/60 border-orange-300 hover:bg-orange-50/80' : 'bg-white/80 border-slate-300/60 hover:bg-white/90'
-              }`}>
-                <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
-                  <div className="size-14 md:size-18 rounded-[1.2rem] md:rounded-[1.5rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
-                    <span className={`material-symbols-outlined text-[28px] md:text-[36px] font-light ${isWeekend && !isToday ? 'text-orange-700' : 'text-primary'}`}>
-                      {isWeekend ? 'event_repeat' : 'today'}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg md:text-xl font-black text-text-main leading-tight">Compromissos do Dia</h3>
-                    <p className="hidden md:block text-[10px] text-text-secondary font-black uppercase tracking-[0.2em]">
-                      {isWeekend ? 'Planejamento de final de semana' : 'Visualize os agendamentos de hoje'}
-                    </p>
-                    <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest mt-1">Gestão diária de atividades</p>
-                  </div>
-                </div>
-              </div>
-
               {/* Mobile Day Info Section */}
               <div className={`md:hidden flex flex-col items-center justify-center px-6 py-8 text-center border-b relative z-10 ${
                 isWeekend && !isToday ? 'bg-orange-50/10 border-orange-100' : 'bg-white border-slate-200'
@@ -1903,20 +1855,6 @@ const Calendar: React.FC = () => {
 
         {viewType === 'agenda' && (
           <div className="flex-1 flex flex-col bg-white relative">
-            {/* Header Section for Agenda View */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 px-4 md:px-8 py-6 md:py-10 bg-white/40 backdrop-blur-md rounded-[1.5rem] md:rounded-[2.5rem] border border-white/60 shadow-sm mx-2 md:mx-8 mt-2 md:mt-8 transition-all duration-500 hover:shadow-md hover:bg-white/60">
-              <div className="flex items-center gap-4 md:gap-8 w-full md:w-auto">
-                <div className="size-14 md:size-24 rounded-[1.2rem] md:rounded-[2rem] bg-white shadow-xl shadow-primary/10 flex items-center justify-center ring-1 ring-primary/10 transition-transform hover:scale-105 duration-500 shrink-0">
-                  <span className="material-symbols-outlined text-[28px] md:text-[48px] text-primary font-light">view_agenda</span>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg md:text-2xl font-black text-text-main leading-tight">Agenda do Mês</h3>
-                  <p className="hidden md:block text-xs text-text-secondary font-black uppercase tracking-[0.2em] opacity-60">Visualize todos os compromissos</p>
-                  <p className="md:hidden text-[10px] text-text-secondary font-bold uppercase tracking-widest opacity-40 mt-1">Visão geral de compromissos</p>
-                </div>
-              </div>
-            </div>
-
             <div ref={agendaViewRef} className={`p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full ${scrollMarginClass}`}>
               {(() => {
                  // Filter events for the current month and year using filteredEvents instead of events
