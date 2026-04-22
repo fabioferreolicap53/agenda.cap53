@@ -1,6 +1,6 @@
 export const INVOLVEMENT_LEVELS = [
-  { value: 'PARTICIPANTE', label: 'Participante' },
-  { value: 'ORGANIZADOR', label: 'Organizador' }
+  { value: 'ORGANIZADOR', label: 'Organizador' },
+  { value: 'PARTICIPANTE', label: 'Participante' }
 ];
 
 export const RESPONSIBILITY_LEVELS = [

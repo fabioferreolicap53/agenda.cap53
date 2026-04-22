@@ -8,8 +8,8 @@ import RefusalModal from '../components/RefusalModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const INVOLVEMENT_LEVELS = [
-    { value: 'PARTICIPANTE', label: 'Participante' },
-    { value: 'ORGANIZADOR', label: 'Organizador' }
+    { value: 'ORGANIZADOR', label: 'Organizador' },
+    { value: 'PARTICIPANTE', label: 'Participante' }
 ];
 
 const Requests: React.FC = () => {
