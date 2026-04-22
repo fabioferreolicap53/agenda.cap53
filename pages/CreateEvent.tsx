@@ -486,7 +486,8 @@ const CreateEvent: React.FC = () => {
 
       if (eventId) {
           try {
-            const selectedItemIds = confirmedItems;
+            // Unificamos os três arrays para sincronizar com almac_requests
+            const selectedItemIds = [...almoxarifadoItems, ...copaItems, ...informaticaItems];
             console.log('--- SYNC LOGÍSTICA START ---', { eventId, selectedItemIds, itemQuantities });
             
             const existingRequests = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList({
@@ -1512,6 +1513,16 @@ const CreateEvent: React.FC = () => {
   const toggleArrayItem = (array: string[], setArray: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
     setArray(prev => {
       if (prev.includes(item)) {
+        return prev.filter(i => i !== item);
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  const toggleResourceItem = (array: string[], setArray: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+    setArray(prev => {
+      if (prev.includes(item)) {
         // Remove item and its quantity
         const newQuantities = { ...itemQuantities };
         delete newQuantities[item];
@@ -1521,6 +1532,7 @@ const CreateEvent: React.FC = () => {
       } else {
         // Add item with default quantity 1
         setItemQuantities(prevQ => ({ ...prevQ, [item]: 1 }));
+        setConfirmedItems(prevC => [...prevC, item]);
         return [...prev, item];
       }
     });
