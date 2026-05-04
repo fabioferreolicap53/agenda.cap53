@@ -540,6 +540,9 @@ const Calendar: React.FC = () => {
   }, []);
 
   const scrollToToday = () => {
+    // No DIA view no desktop, não fazemos scroll automático para evitar saltos indesejados
+    if (viewType === 'day' && !isMobileOrTablet) return;
+
     setTimeout(() => {
       // Configuração base de scroll
       const scrollConfig: ScrollIntoViewOptions = {
