@@ -392,27 +392,39 @@ const MyInvolvement: React.FC = () => {
         ) : (
           <>
             {recentEvents.length > 0 && activeTab === 'all' && !searchTerm && (
-              <div className="mb-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="material-symbols-outlined text-indigo-500">history</span>
-                  <h2 className="text-lg font-bold text-slate-800">Recentes</h2>
-                  <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Últimos {recentEvents.length} criados</span>
+              <div className="mb-10 relative bg-gradient-to-br from-indigo-50/80 via-white to-slate-50 border border-indigo-100/60 rounded-[2rem] p-5 sm:p-8 shadow-sm overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
+                <div className="flex items-center gap-3 mb-6 relative z-10">
+                  <div className="flex items-center justify-center size-10 rounded-xl bg-indigo-100 text-indigo-600 shadow-inner">
+                    <span className="material-symbols-outlined text-[22px]">history</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <h2 className="text-xl font-black text-indigo-950 tracking-tight leading-none">Recentes</h2>
+                    <span className="text-[11px] font-bold text-indigo-600/70 mt-1 uppercase tracking-wider">Últimos {recentEvents.length} criados</span>
+                  </div>
                 </div>
-                <EventList 
-                  events={recentEvents}
-                  loading={loading}
-                  onOpenCalendar={handleOpenEventInCalendar}
-                  onCancel={handleCancelEvent}
-                  onDelete={handleDeleteEvent}
-                  onDuplicate={handleDuplicateEvent}
-                  onEdit={handleEditEvent}
-                />
+                <div className="relative z-10">
+                  <EventList 
+                    events={recentEvents}
+                    loading={loading}
+                    onOpenCalendar={handleOpenEventInCalendar}
+                    onCancel={handleCancelEvent}
+                    onDelete={handleDeleteEvent}
+                    onDuplicate={handleDuplicateEvent}
+                    onEdit={handleEditEvent}
+                  />
+                </div>
               </div>
             )}
 
-            <div className="flex items-center gap-2 mb-4">
-              <span className="material-symbols-outlined text-slate-400">list</span>
-              <h2 className="text-lg font-bold text-slate-800">Todos os Eventos</h2>
+            <div className="flex items-center gap-3 mb-6 mt-4 px-2 sm:px-0">
+              <div className="flex items-center justify-center size-10 rounded-xl bg-slate-100 text-slate-600 border border-slate-200/60 shadow-sm">
+                <span className="material-symbols-outlined text-[22px]">calendar_view_day</span>
+              </div>
+              <div className="flex flex-col">
+                <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">Todos os Eventos</h2>
+                <span className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">Catálogo completo</span>
+              </div>
             </div>
 
             <FilterBar 
