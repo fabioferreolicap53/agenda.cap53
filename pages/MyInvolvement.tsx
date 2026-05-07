@@ -254,11 +254,9 @@ const MyInvolvement: React.FC = () => {
 
   // Filtragem
   const recentEvents = useMemo(() => {
-    // 5 eventos criados recentemente (ordem de criação), exibidos em ordem decrescente pela data/horário de início.
-    // Como os eventos do useMySpace já contêm a propriedade created, podemos usar isso.
+    // 5 eventos criados recentemente, exibidos em ordem decrescente pela data/horário de criação.
     const sortedByCreated = [...events].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    const top5 = sortedByCreated.slice(0, 5);
-    return top5.sort((a, b) => new Date(b.date_start).getTime() - new Date(a.date_start).getTime());
+    return sortedByCreated.slice(0, 5);
   }, [events]);
 
   const filteredEvents = useMemo(() => {
