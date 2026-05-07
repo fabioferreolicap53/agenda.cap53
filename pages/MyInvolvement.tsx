@@ -253,6 +253,14 @@ const MyInvolvement: React.FC = () => {
   };
 
   // Filtragem
+  const recentEvents = useMemo(() => {
+    // 5 eventos criados recentemente (ordem de criação), exibidos em ordem decrescente pela data/horário de início.
+    // Como os eventos do useMySpace já contêm a propriedade created, podemos usar isso.
+    const sortedByCreated = [...events].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    const top5 = sortedByCreated.slice(0, 5);
+    return top5.sort((a, b) => new Date(b.date_start).getTime() - new Date(a.date_start).getTime());
+  }, [events]);
+
   const filteredEvents = useMemo(() => {
     const term = searchTerm.toLowerCase();
     
@@ -385,6 +393,30 @@ const MyInvolvement: React.FC = () => {
           <AnalyticsSection analytics={analytics || { byType: [], byNature: [], byTime: [], byResources: [] }} />
         ) : (
           <>
+            {recentEvents.length > 0 && activeTab === 'all' && !searchTerm && (
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="material-symbols-outlined text-indigo-500">history</span>
+                  <h2 className="text-lg font-bold text-slate-800">Recentes</h2>
+                  <span className="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Últimos {recentEvents.length} criados</span>
+                </div>
+                <EventList 
+                  events={recentEvents}
+                  loading={loading}
+                  onOpenCalendar={handleOpenEventInCalendar}
+                  onCancel={handleCancelEvent}
+                  onDelete={handleDeleteEvent}
+                  onDuplicate={handleDuplicateEvent}
+                  onEdit={handleEditEvent}
+                />
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 mb-4">
+              <span className="material-symbols-outlined text-slate-400">list</span>
+              <h2 className="text-lg font-bold text-slate-800">Todos os Eventos</h2>
+            </div>
+
             <FilterBar 
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
