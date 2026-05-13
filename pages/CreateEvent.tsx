@@ -115,6 +115,7 @@ const CreateEvent: React.FC = () => {
   const [transporteObs, setTransporteObs] = useState('');
   const [originalTransporteSuporte, setOriginalTransporteSuporte] = useState(false);
   const [isRestricted, setIsRestricted] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [estimatedParticipants, setEstimatedParticipants] = useState<string>('');
   const [selectedUnidades, setSelectedUnidades] = useState<string[]>([]);
   const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
@@ -331,7 +332,7 @@ const CreateEvent: React.FC = () => {
         description: observacoes,
         observacoes,
         location: locationState.mode === 'fixed' && locationState.fixedId ? locationState.fixedId : null, 
-        custom_location: locationState.mode === 'free' ? locationState.freeText : null,
+        custom_location: locationState.mode === 'free' && locationState.freeText ? locationState.freeText.trim().toUpperCase() : null,
         date_start: startISO, date_end: endISO,
         participants: selectedParticipants, user: user?.id, status: 'active',
         almoxarifado_items: almoxarifadoItems, 
@@ -347,6 +348,7 @@ const CreateEvent: React.FC = () => {
         unidades: selectedUnidades,
         categorias_profissionais: selectedCategorias,
         is_restricted: isRestricted,
+        is_private: isPrivate,
         estimated_participants: responsibility === 'EXTERNO_COMPROMISSO' ? null : (estimatedParticipants ? parseInt(estimatedParticipants) : null),
         transporte_status: transporteSuporte ? (existingTransporteStatus || 'pending') : null,
         participants_status: participantsStatus,
@@ -932,6 +934,7 @@ const CreateEvent: React.FC = () => {
           
           // Copiar Restrição
           setIsRestricted(!!event.is_restricted);
+          setIsPrivate(!!event.is_private);
           
           // Copiar Quantidade de Participantes
           setEstimatedParticipants(event.estimated_participants ? String(event.estimated_participants) : '');
@@ -1062,6 +1065,7 @@ const CreateEvent: React.FC = () => {
           setTransporteObs(event.transporte_obs || '');
           setOriginalTransporteSuporte(!!event.transporte_suporte);
           setIsRestricted(!!event.is_restricted);
+          setIsPrivate(!!event.is_private);
           setEstimatedParticipants(event.estimated_participants ? String(event.estimated_participants) : '');
           
           // Fetch items
@@ -1638,11 +1642,26 @@ const CreateEvent: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Título da Atividade</label>
-                  <input
-                    required value={title} onChange={(e) => setTitle(e.target.value)}
-                    className="w-full h-14 px-6 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500"
-                    placeholder="Ex: Reunião Geral de Indicadores"
-                  />
+                  <div className="flex items-start gap-3">
+                    <input
+                      required value={title} onChange={(e) => setTitle(e.target.value)}
+                      className="flex-1 h-14 px-6 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 uppercase"
+                      placeholder="Ex: Reunião Geral de Indicadores"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setIsPrivate(!isPrivate)}
+                      className={`h-14 px-4 sm:px-5 flex items-center justify-center gap-2 rounded-2xl border transition-all duration-300 shrink-0 ${isPrivate ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm' : 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400'}`}
+                      title={isPrivate ? "Mudar para Público" : "Mudar para Particular"}
+                    >
+                      <span className="material-symbols-outlined text-xl">{isPrivate ? 'lock' : 'public'}</span>
+                      <span className="text-xs font-bold uppercase tracking-wider hidden sm:block">{isPrivate ? 'Particular' : 'Público'}</span>
+                    </button>
+                  </div>
+                  <p className={`text-[10px] ml-2 mt-1 flex items-center gap-1.5 transition-colors duration-300 ${isPrivate ? 'text-amber-600 font-bold' : 'text-slate-500 font-medium'}`}>
+                    <span className="material-symbols-outlined text-[12px]">{isPrivate ? 'info' : 'info'}</span>
+                    {isPrivate ? 'Evento particular: Invisível no calendário para os demais usuários. Visto apenas pelos envolvidos.' : 'Evento público: Visto por todos no calendário geral.'}
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -1767,7 +1786,7 @@ const CreateEvent: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsRestricted(!isRestricted)}
-                    className={`w-full h-20 flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 ${isRestricted ? 'bg-amber-50/60 border-amber-200 shadow-sm' : 'bg-slate-100/50 border-slate-300 hover:border-slate-400'}`}
+                    className={`w-full h-20 flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 ${isRestricted ? 'bg-amber-50/60 border-amber-200 shadow-sm' : 'bg-slate-50 border-slate-300 hover:border-slate-400 shadow-sm'}`}
                   >
                     <div className="flex items-center gap-4 text-left">
                       <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 text-white shadow-lg shadow-amber-100' : 'bg-slate-200 text-slate-600'}`}>
@@ -1777,14 +1796,14 @@ const CreateEvent: React.FC = () => {
                         <h4 className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isRestricted ? 'text-amber-900' : 'text-slate-900'}`}>
                           {isRestricted ? 'Evento Restrito' : 'Evento Aberto'}
                         </h4>
-                        <p className={`text-[10px] font-bold leading-relaxed ${isRestricted ? 'text-amber-700' : 'text-slate-600'}`}>
+                        <p className={`text-[10px] font-bold leading-relaxed ${isRestricted ? 'text-amber-700' : 'text-slate-500'}`}>
                           {isRestricted 
                             ? 'Apenas convidados podem participar.' 
                             : 'Usuários podem solicitar participação.'}
                         </p>
                       </div>
                     </div>
-                    <div className={`size-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 border-amber-600 shadow-sm' : 'border-slate-400'}`}>
+                    <div className={`size-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 border-amber-600 shadow-sm' : 'border-slate-400 bg-white'}`}>
                       {isRestricted && <span className="material-symbols-outlined text-white text-[18px] font-bold">check</span>}
                     </div>
                   </button>
@@ -1792,12 +1811,12 @@ const CreateEvent: React.FC = () => {
 
                 <div className="md:col-span-1 space-y-2 pt-2">
                   <div className="h-4" /> {/* Spacer for label alignment */}
-                  <div className={`w-full h-20 flex items-center gap-4 p-4 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-200 bg-slate-100 opacity-60 cursor-not-allowed' : 'border-slate-400 bg-white focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/5'}`}>
-                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-200 text-slate-400' : 'bg-slate-100 text-slate-600'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
+                  <div className={`w-full h-20 flex items-center gap-4 p-5 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed' : 'border-slate-300 bg-slate-50 hover:border-slate-400 focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/5 shadow-sm'}`}>
+                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-200 text-slate-400' : 'bg-slate-200 text-slate-600'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
                       <span className="material-symbols-outlined text-[24px]">groups</span>
                     </div>
                     <div className="flex-1 flex flex-col justify-center min-w-0">
-                      <label className="text-[11px] font-bold text-slate-800 uppercase tracking-[0.1em] truncate mb-0.5">Qtd. Estimada de Presentes</label>
+                      <label className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.1em] truncate mb-0.5">Qtd. Estimada de Presentes</label>
                       <input
                         type="number"
                         min="1"
@@ -2343,6 +2362,25 @@ const CreateEvent: React.FC = () => {
                             <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Transporte</span>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Veículos, deslocamento e apoio logístico</span>
                           </div>
+                          {(transporteOrigem || transporteDestino || transporteHorarioLevar || transporteHorarioBuscar || transportePassageiros || transporteObs) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTransporteOrigem('');
+                                setTransporteDestino('');
+                                setTransporteHorarioLevar('');
+                                setTransporteHorarioBuscar('');
+                                setTransportePassageiros('');
+                                setTransporteObs('');
+                                setTransporteSuporte(false);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all group"
+                              title="Limpar todos os campos de transporte"
+                            >
+                              <span className="material-symbols-outlined text-[14px] group-hover:rotate-12 transition-transform">delete_sweep</span>
+                              <span className="text-[10px] font-black uppercase tracking-wider">Limpar</span>
+                            </button>
+                          )}
                         </div>
                         
                         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">

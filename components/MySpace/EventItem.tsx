@@ -104,14 +104,19 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
                 {getStatusDot(event)}
                 {getRoleBadge(event)}
               </div>
-              <h3 className="text-base font-bold text-slate-800 sm:truncate leading-tight">
+              <h3 className="text-base font-bold text-slate-800 sm:truncate leading-tight uppercase flex items-center gap-1.5">
+                {(event as any).is_private ? (
+                  <span className="material-symbols-outlined text-[16px] text-amber-500 font-bold" title="Evento Particular (Invisível no calendário para os demais usuários)">visibility_off</span>
+                ) : (
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 font-bold" title="Evento Público (Visível por todos os usuários)">visibility</span>
+                )}
                 <button 
                   type="button"
                   onClick={() => onOpenCalendar(event)} 
                   className="text-left hover:text-primary transition-colors cursor-pointer"
                   title="Abrir no Calendário"
                 >
-                  {event.title}
+                  {event.title?.toUpperCase()}
                 </button>
               </h3>
             </div>

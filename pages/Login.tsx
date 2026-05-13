@@ -96,10 +96,11 @@ const Login: React.FC = () => {
             <label className="flex flex-col w-full">
               <p className="text-text-main text-sm font-medium pb-2">Nome Usuário</p>
               <input
-                className="w-full rounded-lg border border-gray-300 h-11 px-4 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm"
+                className="w-full rounded-lg border border-gray-300 h-11 px-4 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm uppercase"
                 placeholder="Seu nome completo"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setName(e.target.value.toUpperCase())}
+                onBlur={(e) => setName(e.target.value.trim().toUpperCase())}
                 required
               />
             </label>

@@ -51,6 +51,7 @@ export interface UsersRecord {
     context_status?: string
     online?: boolean
     favorites?: string[]
+    calendar_filters?: any // JSON para armazenar preferências de filtro
 }
 
 // Event

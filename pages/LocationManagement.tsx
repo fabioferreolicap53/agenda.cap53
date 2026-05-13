@@ -233,8 +233,8 @@ const LocationManagement: React.FC = () => {
         
         // Capturar o valor diretamente do formulário como backup do estado
         const formData = new FormData(e.currentTarget as HTMLFormElement);
-        const nameFromForm = formData.get('newLocationName') as string;
-        const nameToUse = (newName || nameFromForm || '').trim();
+        const nameFromForm = formData.get('newLocName') as string;
+        const nameToUse = (newName || nameFromForm || '').trim().toUpperCase();
         
         console.log('Name from state:', newName);
         console.log('Name from form backup:', nameFromForm);
@@ -283,7 +283,7 @@ const LocationManagement: React.FC = () => {
         // Capturar o valor diretamente do formulário como backup do estado
         const formData = new FormData(e.currentTarget as HTMLFormElement);
         const nameFromForm = formData.get('newEventTypeName') as string;
-        const nameToUse = (newEventTypeName || nameFromForm || '').trim();
+        const nameToUse = (newEventTypeName || nameFromForm || '').trim().toUpperCase();
         
         console.log('Event Type from state:', newEventTypeName);
         console.log('Event Type from form backup:', nameFromForm);
@@ -467,7 +467,7 @@ const LocationManagement: React.FC = () => {
         if (!editName.trim()) return;
         try {
             await pb.collection('agenda_cap53_locais').update(id, {
-                name: editName.trim()
+                name: editName.trim().toUpperCase()
             });
             setEditingId(null);
             setEditName('');
@@ -553,10 +553,11 @@ const LocationManagement: React.FC = () => {
                                 name="newLocationName"
                                 value={newName}
                                 onChange={(e) => {
-                                    console.log('newName onChange:', e.target.value);
-                                    setNewName(e.target.value);
+                                    console.log('newName onChange:', e.target.value.toUpperCase());
+                                    setNewName(e.target.value.toUpperCase());
                                 }}
-                                className="w-full rounded-2xl border border-border-light h-12 px-5 focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none bg-gray-50/50 transition-all font-medium text-sm"
+                                onBlur={(e) => setNewName(e.target.value.trim().toUpperCase())}
+                                className="w-full rounded-2xl border border-border-light h-12 px-5 focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none bg-gray-50/50 transition-all font-medium text-sm uppercase"
                                 placeholder="ex: Sala de Reuniões 01"
                             />
                         </div>
@@ -667,8 +668,9 @@ const LocationManagement: React.FC = () => {
                                                     <input
                                                         type="text"
                                                         value={editName}
-                                                        onChange={(e) => setEditName(e.target.value)}
-                                                        className="w-full max-w-[250px] rounded-xl border-2 border-primary/30 px-4 py-2 text-sm focus:border-primary outline-none font-bold"
+                                                        onChange={(e) => setEditName(e.target.value.toUpperCase())}
+                                                        onBlur={(e) => setEditName(e.target.value.trim().toUpperCase())}
+                                                        className="w-full max-w-[250px] rounded-xl border-2 border-primary/30 px-4 py-2 text-sm focus:border-primary outline-none font-bold uppercase"
                                                         autoFocus
                                                     />
                                                     <button 

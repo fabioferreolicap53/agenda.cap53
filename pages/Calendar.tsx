@@ -59,6 +59,7 @@ interface CalendarEvent extends EventsResponse<CalendarExpand> {
   transporte_justification?: string;
   cancel_reason?: string;
   is_restricted?: boolean;
+  is_private?: boolean;
   almac_requests?: AlmacRequestsResponse<{
     item: ItensServicoResponse;
   }>[];
@@ -115,24 +116,40 @@ const Calendar: React.FC = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const savedPersist = localStorage.getItem(getStorageKey('calendar_persist_filters')) === 'true';
-    setPersistFilters(savedPersist);
+    const loadFilters = async () => {
+      try {
+        const userData = await pb.collection(Collections.AgendaCap53Usuarios).getOne(user.id);
+        const filters = userData.calendar_filters;
 
-    if (savedPersist) {
-        try {
-            const savedUser = localStorage.getItem(getStorageKey('calendar_filter_user'));
-            if (savedUser) setFilterUser(JSON.parse(savedUser));
-            
-            const savedRoles = localStorage.getItem(getStorageKey('calendar_filter_roles'));
-            if (savedRoles) setFilterRoles(JSON.parse(savedRoles));
+        if (filters && filters.persist) {
+          setPersistFilters(true);
+          if (filters.user) setFilterUser(filters.user);
+          if (filters.roles) setFilterRoles(filters.roles);
+          if (filters.sectors) setFilterSectors(filters.sectors);
+        } else {
+          // Fallback local
+          const savedPersist = localStorage.getItem(getStorageKey('calendar_persist_filters')) === 'true';
+          setPersistFilters(savedPersist);
 
-            const savedSectors = localStorage.getItem(getStorageKey('calendar_filter_sectors'));
-            if (savedSectors) setFilterSectors(JSON.parse(savedSectors));
-        } catch (e) {
-            console.error('Error loading saved filters', e);
+          if (savedPersist) {
+              const savedUser = localStorage.getItem(getStorageKey('calendar_filter_user'));
+              if (savedUser) setFilterUser(JSON.parse(savedUser));
+              
+              const savedRoles = localStorage.getItem(getStorageKey('calendar_filter_roles'));
+              if (savedRoles) setFilterRoles(JSON.parse(savedRoles));
+
+              const savedSectors = localStorage.getItem(getStorageKey('calendar_filter_sectors'));
+              if (savedSectors) setFilterSectors(JSON.parse(savedSectors));
+          }
         }
-    }
-    setIsFiltersLoaded(true);
+      } catch (e) {
+        console.error('Error loading saved filters', e);
+      } finally {
+        setIsFiltersLoaded(true);
+      }
+    };
+    
+    loadFilters();
   }, [user?.id]);
 
   // Load users
@@ -168,6 +185,20 @@ const Calendar: React.FC = () => {
           localStorage.removeItem(keys.roles);
           localStorage.removeItem(keys.sectors);
       }
+
+      // Salvar no backend (debounce para não floodar o servidor)
+      const timeoutId = setTimeout(() => {
+        pb.collection(Collections.AgendaCap53Usuarios).update(user.id, {
+          calendar_filters: persistFilters ? {
+            persist: true,
+            user: filterUser,
+            roles: filterRoles,
+            sectors: filterSectors
+          } : null
+        }).catch(err => console.error('Erro ao salvar preferências no servidor:', err));
+      }, 1500);
+
+      return () => clearTimeout(timeoutId);
   }, [filterUser, filterRoles, filterSectors, persistFilters, user?.id, isFiltersLoaded]);
 
   const userOptions = useMemo(() => {
@@ -194,6 +225,19 @@ const Calendar: React.FC = () => {
 
   const filteredEvents = useMemo(() => {
     let result = events;
+
+    // Filter Private Events
+    // Only Creator, Participants, or Special Roles can see Private Events
+    result = result.filter(e => {
+        if (!e.is_private) return true;
+        if (!user) return false;
+        
+        const isCreator = e.user === user.id;
+        const isParticipant = e.participants && e.participants.includes(user.id);
+        const isSpecialRole = ['ADMIN', 'ALMC', 'TRA', 'CE'].includes(user.role);
+        
+        return isCreator || isParticipant || isSpecialRole;
+    });
 
     // Text Search
     if (searchQuery) {
@@ -793,7 +837,7 @@ const Calendar: React.FC = () => {
       const res = await pb.collection('agenda_cap53_eventos').getFullList({
         filter,
         expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item,agenda_cap53_solicitacoes_evento(event)',
-        fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,event_responsibility,estimated_participants,expand',
+        fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,is_private,event_responsibility,estimated_participants,expand',
         requestKey: null
       });
 
@@ -990,9 +1034,14 @@ const Calendar: React.FC = () => {
                   {showBackButton && (
                     <button
                       onClick={() => navigate(-1)}
-                      className="size-[42px] flex items-center justify-center rounded-xl bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group"
+                      className="size-[42px] flex items-center justify-center rounded-xl bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group relative"
                     >
                       <span className="material-symbols-outlined text-[20px] font-light group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+                      
+                      {/* Tooltip harmonioso para o hover no desktop */}
+                      <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] shadow-sm">
+                        Voltar
+                      </span>
                     </button>
                   )}
 
@@ -1766,7 +1815,7 @@ const Calendar: React.FC = () => {
 
                         {/* Content Column */}
                         <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                          <h4 className={`text-sm font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
+                          <h4 className={`text-xs uppercase font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
                             {event.title}
                           </h4>
                           
@@ -2244,9 +2293,20 @@ const CalendarTooltip: React.FC<{
         {/* Header Section */}
         <div className="flex justify-between items-start gap-3">
           <div className="flex flex-col min-w-0">
-            <h4 className={`text-base font-black leading-tight ${isCancelled ? 'text-red-500 line-through decoration-2' : 'text-primary'}`}>
-              {event.title}
-            </h4>
+            <div className="flex items-center gap-1">
+              {event.is_private ? (
+                <div className="flex items-center justify-center size-5 rounded-full border text-amber-500 bg-amber-50 border-amber-200" title="Evento Particular (Invisível no calendário para os demais usuários)">
+                  <span className="material-symbols-outlined text-[12px] font-bold">visibility_off</span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center size-5 rounded-full border text-emerald-500 bg-emerald-50 border-emerald-200" title="Evento Público (Visível por todos os usuários)">
+                  <span className="material-symbols-outlined text-[12px] font-bold">visibility</span>
+                </div>
+              )}
+              <h4 className={`text-sm font-black leading-tight uppercase ${isCancelled ? 'text-red-500 line-through decoration-2' : 'text-primary'}`}>
+                {event.title}
+              </h4>
+            </div>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-[9px] font-bold uppercase tracking-wider text-text-secondary/60 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">
                 {event.type || 'Evento'}
@@ -2522,17 +2582,30 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-start justify-between gap-2">
-          {/* Responsabilidade - Visual indicador no card */}
-            {event.event_responsibility && (
-              <div className={`absolute top-2 right-2 flex items-center justify-center size-5 rounded-full border text-slate-400 group-hover:text-primary transition-colors ${isCancelled ? 'bg-white/50 border-red-100' : 'bg-slate-50 border-slate-100'}`} title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
-                <span className="material-symbols-outlined text-[12px]">
-                  {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
-                </span>
+          {/* Responsabilidade - Visual indicador no card (Absolute apenas para modo detalhado) */}
+            {detailed && (
+              <div className="absolute top-4 right-4 flex items-center gap-1">
+                {event.is_private ? (
+                  <div className="flex items-center justify-center size-6 rounded-full border text-amber-500 bg-amber-50 border-amber-200 shadow-sm" title="Evento Particular (Invisível no calendário para os demais usuários)">
+                    <span className="material-symbols-outlined text-[14px] font-bold">visibility_off</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center size-6 rounded-full border text-emerald-500 bg-emerald-50 border-emerald-200 shadow-sm" title="Evento Público (Visível por todos os usuários)">
+                    <span className="material-symbols-outlined text-[14px] font-bold">visibility</span>
+                  </div>
+                )}
+                {event.event_responsibility && (
+                  <div className={`flex items-center justify-center size-6 rounded-full border text-slate-400 shadow-sm transition-colors ${isCancelled ? 'bg-white/50 border-red-100' : 'bg-slate-50 border-slate-200'}`} title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
+                    <span className="material-symbols-outlined text-[14px]">
+                      {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
 
-            <div className="flex flex-col gap-1.5 min-w-0">
-             <p className={`font-bold leading-tight ${detailed ? 'text-lg' : 'text-xs truncate'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
+            <div className="flex flex-col gap-1.5 min-w-0 pr-2">
+             <p className={`font-bold leading-tight uppercase ${detailed ? 'text-base pr-14' : 'text-[11px] line-clamp-4'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
                {event.title}
              </p>
              {/* Mobile/Tablet Extra Details */}
@@ -2557,8 +2630,28 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
           </div>
 
           {!detailed && (
-             <div className="flex flex-col items-end gap-1">
-                 <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+             <div className="flex flex-col items-end gap-1.5 shrink-0 z-10">
+                 {/* Icons renderizados no fluxo para não sobrepor a hora */}
+                 <div className="flex items-center gap-1 mb-0.5">
+                   {event.is_private ? (
+                     <div className="flex items-center justify-center size-5 rounded-full border text-amber-500 bg-amber-50 border-amber-200" title="Evento Particular (Invisível no calendário para os demais usuários)">
+                       <span className="material-symbols-outlined text-[12px] font-bold">visibility_off</span>
+                     </div>
+                   ) : (
+                     <div className="flex items-center justify-center size-5 rounded-full border text-emerald-500 bg-emerald-50 border-emerald-200" title="Evento Público (Visível por todos os usuários)">
+                       <span className="material-symbols-outlined text-[12px] font-bold">visibility</span>
+                     </div>
+                   )}
+                   {event.event_responsibility && (
+                     <div className={`flex items-center justify-center size-5 rounded-full border text-slate-400 ${isCancelled ? 'bg-white/50 border-red-100' : 'bg-slate-50 border-slate-100'}`} title="Responsabilidade">
+                       <span className="material-symbols-outlined text-[12px]">
+                         {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
+                       </span>
+                     </div>
+                   )}
+                 </div>
+                 
+                 <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 shadow-sm">
                    {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                  </span>
                  {/* Participant Count Badge */}

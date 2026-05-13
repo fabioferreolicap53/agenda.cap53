@@ -90,8 +90,9 @@ export const UserCard: React.FC<UserCardProps> = ({
                                 <input
                                     type="text"
                                     value={editData.name || ''}
-                                    onChange={e => setEditData({...editData, name: e.target.value})}
-                                    className="w-full text-sm border-b border-primary/50 focus:border-primary outline-none bg-transparent py-1"
+                                    onChange={e => setEditData({...editData, name: e.target.value.toUpperCase()})}
+                                    onBlur={e => setEditData({...editData, name: e.target.value.trim().toUpperCase()})}
+                                    className="w-full text-sm border-b border-primary/50 focus:border-primary outline-none bg-transparent py-1 uppercase"
                                 />
                             </div>
                             <div>

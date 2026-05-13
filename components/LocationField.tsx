@@ -121,9 +121,10 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
           required={required}
           autoFocus
           value={value.freeText}
-          onChange={(e) => onChange({ ...value, mode: 'free', freeText: e.target.value })}
+          onChange={(e) => onChange({ ...value, mode: 'free', freeText: e.target.value.toUpperCase() })}
+          onBlur={(e) => onChange({ ...value, mode: 'free', freeText: e.target.value.trim().toUpperCase() })}
           placeholder="Digite o local ou endereço externo..."
-          className="w-full h-14 px-6 rounded-2xl bg-white border border-slate-300 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-800 transition-all duration-300 pr-28 placeholder:text-slate-400"
+          className="w-full h-14 px-6 rounded-2xl bg-white border border-slate-300 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-800 transition-all duration-300 pr-28 placeholder:text-slate-400 uppercase"
         />
         <button
           type="button"

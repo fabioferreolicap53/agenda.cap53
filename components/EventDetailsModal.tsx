@@ -875,6 +875,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                 <div className="flex justify-between items-start gap-3">
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 md:gap-2 mb-1 md:mb-2 flex-wrap">
+                            {(event as any).is_private ? (
+                              <div className="flex items-center justify-center size-5 rounded-full border text-amber-500 bg-amber-50 border-amber-200" title="Evento Particular (Invisível no calendário para os demais usuários)">
+                                <span className="material-symbols-outlined text-[12px] font-bold">visibility_off</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center size-5 rounded-full border text-emerald-500 bg-emerald-50 border-emerald-200" title="Evento Público (Visível por todos os usuários)">
+                                <span className="material-symbols-outlined text-[12px] font-bold">visibility</span>
+                              </div>
+                            )}
                             <span className="px-1.5 md:px-2 py-0.5 rounded-full bg-slate-50 border border-slate-100 text-[8px] md:text-[10px] font-bold uppercase tracking-wider text-slate-500">
                                 {event.expand?.type?.name || (event as any).nature || event.type || 'Evento'}
                             </span>
@@ -884,9 +893,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 </span>
                             )}
                         </div>
-                        <h2 className={`text-base md:text-3xl font-bold leading-tight tracking-tight line-clamp-2 ${isCancelled ? 'text-red-500/80 line-through decoration-2' : 'text-slate-900'}`}>{event.title}</h2>
+                        <h2 className={`text-base md:text-2xl lg:text-3xl font-bold leading-tight tracking-tight uppercase break-words ${isCancelled ? 'text-red-500/80 line-through decoration-2' : 'text-slate-900'}`}>{event.title}</h2>
                     </div>
-                    <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-2 shrink-0 self-start">
                         {!isCancelled && (
                             event.user === user?.id || 
                             participantStatus[user?.id] === 'accepted' || 
@@ -1827,7 +1836,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         {/* Print Header */}
                         <div className="border-b-2 border-slate-800 pb-2 mb-2 flex justify-between items-end">
                         <div>
-                            <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-tight">{event.title}</h1>
+                            <div className="flex items-center gap-1.5">
+                                {event.is_restricted && (
+                                  <span className="material-symbols-outlined text-[16px] text-amber-600 font-bold mb-1">lock</span>
+                                )}
+                                <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-tight">{event.title}</h1>
+                            </div>
                             <div className="flex items-center gap-2 mt-1">
                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isCancelled ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                     {isCancelled ? 'Cancelado' : 'Ativo'}
