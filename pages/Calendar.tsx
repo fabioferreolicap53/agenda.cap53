@@ -119,7 +119,15 @@ const Calendar: React.FC = () => {
     const loadFilters = async () => {
       try {
         const userData = await pb.collection(Collections.AgendaCap53Usuarios).getOne(user.id);
-        const filters = userData.calendar_filters;
+        let filters = userData.calendar_filters;
+        
+        if (typeof filters === 'string') {
+          try {
+            filters = JSON.parse(filters);
+          } catch(e) {
+            console.error('Erro ao parsear calendar_filters do BD', e);
+          }
+        }
 
         if (filters && filters.persist) {
           setPersistFilters(true);
@@ -188,13 +196,15 @@ const Calendar: React.FC = () => {
 
       // Salvar no backend (debounce para não floodar o servidor)
       const timeoutId = setTimeout(() => {
+        const filtersToSave = persistFilters ? {
+          persist: true,
+          user: filterUser,
+          roles: filterRoles,
+          sectors: filterSectors
+        } : null;
+        
         pb.collection(Collections.AgendaCap53Usuarios).update(user.id, {
-          calendar_filters: persistFilters ? {
-            persist: true,
-            user: filterUser,
-            roles: filterRoles,
-            sectors: filterSectors
-          } : null
+          calendar_filters: filtersToSave ? JSON.stringify(filtersToSave) : null
         }).catch(err => console.error('Erro ao salvar preferências no servidor:', err));
       }, 1500);
 
