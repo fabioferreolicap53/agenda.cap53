@@ -70,16 +70,22 @@ const LocationManagement: React.FC = () => {
     }, [locations, searchTerm]);
 
     const orderedEventTypes = useMemo(() => {
-        const eventTypesByName = new Map(
-            eventTypes.map(type => [String(type.name || '').trim().toLowerCase(), type])
-        );
-        return EVENT_TYPES_ORDER
-            .map(label => {
-                const normalized = label.trim().toLowerCase();
-                const type = eventTypesByName.get(normalized);
-                return type ? { type, label } : null;
-            })
-            .filter((item): item is { type: (typeof eventTypes)[number]; label: string } => Boolean(item));
+        const types = [...eventTypes];
+        
+        // Ordenar: tipos no EVENT_TYPES_ORDER primeiro, depois o resto alfabeticamente
+        return types.sort((a, b) => {
+            const nameA = String(a.name || '').trim().toUpperCase();
+            const nameB = String(b.name || '').trim().toUpperCase();
+            
+            const indexA = EVENT_TYPES_ORDER.indexOf(nameA);
+            const indexB = EVENT_TYPES_ORDER.indexOf(nameB);
+            
+            if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+            if (indexA !== -1) return -1;
+            if (indexB !== -1) return 1;
+            
+            return nameA.localeCompare(nameB);
+        }).map(type => ({ type, label: type.name }));
     }, [eventTypes]);
 
     // Inscrever para atualizações em tempo real
@@ -296,15 +302,18 @@ const LocationManagement: React.FC = () => {
         }
         setAddingType(true);
         try {
-            console.log('Attempting to create event type...');
+            console.log('Attempting to create event type:', nameToUse);
+            // Usando requestKey: null para evitar cancelamento por outras requisições concorrentes
             const result = await pb.collection('agenda_cap53_tipos_evento').create({
                 name: nameToUse,
                 active: true
-            });
+            }, { requestKey: null });
+            
             console.log('Event type created successfully:', result);
             setNewEventTypeName('');
-            // Forçar atualização da lista se o real-time falhar
-            fetchEventTypes();
+            
+            // Pequeno delay para garantir que o BD processou antes do fetch
+            setTimeout(() => fetchEventTypes(), 500);
         } catch (error: any) {
             console.error('Error adding event type:', error);
             // Se o erro for 404, pode ser o nome da coleção errado
@@ -345,10 +354,11 @@ const LocationManagement: React.FC = () => {
         if (!editTypeName.trim()) return;
         try {
             await pb.collection('agenda_cap53_tipos_evento').update(id, {
-                name: editTypeName.trim()
-            });
+                name: editTypeName.trim().toUpperCase()
+            }, { requestKey: null });
             setEditingTypeId(null);
             setEditTypeName('');
+            setTimeout(() => fetchEventTypes(), 500);
         } catch (error) {
             console.error('Error updating event type name:', error);
         }
