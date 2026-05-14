@@ -2027,7 +2027,7 @@ const Calendar: React.FC = () => {
                                             event={event}
                                             user={user}
                                             onCancel={handleCancelEvent}
-                                            detailed={!isMobileOrTablet}
+                                            forceShowDetails={!isMobileOrTablet}
                                             setTooltipData={setTooltipData}
                                             onSelect={setSelectedEvent}
                                         />
@@ -2453,10 +2453,11 @@ interface CalendarEventCardProps {
   onCancel: (id: string, title: string, participants: string[]) => void;
   setTooltipData: (data: { event: CalendarEvent, x: number, y: number, height: number } | null) => void;
   detailed?: boolean;
+  forceShowDetails?: boolean;
   onSelect: (event: CalendarEvent) => void;
 }
 
-const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, onSelect }) => {
+const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, forceShowDetails, onSelect }) => {
   const isCancelled = event.status === 'canceled';
   const isPast = event.date_end ? new Date(event.date_end) < new Date() : false;
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -2621,7 +2622,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
              </p>
              {/* Mobile/Tablet Extra Details */}
              {!detailed && (
-               <div className="flex md:hidden flex-wrap items-center gap-1.5 mt-1">
+               <div className={`flex flex-wrap items-center gap-1.5 mt-1 ${forceShowDetails ? '' : 'md:hidden'}`}>
                   {involvement && (
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${involvement.color}`}>
                           {involvement.label}
@@ -2665,8 +2666,14 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                    )}
                  </div>
                  
-                 <span className="text-[10px] font-bold text-slate-500 whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 shadow-sm">
+                 <span className={`text-[10px] font-bold text-slate-500 whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 shadow-sm flex items-center gap-1 ${forceShowDetails ? 'px-2 py-1' : ''}`}>
                    {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                   {forceShowDetails && event.date_end && (
+                     <>
+                       <span className="text-[10px] text-slate-300 font-light mx-0.5">—</span>
+                       <span>{new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                     </>
+                   )}
                  </span>
                  {/* Participant Count Badge */}
                  <div className="flex md:hidden items-center gap-0.5 text-[9px] font-bold text-slate-400">
