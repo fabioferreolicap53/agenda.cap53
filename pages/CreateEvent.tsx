@@ -1407,15 +1407,15 @@ const CreateEvent: React.FC = () => {
       alert('Você precisa estar logado para realizar esta ação.');
       return; 
     }
-    if (!dateStart || !dateEnd) {
+    if (!dateStart || (!noEndPreview && !dateEnd)) {
       alert('Por favor, selecione os horários de início e término.');
       return;
     }
-    if (new Date(dateStart) >= new Date(dateEnd)) {
+    if (!noEndPreview && new Date(dateStart) >= new Date(dateEnd)) {
       alert('A data de início não pode ser posterior ou igual à data de término.');
       return;
     }
-    if (isDurationInvalid) {
+    if (!noEndPreview && isDurationInvalid) {
       console.log('Falha na validação: Duração muito longa');
       alert('A duração do evento não pode exceder 23 horas e 59 minutos.');
       return;
@@ -1465,15 +1465,15 @@ const CreateEvent: React.FC = () => {
       };
 
       const startFilter = toPBDate(dateStart);
-      const endFilter = toPBDate(dateEnd);
+      const endFilter = noEndPreview ? null : toPBDate(dateEnd);
 
-      if (!startFilter || !endFilter) {
+      if (!startFilter || (!noEndPreview && !endFilter)) {
         throw new Error("Datas inválidas para o filtro de conflitos.");
       }
 
       // Location Conflict Check
       const selectedLoc = locations.find(l => l.id === locationState.fixedId);
-      if (locationState.mode === 'fixed' && selectedLoc && normalizeBoolean(selectedLoc.conflict_control)) {
+      if (!noEndPreview && locationState.mode === 'fixed' && selectedLoc && normalizeBoolean(selectedLoc.conflict_control)) {
         let filter = `location = "${locationState.fixedId}" && status != "canceled" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
         if (isEditing && editingEventId) {
            filter += ` && id != "${editingEventId}"`;
@@ -1511,7 +1511,7 @@ const CreateEvent: React.FC = () => {
       }
 
       // Professional Category Conflict Check
-      if (selectedCategorias.length > 0 && selectedUnidades.length > 0) {
+      if (!noEndPreview && selectedCategorias.length > 0 && selectedUnidades.length > 0) {
         // Build filter parts carefully
         const categoryParts = selectedCategorias.map(cat => `categorias_profissionais ~ "${cat.replace(/"/g, '\\"')}"`);
         const unitParts = selectedUnidades.map(unit => `unidades ~ "${unit.replace(/"/g, '\\"')}"`);
