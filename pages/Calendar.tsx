@@ -369,9 +369,9 @@ const Calendar: React.FC = () => {
      if (view === 'month' || view === 'week' || view === 'day' || view === 'agenda') {
        return view;
      }
-     // Mobile/Tablet default view: Day (DIA)
+     // Mobile/Tablet default view: Agenda (AGE)
      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-         return 'day';
+         return 'agenda';
      }
      return 'month';
     });
@@ -414,7 +414,7 @@ const Calendar: React.FC = () => {
     // Enforce initial view if no view parameter is present
     useEffect(() => {
         if (!viewParam) {
-            const defaultView = isMobileOrTablet ? 'day' : 'month';
+            const defaultView = isMobileOrTablet ? 'agenda' : 'month';
             if (viewType !== defaultView) {
               setViewType(defaultView);
             }
@@ -424,7 +424,7 @@ const Calendar: React.FC = () => {
 
     // Check if we are on the initial default view
     const isInitialView = useMemo(() => {
-        const defaultView = isMobileOrTablet ? 'day' : 'month';
+        const defaultView = isMobileOrTablet ? 'agenda' : 'month';
         return viewType === defaultView;
     }, [viewType, isMobileOrTablet]);
 
@@ -1184,12 +1184,15 @@ const Calendar: React.FC = () => {
                     <button
                       key={view}
                       onClick={() => updateURL(view, currentDate)}
-                      className={`h-full flex-1 px-4 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 whitespace-nowrap ${
+                      className={`h-full flex-1 px-4 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-500 whitespace-nowrap flex items-center justify-center gap-1.5 ${
                         viewType === view 
-                          ? 'bg-white text-primary shadow-sm ring-1 ring-black/5' 
-                          : 'text-slate-400 hover:text-slate-600'
+                          ? 'bg-white text-primary shadow-[0_2px_10px_-3px_rgba(var(--color-primary-rgb),0.3)] ring-1 ring-primary/10 scale-[1.02] z-10' 
+                          : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
                       }`}
                     >
+                      <span className={`material-symbols-outlined text-[16px] transition-transform duration-500 ${viewType === view ? 'scale-110' : 'opacity-50'}`}>
+                        {view === 'day' ? 'calendar_view_day' : view === 'week' ? 'calendar_view_week' : view === 'month' ? 'calendar_view_month' : 'view_agenda'}
+                      </span>
                       {view === 'day' ? 'Dia' : view === 'week' ? 'Sem' : view === 'month' ? 'Mês' : 'Age'}
                     </button>
                   ))}
@@ -1828,6 +1831,12 @@ const Calendar: React.FC = () => {
                                 </span>
                               </div>
                             )}
+                            <div className="flex items-center gap-1 min-w-0">
+                                <span className="material-symbols-outlined text-[14px] text-slate-400 flex-shrink-0">person</span>
+                                <span className="truncate leading-relaxed">
+                                  {event.expand?.user?.name || 'Desconhecido'}
+                                </span>
+                            </div>
                           </div>
 
                           {/* Status Badges Row */}
@@ -2016,7 +2025,7 @@ const Calendar: React.FC = () => {
                                             event={event}
                                             user={user}
                                             onCancel={handleCancelEvent}
-                                            detailed
+                                            detailed={!isMobileOrTablet}
                                             setTooltipData={setTooltipData}
                                             onSelect={setSelectedEvent}
                                         />
@@ -2616,14 +2625,17 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                           {involvement.label}
                       </span>
                   )}
-                  {isCancelled && (
-                    <span className="text-[9px] font-black text-white bg-red-400 px-1.5 py-0.5 rounded border border-red-500 uppercase tracking-wide">
-                        CANCELADO
+                  {(event.expand?.location?.name || event.custom_location) && (
+                    <span className="text-[9px] font-bold text-slate-500 flex items-center gap-1 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                        <span className="material-symbols-outlined text-[12px] text-primary/60">location_on</span>
+                        <span className="truncate max-w-[120px]">
+                          {event.expand?.location?.name || event.custom_location}
+                        </span>
                     </span>
                   )}
                   <span className="text-[9px] font-medium text-slate-500 flex items-center gap-1">
                       <span className="material-symbols-outlined text-[10px]">person</span>
-                      {creatorName.split(' ')[0]}
+                      {creatorName}
                   </span>
                </div>
              )}
