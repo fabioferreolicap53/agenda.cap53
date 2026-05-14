@@ -1934,7 +1934,7 @@ const CreateEvent: React.FC = () => {
                     </div>
                     <div className="flex-1 flex flex-col justify-center min-w-0">
                       <label className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.1em] truncate mb-0.5">Qtd. Estimada de Presentes</label>
-                      {responsibility === 'NAO_SE_APLICA' && (
+                      {(responsibility === 'NAO_SE_APLICA' || responsibility === 'EXTERNO_COMPROMISSO') && (
                         <p className="text-[9px] font-bold text-amber-600 mb-1 leading-tight flex items-center gap-1">
                           <span className="material-symbols-outlined text-[12px]">info</span>
                           Não se aplica a este tipo
