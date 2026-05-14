@@ -1179,21 +1179,23 @@ const Calendar: React.FC = () => {
               </div>
 
               {/* View Type Group */}
-              <div className="h-[42px] flex bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0 w-full xl:w-auto overflow-x-auto no-scrollbar">
+              <div className="h-[42px] flex bg-slate-50 p-1 rounded-xl border border-slate-200 shrink-0 w-full xl:w-auto overflow-hidden">
                   {(['day', 'week', 'month', 'agenda'] as const).map((view) => (
                     <button
                       key={view}
                       onClick={() => updateURL(view, currentDate)}
-                      className={`h-full flex-1 px-4 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all duration-500 whitespace-nowrap flex items-center justify-center gap-1.5 ${
+                      className={`h-full flex-1 px-2 sm:px-4 md:px-5 text-[8px] sm:text-[9px] font-black uppercase tracking-normal sm:tracking-[0.2em] rounded-lg transition-all duration-500 whitespace-nowrap flex items-center justify-center gap-1 sm:gap-2 group relative ${
                         viewType === view 
-                          ? 'bg-white text-primary shadow-[0_2px_10px_-3px_rgba(var(--color-primary-rgb),0.3)] ring-1 ring-primary/10 scale-[1.02] z-10' 
-                          : 'text-slate-400 hover:text-slate-600 hover:bg-white/50'
+                          ? 'bg-[#1e293b] text-white shadow-[0_10px_20px_-10px_rgba(30,41,59,0.5)] z-10 scale-[1.02]' 
+                          : 'text-slate-400 hover:text-primary hover:bg-white/80'
                       }`}
                     >
-                      <span className={`material-symbols-outlined text-[16px] transition-transform duration-500 ${viewType === view ? 'scale-110' : 'opacity-50'}`}>
+                      <span className={`material-symbols-outlined text-[16px] sm:text-[18px] transition-all duration-500 ${viewType === view ? 'text-white scale-110 rotate-[360deg]' : 'text-slate-300 group-hover:text-primary group-hover:rotate-12'}`}>
                         {view === 'day' ? 'calendar_view_day' : view === 'week' ? 'calendar_view_week' : view === 'month' ? 'calendar_view_month' : 'view_agenda'}
                       </span>
-                      {view === 'day' ? 'Dia' : view === 'week' ? 'Sem' : view === 'month' ? 'Mês' : 'Age'}
+                      <span className="relative">
+                        {view === 'day' ? 'Dia' : view === 'week' ? 'Sem' : view === 'month' ? 'Mês' : 'Age'}
+                      </span>
                     </button>
                   ))}
               </div>
