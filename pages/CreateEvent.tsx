@@ -318,7 +318,8 @@ const CreateEvent: React.FC = () => {
     setLoading(true);
     try {
       const startISO = dateStart.includes('Z') ? dateStart : new Date(dateStart).toISOString();
-      const endISO = noEndPreview ? null : (dateEnd.includes('Z') ? dateEnd : new Date(dateEnd).toISOString());
+      // Se sem previsão, enviamos a mesma data de início para evitar erro de campo obrigatório no PB
+      const endISO = noEndPreview ? startISO : (dateEnd.includes('Z') ? dateEnd : new Date(dateEnd).toISOString());
 
       // Initialize participants_status and participants_roles
       const participantsStatus: Record<string, string> = {};
@@ -328,6 +329,7 @@ const CreateEvent: React.FC = () => {
       // but in this app, creator is separate from participants list usually.
       // However, if the user chose an involvementLevel, we should respect that for the creator's role record.
       const creatorRoleToUse = involvementLevel || 'PARTICIPANTE';
+      console.log('Creator role to use:', creatorRoleToUse);
 
       selectedParticipants.forEach(pId => {
           if (!participantsRoles[pId]) {
@@ -401,7 +403,7 @@ const CreateEvent: React.FC = () => {
         categorias_profissionais: selectedCategorias,
         is_restricted: isRestricted,
         is_private: isPrivate,
-        estimated_participants: responsibility === 'EXTERNO_COMPROMISSO' ? null : (estimatedParticipants ? parseInt(estimatedParticipants) : null),
+        estimated_participants: (responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA') ? 0 : (estimatedParticipants ? parseInt(estimatedParticipants) : 0),
         transporte_status: transporteSuporte ? (existingTransporteStatus || 'pending') : null,
         participants_status: participantsStatus,
         participants_roles: participantsRoles,
@@ -985,8 +987,8 @@ const CreateEvent: React.FC = () => {
           }
           
           // Copiar Restrição
-          setIsRestricted(!!event.is_restricted);
-          setIsPrivate(!!event.is_private);
+          setIsRestricted(!!(event as any).is_restricted);
+          setIsPrivate(!!(event as any).is_private);
           
           // Copiar Quantidade de Participantes
           setEstimatedParticipants(event.estimated_participants ? String(event.estimated_participants) : '');
@@ -1048,7 +1050,7 @@ const CreateEvent: React.FC = () => {
           start.setHours(startHour, 0, 0, 0);
           setDateStart(start.toISOString());
           
-          if (!event.date_end) {
+          if (!event.date_end || event.date_end === event.date_start) {
             setNoEndPreview(true);
             setDateEnd('');
           } else {
@@ -1107,7 +1109,7 @@ const CreateEvent: React.FC = () => {
           };
           
           setDateStart(formatDate(event.date_start || ''));
-          if (!event.date_end) {
+          if (!event.date_end || event.date_end === event.date_start) {
             setNoEndPreview(true);
             setDateEnd('');
           } else {
@@ -1129,8 +1131,8 @@ const CreateEvent: React.FC = () => {
           setTransportePassageiros(event.transporte_passageiro ? String(event.transporte_passageiro) : '');
           setTransporteObs(event.transporte_obs || '');
           setOriginalTransporteSuporte(!!event.transporte_suporte);
-          setIsRestricted(!!event.is_restricted);
-          setIsPrivate(!!event.is_private);
+          setIsRestricted(!!(event as any).is_restricted);
+          setIsPrivate(!!(event as any).is_private);
           setEstimatedParticipants(event.estimated_participants ? String(event.estimated_participants) : '');
           
           // Fetch items
@@ -1441,8 +1443,9 @@ const CreateEvent: React.FC = () => {
     }
 
     // Check for unavailable items
-    const selectedItemIds = [...almoxarifadoItems, ...copaItems, ...informaticaItems];
-    const unavailableSelectedItems = availableItems.filter(i => selectedItemIds.includes(i.id) && i.is_available === false);
+    const selectedItemIdsList = [...almoxarifadoItems, ...copaItems, ...informaticaItems];
+    console.log('Confirmed items list:', confirmedItems);
+    const unavailableSelectedItems = availableItems.filter(i => selectedItemIdsList.includes(i.id) && i.is_available === false);
     
     if (unavailableSelectedItems.length > 0) {
       console.log('Falha na validação: Itens indisponíveis selecionados');
@@ -1590,7 +1593,7 @@ const CreateEvent: React.FC = () => {
     });
   };
 
-  const toggleResourceItem = (array: string[], setArray: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+  const toggleResourceItem = (_array: string[], setArray: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
     setArray(prev => {
       if (prev.includes(item)) {
         // Remove item and its quantity
@@ -1809,7 +1812,6 @@ const CreateEvent: React.FC = () => {
                     value={noEndPreview ? '' : dateEnd}
                     tabIndex={-1}
                     onChange={setDateEnd}
-                    disabled={noEndPreview}
                   />
                   {noEndPreview && (
                     <div className="absolute inset-0 top-[28px] bg-slate-50/50 backdrop-blur-[1px] rounded-lg border border-slate-200 flex items-center justify-center pointer-events-none z-10">

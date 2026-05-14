@@ -37,7 +37,7 @@ interface CalendarExpand {
 type CalendarFiltersPreference = {
   persist: boolean;
   user: string[];
-  roles: string[];
+  types: string[];
   sectors: string[];
 };
 
@@ -68,7 +68,7 @@ const parseCalendarFilters = (value: unknown): CalendarFiltersPreference | null 
   return {
     persist: true,
     user: getValidFilterArray(filters.user),
-    roles: getValidFilterArray(filters.roles),
+    types: getValidFilterArray(filters.types || filters.roles),
     sectors: getValidFilterArray(filters.sectors),
   };
 };
@@ -138,13 +138,13 @@ const Calendar: React.FC = () => {
 
     try {
       const savedUser = localStorage.getItem(getStorageKey('calendar_filter_user'));
-      const savedRoles = localStorage.getItem(getStorageKey('calendar_filter_roles'));
+      const savedTypes = localStorage.getItem(getStorageKey('calendar_filter_types')) || localStorage.getItem(getStorageKey('calendar_filter_roles'));
       const savedSectors = localStorage.getItem(getStorageKey('calendar_filter_sectors'));
 
       return {
         persist: true,
         user: getValidFilterArray(savedUser ? JSON.parse(savedUser) : null),
-        roles: getValidFilterArray(savedRoles ? JSON.parse(savedRoles) : null),
+        types: getValidFilterArray(savedTypes ? JSON.parse(savedTypes) : null),
         sectors: getValidFilterArray(savedSectors ? JSON.parse(savedSectors) : null),
       };
     } catch (e) {
@@ -154,8 +154,9 @@ const Calendar: React.FC = () => {
   };
 
   const [filterUser, setFilterUser] = useState<string[]>(['Todos']);
-  const [filterRoles, setFilterRoles] = useState<string[]>(['Todos']);
+  const [filterTypes, setFilterTypes] = useState<string[]>(['Todos']);
   const [filterSectors, setFilterSectors] = useState<string[]>(['Todos']);
+  const [eventTypes, setEventTypes] = useState<TiposEventoResponse[]>([]);
   const [persistFilters, setPersistFilters] = useState(true);
   const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
 
@@ -167,10 +168,10 @@ const Calendar: React.FC = () => {
   const activeFiltersCount = useMemo(() => {
     let count = 0;
     if (!filterUser.includes('Todos')) count++;
-    if (!filterRoles.includes('Todos')) count++;
+    if (!filterTypes.includes('Todos')) count++;
     if (!filterSectors.includes('Todos')) count++;
     return count;
-  }, [filterUser, filterRoles, filterSectors]);
+  }, [filterUser, filterTypes, filterSectors]);
 
   // Initialize filters when user is available
   useEffect(() => {
@@ -184,7 +185,7 @@ const Calendar: React.FC = () => {
         if (serverFilters) {
           setPersistFilters(true);
           setFilterUser(serverFilters.user);
-          setFilterRoles(serverFilters.roles);
+          setFilterTypes(serverFilters.types);
           setFilterSectors(serverFilters.sectors);
         } else {
           const localFilters = getLocalSavedFilters();
@@ -192,7 +193,7 @@ const Calendar: React.FC = () => {
           if (localFilters) {
             setPersistFilters(true);
             setFilterUser(localFilters.user);
-            setFilterRoles(localFilters.roles);
+            setFilterTypes(localFilters.types);
             setFilterSectors(localFilters.sectors);
 
             // Migra preferências antigas salvas apenas no dispositivo para o backend.
@@ -204,20 +205,20 @@ const Calendar: React.FC = () => {
           } else {
             setPersistFilters(false);
             setFilterUser(['Todos']);
-            setFilterRoles(['Todos']);
-            setFilterSectors(['Todos']);
-          }
+          setFilterTypes(['Todos']);
+          setFilterSectors(['Todos']);
         }
-      } catch (e) {
-        console.error('Error loading saved filters', e);
-        const localFilters = getLocalSavedFilters();
-        if (localFilters) {
-          setPersistFilters(true);
-          setFilterUser(localFilters.user);
-          setFilterRoles(localFilters.roles);
-          setFilterSectors(localFilters.sectors);
-        }
-      } finally {
+      }
+    } catch (e) {
+      console.error('Error loading saved filters', e);
+      const localFilters = getLocalSavedFilters();
+      if (localFilters) {
+        setPersistFilters(true);
+        setFilterUser(localFilters.user);
+        setFilterTypes(localFilters.types);
+        setFilterSectors(localFilters.sectors);
+      }
+    } finally {
         setIsFiltersLoaded(true);
       }
     };
@@ -225,14 +226,23 @@ const Calendar: React.FC = () => {
     loadFilters();
   }, [user?.id]);
 
-  // Load users
+  // Load users and event types
    useEffect(() => {
+       // Fetch users
        pb.collection(Collections.AgendaCap53Usuarios).getFullList({ 
            sort: 'name', 
            fields: 'id,name,sector',
            filter: 'hidden != true'
        })
            .then((res) => setUsers(res as unknown as UsersResponse[]))
+           .catch(console.error);
+
+       // Fetch event types
+       pb.collection(Collections.AgendaCap53TiposEvento).getFullList({
+           sort: 'name',
+           filter: 'active = true'
+       })
+           .then((res) => setEventTypes(res as unknown as TiposEventoResponse[]))
            .catch(console.error);
    }, []);
 
@@ -243,26 +253,26 @@ const Calendar: React.FC = () => {
       const keys = {
           persist: getStorageKey('calendar_persist_filters'),
           user: getStorageKey('calendar_filter_user'),
-          roles: getStorageKey('calendar_filter_roles'),
+          types: getStorageKey('calendar_filter_types'),
           sectors: getStorageKey('calendar_filter_sectors')
       };
 
       if (persistFilters) {
           localStorage.setItem(keys.persist, 'true');
           localStorage.setItem(keys.user, JSON.stringify(filterUser));
-          localStorage.setItem(keys.roles, JSON.stringify(filterRoles));
+          localStorage.setItem(keys.types, JSON.stringify(filterTypes));
           localStorage.setItem(keys.sectors, JSON.stringify(filterSectors));
       } else {
           localStorage.removeItem(keys.persist);
           localStorage.removeItem(keys.user);
-          localStorage.removeItem(keys.roles);
+          localStorage.removeItem(keys.types);
           localStorage.removeItem(keys.sectors);
       }
 
       const filtersToSave: CalendarFiltersPreference | null = persistFilters ? {
         persist: true,
         user: getValidFilterArray(filterUser),
-        roles: getValidFilterArray(filterRoles),
+        types: getValidFilterArray(filterTypes),
         sectors: getValidFilterArray(filterSectors)
       } : null;
 
@@ -276,7 +286,7 @@ const Calendar: React.FC = () => {
       }, 400);
 
       return () => clearTimeout(timeoutId);
-  }, [filterUser, filterRoles, filterSectors, persistFilters, user?.id, isFiltersLoaded]);
+  }, [filterUser, filterTypes, filterSectors, persistFilters, user?.id, isFiltersLoaded]);
 
   const userOptions = useMemo(() => {
       const opts: { value: string; label: string }[] = [
@@ -289,11 +299,15 @@ const Calendar: React.FC = () => {
       return opts;
   }, [users, user]);
 
-  const roleOptions = [
-      { value: 'Todos', label: 'Todos os papéis' },
-      { value: 'CRIADOR', label: 'Criador' },
-      ...INVOLVEMENT_LEVELS.map(l => ({ value: l.value, label: l.label }))
-  ];
+  const typeOptions = useMemo(() => {
+      const opts = [
+          { value: 'Todos', label: 'Todos os tipos' }
+      ];
+      eventTypes.forEach(t => {
+          opts.push({ value: t.name, label: t.name });
+      });
+      return opts;
+  }, [eventTypes]);
 
   const sectorOptions = [
       { value: 'Todos', label: 'Todos os setores' },
@@ -339,81 +353,23 @@ const Calendar: React.FC = () => {
         });
     }
 
-    // User & Role Filter
-    if ((!filterUser.includes('Todos') && filterUser.length > 0) || (!filterRoles.includes('Todos') && filterRoles.length > 0)) {
+    // User Filter
+    if (!filterUser.includes('Todos') && filterUser.length > 0) {
         result = result.filter(e => {
-            // Case 1: Filter by specific users
-            if (!filterUser.includes('Todos') && filterUser.length > 0) {
-                // Resolve 'me' to actual ID
-                const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
-                
-                return targetUserIds.some(targetId => {
-                    const userRolesMap = e.participants_roles || {};
-                    const userRoles: string[] = [];
-                    
-                    // Check creator
-                    if (e.user === targetId) userRoles.push('CRIADOR');
-                    
-                    // Check explicit roles
-                    if (userRolesMap[targetId]) {
-                        userRoles.push(userRolesMap[targetId]);
-                    }
-                    
-                    // Check participant without explicit role
-                    if (e.participants && e.participants.includes(targetId)) {
-                        const explicitRole = userRolesMap[targetId];
-                        if (!explicitRole && e.user !== targetId) {
-                            userRoles.push('PARTICIPANTE');
-                        }
-                    }
-                    
-                    if (userRoles.length === 0) return false;
-                    
-                    if (filterRoles.includes('Todos') || filterRoles.length === 0) return true;
-                    
-                    return userRoles.some(r => filterRoles.includes(r));
-                });
-            }
-            
-            // Case 2: Filter by roles only (User is 'Todos')
-            if (filterRoles.length > 0 && !filterRoles.includes('Todos')) {
-                // Check if ANYONE in the event has one of the selected roles
-                // 1. Check Creator
-                if (filterRoles.includes('CRIADOR')) return true; // Creator always exists
-                
-                // 2. Check Participants Roles
-                if (e.participants_roles) {
-                    const rolesInEvent = Object.values(e.participants_roles);
-                    if (rolesInEvent.some((r: string) => filterRoles.includes(r))) return true;
-                }
-                
-                // 3. Check generic 'PARTICIPANTE'
-                if (filterRoles.includes('PARTICIPANTE')) {
-                    // If there are participants
-                    if (e.participants && e.participants.length > 0) {
-                        // And if we are looking for generic participants, we assume anyone in participants list 
-                        // who is NOT the creator effectively acts as a participant.
-                        // However, to be strict, we should check if they have a specific role assigned.
-                        // If logic above assigns 'PARTICIPANTE' when no explicit role, we replicate that check:
-                        const hasGenericParticipant = e.participants.some((pId: string) => {
-                            const rolesMap = e.participants_roles || {};
-                            const explicitRole = rolesMap[pId];
-                            return !explicitRole && pId !== e.user;
-                        });
-                        if (hasGenericParticipant) return true;
-                    }
-                }
-                
-                // If we are looking for specific roles like ORGANIZADOR and they weren't found in step 2
-                return false;
-            }
-            
-            return true;
+            const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
+            return targetUserIds.some(targetId => 
+                e.user === targetId || (e.participants && e.participants.includes(targetId))
+            );
         });
     }
 
+    // Type Filter
+    if (!filterTypes.includes('Todos') && filterTypes.length > 0) {
+        result = result.filter(e => filterTypes.includes(e.type || ''));
+    }
+
     return result;
-  }, [events, searchQuery, filterUser, filterRoles, filterSectors, user]);
+  }, [events, searchQuery, filterUser, filterTypes, filterSectors, user]);
 
   // Group events by date for efficient lookup
   const eventsByDate = useMemo(() => {
@@ -1318,17 +1274,17 @@ const Calendar: React.FC = () => {
                   </div>
                   <div className="flex flex-col gap-1.5">
                     <label className="flex items-center justify-center md:justify-start gap-2 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 md:ml-1">
-                      <span className="material-symbols-outlined text-[14px]">badge</span>
-                      Papéis
+                      <span className="material-symbols-outlined text-[14px]">category</span>
+                      Tipo & Natureza
                     </label>
                     <div className="h-[40px]">
                       <CustomSelect
-                          value={filterRoles}
-                          onChange={setFilterRoles}
-                          options={roleOptions}
+                          value={filterTypes}
+                          onChange={setFilterTypes}
+                          options={typeOptions}
                           multiSelect={true}
-                          placeholder="Todos os Papéis"
-                          startIcon="manage_accounts"
+                          placeholder="Todos os Tipos"
+                          startIcon="category"
                           className="w-full h-full"
                       />
                     </div>
@@ -1339,7 +1295,7 @@ const Calendar: React.FC = () => {
                   <button
                     onClick={() => {
                       setFilterUser(['Todos']);
-                      setFilterRoles(['Todos']);
+                      setFilterTypes(['Todos']);
                       setFilterSectors(['Todos']);
                     }}
                     className="h-[40px] px-4 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 hover:bg-red-50 border border-transparent hover:border-red-100 rounded-xl transition-all group"
@@ -1874,7 +1830,7 @@ const Calendar: React.FC = () => {
                           <span className={`text-sm font-black ${isPast ? 'text-slate-400' : 'text-primary'}`}>
                             {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
-                          {event.date_end && (
+                          {event.date_end && event.date_end !== event.date_start && (
                             <span className="text-[10px] font-medium text-text-secondary/60">
                               {new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -1888,6 +1844,12 @@ const Calendar: React.FC = () => {
                           </h4>
                           
                           <div className="flex items-start gap-2 text-xs text-slate-500 mt-0.5">
+                            {event.type && (
+                              <div className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
+                                <span className="material-symbols-outlined text-[12px] text-slate-500">category</span>
+                                <span className="text-[9px] font-bold uppercase tracking-wide">{event.type}</span>
+                              </div>
+                            )}
                             {(event.expand?.location?.name || event.custom_location) && (
                               <div className="flex items-start gap-1 min-w-0">
                                 <span className="material-symbols-outlined text-[14px] text-slate-400 flex-shrink-0 mt-0.5">location_on</span>
@@ -2686,6 +2648,11 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
              {/* Mobile/Tablet Extra Details */}
              {!detailed && (
                <div className={`flex flex-wrap items-center gap-1.5 mt-1 ${forceShowDetails ? '' : 'md:hidden'}`}>
+                  {event.type && (
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-slate-600 uppercase tracking-wide">
+                          {event.type}
+                      </span>
+                  )}
                   {involvement && (
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${involvement.color}`}>
                           {involvement.label}
@@ -2731,7 +2698,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                  
                  <span className={`text-[10px] font-bold text-slate-500 whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100 shadow-sm flex items-center gap-1 ${forceShowDetails ? 'px-2 py-1' : ''}`}>
                    {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                   {forceShowDetails && event.date_end && (
+                   {forceShowDetails && event.date_end && event.date_end !== event.date_start && (
                      <>
                        <span className="text-[10px] text-slate-300 font-light mx-0.5">—</span>
                        <span>{new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -2753,11 +2720,17 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
         {detailed && (
           <div className="flex flex-col gap-2 mt-1">
              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-medium text-slate-500">
+                 {event.type && (
+                   <div className="flex items-center gap-1.5">
+                     <span className="material-symbols-outlined text-base text-primary/70">category</span>
+                     <span className="font-bold uppercase tracking-wider">{event.type}</span>
+                   </div>
+                 )}
                  <div className="flex items-center gap-1.5">
                    <span className="material-symbols-outlined text-base text-primary/70">schedule</span>
                    <span>
                      {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                     {event.date_end && ` - ${new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                     {event.date_end && event.date_end !== event.date_start && ` - ${new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
                    </span>
                  </div>
                  <div className="flex items-center gap-1.5">
