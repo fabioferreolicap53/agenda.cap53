@@ -101,6 +101,7 @@ const CreateEvent: React.FC = () => {
   const [observacoes, setObservacoes] = useState('');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
+  const [noEndPreview, setNoEndPreview] = useState(false);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const [originalParticipants, setOriginalParticipants] = useState<string[]>([]); // To track changes for notifications
   const [almoxarifadoItems, setAlmoxarifadoItems] = useState<string[]>([]);
@@ -199,6 +200,11 @@ const CreateEvent: React.FC = () => {
 
   // Validate dates
   useEffect(() => {
+    if (noEndPreview) {
+      setIsDateInvalid(false);
+      setIsDurationInvalid(false);
+      return;
+    }
     if (dateStart && dateEnd) {
       const start = new Date(dateStart);
       const end = new Date(dateEnd);
@@ -228,6 +234,25 @@ const CreateEvent: React.FC = () => {
     }
   }, [transporteSuporte, transporteHorarioLevar, transporteHorarioBuscar]);
 
+  // Conflict control state check
+  const requiresConflictCheck = useMemo(() => {
+    if (locationState.mode === 'fixed' && locationState.fixedId) {
+      const selectedLoc = locations.find(l => l.id === locationState.fixedId);
+      return selectedLoc ? normalizeBoolean(selectedLoc.conflict_control) : false;
+    }
+    return false;
+  }, [locationState.mode, locationState.fixedId, locations]);
+
+  // Auto-reset private and noEndPreview if conflict check is required
+  useEffect(() => {
+    if (requiresConflictCheck) {
+      if (isPrivate) setIsPrivate(false);
+      if (noEndPreview) {
+        setNoEndPreview(false);
+      }
+    }
+  }, [requiresConflictCheck, isPrivate, noEndPreview]);
+
   // Conflict Modal State
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [conflictModalData, setConflictModalData] = useState<{
@@ -243,7 +268,7 @@ const CreateEvent: React.FC = () => {
   });
 
   const saveEvent = async () => {
-    if (!dateStart || !dateEnd) {
+    if (!dateStart || (!noEndPreview && !dateEnd)) {
       alert('Por favor, selecione as datas de início e fim.');
       return;
     }
@@ -265,8 +290,8 @@ const CreateEvent: React.FC = () => {
 
     setLoading(true);
     try {
-          const startISO = dateStart.includes('Z') ? dateStart : new Date(dateStart).toISOString();
-      const endISO = dateEnd.includes('Z') ? dateEnd : new Date(dateEnd).toISOString();
+      const startISO = dateStart.includes('Z') ? dateStart : new Date(dateStart).toISOString();
+      const endISO = noEndPreview ? null : (dateEnd.includes('Z') ? dateEnd : new Date(dateEnd).toISOString());
 
       // Initialize participants_status and participants_roles
       const participantsStatus: Record<string, string> = {};
@@ -994,10 +1019,17 @@ const CreateEvent: React.FC = () => {
           const startHour = now.getHours() + 1;
           const start = new Date();
           start.setHours(startHour, 0, 0, 0);
-          const end = new Date(start);
-          end.setHours(start.getHours() + 1);
           setDateStart(start.toISOString());
-          setDateEnd(end.toISOString());
+          
+          if (!event.date_end) {
+            setNoEndPreview(true);
+            setDateEnd('');
+          } else {
+            const end = new Date(start);
+            end.setHours(start.getHours() + 1);
+            setDateEnd(end.toISOString());
+            setNoEndPreview(false);
+          }
 
           console.log('--- DADOS PARA DUPLICAÇÃO CARREGADOS ---');
         } catch (err) {
@@ -1048,7 +1080,13 @@ const CreateEvent: React.FC = () => {
           };
           
           setDateStart(formatDate(event.date_start || ''));
-          setDateEnd(formatDate(event.date_end || ''));
+          if (!event.date_end) {
+            setNoEndPreview(true);
+            setDateEnd('');
+          } else {
+            setDateEnd(formatDate(event.date_end));
+            setNoEndPreview(false);
+          }
           
           setSelectedParticipants(event.participants || []);
           setOriginalParticipants(event.participants || []);
@@ -1642,25 +1680,38 @@ const CreateEvent: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 flex-1">
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Título da Atividade</label>
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <input
                       required value={title} onChange={(e) => setTitle(e.target.value)}
-                      className="flex-1 h-14 px-6 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 uppercase"
+                      className="flex-1 min-w-0 h-14 px-4 sm:px-6 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 uppercase"
                       placeholder="Ex: Reunião Geral de Indicadores"
                     />
                     <button
                       type="button"
-                      onClick={() => setIsPrivate(!isPrivate)}
-                      className={`h-14 px-4 sm:px-5 flex items-center justify-center gap-2 rounded-2xl border transition-all duration-300 shrink-0 ${isPrivate ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm' : 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400'}`}
-                      title={isPrivate ? "Mudar para Público" : "Mudar para Particular"}
+                      onClick={() => !requiresConflictCheck && setIsPrivate(!isPrivate)}
+                      disabled={requiresConflictCheck}
+                      className={`h-14 w-14 sm:w-auto px-0 sm:px-5 flex items-center justify-center gap-2 rounded-2xl border transition-all duration-300 shrink-0 ${
+                        requiresConflictCheck 
+                          ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' 
+                          : isPrivate 
+                            ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm' 
+                            : 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400'
+                      }`}
+                      title={requiresConflictCheck ? "Não permitido para este local" : (isPrivate ? "Mudar para Público" : "Mudar para Particular")}
                     >
                       <span className="material-symbols-outlined text-xl">{isPrivate ? 'lock' : 'public'}</span>
                       <span className="text-xs font-bold uppercase tracking-wider hidden sm:block">{isPrivate ? 'Particular' : 'Público'}</span>
                     </button>
                   </div>
-                  <p className={`text-[10px] ml-2 mt-1 flex items-center gap-1.5 transition-colors duration-300 ${isPrivate ? 'text-amber-600 font-bold' : 'text-slate-500 font-medium'}`}>
-                    <span className="material-symbols-outlined text-[12px]">{isPrivate ? 'info' : 'info'}</span>
-                    {isPrivate ? 'Evento particular: Invisível no calendário para os demais usuários. Visto apenas pelos envolvidos.' : 'Evento público: Visto por todos no calendário geral.'}
+                  <p className={`text-[10px] ml-1 sm:ml-2 mt-1 flex items-start sm:items-center gap-1.5 transition-colors duration-300 ${requiresConflictCheck ? 'text-red-500 font-bold' : isPrivate ? 'text-amber-600 font-bold' : 'text-slate-500 font-medium'}`}>
+                    <span className="material-symbols-outlined text-[14px] mt-0.5 sm:mt-0">{requiresConflictCheck ? 'warning' : 'info'}</span>
+                    <span className="leading-tight">
+                      {requiresConflictCheck 
+                        ? 'Evento deve ser público pois o local selecionado exige controle de conflito.'
+                        : isPrivate 
+                          ? 'Evento particular: Invisível no calendário para os demais usuários. Visto apenas pelos envolvidos.' 
+                          : 'Evento público: Visto por todos no calendário geral.'}
+                    </span>
                   </p>
                 </div>
 
@@ -1686,7 +1737,9 @@ const CreateEvent: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Data & Início</label>
+                  <div className="flex items-center h-5">
+                    <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Data & Início</label>
+                  </div>
                   <CustomDatePicker
                     required
                     value={dateStart}
@@ -1705,14 +1758,43 @@ const CreateEvent: React.FC = () => {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Término Previsto</label>
+                <div className="space-y-2 relative">
+                  <div className="flex items-center justify-between h-5">
+                    <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Término Previsto</label>
+                    <label className={`flex items-center gap-1.5 ${requiresConflictCheck ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} title={requiresConflictCheck ? "Local exige controle de conflito" : ""}>
+                      <input
+                        type="checkbox"
+                        checked={noEndPreview}
+                        disabled={requiresConflictCheck}
+                        onChange={(e) => {
+                          if (!requiresConflictCheck) {
+                            setNoEndPreview(e.target.checked);
+                            if (e.target.checked) setDateEnd('');
+                          }
+                        }}
+                        className="w-3.5 h-3.5 text-primary border-slate-300 rounded focus:ring-primary disabled:bg-slate-200"
+                      />
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Sem previsão</span>
+                    </label>
+                  </div>
                   <CustomDatePicker
-                    required
-                    value={dateEnd}
+                    required={!noEndPreview}
+                    value={noEndPreview ? '' : dateEnd}
                     tabIndex={-1}
                     onChange={setDateEnd}
+                    disabled={noEndPreview}
                   />
+                  {noEndPreview && (
+                    <div className="absolute inset-0 top-[28px] bg-slate-50/50 backdrop-blur-[1px] rounded-lg border border-slate-200 flex items-center justify-center pointer-events-none z-10">
+                      <span className="text-xs font-semibold text-slate-400">Sem horário de término</span>
+                    </div>
+                  )}
+                  {requiresConflictCheck && (
+                    <p className="text-[10px] ml-1 mt-1 flex items-start gap-1.5 text-red-500 font-bold transition-colors duration-300">
+                      <span className="material-symbols-outlined text-[14px]">warning</span>
+                      <span className="leading-tight">Horário obrigatório devido ao controle de conflito do local.</span>
+                    </p>
+                  )}
                 </div>
 
                 <div className="md:col-span-1 space-y-2">
