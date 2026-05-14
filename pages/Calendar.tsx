@@ -34,6 +34,45 @@ interface CalendarExpand {
   }>[];
 }
 
+type CalendarFiltersPreference = {
+  persist: boolean;
+  user: string[];
+  roles: string[];
+  sectors: string[];
+};
+
+const getValidFilterArray = (value: unknown, fallback: string[] = ['Todos']): string[] => {
+  if (!Array.isArray(value)) return fallback;
+  const normalized = value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0);
+  return normalized.length > 0 ? normalized : fallback;
+};
+
+const parseCalendarFilters = (value: unknown): CalendarFiltersPreference | null => {
+  if (!value) return null;
+
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch (e) {
+      console.error('Erro ao parsear calendar_filters do BD', e);
+      return null;
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object') return null;
+
+  const filters = parsed as Record<string, unknown>;
+  if (!filters.persist) return null;
+
+  return {
+    persist: true,
+    user: getValidFilterArray(filters.user),
+    roles: getValidFilterArray(filters.roles),
+    sectors: getValidFilterArray(filters.sectors),
+  };
+};
+
 // Extended Event interface to include missing fields from typegen
 interface CalendarEvent extends EventsResponse<CalendarExpand> {
   status?: string;
@@ -93,6 +132,27 @@ const Calendar: React.FC = () => {
   // Helper to get storage keys based on current user
   const getStorageKey = (key: string) => user?.id ? `${key}_${user.id}` : key;
 
+  const getLocalSavedFilters = (): CalendarFiltersPreference | null => {
+    const savedPersist = localStorage.getItem(getStorageKey('calendar_persist_filters')) === 'true';
+    if (!savedPersist) return null;
+
+    try {
+      const savedUser = localStorage.getItem(getStorageKey('calendar_filter_user'));
+      const savedRoles = localStorage.getItem(getStorageKey('calendar_filter_roles'));
+      const savedSectors = localStorage.getItem(getStorageKey('calendar_filter_sectors'));
+
+      return {
+        persist: true,
+        user: getValidFilterArray(savedUser ? JSON.parse(savedUser) : null),
+        roles: getValidFilterArray(savedRoles ? JSON.parse(savedRoles) : null),
+        sectors: getValidFilterArray(savedSectors ? JSON.parse(savedSectors) : null),
+      };
+    } catch (e) {
+      console.error('Erro ao carregar filtros salvos localmente', e);
+      return null;
+    }
+  };
+
   const [filterUser, setFilterUser] = useState<string[]>(['Todos']);
   const [filterRoles, setFilterRoles] = useState<string[]>(['Todos']);
   const [filterSectors, setFilterSectors] = useState<string[]>(['Todos']);
@@ -119,39 +179,44 @@ const Calendar: React.FC = () => {
     const loadFilters = async () => {
       try {
         const userData = await pb.collection(Collections.AgendaCap53Usuarios).getOne(user.id);
-        let filters = userData.calendar_filters;
-        
-        if (typeof filters === 'string') {
-          try {
-            filters = JSON.parse(filters);
-          } catch(e) {
-            console.error('Erro ao parsear calendar_filters do BD', e);
-          }
-        }
+        const serverFilters = parseCalendarFilters(userData.calendar_filters);
 
-        if (filters && filters.persist) {
+        if (serverFilters) {
           setPersistFilters(true);
-          if (filters.user) setFilterUser(filters.user);
-          if (filters.roles) setFilterRoles(filters.roles);
-          if (filters.sectors) setFilterSectors(filters.sectors);
+          setFilterUser(serverFilters.user);
+          setFilterRoles(serverFilters.roles);
+          setFilterSectors(serverFilters.sectors);
         } else {
-          // Fallback local
-          const savedPersist = localStorage.getItem(getStorageKey('calendar_persist_filters')) === 'true';
-          setPersistFilters(savedPersist);
+          const localFilters = getLocalSavedFilters();
 
-          if (savedPersist) {
-              const savedUser = localStorage.getItem(getStorageKey('calendar_filter_user'));
-              if (savedUser) setFilterUser(JSON.parse(savedUser));
-              
-              const savedRoles = localStorage.getItem(getStorageKey('calendar_filter_roles'));
-              if (savedRoles) setFilterRoles(JSON.parse(savedRoles));
+          if (localFilters) {
+            setPersistFilters(true);
+            setFilterUser(localFilters.user);
+            setFilterRoles(localFilters.roles);
+            setFilterSectors(localFilters.sectors);
 
-              const savedSectors = localStorage.getItem(getStorageKey('calendar_filter_sectors'));
-              if (savedSectors) setFilterSectors(JSON.parse(savedSectors));
+            // Migra preferências antigas salvas apenas no dispositivo para o backend.
+            pb.collection(Collections.AgendaCap53Usuarios).update(
+              user.id,
+              { calendar_filters: localFilters },
+              { requestKey: null }
+            ).catch(err => console.error('Erro ao migrar filtros locais para o servidor:', err));
+          } else {
+            setPersistFilters(false);
+            setFilterUser(['Todos']);
+            setFilterRoles(['Todos']);
+            setFilterSectors(['Todos']);
           }
         }
       } catch (e) {
         console.error('Error loading saved filters', e);
+        const localFilters = getLocalSavedFilters();
+        if (localFilters) {
+          setPersistFilters(true);
+          setFilterUser(localFilters.user);
+          setFilterRoles(localFilters.roles);
+          setFilterSectors(localFilters.sectors);
+        }
       } finally {
         setIsFiltersLoaded(true);
       }
@@ -194,19 +259,21 @@ const Calendar: React.FC = () => {
           localStorage.removeItem(keys.sectors);
       }
 
-      // Salvar no backend (debounce para não floodar o servidor)
+      const filtersToSave: CalendarFiltersPreference | null = persistFilters ? {
+        persist: true,
+        user: getValidFilterArray(filterUser),
+        roles: getValidFilterArray(filterRoles),
+        sectors: getValidFilterArray(filterSectors)
+      } : null;
+
+      // Salvar no backend rapidamente para não perder preferências ao trocar de dispositivo.
       const timeoutId = setTimeout(() => {
-        const filtersToSave = persistFilters ? {
-          persist: true,
-          user: filterUser,
-          roles: filterRoles,
-          sectors: filterSectors
-        } : null;
-        
-        pb.collection(Collections.AgendaCap53Usuarios).update(user.id, {
-          calendar_filters: filtersToSave ? JSON.stringify(filtersToSave) : null
-        }).catch(err => console.error('Erro ao salvar preferências no servidor:', err));
-      }, 1500);
+        pb.collection(Collections.AgendaCap53Usuarios).update(
+          user.id,
+          { calendar_filters: filtersToSave },
+          { requestKey: null }
+        ).catch(err => console.error('Erro ao salvar preferências no servidor:', err));
+      }, 400);
 
       return () => clearTimeout(timeoutId);
   }, [filterUser, filterRoles, filterSectors, persistFilters, user?.id, isFiltersLoaded]);
