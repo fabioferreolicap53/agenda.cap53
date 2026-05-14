@@ -18,6 +18,11 @@ export const RESPONSIBILITY_LEVELS = [
     value: 'EXTERNO_COMPROMISSO', 
     label: 'Participação externa',
     description: 'O evento é de terceiros. A coordenação apenas envia um ou mais representantes.'
+  },
+  {
+    value: 'NAO_SE_APLICA',
+    label: 'Não se aplica',
+    description: 'Apenas tarefas e lembretes específicos. Não exige organização de evento.'
   }
 ];
 

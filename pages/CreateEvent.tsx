@@ -164,6 +164,27 @@ const CreateEvent: React.FC = () => {
     setVisibleParticipantsCount(5);
   }, [participantSearch]);
 
+  // Handle auto-selections based on Type & Natureza
+  useEffect(() => {
+    if (type?.trim().toUpperCase() === 'TAREFA') {
+      setResponsibility('NAO_SE_APLICA');
+      setInvolvementLevel('ORGANIZADOR');
+    }
+  }, [type]);
+
+  // Handle auto-selections based on Responsibility
+  useEffect(() => {
+    if (responsibility === 'NAO_SE_APLICA') {
+      setInvolvementLevel('ORGANIZADOR');
+      // Limpa os campos restritos
+      setEstimatedParticipants('');
+      setEnvolverProfissionais(false);
+      setLogisticaRecursos(false);
+    } else if (responsibility === 'EXTERNO_COMPROMISSO') {
+      setInvolvementLevel('PARTICIPANTE');
+    }
+  }, [responsibility]);
+
   const [searchParams] = useSearchParams();
   const [isEditing, setIsEditing] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -1811,13 +1832,16 @@ const CreateEvent: React.FC = () => {
                       setResponsibility(val);
                       if (val === 'EXTERNO_COMPROMISSO') {
                         setInvolvementLevel('PARTICIPANTE');
+                      } else if (val === 'NAO_SE_APLICA') {
+                        setInvolvementLevel('ORGANIZADOR');
                       } else if (!val) {
                         setInvolvementLevel('');
                       }
                     }}
                     placeholder="Selecione a responsabilidade..."
                     required
-                    className="h-14 font-semibold"
+                    className={`h-14 font-semibold ${type?.trim().toUpperCase() === 'TAREFA' ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
+                    disabled={type?.trim().toUpperCase() === 'TAREFA'}
                     options={RESPONSIBILITY_LEVELS}
                   />
                 </div>
@@ -1829,11 +1853,14 @@ const CreateEvent: React.FC = () => {
                     onChange={setInvolvementLevel}
                     placeholder={responsibility ? "Selecione o nível..." : "Selecione a responsabilidade primeiro"}
                     required
-                    className={`h-14 font-semibold ${!responsibility ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
-                    disabled={!responsibility}
+                    className={`h-14 font-semibold ${(!responsibility || responsibility === 'NAO_SE_APLICA') ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
+                    disabled={!responsibility || responsibility === 'NAO_SE_APLICA'}
                     options={INVOLVEMENT_LEVELS.filter(level => {
                       if (responsibility === 'EXTERNO_COMPROMISSO') {
                         return level.value === 'PARTICIPANTE';
+                      }
+                      if (responsibility === 'NAO_SE_APLICA') {
+                        return level.value === 'ORGANIZADOR';
                       }
                       return true;
                     })}
@@ -1899,21 +1926,27 @@ const CreateEvent: React.FC = () => {
 
                 <div className="md:col-span-1 space-y-2 pt-2">
                   <div className="h-4" /> {/* Spacer for label alignment */}
-                  <div className={`w-full h-20 flex items-center gap-4 p-5 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed' : 'border-slate-300 bg-slate-50 hover:border-slate-400 focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/5 shadow-sm'}`}>
-                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' ? 'bg-slate-200 text-slate-400' : 'bg-slate-200 text-slate-600'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
+                  <div className={`w-full h-20 flex items-center gap-4 p-5 rounded-[2rem] border transition-all duration-300 ${responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA' ? 'border-slate-200 bg-slate-50 opacity-60 cursor-not-allowed' : 'border-slate-300 bg-slate-50 hover:border-slate-400 focus-within:border-primary/50 focus-within:ring-4 focus-within:ring-primary/5 shadow-sm'}`}>
+                    <div className={`size-12 rounded-2xl ${responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA' ? 'bg-slate-200 text-slate-400' : 'bg-slate-200 text-slate-600'} flex items-center justify-center shrink-0 transition-all duration-300 group-focus-within:bg-primary group-focus-within:text-white group-focus-within:shadow-lg group-focus-within:shadow-primary/20`}>
                       <span className="material-symbols-outlined text-[24px]">groups</span>
                     </div>
                     <div className="flex-1 flex flex-col justify-center min-w-0">
                       <label className="text-[11px] font-bold text-slate-900 uppercase tracking-[0.1em] truncate mb-0.5">Qtd. Estimada de Presentes</label>
+                      {responsibility === 'NAO_SE_APLICA' && (
+                        <p className="text-[9px] font-bold text-amber-600 mb-1 leading-tight flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px]">info</span>
+                          Não se aplica a este tipo
+                        </p>
+                      )}
                       <input
                         type="number"
                         min="1"
                         value={estimatedParticipants}
                         onChange={(e) => setEstimatedParticipants(e.target.value)}
-                        disabled={responsibility === 'EXTERNO_COMPROMISSO'}
-                        className={`w-full bg-transparent border-none outline-none font-black text-sm p-0 h-5 placeholder:text-slate-500 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'text-slate-500' : 'text-slate-900'}`}
+                        disabled={responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA'}
+                        className={`w-full bg-transparent border-none outline-none font-black text-sm p-0 h-5 placeholder:text-slate-500 ${responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA' ? 'text-slate-500' : 'text-slate-900'}`}
                         placeholder="Ex: 50"
-                        title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : undefined}
+                        title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : responsibility === 'NAO_SE_APLICA' ? 'Indisponível para Tarefas' : undefined}
                       />
                     </div>
                   </div>
@@ -2098,7 +2131,7 @@ const CreateEvent: React.FC = () => {
           </div>
 
           {/* Row 2: Professional Scope (Full Width) - SWAPPED TO TOP */}
-          <section className={`bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!envolverProfissionais && 'opacity-90'}`}>
+          <section className={`bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!envolverProfissionais && 'opacity-90'} ${responsibility === 'NAO_SE_APLICA' ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
               <div className="flex items-center gap-4">
                 <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${envolverProfissionais ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-200 text-slate-600'}`}>
@@ -2106,11 +2139,19 @@ const CreateEvent: React.FC = () => {
                 </div>
                 <div>
                   <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${envolverProfissionais ? 'text-slate-900' : 'text-slate-500'}`}>Envolvimento de Unidades e Profissionais</h3>
-                  <p className="text-[10px] font-bold text-slate-500 mt-0.5">Clique no botão ao lado para ativar e definir o público-alvo nas unidades</p>
+                  {responsibility === 'NAO_SE_APLICA' ? (
+                    <p className="text-[10px] font-bold text-amber-600 mt-0.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px]">info</span>
+                      Não se aplica a este tipo
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-slate-500 mt-0.5">Clique no botão ao lado para ativar e definir o público-alvo nas unidades</p>
+                  )}
                 </div>
               </div>
               <button
                 type="button"
+                disabled={responsibility === 'NAO_SE_APLICA'}
                 onClick={() => setEnvolverProfissionais(!envolverProfissionais)}
                 className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${envolverProfissionais ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:min-w-[420px]'}`}
               >
@@ -2297,7 +2338,7 @@ const CreateEvent: React.FC = () => {
           </section>
 
           {/* Row 3: Logistics (Full Width) - SWAPPED TO BOTTOM */}
-          <section className={`bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!logisticaRecursos && 'opacity-90'}`}>
+          <section className={`bg-white/90 backdrop-blur-xl border border-slate-300 rounded-2xl p-4 md:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all duration-500 hover:shadow-[0_20px_40px_rgba(0,0,0,0.04)] flex flex-col gap-6 md:gap-8 relative z-10 ${!logisticaRecursos && 'opacity-90'} ${responsibility === 'NAO_SE_APLICA' ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
               <div className="flex items-center gap-4">
                 <div className={`size-12 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 shrink-0 ${logisticaRecursos ? 'bg-primary text-white shadow-primary/20' : 'bg-slate-200 text-slate-600'}`}>
@@ -2305,12 +2346,19 @@ const CreateEvent: React.FC = () => {
                 </div>
                 <div>
                   <h3 className={`text-lg md:text-xl font-bold tracking-tight transition-colors duration-500 ${logisticaRecursos ? 'text-slate-900' : 'text-slate-500'}`}>Logística & Recursos</h3>
-                  <p className="text-[10px] font-bold text-slate-500 mt-0.5">Clique no botão ao lado para ativar e solicitar insumos e apoio para o evento</p>
+                  {responsibility === 'NAO_SE_APLICA' ? (
+                    <p className="text-[10px] font-bold text-amber-600 mt-0.5 flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[12px]">info</span>
+                      Não se aplica a este tipo
+                    </p>
+                  ) : (
+                    <p className="text-[10px] font-bold text-slate-500 mt-0.5">Clique no botão ao lado para ativar e solicitar insumos e apoio para o evento</p>
+                  )}
                 </div>
               </div>
-
               <button
                 type="button"
+                disabled={responsibility === 'NAO_SE_APLICA'}
                 onClick={() => setLogisticaRecursos(!logisticaRecursos)}
                 className={`group relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3 px-6 py-3 rounded-2xl font-bold text-[10px] uppercase tracking-widest transition-all duration-500 overflow-hidden ${logisticaRecursos ? 'bg-primary text-white shadow-xl shadow-primary/20 min-h-[48px]' : 'bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-600 min-h-[48px] sm:min-w-[420px]'}`}
               >
