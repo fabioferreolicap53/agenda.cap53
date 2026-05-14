@@ -133,17 +133,23 @@ const CreateEvent: React.FC = () => {
   const [isDurationInvalid, setIsDurationInvalid] = useState(false);
 
   const orderedEventTypeOptions = useMemo(() => {
-    const eventTypesByName = new Map(
-      eventTypes.map(type => [String(type.name || '').trim().toLowerCase(), type])
-    );
-    const ordered = EVENT_TYPES_ORDER
-      .map(label => {
-        const normalized = label.trim().toLowerCase();
-        const type = eventTypesByName.get(normalized);
-        return type ? { value: type.name, label } : null;
-      })
-      .filter((item): item is { value: string; label: string } => Boolean(item));
-    return ordered.length > 0 ? ordered : eventTypes.map(t => ({ value: t.name, label: t.name }));
+    // Pegar apenas tipos ativos
+    const activeTypes = eventTypes.filter(t => t.active !== false);
+    
+    // Ordenar: tipos no EVENT_TYPES_ORDER primeiro, depois o resto alfabeticamente
+    return [...activeTypes].sort((a, b) => {
+      const nameA = String(a.name || '').trim().toUpperCase();
+      const nameB = String(b.name || '').trim().toUpperCase();
+      
+      const indexA = EVENT_TYPES_ORDER.indexOf(nameA);
+      const indexB = EVENT_TYPES_ORDER.indexOf(nameB);
+      
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      
+      return nameA.localeCompare(nameB);
+    }).map(t => ({ value: t.name, label: t.name }));
   }, [eventTypes]);
   const [isTransportTimeInvalid, setIsTransportTimeInvalid] = useState(false);
   const [isConflictCheckLoading, setIsConflictCheckLoading] = useState(false);
