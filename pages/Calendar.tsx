@@ -1801,7 +1801,7 @@ const Calendar: React.FC = () => {
                           event={event}
                           user={user}
                           onCancel={handleCancelEvent}
-                          detailed
+                          forceShowDetails={!isMobileOrTablet}
                           setTooltipData={setTooltipData}
                           onSelect={setSelectedEvent}
                         />
