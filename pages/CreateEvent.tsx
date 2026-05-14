@@ -1711,11 +1711,22 @@ const CreateEvent: React.FC = () => {
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Título da Atividade</label>
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <input
-                      required value={title} onChange={(e) => setTitle(e.target.value)}
-                      className="flex-1 min-w-0 h-14 px-4 sm:px-6 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 uppercase"
-                      placeholder="Ex: Reunião Geral de Indicadores"
-                    />
+                    <div className="flex-1 relative group/title">
+                      <input
+                        required value={title} onChange={(e) => setTitle(e.target.value)}
+                        className="w-full h-14 px-4 sm:px-6 pr-12 sm:pr-14 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 uppercase"
+                        placeholder="Ex: Reunião Geral de Indicadores"
+                      />
+                      {title && (
+                        <button
+                          type="button"
+                          onClick={() => setTitle('')}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors duration-200"
+                        >
+                          <span className="material-symbols-outlined text-[17px]">close</span>
+                        </button>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => !requiresConflictCheck && setIsPrivate(!isPrivate)}
@@ -2524,31 +2535,53 @@ const CreateEvent: React.FC = () => {
                         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
                           <div className="space-y-2.5">
                             <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest ml-1">Local de Origem *</label>
-                            <input 
-                              type="text"
-                              value={transporteOrigem}
-                              tabIndex={activeTab === 'transporte' ? 0 : -1}
-                              onChange={(e) => {
-                                setTransporteOrigem(e.target.value);
-                                if (e.target.value) setTransporteSuporte(true);
-                              }}
-                              placeholder="De onde o veículo deve sair?"
-                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
-                            />
+                            <div className="relative group/origin">
+                              <input 
+                                type="text"
+                                value={transporteOrigem}
+                                tabIndex={activeTab === 'transporte' ? 0 : -1}
+                                onChange={(e) => {
+                                  setTransporteOrigem(e.target.value);
+                                  if (e.target.value) setTransporteSuporte(true);
+                                }}
+                                placeholder="De onde o veículo deve sair?"
+                                className="w-full h-12 px-5 pr-12 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
+                              />
+                              {transporteOrigem && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTransporteOrigem('')}
+                                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors duration-200"
+                                >
+                                  <span className="material-symbols-outlined text-[17px]">close</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
                           <div className="space-y-2.5">
                             <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest ml-1">Local de Destino *</label>
-                            <input 
-                              type="text"
-                              value={transporteDestino}
-                              tabIndex={activeTab === 'transporte' ? 0 : -1}
-                              onChange={(e) => {
-                                setTransporteDestino(e.target.value);
-                                if (e.target.value) setTransporteSuporte(true);
-                              }}
-                              placeholder="Para onde o veículo deve ir?"
-                              className="w-full h-12 px-5 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
-                            />
+                            <div className="relative group/destination">
+                              <input 
+                                type="text"
+                                value={transporteDestino}
+                                tabIndex={activeTab === 'transporte' ? 0 : -1}
+                                onChange={(e) => {
+                                  setTransporteDestino(e.target.value);
+                                  if (e.target.value) setTransporteSuporte(true);
+                                }}
+                                placeholder="Para onde o veículo deve ir?"
+                                className="w-full h-12 px-5 pr-12 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
+                              />
+                              {transporteDestino && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTransporteDestino('')}
+                                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors duration-200"
+                                >
+                                  <span className="material-symbols-outlined text-[17px]">close</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <CustomTimePicker
