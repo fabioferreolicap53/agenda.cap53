@@ -156,7 +156,7 @@ const Calendar: React.FC = () => {
   const [filterUser, setFilterUser] = useState<string[]>(['Todos']);
   const [filterRoles, setFilterRoles] = useState<string[]>(['Todos']);
   const [filterSectors, setFilterSectors] = useState<string[]>(['Todos']);
-  const [persistFilters, setPersistFilters] = useState(false);
+  const [persistFilters, setPersistFilters] = useState(true);
   const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -1348,20 +1348,6 @@ const Calendar: React.FC = () => {
                     <span className="hidden xl:inline">Limpar Filtros</span>
                     <span className="xl:hidden">Limpar</span>
                   </button>
-
-                  <label className={`flex items-center justify-center gap-2.5 text-[9px] font-black uppercase tracking-widest cursor-pointer select-none transition-all duration-300 px-6 rounded-xl border h-[40px] flex-1 lg:flex-none ${persistFilters ? 'bg-emerald-500 text-white border-emerald-500 shadow-lg shadow-emerald-200' : 'bg-white text-slate-500 border-slate-200 hover:text-primary hover:border-primary/30 hover:shadow-md'}`}>
-                      <input 
-                        type="checkbox" 
-                        checked={persistFilters} 
-                        onChange={(e) => setPersistFilters(e.target.checked)}
-                        className="hidden"
-                      />
-                      <span className="material-symbols-outlined text-[18px]">
-                          {persistFilters ? 'bookmark_check' : 'bookmark'}
-                      </span>
-                      <span className="hidden xl:inline">{persistFilters ? 'Preferências Salvas' : 'Salvar Preferências'}</span>
-                      <span className="xl:hidden">{persistFilters ? 'Salvo' : 'Salvar'}</span>
-                  </label>
                 </div>
             </div>
           </div>
