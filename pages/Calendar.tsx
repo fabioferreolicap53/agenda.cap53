@@ -1704,41 +1704,44 @@ const Calendar: React.FC = () => {
             <div 
               ref={isToday ? todayRef : dayViewRef}
               onDoubleClick={() => handleDayDoubleClick(currentDate)}
-              className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ease-out ${scrollMarginClass} ${
+              className={`flex-1 flex flex-col cursor-default relative overflow-visible transition-all duration-500 ease-out p-4 md:p-8 max-w-4xl mx-auto w-full ${scrollMarginClass} ${
                 isToday 
                   ? `bg-primary/[0.04] ring-inset ring-2 ring-primary/20 shadow-inner ${shouldPulseToday ? 'animate-pulse ring-4 ring-primary/30 z-20' : ''}` 
                   : (isWeekend ? 'bg-orange-50/30' : 'bg-white')
               }`}
             >
-              {/* Mobile Day Info Section */}
-              <div className={`md:hidden flex flex-col items-center justify-center px-6 py-8 text-center border-b relative z-10 ${
-                isWeekend && !isToday ? 'bg-orange-50/10 border-orange-100' : 'bg-white border-slate-200'
+              {/* Internal Header (Date & Weekday) - Desktop & Mobile Unified in layout */}
+              <div className={`flex flex-col gap-4 mb-8 pb-8 border-b relative z-10 ${
+                isWeekend && !isToday ? 'border-orange-100' : 'border-slate-100'
               }`}>
-                <div className="flex flex-col items-center gap-2">
-                  <h2 className={`text-4xl font-black tracking-tighter leading-none ${isWeekend && !isToday ? 'text-orange-600/80' : 'text-primary'}`}>
-                    {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-                  </h2>
-                  <div className="flex items-center gap-3">
-                    <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isWeekend && !isToday ? 'text-orange-600/60' : 'text-text-secondary'}`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                      <h2 className={`text-2xl md:text-4xl font-black tracking-tight ${isWeekend && !isToday ? 'text-orange-600/80' : 'text-primary'}`}>
+                        {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
+                      </h2>
+                      {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border shadow-sm ${
+                          isWeekend && !isToday ? 'bg-orange-100/50 border-orange-200' : 'bg-primary/5 border-primary/10'
+                        }`}>
+                          <span className={`material-symbols-outlined text-sm md:text-lg ${isWeekend && !isToday ? 'text-orange-500/60' : 'text-primary/60'}`}>event_available</span>
+                          <span className={`text-[10px] md:text-xs font-black ${isWeekend && !isToday ? 'text-orange-600/70' : 'text-primary'}`}>
+                            {(eventsByDate[currentDate.toDateString()] || []).length}
+                            <span className="ml-1 opacity-60 text-[9px] md:text-[11px] uppercase tracking-wider hidden sm:inline">Eventos</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <p className={`text-xs md:text-sm font-bold uppercase tracking-[0.2em] ${isWeekend && !isToday ? 'text-orange-600/60' : 'text-text-secondary'}`}>
                       {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
                     </p>
-                    {isToday && (
-                      <span className="px-2 py-0.5 bg-primary text-white text-[8px] font-black uppercase tracking-widest rounded-full shadow-md shadow-primary/20">
-                        Hoje
-                      </span>
-                    )}
                   </div>
-                </div>
-                {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
-                  <div className={`mt-4 flex items-center gap-1.5 px-3 py-1.5 rounded-xl border shadow-sm ${
-                    isWeekend && !isToday ? 'bg-orange-50/50 border-orange-100' : 'bg-primary/5 border-primary/10'
-                  }`}>
-                    <span className={`material-symbols-outlined text-sm ${isWeekend && !isToday ? 'text-orange-500/60' : 'text-primary/60'}`}>event_available</span>
-                    <span className={`text-[10px] font-black uppercase tracking-wider ${isWeekend && !isToday ? 'text-orange-600/70' : 'text-primary'}`}>
-                      {(eventsByDate[currentDate.toDateString()] || []).length} Eventos
+                  {isToday && (
+                    <span className="px-3 py-1 md:px-5 md:py-2 bg-primary text-white text-[8px] md:text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 shrink-0">
+                      Hoje
                     </span>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
 
               {/* Glow effect for today day view */}
@@ -1748,39 +1751,6 @@ const Calendar: React.FC = () => {
               {isWeekend && !isToday && (
                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-orange-400/[0.03] via-transparent to-transparent"></div>
               )}
-            <div className={`hidden md:block sticky top-[120px] md:top-[64px] z-[90] border-b px-3 md:px-8 py-1.5 md:py-3 shadow-sm ${
-              isWeekend && !isToday ? 'bg-orange-50/30 border-orange-50' : 'bg-white border-slate-100'
-            }`}>
-                <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
-                  <div className="flex flex-col md:gap-1">
-                    <div className="flex items-center gap-1.5 md:gap-3">
-                      <h2 className={`text-lg md:text-3xl font-black tracking-tight ${isWeekend && !isToday ? 'text-orange-600/80' : 'text-primary'}`}>
-                        {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
-                      </h2>
-                      {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
-                        <div className={`flex items-center gap-1 px-1.5 py-0.5 md:px-3 md:py-1.5 rounded-lg md:rounded-xl border shadow-sm ${
-                          isWeekend && !isToday ? 'bg-orange-100/50 border-orange-200' : 'bg-primary/5 border-primary/10'
-                        }`}>
-                          <span className={`material-symbols-outlined text-xs md:text-lg ${isWeekend && !isToday ? 'text-orange-500/60' : 'text-primary/60'}`}>event_available</span>
-                          <span className={`text-[9px] md:text-xs font-black ${isWeekend && !isToday ? 'text-orange-600/70' : 'text-primary'}`}>
-                            {(eventsByDate[currentDate.toDateString()] || []).length}
-                            <span className="ml-1 opacity-60 text-[8px] md:text-[10px] uppercase tracking-wider hidden sm:inline">Eventos</span>
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <p className={`text-[9px] md:text-sm font-bold uppercase tracking-[0.15em] md:tracking-[0.2em] ${isWeekend && !isToday ? 'text-orange-600/60' : 'text-text-secondary'}`}>
-                      {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
-                    </p>
-                  </div>
-                  {isToday && (
-                    <span className="px-1.5 py-0.5 md:px-4 md:py-1.5 bg-primary text-white text-[7px] md:text-[10px] font-black uppercase tracking-widest rounded-full shadow-md md:shadow-lg shadow-primary/20 shrink-0">
-                      Hoje
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className={`p-4 md:p-8 max-w-4xl mx-auto w-full ${scrollMarginClass}`}>
 
               <div className="space-y-4">
                 {(() => {
@@ -1935,7 +1905,6 @@ const Calendar: React.FC = () => {
                   );
                 });
               })()}
-              </div>
             </div>
           </div>
         );
