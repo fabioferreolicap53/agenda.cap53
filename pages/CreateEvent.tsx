@@ -166,11 +166,18 @@ const CreateEvent: React.FC = () => {
 
   // Handle auto-selections based on Type & Natureza
   useEffect(() => {
-    if (type?.trim().toUpperCase() === 'TAREFA') {
+    if (type?.trim().toUpperCase() === 'LEMBRETE') {
       setResponsibility('NAO_SE_APLICA');
       setInvolvementLevel('ORGANIZADOR');
     }
   }, [type]);
+
+  // Handle auto-selections based on Location 'not_applicable'
+  useEffect(() => {
+    if (locationState.fixedId === 'not_applicable') {
+      setType('LEMBRETE');
+    }
+  }, [locationState.fixedId]);
 
   // Handle auto-selections based on Responsibility
   useEffect(() => {
@@ -381,12 +388,13 @@ const CreateEvent: React.FC = () => {
 
       const eventData = {
         title, 
-        nature: type, // Sincronizando com o campo Natureza usado nos relatórios
         type, 
         description: observacoes,
         observacoes,
-        location: locationState.mode === 'fixed' && locationState.fixedId ? locationState.fixedId : null, 
-        custom_location: locationState.mode === 'free' && locationState.freeText ? locationState.freeText.trim().toUpperCase() : null,
+        location: (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') ? locationState.fixedId : null, 
+        custom_location: locationState.mode === 'free' && locationState.freeText 
+          ? locationState.freeText.trim().toUpperCase() 
+          : (locationState.fixedId === 'not_applicable' ? 'Não se aplica' : null),
         date_start: startISO, date_end: endISO,
         participants: selectedParticipants, user: user?.id, status: 'active',
         almoxarifado_items: almoxarifadoItems, 
@@ -980,8 +988,10 @@ const CreateEvent: React.FC = () => {
           setObservacoes(event.observacoes || event.description || '');
           
           // Copiar Localização
-          if (event.location === 'external' || (!event.location && event.custom_location)) {
+          if (event.location === 'external' || (!event.location && event.custom_location && event.custom_location !== 'Não se aplica')) {
             setLocationState({ mode: 'free', fixedId: 'external', freeText: event.custom_location || '' });
+          } else if (!event.location && event.custom_location === 'Não se aplica') {
+            setLocationState({ mode: 'fixed', fixedId: 'not_applicable', freeText: '' });
           } else {
             setLocationState({ mode: 'fixed', fixedId: event.location || '', freeText: '' });
           }
@@ -1091,8 +1101,10 @@ const CreateEvent: React.FC = () => {
           setCreatorId(event.user);
           
           // Check for external location (saved as null in location field but has custom_location)
-          if (event.location === 'external' || (!event.location && event.custom_location)) {
+          if (event.location === 'external' || (!event.location && event.custom_location && event.custom_location !== 'Não se aplica')) {
             setLocationState({ mode: 'free', fixedId: 'external', freeText: event.custom_location || '' });
+          } else if (!event.location && event.custom_location === 'Não se aplica') {
+            setLocationState({ mode: 'fixed', fixedId: 'not_applicable', freeText: '' });
           } else {
             setLocationState({ mode: 'fixed', fixedId: event.location || '', freeText: '' });
           }
@@ -1763,7 +1775,8 @@ const CreateEvent: React.FC = () => {
                     onChange={setType}
                     placeholder="Selecione o tipo..."
                     required
-                    className="h-14 font-semibold"
+                    className={`h-14 font-semibold ${locationState.fixedId === 'not_applicable' ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
+                    disabled={locationState.fixedId === 'not_applicable'}
                     options={orderedEventTypeOptions}
                   />
                 </div>
@@ -1853,8 +1866,8 @@ const CreateEvent: React.FC = () => {
                     }}
                     placeholder="Selecione a responsabilidade..."
                     required
-                    className={`h-14 font-semibold ${type?.trim().toUpperCase() === 'TAREFA' ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
-                    disabled={type?.trim().toUpperCase() === 'TAREFA'}
+                    className={`h-14 font-semibold ${type?.trim().toUpperCase() === 'LEMBRETE' ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
+                    disabled={type?.trim().toUpperCase() === 'LEMBRETE'}
                     options={RESPONSIBILITY_LEVELS}
                   />
                 </div>
@@ -1959,7 +1972,7 @@ const CreateEvent: React.FC = () => {
                         disabled={responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA'}
                         className={`w-full bg-transparent border-none outline-none font-black text-sm p-0 h-5 placeholder:text-slate-500 ${responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA' ? 'text-slate-500' : 'text-slate-900'}`}
                         placeholder="Ex: 50"
-                        title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : responsibility === 'NAO_SE_APLICA' ? 'Indisponível para Tarefas' : undefined}
+                        title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : responsibility === 'NAO_SE_APLICA' ? 'Indisponível para Lembretes' : undefined}
                       />
                     </div>
                   </div>

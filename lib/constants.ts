@@ -22,7 +22,7 @@ export const RESPONSIBILITY_LEVELS = [
   {
     value: 'NAO_SE_APLICA',
     label: 'Não se aplica',
-    description: 'Apenas tarefas e lembretes específicos. Não exige organização de evento.'
+    description: 'Apenas lembretes específicos. Não exige organização de evento.'
   }
 ];
 

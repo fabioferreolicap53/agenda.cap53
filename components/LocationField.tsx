@@ -140,6 +140,7 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
 
   const selectedLoc = locations.find(l => l.id === value.fixedId);
   const showNoConflictNotice = selectedLoc ? !normalizeBoolean(selectedLoc.conflict_control) : false;
+  const showNotApplicableNotice = value.fixedId === 'not_applicable';
 
   return (
     <div className="space-y-2">
@@ -148,6 +149,8 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
         onChange={(val) => {
           if (val === 'external') {
             handleModeSwitch('free');
+          } else if (val === 'not_applicable') {
+            onChange({ mode: 'fixed', fixedId: 'not_applicable', freeText: '' });
           } else {
             onChange({ mode: 'fixed', fixedId: val, freeText: '' });
           }
@@ -158,6 +161,7 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
         disabled={loading}
         options={[
           { value: 'external', label: '📍 LUGAR EXTERNO NÃO FIXO' },
+          { value: 'not_applicable', label: '🚫 NÃO SE APLICA' },
           ...locations
             .filter(loc => normalizeBoolean(loc.is_available) || loc.id === value.fixedId)
             .map(loc => {
@@ -182,6 +186,12 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
         <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-100 bg-amber-50 text-amber-700 text-[11px] font-semibold">
           <span className="material-symbols-outlined text-[16px]">info</span>
           É necessário contatar os responsáveis pelo local para liberação do evento.
+        </div>
+      )}
+      {showNotApplicableNotice && (
+        <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-amber-100 bg-amber-50 text-amber-700 text-[11px] font-semibold">
+          <span className="material-symbols-outlined text-[16px]">info</span>
+          Use esta opção apenas para salvar lembretes que não ocorrem em um local físico.
         </div>
       )}
     </div>
