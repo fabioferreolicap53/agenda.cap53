@@ -157,7 +157,6 @@ const Calendar: React.FC = () => {
   const [filterTypes, setFilterTypes] = useState<string[]>(['Todos']);
   const [filterSectors, setFilterSectors] = useState<string[]>(['Todos']);
   const [eventTypes, setEventTypes] = useState<TiposEventoResponse[]>([]);
-  const [persistFilters, setPersistFilters] = useState(true);
   const [isFiltersLoaded, setIsFiltersLoaded] = useState(false);
 
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -183,7 +182,6 @@ const Calendar: React.FC = () => {
         const serverFilters = parseCalendarFilters(userData.calendar_filters);
 
         if (serverFilters) {
-          setPersistFilters(true);
           setFilterUser(serverFilters.user);
           setFilterTypes(serverFilters.types);
           setFilterSectors(serverFilters.sectors);
@@ -191,7 +189,6 @@ const Calendar: React.FC = () => {
           const localFilters = getLocalSavedFilters();
 
           if (localFilters) {
-            setPersistFilters(true);
             setFilterUser(localFilters.user);
             setFilterTypes(localFilters.types);
             setFilterSectors(localFilters.sectors);
@@ -203,22 +200,20 @@ const Calendar: React.FC = () => {
               { requestKey: null }
             ).catch(err => console.error('Erro ao migrar filtros locais para o servidor:', err));
           } else {
-            setPersistFilters(false);
             setFilterUser(['Todos']);
-          setFilterTypes(['Todos']);
-          setFilterSectors(['Todos']);
+            setFilterTypes(['Todos']);
+            setFilterSectors(['Todos']);
+          }
         }
-      }
-    } catch (e) {
-      console.error('Error loading saved filters', e);
-      const localFilters = getLocalSavedFilters();
-      if (localFilters) {
-        setPersistFilters(true);
-        setFilterUser(localFilters.user);
-        setFilterTypes(localFilters.types);
-        setFilterSectors(localFilters.sectors);
-      }
-    } finally {
+      } catch (e) {
+        console.error('Error loading saved filters', e);
+        const localFilters = getLocalSavedFilters();
+        if (localFilters) {
+          setFilterUser(localFilters.user);
+          setFilterTypes(localFilters.types);
+          setFilterSectors(localFilters.sectors);
+        }
+      } finally {
         setIsFiltersLoaded(true);
       }
     };
@@ -257,24 +252,17 @@ const Calendar: React.FC = () => {
           sectors: getStorageKey('calendar_filter_sectors')
       };
 
-      if (persistFilters) {
-          localStorage.setItem(keys.persist, 'true');
-          localStorage.setItem(keys.user, JSON.stringify(filterUser));
-          localStorage.setItem(keys.types, JSON.stringify(filterTypes));
-          localStorage.setItem(keys.sectors, JSON.stringify(filterSectors));
-      } else {
-          localStorage.removeItem(keys.persist);
-          localStorage.removeItem(keys.user);
-          localStorage.removeItem(keys.types);
-          localStorage.removeItem(keys.sectors);
-      }
+      localStorage.setItem(keys.persist, 'true');
+      localStorage.setItem(keys.user, JSON.stringify(filterUser));
+      localStorage.setItem(keys.types, JSON.stringify(filterTypes));
+      localStorage.setItem(keys.sectors, JSON.stringify(filterSectors));
 
-      const filtersToSave: CalendarFiltersPreference | null = persistFilters ? {
+      const filtersToSave: CalendarFiltersPreference = {
         persist: true,
         user: getValidFilterArray(filterUser),
         types: getValidFilterArray(filterTypes),
         sectors: getValidFilterArray(filterSectors)
-      } : null;
+      };
 
       // Salvar no backend rapidamente para não perder preferências ao trocar de dispositivo.
       const timeoutId = setTimeout(() => {
@@ -286,7 +274,7 @@ const Calendar: React.FC = () => {
       }, 400);
 
       return () => clearTimeout(timeoutId);
-  }, [filterUser, filterTypes, filterSectors, persistFilters, user?.id, isFiltersLoaded]);
+  }, [filterUser, filterTypes, filterSectors, user?.id, isFiltersLoaded]);
 
   const userOptions = useMemo(() => {
       const opts: { value: string; label: string }[] = [
