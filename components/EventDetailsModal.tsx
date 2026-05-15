@@ -970,7 +970,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                 <span className="material-symbols-outlined text-[16px]">schedule</span>
                                                 <span className="whitespace-nowrap">
                                                     {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                                    {event.date_end && !isNaN(endDate.getTime()) && (
+                                                    {event.date_end && !isNaN(endDate.getTime()) && startDate.getTime() !== endDate.getTime() && (
                                                         <>
                                                             <span className="mx-1.5 text-slate-300">•</span>
                                                             {endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
@@ -1879,7 +1879,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 </p>
                                 <p className="text-[11px] font-bold text-slate-600">
                                     {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                    {event.date_end && !isNaN(endDate.getTime()) && ` - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
+                                    {event.date_end && !isNaN(endDate.getTime()) && startDate.getTime() !== endDate.getTime() && ` - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`}
                                 </p>
                             </div>
                             <div>

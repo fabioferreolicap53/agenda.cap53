@@ -176,6 +176,8 @@ const CreateEvent: React.FC = () => {
   useEffect(() => {
     if (locationState.fixedId === 'not_applicable') {
       setType('LEMBRETE');
+      setNoEndPreview(true);
+      setDateEnd('');
     }
   }, [locationState.fixedId]);
 
@@ -1815,13 +1817,13 @@ const CreateEvent: React.FC = () => {
                 <div className="space-y-2 relative">
                   <div className="flex items-center justify-between h-5">
                     <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Término Previsto</label>
-                    <label className={`flex items-center gap-1.5 ${requiresConflictCheck ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} title={requiresConflictCheck ? "Local exige controle de conflito" : ""}>
+                    <label className={`flex items-center gap-1.5 ${(requiresConflictCheck || locationState.fixedId === 'not_applicable') ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`} title={requiresConflictCheck ? "Local exige controle de conflito" : (locationState.fixedId === 'not_applicable' ? "Não se aplica término para lembretes sem local" : "")}>
                       <input
                         type="checkbox"
                         checked={noEndPreview}
-                        disabled={requiresConflictCheck}
+                        disabled={requiresConflictCheck || locationState.fixedId === 'not_applicable'}
                         onChange={(e) => {
-                          if (!requiresConflictCheck) {
+                          if (!requiresConflictCheck && locationState.fixedId !== 'not_applicable') {
                             setNoEndPreview(e.target.checked);
                             if (e.target.checked) setDateEnd('');
                           }
@@ -1926,26 +1928,34 @@ const CreateEvent: React.FC = () => {
                   <div className="h-4" /> {/* Spacer for label alignment */}
                   <button
                     type="button"
-                    onClick={() => setIsRestricted(!isRestricted)}
-                    className={`w-full h-20 flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 ${isRestricted ? 'bg-amber-50/60 border-amber-200 shadow-sm' : 'bg-slate-50 border-slate-300 hover:border-slate-400 shadow-sm'}`}
+                    onClick={() => !isPrivate && setIsRestricted(!isRestricted)}
+                    disabled={isPrivate}
+                    className={`w-full h-20 flex items-center justify-between p-5 rounded-[2rem] border transition-all duration-300 ${isPrivate ? 'bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed' : isRestricted ? 'bg-amber-50/60 border-amber-200 shadow-sm' : 'bg-slate-50 border-slate-300 hover:border-slate-400 shadow-sm'}`}
                   >
                     <div className="flex items-center gap-4 text-left">
-                      <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 text-white shadow-lg shadow-amber-100' : 'bg-slate-200 text-slate-600'}`}>
-                        <span className="material-symbols-outlined text-[22px]">{isRestricted ? 'lock' : 'lock_open'}</span>
+                      <div className={`size-12 rounded-2xl flex items-center justify-center transition-all duration-300 ${isPrivate ? 'bg-slate-200 text-slate-400' : isRestricted ? 'bg-amber-500 text-white shadow-lg shadow-amber-100' : 'bg-slate-200 text-slate-600'}`}>
+                        <span className="material-symbols-outlined text-[22px]">{isPrivate ? 'lock' : (isRestricted ? 'lock' : 'lock_open')}</span>
                       </div>
-                      <div>
-                        <h4 className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isRestricted ? 'text-amber-900' : 'text-slate-900'}`}>
-                          {isRestricted ? 'Evento Restrito' : 'Evento Aberto'}
+                      <div className="flex flex-col min-w-0">
+                        <h4 className={`text-[11px] font-bold uppercase tracking-[0.1em] ${isPrivate ? 'text-slate-500' : isRestricted ? 'text-amber-900' : 'text-slate-900'}`}>
+                          {isPrivate ? 'Evento Aberto' : (isRestricted ? 'Evento Restrito' : 'Evento Aberto')}
                         </h4>
-                        <p className={`text-[10px] font-bold leading-relaxed ${isRestricted ? 'text-amber-700' : 'text-slate-500'}`}>
-                          {isRestricted 
-                            ? 'Apenas convidados podem participar.' 
-                            : 'Usuários podem solicitar participação.'}
-                        </p>
+                        {isPrivate ? (
+                          <p className="text-[9px] font-bold text-amber-600 mt-1 leading-tight flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[12px]">info</span>
+                            Não se aplica a este tipo
+                          </p>
+                        ) : (
+                          <p className={`text-[10px] font-bold leading-relaxed ${isRestricted ? 'text-amber-700' : 'text-slate-500'}`}>
+                            {isRestricted 
+                              ? 'Apenas convidados podem participar.' 
+                              : 'Usuários podem solicitar participação.'}
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <div className={`size-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isRestricted ? 'bg-amber-500 border-amber-600 shadow-sm' : 'border-slate-400 bg-white'}`}>
-                      {isRestricted && <span className="material-symbols-outlined text-white text-[18px] font-bold">check</span>}
+                    <div className={`size-8 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${isPrivate ? 'border-slate-300 bg-slate-100' : isRestricted ? 'bg-amber-500 border-amber-600 shadow-sm' : 'border-slate-400 bg-white'}`}>
+                      {isRestricted && !isPrivate && <span className="material-symbols-outlined text-white text-[18px] font-bold">check</span>}
                     </div>
                   </button>
                 </div>
