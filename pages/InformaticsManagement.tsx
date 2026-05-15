@@ -1142,7 +1142,7 @@ const InformaticsManagement: React.FC = () => {
                                                         <div className="flex items-center gap-1.5 text-slate-500 font-bold text-[10px] uppercase tracking-wider">
                                                             <span className="material-symbols-outlined text-[14px]">schedule</span>
                                                             {eventDate ? eventDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                                                            {eventDateEnd ? ` - ${eventDateEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                                            {(eventDateEnd && (!eventDate || (eventDateEnd.getTime() !== eventDate.getTime() && !isNaN(eventDateEnd.getTime())))) ? ` - ${eventDateEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : ''}
                                                         </div>
                                                     </div>
                                                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-sm ${eventStatusBadge.classes}`}>
@@ -1519,7 +1519,7 @@ const InformaticsManagement: React.FC = () => {
                                                                 nomeEvento: group.event.title || 'Evento sem título',
                                                                 localEvento: group.event.expand?.location?.name || group.event.custom_location || 'Não informado',
                                                                 dataInicio: group.event.date_start ? new Date(group.event.date_start.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
-                                                                dataFim: group.event.date_end ? new Date(group.event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
+                                                                dataFim: (group.event.date_end && group.event.date_end !== group.event.date_start) ? new Date(group.event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem Previsão',
                                                                 observacoes: group.event.observacoes || group.event.description || '',
                                                                 participantes: group.event.estimated_participants || 'Não informado',
                                                                 insumos: r.map((req: any) => ({

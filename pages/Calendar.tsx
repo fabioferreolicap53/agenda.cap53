@@ -2330,7 +2330,11 @@ const CalendarTooltip: React.FC<{
           <span className="material-symbols-outlined text-lg text-primary opacity-70">schedule</span>
           <div className="flex flex-col leading-tight">
             <span className="text-xs font-bold text-text-main">
-              De {startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} às {endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+              {(!event.date_end || event.date_end === event.date_start) ? (
+                `A partir das ${startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+              ) : (
+                `De ${startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} às ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+              )}
             </span>
             <span className="text-[10px] font-medium text-text-secondary capitalize">
               {startDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}

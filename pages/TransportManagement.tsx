@@ -775,7 +775,7 @@ const TransportManagement: React.FC = () => {
                                                                 nomeEvento: event.title || 'Evento sem título',
                                                                 localEvento: event.expand?.location?.name || event.custom_location || 'Utilizando transporte (vários)',
                                                                 dataInicio: event.date_start ? new Date(event.date_start.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
-                                                                dataFim: event.date_end ? new Date(event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---',
+                                                                dataFim: (event.date_end && event.date_end !== event.date_start) ? new Date(event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem Previsão',
                                                                 observacoes: event.transporte_obs || event.observacoes || event.description || '',
                                                                 participantes: event.transporte_passageiro || event.estimated_participants || 'Não informado',
                                                                 insumos: [
