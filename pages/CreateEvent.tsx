@@ -272,12 +272,15 @@ const CreateEvent: React.FC = () => {
 
   // Conflict control state check
   const requiresConflictCheck = useMemo(() => {
+    if (type?.trim().toUpperCase() === 'LEMBRETE') {
+      return false;
+    }
     if (locationState.mode === 'fixed' && locationState.fixedId) {
       const selectedLoc = locations.find(l => l.id === locationState.fixedId);
       return selectedLoc ? normalizeBoolean(selectedLoc.conflict_control) : false;
     }
     return false;
-  }, [locationState.mode, locationState.fixedId, locations]);
+  }, [type, locationState.mode, locationState.fixedId, locations]);
 
   // Auto-reset private and noEndPreview if conflict check is required
   useEffect(() => {
@@ -286,8 +289,10 @@ const CreateEvent: React.FC = () => {
       if (noEndPreview) {
         setNoEndPreview(false);
       }
+    } else if (type?.trim().toUpperCase() === 'LEMBRETE') {
+      setIsPrivate(true);
     }
-  }, [requiresConflictCheck, isPrivate, noEndPreview]);
+  }, [requiresConflictCheck, isPrivate, noEndPreview, type]);
 
   // Conflict Modal State
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
@@ -1743,16 +1748,16 @@ const CreateEvent: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => !requiresConflictCheck && setIsPrivate(!isPrivate)}
-                      disabled={requiresConflictCheck}
+                      onClick={() => !requiresConflictCheck && type?.trim().toUpperCase() !== 'LEMBRETE' && setIsPrivate(!isPrivate)}
+                      disabled={requiresConflictCheck || type?.trim().toUpperCase() === 'LEMBRETE'}
                       className={`h-14 w-14 sm:w-auto px-0 sm:px-5 flex items-center justify-center gap-2 rounded-2xl border transition-all duration-300 shrink-0 ${
-                        requiresConflictCheck 
+                        (requiresConflictCheck || type?.trim().toUpperCase() === 'LEMBRETE')
                           ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' 
                           : isPrivate 
                             ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm' 
                             : 'bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100 hover:border-slate-400'
                       }`}
-                      title={requiresConflictCheck ? "Não permitido para este local" : (isPrivate ? "Mudar para Público" : "Mudar para Particular")}
+                      title={requiresConflictCheck ? "Não permitido para este local" : (type?.trim().toUpperCase() === 'LEMBRETE' ? "Lembretes são sempre particulares" : (isPrivate ? "Mudar para Público" : "Mudar para Particular"))}
                     >
                       <span className="material-symbols-outlined text-xl">{isPrivate ? 'lock' : 'public'}</span>
                       <span className="text-xs font-bold uppercase tracking-wider hidden sm:block">{isPrivate ? 'Particular' : 'Público'}</span>
@@ -1763,9 +1768,11 @@ const CreateEvent: React.FC = () => {
                     <span className="leading-tight">
                       {requiresConflictCheck 
                         ? 'Evento deve ser público pois o local selecionado exige controle de conflito.'
-                        : isPrivate 
-                          ? 'Evento particular: Invisível no calendário para os demais usuários. Visto apenas pelos envolvidos.' 
-                          : 'Evento público: Visto por todos no calendário geral.'}
+                        : type?.trim().toUpperCase() === 'LEMBRETE'
+                          ? 'Lembretes são sempre particulares e não exigem controle de conflito.'
+                          : isPrivate 
+                            ? 'Evento particular: Invisível no calendário para os demais usuários. Visto apenas pelos envolvidos.' 
+                            : 'Evento público: Visto por todos no calendário geral.'}
                     </span>
                   </p>
                 </div>
