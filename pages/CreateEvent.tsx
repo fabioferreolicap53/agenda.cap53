@@ -1495,7 +1495,8 @@ const CreateEvent: React.FC = () => {
 
       // Location Conflict Check
       const selectedLoc = locations.find(l => l.id === locationState.fixedId);
-      if (!noEndPreview && locationState.mode === 'fixed' && selectedLoc && normalizeBoolean(selectedLoc.conflict_control)) {
+      const isLembrete = type?.trim().toUpperCase() === 'LEMBRETE';
+      if (!isLembrete && !noEndPreview && locationState.mode === 'fixed' && selectedLoc && normalizeBoolean(selectedLoc.conflict_control)) {
         let filter = `location = "${locationState.fixedId}" && status != "canceled" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
         if (isEditing && editingEventId) {
            filter += ` && id != "${editingEventId}"`;
