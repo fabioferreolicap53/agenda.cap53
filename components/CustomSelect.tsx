@@ -5,6 +5,7 @@ interface Option {
   label: string;
   description?: string;
   disabled?: boolean;
+  icon?: string;
 }
 
 interface CustomSelectProps {
@@ -272,15 +273,25 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     : !option.disabled && index !== highlightedIndex ? 'text-slate-600 hover:bg-gray-50 hover:text-primary' : ''}
                 `}
               >
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold">
-                    {option.label}
-                  </span>
-                  {option.description && (
-                    <span className={`text-[11px] leading-tight ${index === highlightedIndex || isSelected(option.value) ? 'text-primary/70' : 'text-slate-400'}`}>
-                      {option.description}
-                    </span>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {option.icon && (
+                    <div className={`
+                      size-9 rounded-xl flex items-center justify-center shrink-0
+                      ${index === highlightedIndex || isSelected(option.value) ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-slate-100 text-slate-500'}
+                    `}>
+                      <span className="material-symbols-outlined text-lg">{option.icon}</span>
+                    </div>
                   )}
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-sm font-semibold truncate">
+                      {option.label}
+                    </span>
+                    {option.description && (
+                      <span className={`text-[11px] leading-tight ${index === highlightedIndex || isSelected(option.value) ? 'text-primary/70' : 'text-slate-400'}`}>
+                        {option.description}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {isSelected(option.value) && (
                   <span className="material-symbols-outlined text-lg flex-shrink-0">

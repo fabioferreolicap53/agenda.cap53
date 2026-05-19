@@ -149,7 +149,16 @@ const CreateEvent: React.FC = () => {
       if (indexB !== -1) return 1;
       
       return nameA.localeCompare(nameB);
-    }).map(t => ({ value: t.name, label: t.name }));
+    }).map(t => {
+      const name = t.name || '';
+      const isLembrete = name.trim().toUpperCase() === 'LEMBRETE';
+      return { 
+        value: name, 
+        label: name,
+        icon: isLembrete ? 'event_note' : undefined,
+        description: isLembrete ? 'Registro pessoal' : undefined
+      };
+    });
   }, [eventTypes]);
   const [isTransportTimeInvalid, setIsTransportTimeInvalid] = useState(false);
   const [isConflictCheckLoading, setIsConflictCheckLoading] = useState(false);
