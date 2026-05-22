@@ -117,6 +117,75 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           return INVOLVEMENT_LEVELS.find(l => l.value === r)?.label || 'Participante';
         };
 
+  const handleRemoveParticipant = async (participantId: string, participantName: string) => {
+    if (!confirm(`Tem certeza que deseja retirar a participação de ${participantName}?`)) return;
+    
+    try {
+      const participants = event.participants || [];
+      const updatedParticipants = participants.filter(id => id !== participantId);
+      
+      const updatedStatus = { ...event.participants_status };
+      delete updatedStatus[participantId];
+
+      const updatedRoles = { ...event.participants_roles };
+      delete updatedRoles[participantId];
+
+      try {
+        await pb.collection('agenda_cap53_eventos').update(event.id, {
+          participants: updatedParticipants,
+          participants_status: updatedStatus,
+          participants_roles: updatedRoles
+        });
+      } catch (updateErr) {
+        console.warn('Não foi possível atualizar o evento diretamente (permissão), mas o registro será removido:', updateErr);
+      }
+
+      const existingParticipant = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
+          filter: `event = "${event.id}" && user = "${participantId}"`,
+          requestKey: null
+      });
+
+      const isSelfRemoval = user?.id === participantId;
+
+      if (existingParticipant.items.length > 0) {
+          if (isSelfRemoval) {
+              await pb.collection('agenda_cap53_participantes').update(existingParticipant.items[0].id, {
+                  status: 'rejected'
+              });
+          } else {
+              await pb.collection('agenda_cap53_participantes').delete(existingParticipant.items[0].id);
+          }
+      } else if (isSelfRemoval) {
+          await pb.collection('agenda_cap53_participantes').create({
+              event: event.id,
+              user: participantId,
+              status: 'rejected'
+          });
+      }
+
+      const targetUserId = isSelfRemoval ? event.user : participantId;
+      
+      if (targetUserId) {
+        await notificationService.createNotification({
+          user: targetUserId,
+          title: 'Participação Removida',
+          message: isSelfRemoval 
+            ? `${user?.name} retirou sua participação do evento "${event.title}".`
+            : `Sua participação no evento "${event.title}" foi removida pelo criador.`,
+          type: 'system',
+          event: event.id,
+          data: { kind: 'participation_removed' }
+        });
+      }
+
+      await refreshEvent();
+      alert('Participação removida com sucesso.');
+    } catch (err) {
+      console.error('Error removing participant:', err);
+      alert('Erro ao remover participante.');
+    }
+  };
+
   const renderParticipantRow = (p: UsersResponse) => {
     const isCreator = event.user === p.id;
     const status = isCreator ? 'accepted' : (participantStatus[p.id] || 'pending');
@@ -144,6 +213,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           }`}>
             {status === 'accepted' ? 'Confirmado' : status === 'rejected' ? 'Recusado' : 'Pendente'}
           </span>
+          {event.user === user?.id && !isCreator && status === 'accepted' && (
+            <button 
+                onClick={() => handleRemoveParticipant(p.id, p.name || 'Usuário')}
+                className="size-6 flex items-center justify-center rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100 shrink-0 ml-1"
+                title="Retirar participação"
+            >
+                <span className="material-symbols-outlined text-[14px]">person_remove</span>
+            </button>
+          )}
         </div>
       </div>
     );
@@ -386,56 +464,84 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     
     // Verifica se o evento está cancelado
     if (isCancelled) {
-      alert('Este evento foi cancelado e não aceita novas solicitações.');
+      alert('Este evento foi cancelado e não aceita novas participações.');
       return;
     }
 
     // Verifica se o evento é restrito
     if (event.is_restricted) {
-      alert('Este evento é restrito e não permite novas solicitações de participação.');
+      alert('Este evento é restrito e não permite novas participações.');
       return;
     }
 
     // Safety check for restricted roles
     // Permite que CE solicite participação, removendo-o da lista de bloqueio
     if (['TRA', 'ALMC', 'DCA'].includes(user.role as string)) {
-      alert('Seu perfil não possui permissão para solicitar participação em eventos.');
+      alert('Seu perfil não possui permissão para participar de eventos.');
       return;
     }
 
     setIsRequesting(true);
     try {
-      await pb.collection('agenda_cap53_solicitacoes_evento').create({
-        event: event.id,
-        user: user.id,
-        status: 'pending',
-        message: requestMessage
+      const participants = event.participants || [];
+      if (!participants.includes(user.id)) {
+        const updatedParticipants = [...participants, user.id];
+        const updatedStatus = { ...(event.participants_status || {}), [user.id]: 'accepted' };
+        const updatedRoles = { ...(event.participants_roles || {}), [user.id]: 'PARTICIPANTE' };
+
+        try {
+          await pb.collection('agenda_cap53_eventos').update(event.id, {
+            participants: updatedParticipants,
+            participants_status: updatedStatus,
+            participants_roles: updatedRoles
+          });
+        } catch (updateErr) {
+          console.warn('Não foi possível atualizar o evento diretamente (permissão), mas o registro será criado:', updateErr);
+        }
+      }
+
+      const existingParticipant = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
+          filter: `event = "${event.id}" && user = "${user.id}"`,
+          requestKey: null
       });
 
+      if (existingParticipant.items.length > 0) {
+          await pb.collection('agenda_cap53_participantes').update(existingParticipant.items[0].id, {
+              status: 'accepted',
+              role: 'PARTICIPANTE'
+          });
+      } else {
+          await pb.collection('agenda_cap53_participantes').create({
+              event: event.id,
+              user: user.id,
+              status: 'accepted',
+              role: 'PARTICIPANTE'
+          });
+      }
+
       // Notify creator
-      if (event.user) {
+      if (event.user && event.user !== user.id) {
         await notificationService.createNotification({
           user: event.user,
-          title: 'Nova Solicitação de Participação',
-          message: `${user.name} deseja participar do seu evento "${event.title}".${requestMessage ? `\n\nMensagem: "${requestMessage}"` : ''}`,
-          type: 'event_participation_request',
+          title: 'Nova Participação',
+          message: `${user.name} ingressou no seu evento "${event.title}".`,
+          type: 'system',
           event: event.id,
           data: {
-            kind: 'participation_request',
-            requester_id: user.id,
-            requester_name: user.name,
-            requester_message: requestMessage
+            kind: 'participation_auto_accepted',
+            participant_id: user.id,
+            participant_name: user.name
           }
         });
       }
 
-      await fetchParticipationRequests();
+      await refreshEvent();
       setShowRequestForm(false);
       setRequestMessage('');
-      alert('Solicitação enviada com sucesso! Aguarde a aprovação do criador.');
+      alert('Participação confirmada com sucesso!');
     } catch (err) {
-      console.error('Error requesting participation:', err);
-      alert('Erro ao enviar solicitação.');
+      console.error('Error joining event:', err);
+      alert('Erro ao ingressar no evento.');
     } finally {
       setIsRequesting(false);
     }
@@ -517,6 +623,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         // NEW SYSTEM: Fetch statuses from the dedicated collection
         const participantsRes = await pb.collection('agenda_cap53_participantes').getFullList({
             filter: `event = "${event.id}"`,
+            expand: 'user',
             requestKey: null
         });
         
@@ -531,9 +638,20 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
              if (!statusMap[pId]) statusMap[pId] = 'pending';
         });
 
+        // Initialize expand.participants if missing
+        if (!freshEvent.expand) freshEvent.expand = {};
+        if (!freshEvent.expand.participants) freshEvent.expand.participants = [];
+
         // Overwrite with collection data
         participantsRes.forEach(p => {
             statusMap[p.user] = p.status;
+            // Inject expanded user object to ensure UI renders them even if not in the event's 'participants' array
+            if (p.expand?.user) {
+                const userExists = freshEvent.expand.participants.some((existingUser: any) => existingUser.id === p.user);
+                if (!userExists) {
+                    freshEvent.expand.participants.push(p.expand.user);
+                }
+            }
         });
 
         setParticipantStatus(statusMap);
@@ -1084,13 +1202,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                                     {/* Action Buttons based on status */}
                                     <div className="flex justify-end w-full md:w-auto">
-                                        {!participantStatus[user.id] && !hasRequestedParticipation && !showRequestForm && !isCancelled && (
+                                        {!participantStatus[user.id] && !hasRequestedParticipation && !isCancelled && (
                                             <button 
-                                                onClick={() => setShowRequestForm(true)}
-                                                className="w-full md:w-auto px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2"
+                                                onClick={handleRequestParticipation}
+                                                disabled={isRequesting}
+                                                className="w-full md:w-auto px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                                             >
-                                                <span className="material-symbols-outlined text-base md:hidden">send</span>
-                                                Solicitar Participação
+                                                <span className="material-symbols-outlined text-base md:hidden">person_add</span>
+                                                {isRequesting ? 'Entrando...' : 'Participar do Evento'}
+                                            </button>
+                                        )}
+
+                                        {participantStatus[user.id] === 'accepted' && !isCancelled && (
+                                            <button 
+                                                onClick={() => handleRemoveParticipant(user.id, user.name || 'Você')}
+                                                className="w-full md:w-auto px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-red-100 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-base md:hidden">person_remove</span>
+                                                Sair do Evento
                                             </button>
                                         )}
 
@@ -1121,32 +1250,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         )}
                                     </div>
                                 </div>
-
-                                {showRequestForm && !isCancelled && (
-                                    <div className="pt-4 border-t border-primary/10 space-y-3 animate-in fade-in slide-in-from-top-2">
-                                        <textarea
-                                            placeholder="Escreva uma mensagem para o criador (opcional)..."
-                                            value={requestMessage}
-                                            onChange={(e) => setRequestMessage(e.target.value)}
-                                            className="w-full p-4 rounded-xl border border-primary/20 bg-white text-xs focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none h-24"
-                                        />
-                                        <div className="flex justify-end gap-2">
-                                            <button 
-                                                onClick={() => setShowRequestForm(false)}
-                                                className="px-4 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-100 rounded-xl transition-all"
-                                            >
-                                                Cancelar
-                                            </button>
-                                            <button 
-                                                onClick={handleRequestParticipation}
-                                                disabled={isRequesting}
-                                                className="px-5 py-2.5 rounded-xl bg-primary text-white text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover disabled:opacity-50 transition-all"
-                                            >
-                                                {isRequesting ? 'Enviando...' : 'Confirmar Envio'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         )}
                     </div>

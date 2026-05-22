@@ -312,7 +312,8 @@ const Calendar: React.FC = () => {
         if (!user) return false;
         
         const isCreator = e.user === user.id;
-        const isParticipant = e.participants && e.participants.includes(user.id);
+        const isParticipant = (e.participants && e.participants.includes(user.id)) || 
+                              e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === user.id && p.status === 'accepted');
         const isSpecialRole = ['ADMIN', 'ALMC', 'TRA', 'CE'].includes(user.role);
         
         return isCreator || isParticipant || isSpecialRole;
@@ -345,9 +346,11 @@ const Calendar: React.FC = () => {
     if (!filterUser.includes('Todos') && filterUser.length > 0) {
         result = result.filter(e => {
             const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
-            return targetUserIds.some(targetId => 
-                e.user === targetId || (e.participants && e.participants.includes(targetId))
-            );
+        return targetUserIds.some(targetId => {
+                const inParticipantsArray = e.participants && e.participants.includes(targetId);
+                const inParticipantesCollection = e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === targetId && p.status === 'accepted');
+                return e.user === targetId || inParticipantsArray || inParticipantesCollection;
+            });
         });
     }
 
@@ -857,7 +860,7 @@ const Calendar: React.FC = () => {
 
       const res = await pb.collection('agenda_cap53_eventos').getFullList({
         filter,
-        expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item,agenda_cap53_solicitacoes_evento(event)',
+        expand: 'user,location,participants,type,agenda_cap53_almac_requests_via_event,agenda_cap53_almac_requests_via_event.item,agenda_cap53_solicitacoes_evento(event),agenda_cap53_participantes(event)',
         fields: 'id,title,type,description,observacoes,date_start,date_end,location,custom_location,user,participants,participants_roles,creator_role,status,almoxarifado_items,copa_items,informatica_items,transporte,transporte_suporte,transporte_origem,transporte_destino,transporte_horario_levar,transporte_horario_buscar,transporte_obs,unidades,categorias_profissionais,transporte_status,transporte_justification,participants_status,cancel_reason,almoxarifado_confirmed_items,copa_confirmed_items,informatica_confirmed_items,is_restricted,is_private,event_responsibility,estimated_participants,expand',
         requestKey: null
       });
