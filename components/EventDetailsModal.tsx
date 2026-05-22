@@ -150,7 +150,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       if (existingParticipant.items.length > 0) {
           if (isSelfRemoval) {
               await pb.collection('agenda_cap53_participantes').update(existingParticipant.items[0].id, {
-                  status: 'rejected'
+                  status: 'withdrawn'
               });
           } else {
               await pb.collection('agenda_cap53_participantes').delete(existingParticipant.items[0].id);
@@ -159,7 +159,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           await pb.collection('agenda_cap53_participantes').create({
               event: event.id,
               user: participantId,
-              status: 'rejected'
+              status: 'withdrawn'
           });
       }
 
@@ -209,9 +209,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded shrink-0 ${
             status === 'accepted' ? 'bg-green-100 text-green-700' :
             status === 'rejected' ? 'bg-red-100 text-red-700' :
+            status === 'withdrawn' ? 'bg-slate-100 text-slate-700' :
             'bg-yellow-100 text-yellow-700'
           }`}>
-            {status === 'accepted' ? 'Confirmado' : status === 'rejected' ? 'Recusado' : 'Pendente'}
+            {status === 'accepted' ? 'Confirmado' : status === 'rejected' ? 'Recusado' : status === 'withdrawn' ? 'Retirou-se' : 'Pendente'}
           </span>
           {event.user === user?.id && !isCreator && status === 'accepted' && (
             <button 
@@ -1202,7 +1203,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
                                     {/* Action Buttons based on status */}
                                     <div className="flex justify-end w-full md:w-auto">
-                                        {!participantStatus[user.id] && !hasRequestedParticipation && !isCancelled && (
+                                        {(!participantStatus[user.id] || participantStatus[user.id] === 'withdrawn') && !hasRequestedParticipation && !isCancelled && (
                                             <button 
                                                 onClick={handleRequestParticipation}
                                                 disabled={isRequesting}
@@ -1290,6 +1291,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 ...pendingRequesters
                             ];
                             const rejected = participants.filter((p: UsersResponse) => participantStatus[p.id] === 'rejected');
+                            const withdrawn = participants.filter((p: UsersResponse) => participantStatus[p.id] === 'withdrawn');
 
                             return (
                                 <div className="space-y-6">
@@ -1325,6 +1327,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
                                                 {rejected.map((p: UsersResponse) => renderParticipantRow(p))}
+                                             </div>
+                                        </div>
+                                    )}
+
+                                    {withdrawn.length > 0 && (
+                                        <div className="space-y-3">
+                                             <div className="flex items-center gap-2 px-2">
+                                                <span className="w-2 h-2 rounded-full bg-slate-400 shadow-sm" />
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Retiraram-se ({withdrawn.length})</h3>
+                                             </div>
+                                             <div className="grid grid-cols-1 gap-3">
+                                                {withdrawn.map((p: UsersResponse) => renderParticipantRow(p))}
                                              </div>
                                         </div>
                                     )}
@@ -1627,15 +1641,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     const confirmed = Object.values(participantStatus).filter(s => s === 'accepted').length + 1;
                                     const pendentes = Object.values(participantStatus).filter(s => s === 'pending').length + eventParticipationRequests.filter(r => r.status === 'pending').length;
                                     const recusados = Object.values(participantStatus).filter(s => s === 'rejected').length;
-                                    const total = confirmed + pendentes + recusados;
+                                    const retirados = Object.values(participantStatus).filter(s => s === 'withdrawn').length;
+                                    const total = confirmed + pendentes + recusados + retirados;
                                     const segments = [
                                         { label: 'Confirmados', color: 'bg-green-500', icon: 'check_circle', count: confirmed },
                                         { label: 'Pendentes', color: 'bg-yellow-500', icon: 'schedule', count: pendentes },
-                                        { label: 'Recusados', color: 'bg-red-500', icon: 'cancel', count: recusados }
-                                    ];
+                                        { label: 'Recusados', color: 'bg-red-500', icon: 'cancel', count: recusados },
+                                        { label: 'Retiraram-se', color: 'bg-slate-500', icon: 'person_remove', count: retirados }
+                                    ].filter(s => s.count > 0);
+                                    
                                     return (
                                         <div className="space-y-4">
-                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                                 {segments.map(s => (
                                                     <div key={s.label} className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                                         <div className="flex items-center gap-2">

@@ -313,7 +313,7 @@ const Calendar: React.FC = () => {
         
         const isCreator = e.user === user.id;
         const isParticipant = (e.participants && e.participants.includes(user.id)) || 
-                              e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === user.id && p.status === 'accepted');
+                              e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === user.id && (p.status === 'accepted' || p.status === 'withdrawn'));
         const isSpecialRole = ['ADMIN', 'ALMC', 'TRA', 'CE'].includes(user.role);
         
         return isCreator || isParticipant || isSpecialRole;
@@ -348,7 +348,7 @@ const Calendar: React.FC = () => {
             const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
         return targetUserIds.some(targetId => {
                 const inParticipantsArray = e.participants && e.participants.includes(targetId);
-                const inParticipantesCollection = e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === targetId && p.status === 'accepted');
+                const inParticipantesCollection = e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === targetId && (p.status === 'accepted' || p.status === 'withdrawn'));
                 return e.user === targetId || inParticipantsArray || inParticipantesCollection;
             });
         });

@@ -88,7 +88,7 @@ export interface EventsRecord {
 export interface ParticipantesRecord {
 	event: string
 	user: string
-	status?: 'pending' | 'accepted' | 'declined'
+	status?: 'pending' | 'accepted' | 'declined' | 'rejected' | 'withdrawn'
 }
 
 // Almac Request

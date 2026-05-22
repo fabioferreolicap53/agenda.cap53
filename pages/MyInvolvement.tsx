@@ -255,7 +255,10 @@ const MyInvolvement: React.FC = () => {
   // Filtragem
   const recentEvents = useMemo(() => {
     // 5 eventos criados recentemente, exibidos em ordem decrescente pela data/horário de criação.
-    const sortedByCreated = [...events].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
+    const sortedByCreated = [...events].filter(e => {
+        if (e.participationStatus === 'withdrawn' && e.type !== 'created') return false;
+        return true;
+    }).sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
     return sortedByCreated.slice(0, 5);
   }, [events]);
 
@@ -273,11 +276,20 @@ const MyInvolvement: React.FC = () => {
                    e.requestStatus !== 'pending' && 
                    e.participationStatus !== 'pending' && 
                    e.requestStatus !== 'rejected' && 
-                   e.participationStatus !== 'rejected';
+                   e.participationStatus !== 'rejected' &&
+                   e.participationStatus !== 'withdrawn';
           });
           break;
       case 'participant': 
-        result = events.filter(e => (e.userRole || '').toUpperCase() === 'PARTICIPANTE' && e.requestStatus !== 'pending' && e.participationStatus !== 'pending' && e.requestStatus !== 'rejected' && e.participationStatus !== 'rejected');
+        result = events.filter(e => {
+            const role = (e.userRole || '').toUpperCase();
+            return role === 'PARTICIPANTE' && 
+                   e.requestStatus !== 'pending' && 
+                   e.participationStatus !== 'pending' && 
+                   e.requestStatus !== 'rejected' && 
+                   e.participationStatus !== 'rejected' && 
+                   e.participationStatus !== 'withdrawn';
+        });
         break;
       case 'pending': 
         result = events.filter(e => e.requestStatus === 'pending' || e.participationStatus === 'pending');
@@ -286,7 +298,11 @@ const MyInvolvement: React.FC = () => {
         result = events.filter(e => e.requestStatus === 'rejected' || e.participationStatus === 'rejected');
         break;
       default: 
-        result = events;
+        result = events.filter(e => {
+            // Se "withdrawn", remove-o a menos que seja criador
+            if (e.participationStatus === 'withdrawn' && e.type !== 'created') return false;
+            return true;
+        });
         break;
     }
 
