@@ -358,7 +358,7 @@ const CreateEvent: React.FC = () => {
           if (!participantsRoles[pId]) {
             participantsRoles[pId] = 'PARTICIPANTE';
           }
-          participantsStatus[pId] = 'pending';
+          participantsStatus[pId] = 'accepted';
       });
 
       let existingTransporteStatus: string | null = null;
@@ -473,7 +473,7 @@ const CreateEvent: React.FC = () => {
                   pb.collection(Collections.AgendaCap53Participantes).create({
                     event: editingEventId,
                     user: pId,
-                    status: 'pending',
+                    status: 'accepted',
                     role: participantsRoles[pId] || 'PARTICIPANTE'
                   })
                 ));
@@ -492,6 +492,7 @@ const CreateEvent: React.FC = () => {
                         message: `Você foi convidado para o evento "${title}".${estimatedText}`,
                         type: 'event_invite',
                         event: editingEventId || undefined,
+                        invite_status: 'accepted',
                         data: {
                             estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined
                         }
@@ -500,8 +501,8 @@ const CreateEvent: React.FC = () => {
 
                 await notificationService.createNotification({
                     user: user?.id || '',
-                    title: 'Novos Convites Enviados',
-                    message: `Convite para evento "${title}" enviado para: ${newParticipantNames}.${estimatedText}`,
+                    title: 'Novos Convites Adicionados',
+                    message: `Convite para evento "${title}" adicionado e confirmado para: ${newParticipantNames}.${estimatedText}`,
                     type: 'system',
                     event: editingEventId || undefined,
                     data: {
@@ -524,7 +525,7 @@ const CreateEvent: React.FC = () => {
             pb.collection(Collections.AgendaCap53Participantes).create({
               event: eventId,
               user: participantId,
-              status: 'pending',
+              status: 'accepted',
               role: participantsRoles[participantId] || involvementLevel || 'PARTICIPANTE'
             })
           ));
@@ -538,6 +539,7 @@ const CreateEvent: React.FC = () => {
               message: `Você foi convidado para o evento "${title}".${estimatedText}`,
               type: 'event_invite',
               event: eventId || undefined,
+              invite_status: 'accepted',
               data: {
                 estimated_participants: estimatedParticipants ? parseInt(estimatedParticipants) : undefined
               }
@@ -552,8 +554,8 @@ const CreateEvent: React.FC = () => {
 
           await notificationService.createNotification({
             user: user?.id || '',
-            title: 'Convites Enviados',
-            message: `Convite para evento "${title}" enviado para: ${participantNames}.`,
+            title: 'Convites Adicionados',
+            message: `Convite para evento "${title}" adicionado e confirmado para: ${participantNames}.`,
             type: 'system',
             event: eventId || undefined,
             data: {

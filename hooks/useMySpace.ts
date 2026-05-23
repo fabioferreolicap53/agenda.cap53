@@ -67,6 +67,7 @@ export const useMySpace = () => {
     invitesPending: 0,
     invitesAccepted: 0,
     invitesRejected: 0,
+    invitesWithdrawn: 0,
     // Solicitações Enviadas
     requestsPending: 0,
     requestsAccepted: 0,
@@ -115,13 +116,26 @@ export const useMySpace = () => {
       
       const participationEvents = participationsRes
         .filter(p => p.expand?.event)
-        .map(p => ({
-          ...p.expand.event,
-          category: p.expand.event.expand?.type?.name || p.expand.event.type,
-          userRole: p.role || 'PARTICIPANTE',
-          type: 'participation' as const,
-          participationStatus: p.status
-        }))
+        .map(p => {
+          const evt = p.expand!.event;
+          // Ensure we capture if the user was removed from the event's participant list
+          const isRemoved = !evt.participants?.includes(user.id);
+          
+          // CRITICAL FIX: se o evento não tiver o usuário e o status do participante não for withdrawn/rejected, força rejected (Removido pelo criador)
+          // Mas se for withdrawn (retirou-se), mantemos withdrawn.
+          let computedStatus = p.status;
+          if (isRemoved && p.status !== 'withdrawn' && p.status !== 'rejected') {
+             computedStatus = 'rejected';
+          }
+          
+          return {
+            ...evt,
+            category: evt.expand?.type?.name || evt.type,
+            userRole: p.role || 'PARTICIPANTE',
+            type: 'participation' as const,
+            participationStatus: computedStatus
+          };
+        })
         .filter(e => e.user !== user.id);
 
       // 1.1 Fetch ALL participants for events where I am Creator or Organizer/Coorganizer
@@ -174,19 +188,39 @@ export const useMySpace = () => {
       const uniqueEventsMap = new Map<string, MySpaceEvent>();
 
       // 1. Add Created events (Highest priority)
-      createdWithMeta.forEach(e => uniqueEventsMap.set(e.id, e));
+      // Remove events that are canceled/deleted if needed, but here we just ensure they exist
+      createdWithMeta.forEach(e => {
+          if (e.id && e.status !== 'canceled') uniqueEventsMap.set(e.id, e);
+      });
 
       // 2. Add Participation events
       // Only add if not already present (e.g. if I created it, I'm already there)
       participationEvents.forEach(e => {
+        if (!e.id || e.status === 'canceled') return;
+        
         if (!uniqueEventsMap.has(e.id)) {
           uniqueEventsMap.set(e.id, e);
+        } else {
+          // Update status of existing created event se o usuário também é participante e seu status é withdrawn ou rejected
+          const existing = uniqueEventsMap.get(e.id);
+          if (existing) {
+             if (existing.type !== 'created') {
+                uniqueEventsMap.set(e.id, e);
+             } else {
+                // Se eu sou o criador, mas por algum motivo me retirei (withdrawn) da minha própria lista de participantes,
+                // eu devo preservar o `participationStatus` na propriedade do evento original.
+                if (e.participationStatus === 'withdrawn' || e.participationStatus === 'rejected') {
+                    existing.participationStatus = e.participationStatus;
+                }
+             }
+          }
         }
       });
 
       // 3. Add Request events
       // Only add if not already present (e.g. if I'm already a participant, don't show request)
       requestEvents.forEach(e => {
+        if (!e.id) return;
         if (!uniqueEventsMap.has(e.id)) {
           uniqueEventsMap.set(e.id, e);
         }
@@ -206,6 +240,7 @@ export const useMySpace = () => {
         invitesPending: 0,
         invitesAccepted: 0,
         invitesRejected: 0,
+        invitesWithdrawn: 0,
         // Enviados (Solicitações)
         requestsPending: 0,
         requestsAccepted: 0,
@@ -242,9 +277,17 @@ export const useMySpace = () => {
         if (e.type === 'created') {
           if (eventIsActive) {
             const role = (e.userRole || '').toUpperCase();
-            if (role === 'ORGANIZADOR') breakdown.organizer++;
-            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
-            breakdown.confirmed++;
+            
+            // Check if withdrawn from own event
+            if (e.participationStatus === 'withdrawn') {
+                breakdown.invitesWithdrawn++;
+            } else if (e.participationStatus === 'rejected') {
+                breakdown.invitesRejected++;
+            } else {
+                if (role === 'ORGANIZADOR') breakdown.organizer++;
+                else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
+                breakdown.confirmed++;
+            }
           }
           return;
         }
@@ -261,6 +304,8 @@ export const useMySpace = () => {
             breakdown.invitesPending++;
           } else if (e.participationStatus === 'rejected') {
             breakdown.invitesRejected++;
+          } else if (e.participationStatus === 'withdrawn') {
+            breakdown.invitesWithdrawn++;
           }
           return;
         }
@@ -288,6 +333,7 @@ export const useMySpace = () => {
         invitesPending: breakdown.invitesPending,
         invitesAccepted: breakdown.invitesAccepted,
         invitesRejected: breakdown.invitesRejected,
+        invitesWithdrawn: breakdown.invitesWithdrawn,
         requestsPending: breakdown.requestsPending,
         requestsAccepted: breakdown.requestsAccepted,
         requestsRejected: breakdown.requestsRejected,

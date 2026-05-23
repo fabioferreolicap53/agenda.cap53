@@ -33,7 +33,10 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
       label = 'Solicitação Pendente';
     } else if (event.participationStatus === 'rejected' || event.requestStatus === 'rejected') {
       color = 'bg-red-500';
-      label = 'Recusado';
+      label = 'Removido/Recusado';
+    } else if (event.participationStatus === 'withdrawn') {
+      color = 'bg-amber-600';
+      label = 'Retirou-se';
     } else if (event.status === 'canceled') {
       color = 'bg-red-600';
       label = 'Cancelado';
@@ -72,6 +75,14 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
       label = 'Aguardando';
       icon = 'hourglass_top';
       classes = 'text-slate-500 bg-slate-50 border-slate-100';
+    } else if (event.participationStatus === 'withdrawn') {
+      label = 'Desistente';
+      icon = 'logout';
+      classes = 'text-amber-700 bg-amber-50 border-amber-200';
+    } else if (event.participationStatus === 'rejected') {
+      label = 'Removido';
+      icon = 'person_remove';
+      classes = 'text-red-700 bg-red-50 border-red-200';
     }
 
     return (

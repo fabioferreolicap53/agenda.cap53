@@ -32,7 +32,7 @@ export const getAvatarUrl = (record: any): string | null => {
     if (record.avatar && typeof record.avatar === 'string') {
         // Se o record tiver um ID (é um model do PB), gera a URL
         if (record.id && record.collectionId || record.collectionName) {
-            return pb.files.getUrl(record, record.avatar);
+            return pb.files.getURL(record, record.avatar);
         }
     }
     

@@ -147,20 +147,34 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
       const isSelfRemoval = user?.id === participantId;
 
-      if (existingParticipant.items.length > 0) {
-          if (isSelfRemoval) {
-              await pb.collection('agenda_cap53_participantes').update(existingParticipant.items[0].id, {
-                  status: 'withdrawn'
-              });
-          } else {
-              await pb.collection('agenda_cap53_participantes').delete(existingParticipant.items[0].id);
-          }
-      } else if (isSelfRemoval) {
-          await pb.collection('agenda_cap53_participantes').create({
-              event: event.id,
-              user: participantId,
-              status: 'withdrawn'
-          });
+      try {
+        if (existingParticipant.items.length > 0) {
+            if (isSelfRemoval) {
+                await pb.collection('agenda_cap53_participantes').update(existingParticipant.items[0].id, {
+                    status: 'withdrawn'
+                });
+            } else {
+                // Mark as rejected instead of deleting, to keep the history of removal
+                await pb.collection('agenda_cap53_participantes').update(existingParticipant.items[0].id, {
+                    status: 'rejected'
+                });
+            }
+        } else if (isSelfRemoval) {
+            await pb.collection('agenda_cap53_participantes').create({
+                event: event.id,
+                user: participantId,
+                status: 'withdrawn'
+            });
+        } else {
+            // If not self removal and it didn't exist, we just create it as rejected
+            await pb.collection('agenda_cap53_participantes').create({
+                event: event.id,
+                user: participantId,
+                status: 'rejected'
+            });
+        }
+      } catch (e) {
+          console.warn('Não foi possível atualizar o registro do participante (provável falta de permissão da API), mas o evento foi atualizado.', e);
       }
 
       const targetUserId = isSelfRemoval ? event.user : participantId;
@@ -212,7 +226,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             status === 'withdrawn' ? 'bg-slate-100 text-slate-700' :
             'bg-yellow-100 text-yellow-700'
           }`}>
-            {status === 'accepted' ? 'Confirmado' : status === 'rejected' ? 'Recusado' : status === 'withdrawn' ? 'Retirou-se' : 'Pendente'}
+            {status === 'accepted' ? 'Confirmado' : status === 'rejected' ? 'Removido/Recusado' : status === 'withdrawn' ? 'Retirou-se' : 'Pendente'}
           </span>
           {event.user === user?.id && !isCreator && status === 'accepted' && (
             <button 
@@ -221,6 +235,15 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                 title="Retirar participação"
             >
                 <span className="material-symbols-outlined text-[14px]">person_remove</span>
+            </button>
+          )}
+          {user?.id === p.id && !isCreator && status === 'accepted' && (
+            <button 
+                onClick={() => handleRemoveParticipant(p.id, p.name || 'Usuário')}
+                className="size-6 flex items-center justify-center rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors border border-red-100 shrink-0 ml-1"
+                title="Sair do evento"
+            >
+                <span className="material-symbols-outlined text-[14px]">logout</span>
             </button>
           )}
         </div>
@@ -526,8 +549,9 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           user: event.user,
           title: 'Nova Participação',
           message: `${user.name} ingressou no seu evento "${event.title}".`,
-          type: 'system',
+          type: 'event_participation_request',
           event: event.id,
+          invite_status: 'accepted',
           data: {
             kind: 'participation_auto_accepted',
             participant_id: user.id,
@@ -645,11 +669,20 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
         // Overwrite with collection data
         participantsRes.forEach(p => {
-            statusMap[p.user] = p.status;
+            // Se o participante não está na lista de participantes (foi removido do evento)
+            // e o criador não teve permissão de atualizar o registro de p.status para 'rejected',
+            // nós forçamos o status para 'rejected' localmente.
+            const isRemovedFromEvent = !freshEvent.participants?.includes(p.user);
+            const status = isRemovedFromEvent && p.status !== 'withdrawn' && p.status !== 'rejected' 
+                ? 'rejected' 
+                : p.status;
+
+            statusMap[p.user] = status;
+
             // Inject expanded user object to ensure UI renders them even if not in the event's 'participants' array
             if (p.expand?.user) {
-                const userExists = freshEvent.expand.participants.some((existingUser: any) => existingUser.id === p.user);
-                if (!userExists) {
+                const userExists = freshEvent.expand?.participants?.some((existingUser: any) => existingUser.id === p.user);
+                if (!userExists && freshEvent.expand && freshEvent.expand.participants) {
                     freshEvent.expand.participants.push(p.expand.user);
                 }
             }
@@ -1323,7 +1356,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         <div className="space-y-3">
                                              <div className="flex items-center gap-2 px-2">
                                                 <span className="w-2 h-2 rounded-full bg-red-500 shadow-sm" />
-                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Recusados ({rejected.length})</h3>
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Removidos ({rejected.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
                                                 {rejected.map((p: UsersResponse) => renderParticipantRow(p))}

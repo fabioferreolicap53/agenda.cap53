@@ -191,7 +191,8 @@ const Notifications: React.FC = () => {
       title.includes('aceita') || 
       title.includes('aceito') ||
       title.includes('confirmada') ||
-      title.includes('confirmado')
+      title.includes('confirmado') ||
+      (type === 'event_invite' && n.invite_status === 'accepted')
     ) {
       return 'approved';
     }
@@ -786,6 +787,10 @@ const Notifications: React.FC = () => {
         if (data.item_name) {
             return `Aguardando aprovação de ${data.item_name} para o evento "${data.event_title || 'Evento'}"`;
         }
+        return msg;
+    }
+
+    if (n.invite_status === 'accepted') {
         return msg;
     }
 
@@ -1545,7 +1550,7 @@ const Notifications: React.FC = () => {
                         // unless they are viewing a request they made themselves (which is rare but possible for ADMIN)
                         // Logic: Show message ONLY if user is NOT the sector responsible for this request type
                         
-                        let showPendingMessage = isPending;
+                        let showPendingMessage = isPending && notifKind !== 'organizer_invite_sent';
 
                         if (user?.role === 'ALMC' && (sectorName === 'Almoxarifado' || sectorName === 'Copa')) {
                             showPendingMessage = false;
@@ -1693,6 +1698,8 @@ const Notifications: React.FC = () => {
                     getData(notification).kind !== 'participation_request_response' &&
                     // Exclude organizer invite sent (it's an info notification for the creator)
                     getData(notification).kind !== 'organizer_invite_sent' &&
+                    // Exclude automatically accepted notifications
+                    notification.invite_status !== 'accepted' &&
                     // For sector requests, only show actions if it's the latest notification in the chain
                     !((notification.type === 'almc_item_request' || notification.type === 'transport_request' || notification.type === 'request_decision') && !isLatest) && (
                     // Check Permissions:
@@ -1995,8 +2002,9 @@ const Notifications: React.FC = () => {
                                  isAccepted = true;
                              }
                         } else if (notifData.kind === 'organizer_invite_sent') {
-                             // New organizer notification with no responses yet
-                             isPendingDecision = true;
+                             // Convites agora são confirmados automaticamente
+                             isPendingDecision = false;
+                             isAccepted = true;
                         } else {
                              // Fallback to flag if no history (legacy behavior)
                              isPendingDecision = notifData.re_invited === true;

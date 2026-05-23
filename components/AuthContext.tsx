@@ -142,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     name: model.name || '',
                     email: model.email,
                     role: devRoleOverride || (model.role as UserRole),
-                    avatar: model.avatar ? pb.files.getUrl(model, model.avatar) : null,
+                    avatar: model.avatar ? pb.files.getURL(model, model.avatar) : null,
                     status: model.status,
                     context_status: model.context_status,
                     last_active: model.last_active,
@@ -283,7 +283,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                     name: e.record.name || prev.name,
                                     email: e.record.email || prev.email,
                                     role: (e.record.role as UserRole) || prev.role,
-                                    avatar: e.record.avatar ? `${pb.files.getUrl(e.record, e.record.avatar)}?t=${Date.now()}` : null,
+                                    avatar: e.record.avatar ? `${pb.files.getURL(e.record, e.record.avatar)}?t=${Date.now()}` : null,
                                     status: e.record.status || prev.status,
                                     context_status: e.record.context_status, // can be empty string
                                     last_active: e.record.last_active || prev.last_active,

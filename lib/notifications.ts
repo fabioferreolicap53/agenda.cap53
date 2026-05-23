@@ -22,6 +22,7 @@ export interface CreateNotificationParams {
   type: NotificationType;
   event?: string;
   related_request?: string;
+  invite_status?: 'pending' | 'accepted' | 'rejected' | 'confirmed' | 'approved';
   data?: any;
 }
 
@@ -59,7 +60,7 @@ export const notificationService = {
    * Prevents duplicates if the same user, event, and type are provided.
    */
   async createNotification(params: CreateNotificationParams) {
-    const { user, title, message, type, event, related_request, data } = params;
+    const { user, title, message, type, event, related_request, invite_status, data } = params;
 
     console.log('🔔 DEBUG createNotification:', { user, title, message, type, event, related_request });
 
@@ -72,13 +73,19 @@ export const notificationService = {
 
       if (existing.totalItems > 0) {
         console.log(`✅ Notificação já existe para usuário ${user} e evento ${event}`);
+        // Atualiza o status se for fornecido
+        if (invite_status && existing.items[0].invite_status !== invite_status) {
+          return await pb.collection('agenda_cap53_notifications').update(existing.items[0].id, {
+            invite_status: invite_status
+          });
+        }
         return existing.items[0];
       }
     }
 
     // 2. Create the internal PocketBase notification
     console.log('💾 Tentando criar notificação no banco de dados...');
-    console.log('📋 Dados completos:', { user, title, message, type, event, related_request, data });
+    console.log('📋 Dados completos:', { user, title, message, type, event, related_request, invite_status, data });
     
     let notification;
     try {
@@ -93,13 +100,13 @@ export const notificationService = {
         event,
         related_request,
         read: false,
-        invite_status: (
+        invite_status: invite_status || ((
           type === 'event_invite' || 
           type === 'event_participation_request' || 
           type === 'almc_item_request' || 
           type === 'transport_request' || 
           type === 'service_request'
-        ) ? 'pending' : null,
+        ) ? 'pending' : null),
         data,
         acknowledged: false
       });

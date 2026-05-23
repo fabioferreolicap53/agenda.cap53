@@ -161,7 +161,6 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
         disabled={loading}
         options={[
           { value: 'external', label: '📍 LUGAR EXTERNO NÃO FIXO' },
-          { value: 'not_applicable', label: '🚫 NÃO SE APLICA' },
           ...locations
             .filter(loc => normalizeBoolean(loc.is_available) || loc.id === value.fixedId)
             .map(loc => {
@@ -179,7 +178,8 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
                 disabled: isRestricted && !hasPermission,
                 description
               };
-            })
+            }),
+          { value: 'not_applicable', label: '🚫 NÃO SE APLICA' }
         ]}
       />
       {showNoConflictNotice && (

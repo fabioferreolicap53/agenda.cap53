@@ -9,9 +9,10 @@ interface StatsProps {
     requestsPending: number;
     invitesRejected: number;
     requestsRejected: number;
+    invitesWithdrawn?: number;
   };
-  activeTab: 'all' | 'organizer' | 'participant' | 'pending' | 'rejected';
-  onTabChange: (tab: 'all' | 'organizer' | 'participant' | 'pending' | 'rejected') => void;
+  activeTab: 'all' | 'organizer' | 'participant' | 'withdrawn' | 'removed';
+  onTabChange: (tab: 'all' | 'organizer' | 'participant' | 'withdrawn' | 'removed') => void;
 }
 
 export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange }) => {
@@ -41,18 +42,18 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
       inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
     },
     { 
-      id: 'pending', 
-      label: 'Pendentes', 
-      value: stats.invitesPending + stats.requestsPending, 
-      icon: 'pending_actions', 
+      id: 'withdrawn', 
+      label: 'Retirou-se', 
+      value: stats.invitesWithdrawn || 0, 
+      icon: 'logout', 
       activeColor: 'text-amber-600 bg-amber-50 border-amber-200',
       inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
     },
     { 
-      id: 'rejected', 
-      label: 'Recusados', 
+      id: 'removed', 
+      label: 'Removido', 
       value: stats.invitesRejected + stats.requestsRejected, 
-      icon: 'cancel', 
+      icon: 'person_remove', 
       activeColor: 'text-red-600 bg-red-50 border-red-200',
       inactiveColor: 'text-slate-500 bg-white border-slate-100 hover:border-slate-200'
     },

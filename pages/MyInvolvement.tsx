@@ -23,7 +23,7 @@ const MyInvolvement: React.FC = () => {
   const { events, loading, stats, analytics, refresh } = useMySpace();
   
   // Local state
-  const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'participant' | 'pending' | 'rejected'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'participant' | 'withdrawn' | 'removed'>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
 
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
@@ -137,7 +137,7 @@ const MyInvolvement: React.FC = () => {
     const tabParam = params.get('tab');
     const scrollParam = params.get('scroll');
     const anchorParam = params.get('anchor');
-    if (tabParam && ['all','organizer','participant','pending','rejected'].includes(tabParam)) {
+    if (tabParam && ['all','organizer','participant','withdrawn','removed'].includes(tabParam)) {
       setActiveTab(tabParam as any);
     }
     const targetTab = tabParam || activeTab;
@@ -291,16 +291,16 @@ const MyInvolvement: React.FC = () => {
                    e.participationStatus !== 'withdrawn';
         });
         break;
-      case 'pending': 
-        result = events.filter(e => e.requestStatus === 'pending' || e.participationStatus === 'pending');
-        break;
-      case 'rejected': 
+      case 'removed': 
         result = events.filter(e => e.requestStatus === 'rejected' || e.participationStatus === 'rejected');
+        break;
+      case 'withdrawn':
+        result = events.filter(e => e.participationStatus === 'withdrawn');
         break;
       default: 
         result = events.filter(e => {
-            // Se "withdrawn", remove-o a menos que seja criador
-            if (e.participationStatus === 'withdrawn' && e.type !== 'created') return false;
+            // Se "withdrawn" ou "rejected", remove-o a menos que seja criador, da aba "Todos os Eventos"
+            if ((e.participationStatus === 'withdrawn' || e.participationStatus === 'rejected') && e.type !== 'created') return false;
             return true;
         });
         break;
