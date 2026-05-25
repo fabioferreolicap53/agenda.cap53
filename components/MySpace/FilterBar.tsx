@@ -1,150 +1,61 @@
-import React, { useState } from 'react';
-import CustomSelect from '../CustomSelect';
+import React from 'react';
 
 interface FilterBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   resultCount: number;
-  
-  // New props for filters
-  selectedMonth: string;
-  onMonthChange: (value: string) => void;
-  selectedYear: string;
-  onYearChange: (value: string) => void;
-  selectedType: string;
-  onTypeChange: (value: string) => void;
-  selectedLocation: string;
-  onLocationChange: (value: string) => void;
-  
-  eventTypes: string[];
-  locations: string[];
 }
 
 export const FilterBar: React.FC<FilterBarProps> = ({ 
   searchTerm, 
   onSearchChange, 
-  resultCount,
-  selectedMonth,
-  onMonthChange,
-  selectedYear,
-  onYearChange,
-  selectedType,
-  onTypeChange,
-  selectedLocation,
-  onLocationChange,
-  eventTypes,
-  locations
+  resultCount
 }) => {
-  const [showFilters, setShowFilters] = useState(false);
-
-  const months = [
-    { value: 'all', label: 'Todos os Meses' },
-    { value: '0', label: 'Janeiro' },
-    { value: '1', label: 'Fevereiro' },
-    { value: '2', label: 'Março' },
-    { value: '3', label: 'Abril' },
-    { value: '4', label: 'Maio' },
-    { value: '5', label: 'Junho' },
-    { value: '6', label: 'Julho' },
-    { value: '7', label: 'Agosto' },
-    { value: '8', label: 'Setembro' },
-    { value: '9', label: 'Outubro' },
-    { value: '10', label: 'Novembro' },
-    { value: '11', label: 'Dezembro' },
-  ];
-
-  // Generate years (current year - 1 to current year + 2)
-  const currentYear = new Date().getFullYear();
-  const years = [
-    { value: 'all', label: 'Todos os Anos' },
-    ...Array.from({ length: 4 }, (_, i) => {
-        const year = (currentYear - 1 + i).toString();
-        return { value: year, label: year };
-    })
-  ];
-
-  const typeOptions = [
-    { value: 'all', label: 'Todos os Tipos' },
-    ...eventTypes.map(t => ({ value: t, label: t }))
-  ];
-
-  const locationOptions = [
-    { value: 'all', label: 'Todos os Locais' },
-    ...locations.map(l => ({ value: l, label: l }))
-  ];
-
   return (
-    <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-      {/* Top Row: Search and Count */}
-      <div className="flex flex-col md:flex-row items-center gap-4">
-        <div className="flex flex-1 w-full gap-2">
-            <div className="relative flex-1">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                <input
-                  type="text"
-                  placeholder="Buscar eventos, locais ou tipos..."
-                  value={searchTerm}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  className="w-full bg-slate-50 border-none rounded-xl h-10 pl-10 pr-4 text-sm font-medium focus:ring-2 focus:ring-indigo-100 outline-none transition-all placeholder:text-slate-400 text-slate-600"
-                />
+    <div className="relative group">
+      {/* Glow effect background */}
+      <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-[2rem] blur opacity-0 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+      
+      <div className="relative flex flex-col md:flex-row items-center gap-4 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-[1.8rem] border border-slate-200/60 shadow-xl shadow-slate-200/40">
+        <div className="flex flex-1 w-full gap-3">
+          <div className="relative flex-1 group/input">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center">
+              <span className="material-symbols-outlined text-slate-400 group-focus-within/input:text-indigo-500 transition-colors duration-300">search</span>
             </div>
-            <button 
-              onClick={() => setShowFilters(!showFilters)}
-              className="lg:hidden flex items-center justify-center w-10 h-10 bg-slate-50 rounded-xl border border-slate-100 text-slate-500 hover:text-primary hover:bg-primary/10 transition-colors shrink-0"
-              title={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
-            >
-              <span className="material-symbols-outlined">{showFilters ? 'filter_list_off' : 'filter_list'}</span>
-            </button>
+            
+            <input
+              type="text"
+              placeholder="Buscar por título, local, natureza..."
+              value={searchTerm}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="w-full bg-slate-100/50 hover:bg-slate-100 border border-transparent focus:border-indigo-200 focus:bg-white rounded-2xl h-12 pl-12 pr-12 text-sm font-semibold text-slate-700 placeholder:text-slate-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all duration-300 shadow-inner"
+            />
+
+            {searchTerm && (
+              <button 
+                onClick={() => onSearchChange('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 size-8 flex items-center justify-center rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            )}
+          </div>
         </div>
         
-         <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100/50 whitespace-nowrap self-start md:self-auto">
-            <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-              {resultCount} {resultCount === 1 ? 'Evento' : 'Eventos'}
+        <div className="flex items-center gap-3 pl-2 pr-4 py-2 bg-indigo-50/50 rounded-2xl border border-indigo-100/50 whitespace-nowrap self-stretch md:self-auto transition-all hover:bg-indigo-50">
+          <div className="flex items-center justify-center size-8 rounded-xl bg-indigo-500 shadow-lg shadow-indigo-200">
+            <span className="text-[11px] font-black text-white">
+              {resultCount}
             </span>
           </div>
-      </div>
-
-      {/* Bottom Row: Filters */}
-      <div className={`${showFilters ? 'grid' : 'hidden'} lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-300 ease-in-out`}>
-        {/* Month */}
-        <div className="h-11">
-          <CustomSelect 
-              value={selectedMonth} 
-              onChange={onMonthChange} 
-              options={months} 
-              placeholder="Todos os Meses" 
-          />
-        </div>
-
-        {/* Year */}
-        <div className="h-11">
-          <CustomSelect 
-              value={selectedYear} 
-              onChange={onYearChange} 
-              options={years} 
-              placeholder="Todos os Anos" 
-          />
-        </div>
-
-        {/* Type */}
-        <div className="h-11">
-          <CustomSelect 
-              value={selectedType} 
-              onChange={onTypeChange} 
-              options={typeOptions} 
-              placeholder="Todos os Tipos" 
-          />
-        </div>
-
-        {/* Location */}
-        <div className="h-11">
-          <CustomSelect 
-              value={selectedLocation} 
-              onChange={onLocationChange} 
-              options={locationOptions} 
-              placeholder="Todos os Locais" 
-          />
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-indigo-600/80 leading-none">
+              Resultados
+            </span>
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+              Encontrados
+            </span>
+          </div>
         </div>
       </div>
     </div>

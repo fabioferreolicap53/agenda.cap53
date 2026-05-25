@@ -233,7 +233,7 @@ export const useMySpace = () => {
 
       // Calculate stats with fine-grained separation
       const breakdown = {
-        totalCreated: createdRes.length,
+        totalCreated: createdWithMeta.filter(e => e.status !== 'canceled').length,
         organizer: 0,
         participant: 0,
         // Recebidos

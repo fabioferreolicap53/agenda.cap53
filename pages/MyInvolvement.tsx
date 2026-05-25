@@ -45,15 +45,9 @@ const MyInvolvement: React.FC = () => {
     return params.get('search') || '';
   });
 
-  // Novos Filtros
-  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().getMonth().toString());
-  const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
-  const [selectedType, setSelectedType] = useState<string>('all');
-  const [selectedLocation, setSelectedLocation] = useState<string>('all');
+  // Pagination
+  const [visibleCount, setVisibleCount] = useState(10);
   
-  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
-  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
-
   // Scroll persistence (container-based)
   const scrollPositions = useRef<Record<string, number>>({});
   const pendingRestoreScroll = useRef<number | null>(null);
@@ -71,22 +65,6 @@ const MyInvolvement: React.FC = () => {
   const [refusalModalOpen, setRefusalModalOpen] = useState(false);
   const [eventToCancel, setEventToCancel] = useState<MySpaceEvent | null>(null);
   const [processingCancellation, setProcessingCancellation] = useState(false);
-
-  // Carregar opções de filtro
-  React.useEffect(() => {
-    const fetchOptions = async () => {
-      try {
-        const types = await pb.collection('agenda_cap53_tipos_evento').getFullList({ sort: 'name' });
-        setAvailableTypes(types.map((t: any) => t.name));
-
-        const locs = await pb.collection('agenda_cap53_locais').getFullList({ sort: 'name' });
-        setAvailableLocations(locs.map((l: any) => l.name));
-      } catch (error) {
-        console.error('Error fetching filter options:', error);
-      }
-    };
-    fetchOptions();
-  }, []);
 
   // Listen and persist scroll continuously on container
   useEffect(() => {
@@ -252,15 +230,10 @@ const MyInvolvement: React.FC = () => {
     navigate(`/create-event?edit_from=${event.id}`);
   };
 
-  // Filtragem
-  const recentEvents = useMemo(() => {
-    // 5 eventos criados recentemente, exibidos em ordem decrescente pela data/horário de criação.
-    const sortedByCreated = [...events].filter(e => {
-        if (e.participationStatus === 'withdrawn' && e.type !== 'created') return false;
-        return true;
-    }).sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    return sortedByCreated.slice(0, 5);
-  }, [events]);
+  // Reset pagination on tab or search change
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [activeTab, searchTerm]);
 
   const filteredEvents = useMemo(() => {
     const term = searchTerm.toLowerCase();
@@ -297,12 +270,9 @@ const MyInvolvement: React.FC = () => {
       case 'withdrawn':
         result = events.filter(e => e.participationStatus === 'withdrawn');
         break;
+      case 'all':
       default: 
-        result = events.filter(e => {
-            // Se "withdrawn" ou "rejected", remove-o a menos que seja criador, da aba "Todos os Eventos"
-            if ((e.participationStatus === 'withdrawn' || e.participationStatus === 'rejected') && e.type !== 'created') return false;
-            return true;
-        });
+        result = events.filter(e => e.type === 'created');
         break;
     }
 
@@ -317,32 +287,15 @@ const MyInvolvement: React.FC = () => {
       );
     }
 
-    // 3. Novos Filtros Avançados
-    result = result.filter(e => {
-        // Data
-        if (selectedMonth !== 'all' || selectedYear !== 'all') {
-            const eventDate = new Date(e.date_start);
-            if (selectedMonth !== 'all' && eventDate.getMonth().toString() !== selectedMonth) return false;
-            if (selectedYear !== 'all' && eventDate.getFullYear().toString() !== selectedYear) return false;
-        }
-
-        // Tipo
-        if (selectedType !== 'all') {
-            const type = e.category || e.nature;
-            if (type !== selectedType) return false;
-        }
-
-        // Localização
-        if (selectedLocation !== 'all') {
-             const locName = e.expand?.location?.name || e.custom_location || e.location || '';
-             if (locName !== selectedLocation) return false;
-        }
-        
-        return true;
-    });
+    // 3. Ordenação Decrescente por Data de Criação
+    result = [...result].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
     
     return result;
-  }, [events, activeTab, searchTerm, selectedMonth, selectedYear, selectedType, selectedLocation]);
+  }, [events, activeTab, searchTerm]);
+
+  const visibleEvents = useMemo(() => {
+    return filteredEvents.slice(0, visibleCount);
+  }, [filteredEvents, visibleCount]);
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
@@ -407,67 +360,35 @@ const MyInvolvement: React.FC = () => {
           <AnalyticsSection analytics={analytics || { byType: [], byNature: [], byTime: [], byResources: [] }} />
         ) : (
           <>
-            {recentEvents.length > 0 && activeTab === 'all' && !searchTerm && (
-              <div className="mb-10 relative bg-gradient-to-br from-indigo-50/80 via-white to-slate-50 border border-indigo-100/60 rounded-[2rem] p-5 sm:p-8 shadow-sm overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-400/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none"></div>
-                <div className="flex items-center gap-3 mb-6 relative z-10">
-                  <div className="flex items-center justify-center size-10 rounded-xl bg-indigo-100 text-indigo-600 shadow-inner">
-                    <span className="material-symbols-outlined text-[22px]">history</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <h2 className="text-xl font-black text-indigo-950 tracking-tight leading-none">Recentes</h2>
-                    <span className="text-[11px] font-bold text-indigo-600/70 mt-1 uppercase tracking-wider">Últimos {recentEvents.length} criados</span>
-                  </div>
-                </div>
-                <div className="relative z-10">
-                  <EventList 
-                    events={recentEvents}
-                    loading={loading}
-                    onOpenCalendar={handleOpenEventInCalendar}
-                    onCancel={handleCancelEvent}
-                    onDelete={handleDeleteEvent}
-                    onDuplicate={handleDuplicateEvent}
-                    onEdit={handleEditEvent}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 mb-6 mt-4 px-2 sm:px-0">
-              <div className="flex items-center justify-center size-10 rounded-xl bg-slate-100 text-slate-600 border border-slate-200/60 shadow-sm">
-                <span className="material-symbols-outlined text-[22px]">calendar_view_day</span>
-              </div>
-              <div className="flex flex-col">
-                <h2 className="text-xl font-black text-slate-800 tracking-tight leading-none">Todos os Eventos</h2>
-                <span className="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">Catálogo completo</span>
-              </div>
-            </div>
-
             <FilterBar 
               searchTerm={searchTerm} 
               onSearchChange={setSearchTerm} 
               resultCount={filteredEvents.length}
-              selectedMonth={selectedMonth}
-              onMonthChange={setSelectedMonth}
-              selectedYear={selectedYear}
-              onYearChange={setSelectedYear}
-              selectedType={selectedType}
-              onTypeChange={setSelectedType}
-              selectedLocation={selectedLocation}
-              onLocationChange={setSelectedLocation}
-              eventTypes={availableTypes}
-              locations={availableLocations}
             />
             
-            <EventList 
-              events={filteredEvents}
-              loading={loading}
-              onOpenCalendar={handleOpenEventInCalendar}
-              onCancel={handleCancelEvent}
-              onDelete={handleDeleteEvent}
-              onDuplicate={handleDuplicateEvent}
-              onEdit={handleEditEvent}
-            />
+            <div className="space-y-6">
+              <EventList 
+                events={visibleEvents}
+                loading={loading}
+                onOpenCalendar={handleOpenEventInCalendar}
+                onCancel={handleCancelEvent}
+                onDelete={handleDeleteEvent}
+                onDuplicate={handleDuplicateEvent}
+                onEdit={handleEditEvent}
+              />
+
+              {filteredEvents.length > visibleCount && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => setVisibleCount(prev => prev + 10)}
+                    className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm group"
+                  >
+                    <span className="material-symbols-outlined text-[20px] group-hover:translate-y-0.5 transition-transform">expand_more</span>
+                    Carregar mais eventos
+                  </button>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
