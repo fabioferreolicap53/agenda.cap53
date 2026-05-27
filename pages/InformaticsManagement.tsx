@@ -37,6 +37,7 @@ const InformaticsManagement: React.FC = () => {
     const [newItemName, setNewItemName] = useState('');
     const [newItemUnit, setNewItemUnit] = useState('un');
     const [newItemAvailable, setNewItemAvailable] = useState(true);
+    const [newItemStock, setNewItemStock] = useState<number>(0);
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
@@ -317,7 +318,8 @@ const InformaticsManagement: React.FC = () => {
                 name: normalizedName,
                 category: 'INFORMATICA',
                 unit: normalizedUnit,
-                is_available: !!newItemAvailable
+                is_available: !!newItemAvailable,
+                stock: Number(newItemStock)
             };
 
             if (editingId) {
@@ -349,6 +351,7 @@ const InformaticsManagement: React.FC = () => {
             setNewItemName('');
             setNewItemAvailable(true);
             setNewItemUnit('un');
+            setNewItemStock(0);
             fetchData();
         } catch (error: any) {
             console.error('Erro ao salvar recurso:', error);
@@ -359,6 +362,7 @@ const InformaticsManagement: React.FC = () => {
     const handleEditItem = (item: any) => {
         setNewItemName(item.name);
         setNewItemUnit(item.unit || 'un');
+        setNewItemStock(item.stock || 0);
         setNewItemAvailable(item.is_available ?? true);
         setEditingId(item.id);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -389,6 +393,7 @@ const InformaticsManagement: React.FC = () => {
     const handleCancelEdit = () => {
         setNewItemName('');
         setNewItemUnit('un');
+        setNewItemStock(0);
         setNewItemAvailable(true);
         setEditingId(null);
     };
@@ -646,6 +651,18 @@ const InformaticsManagement: React.FC = () => {
                                         </div>
 
                                         <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Quantidade em Estoque</label>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={newItemStock}
+                                                onChange={(e) => setNewItemStock(Number(e.target.value))}
+                                                placeholder="Ex: 10"
+                                                className="w-full h-14 px-4 bg-slate-100 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-4 focus:ring-slate-900/5 focus:border-slate-400 transition-all outline-none"
+                                            />
+                                        </div>
+
+                                        <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Disponibilidade Imediata</label>
                                             <button
                                                 type="button"
@@ -715,15 +732,16 @@ const InformaticsManagement: React.FC = () => {
                                             <table className="w-full border-collapse">
                                                 <thead>
                                                     <tr className="bg-slate-100/50 border-b border-slate-200">
-                                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Recurso</th>
-                                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-500 uppercase tracking-widest">Disponibilidade</th>
-                                                        <th className="px-6 py-5 text-right text-[10px] font-black text-slate-500 uppercase tracking-widest">Ações</th>
+                                                        <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Recurso</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Quantidade</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidade</th>
+                                                <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
                                                     {loading ? (
                                                         <tr>
-                                                            <td colSpan={3} className="px-6 py-20 text-center">
+                                                            <td colSpan={4} className="px-6 py-20 text-center">
                                                                 <div className="flex flex-col items-center gap-3">
                                                                     <div className="size-10 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin"></div>
                                                                     <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Carregando recursos...</p>
@@ -732,7 +750,7 @@ const InformaticsManagement: React.FC = () => {
                                                         </tr>
                                                     ) : filteredItems.length === 0 ? (
                                                         <tr>
-                                                            <td colSpan={3} className="px-6 py-32 text-center">
+                                                            <td colSpan={4} className="px-6 py-32 text-center">
                                                                 <div className="flex flex-col items-center gap-4">
                                                                     <div className="size-16 rounded-full bg-slate-100 flex items-center justify-center">
                                                                         <span className="material-symbols-outlined text-3xl text-slate-300">devices</span>
@@ -752,6 +770,11 @@ const InformaticsManagement: React.FC = () => {
                                                                         <span className="text-slate-900 font-bold text-sm">{item.name}</span>
                                                                         <span className="text-slate-400 text-[10px] font-medium uppercase tracking-wider">{item.unit || 'un'}</span>
                                                                     </div>
+                                                                </td>
+                                                                <td className="px-6 py-5">
+                                                                    <span className="text-sm font-bold text-slate-900">
+                                                                        {item.stock !== undefined && item.stock !== null ? item.stock : '-'}
+                                                                    </span>
                                                                 </td>
                                                                 <td className="px-6 py-5">
                                                                     <button 

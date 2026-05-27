@@ -737,6 +737,18 @@ const AlmacManagement: React.FC = () => {
                                     </div>
 
                                     <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Quantidade em Estoque</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            value={newItemStock}
+                                            onChange={(e) => setNewItemStock(Number(e.target.value))}
+                                            placeholder="Ex: 10"
+                                            className="w-full h-14 px-4 bg-slate-100 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:ring-4 focus:ring-slate-900/5 focus:border-slate-400 transition-all outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Disponibilidade Imediata</label>
                                         <button
                                             type="button"
@@ -820,6 +832,7 @@ const AlmacManagement: React.FC = () => {
                                             <tr className="bg-slate-50/50 border-b border-slate-100">
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Item</th>
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</th>
+                                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Quantidade</th>
                                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Disponibilidade</th>
                                                 <th className="px-6 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
                                             </tr>
@@ -864,6 +877,11 @@ const AlmacManagement: React.FC = () => {
                                                                 : 'bg-primary/10 text-primary border border-primary/20'
                                                             }`}>
                                                                 {item.category === 'COPA' ? 'Copa' : 'Almoxarifado'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-5">
+                                                            <span className="text-sm font-bold text-slate-900">
+                                                                {item.stock !== undefined && item.stock !== null ? item.stock : '-'}
                                                             </span>
                                                         </td>
                                                         <td className="px-6 py-5">

@@ -1486,6 +1486,68 @@ const CreateEvent: React.FC = () => {
       return;
     }
 
+    // Check for stock availability
+    const stockItems = availableItems.filter(i => selectedItemIdsList.includes(i.id) && i.stock !== undefined && i.stock !== null && i.stock >= 0);
+    if (stockItems.length > 0) {
+      setLoading(true);
+      setIsConflictCheckLoading(true);
+      try {
+        const toPBDate = (dateStr: string) => {
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) return '';
+          return d.toISOString().replace('T', ' ');
+        };
+
+        const startFilter = toPBDate(dateStart);
+        const endFilter = noEndPreview ? null : toPBDate(dateEnd);
+
+        let eventFilter = '';
+        if (!noEndPreview && endFilter) {
+            eventFilter = `status != "canceled" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
+        } else {
+            const startDateStr = startFilter.split(' ')[0]; // YYYY-MM-DD
+            eventFilter = `status != "canceled" && date_start >= "${startDateStr} 00:00:00" && date_start <= "${startDateStr} 23:59:59"`;
+        }
+        if (isEditing && editingEventId) {
+           eventFilter += ` && id != "${editingEventId}"`;
+        }
+
+        const overlappingEventsRes = await pb.collection(Collections.AgendaCap53Eventos).getFullList({
+           filter: eventFilter,
+           fields: 'id'
+        });
+        const overlappingEventIds = overlappingEventsRes.map(e => e.id);
+
+        const itemFilterStr = `(${stockItems.map(i => `item="${i.id}"`).join(' || ')}) && status != "rejected"`;
+        const requestsRes = await pb.collection(Collections.AgendaCap53AlmacRequests).getFullList({
+            filter: itemFilterStr
+        });
+        
+        const overlappingRequests = requestsRes.filter(r => overlappingEventIds.includes(r.event));
+
+        for (const stockItem of stockItems) {
+            const itemRequests = overlappingRequests.filter(r => r.item === stockItem.id);
+            const usedQuantity = itemRequests.reduce((sum, req) => sum + (req.quantity || 1), 0);
+            const currentRequestQuantity = itemQuantities[stockItem.id] || 1;
+            
+            if (usedQuantity + currentRequestQuantity > stockItem.stock) {
+                setConflictModalData({
+                  title: 'Bloqueio: Estoque Indisponível!',
+                  message: `Prezado(a), a quantidade solicitada do item "${stockItem.name}" não está disponível no momento. Existem apenas ${stockItem.stock} unidades no estoque, sendo que ${usedQuantity} já estão reservadas para outros eventos neste mesmo período.`,
+                  details: `Item: ${stockItem.name} | Quantidade solicitada: ${currentRequestQuantity} | Quantidade disponível para o período: ${stockItem.stock - usedQuantity}`,
+                  type: 'danger'
+                });
+                setIsConflictModalOpen(true);
+                setIsConflictCheckLoading(false);
+                setLoading(false);
+                return;
+            }
+        }
+      } catch (err) {
+        console.error('Erro ao verificar estoque:', err);
+      }
+    }
+
     setLoading(true);
     setIsConflictCheckLoading(true);
     try {
@@ -2496,48 +2558,56 @@ const CreateEvent: React.FC = () => {
                           </div>
                           
                           {almoxarifadoItems.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSolicitarEntrega(!solicitarEntrega);
-                                if (!solicitarEntrega) {
-                                    setTransporteSuporte(true);
-                                    setTransporteOrigem('CAP5.3');
-                                    
-                                    // Pega o nome do local
-                                    let locName = '';
-                                    if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
-                                        const loc = locations.find(l => l.id === locationState.fixedId);
-                                        if (loc) locName = loc.name;
-                                    } else if (locationState.mode === 'free' && locationState.freeText) {
-                                        locName = locationState.freeText;
-                                    }
-                                    if (locName) setTransporteDestino(locName);
-                                    
-                                    // Pega os horários do evento (Date Start e Date End)
-                                    if (dateStart) {
-                                        const d = new Date(dateStart);
-                                        if (!isNaN(d.getTime())) {
-                                            setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-                                        }
-                                    }
-                                    if (dateEnd) {
-                                        const d = new Date(dateEnd);
-                                        if (!isNaN(d.getTime())) {
-                                            setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-                                        }
-                                    }
-                                }
-                              }}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-                                solicitarEntrega 
-                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
-                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'local_shipping' : 'directions_car'}</span>
-                              {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar Transporte'}
-                            </button>
+                            <div className="flex flex-col items-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSolicitarEntrega(!solicitarEntrega);
+                                  if (!solicitarEntrega) {
+                                      setTransporteSuporte(true);
+                                      setTransporteOrigem('CAP5.3');
+                                      
+                                      // Pega o nome do local
+                                      let locName = '';
+                                      if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
+                                          const loc = locations.find(l => l.id === locationState.fixedId);
+                                          if (loc) locName = loc.name;
+                                      } else if (locationState.mode === 'free' && locationState.freeText) {
+                                          locName = locationState.freeText;
+                                      }
+                                      if (locName) setTransporteDestino(locName);
+                                      
+                                      // Pega os horários do evento (Date Start e Date End)
+                                      if (dateStart) {
+                                          const d = new Date(dateStart);
+                                          if (!isNaN(d.getTime())) {
+                                              setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                          }
+                                      }
+                                      if (dateEnd) {
+                                          const d = new Date(dateEnd);
+                                          if (!isNaN(d.getTime())) {
+                                              setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                          }
+                                      }
+                                  }
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  solicitarEntrega 
+                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:bg-emerald-600 hover:scale-[1.02]' 
+                                    : 'bg-primary text-white border-primary shadow-[0_0_15px_rgba(28,46,74,0.5)] animate-pulse hover:animate-none hover:bg-primary-hover hover:scale-[1.02]'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'check_circle' : 'directions_car'}</span>
+                                {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar transporte para os recursos'}
+                              </button>
+                              {solicitarEntrega && (
+                                <div className="flex items-start sm:items-center gap-1 text-slate-400 max-w-[200px] sm:max-w-none text-right sm:text-left animate-in fade-in slide-in-from-top-1 duration-300">
+                                  <span className="material-symbols-outlined text-[12px] mt-0.5 sm:mt-0">info</span>
+                                  <span className="text-[9px] font-bold tracking-wider leading-tight">Para ajustes, acesse a aba Transporte.</span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         
@@ -2561,48 +2631,56 @@ const CreateEvent: React.FC = () => {
                           </div>
                           
                           {copaItems.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSolicitarEntrega(!solicitarEntrega);
-                                if (!solicitarEntrega) {
-                                    setTransporteSuporte(true);
-                                    setTransporteOrigem('CAP5.3');
-                                    
-                                    // Pega o nome do local
-                                    let locName = '';
-                                    if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
-                                        const loc = locations.find(l => l.id === locationState.fixedId);
-                                        if (loc) locName = loc.name;
-                                    } else if (locationState.mode === 'free' && locationState.freeText) {
-                                        locName = locationState.freeText;
-                                    }
-                                    if (locName) setTransporteDestino(locName);
-                                    
-                                    // Pega os horários do evento (Date Start e Date End)
-                                    if (dateStart) {
-                                        const d = new Date(dateStart);
-                                        if (!isNaN(d.getTime())) {
-                                            setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-                                        }
-                                    }
-                                    if (dateEnd) {
-                                        const d = new Date(dateEnd);
-                                        if (!isNaN(d.getTime())) {
-                                            setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-                                        }
-                                    }
-                                }
-                              }}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-                                solicitarEntrega 
-                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
-                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'local_shipping' : 'directions_car'}</span>
-                              {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar Transporte'}
-                            </button>
+                            <div className="flex flex-col items-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSolicitarEntrega(!solicitarEntrega);
+                                  if (!solicitarEntrega) {
+                                      setTransporteSuporte(true);
+                                      setTransporteOrigem('CAP5.3');
+                                      
+                                      // Pega o nome do local
+                                      let locName = '';
+                                      if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
+                                          const loc = locations.find(l => l.id === locationState.fixedId);
+                                          if (loc) locName = loc.name;
+                                      } else if (locationState.mode === 'free' && locationState.freeText) {
+                                          locName = locationState.freeText;
+                                      }
+                                      if (locName) setTransporteDestino(locName);
+                                      
+                                      // Pega os horários do evento (Date Start e Date End)
+                                      if (dateStart) {
+                                          const d = new Date(dateStart);
+                                          if (!isNaN(d.getTime())) {
+                                              setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                          }
+                                      }
+                                      if (dateEnd) {
+                                          const d = new Date(dateEnd);
+                                          if (!isNaN(d.getTime())) {
+                                              setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                          }
+                                      }
+                                  }
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  solicitarEntrega 
+                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:bg-emerald-600 hover:scale-[1.02]' 
+                                    : 'bg-primary text-white border-primary shadow-[0_0_15px_rgba(28,46,74,0.5)] animate-pulse hover:animate-none hover:bg-primary-hover hover:scale-[1.02]'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'check_circle' : 'directions_car'}</span>
+                                {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar transporte para os recursos'}
+                              </button>
+                              {solicitarEntrega && (
+                                <div className="flex items-start sm:items-center gap-1 text-slate-400 max-w-[200px] sm:max-w-none text-right sm:text-left animate-in fade-in slide-in-from-top-1 duration-300">
+                                  <span className="material-symbols-outlined text-[12px] mt-0.5 sm:mt-0">info</span>
+                                  <span className="text-[9px] font-bold tracking-wider leading-tight">Para ajustes, acesse a aba Transporte.</span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         
@@ -2626,48 +2704,56 @@ const CreateEvent: React.FC = () => {
                           </div>
                           
                           {informaticaItems.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSolicitarEntrega(!solicitarEntrega);
-                                if (!solicitarEntrega) {
-                                    setTransporteSuporte(true);
-                                    setTransporteOrigem('CAP5.3');
-                                    
-                                    // Pega o nome do local
-                                    let locName = '';
-                                    if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
-                                        const loc = locations.find(l => l.id === locationState.fixedId);
-                                        if (loc) locName = loc.name;
-                                    } else if (locationState.mode === 'free' && locationState.freeText) {
-                                        locName = locationState.freeText;
-                                    }
-                                    if (locName) setTransporteDestino(locName);
-                                    
-                                    // Pega os horários do evento (Date Start e Date End)
-                                    if (dateStart) {
-                                        const d = new Date(dateStart);
-                                        if (!isNaN(d.getTime())) {
-                                            setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-                                        }
-                                    }
-                                    if (dateEnd) {
-                                        const d = new Date(dateEnd);
-                                        if (!isNaN(d.getTime())) {
-                                            setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
-                                        }
-                                    }
-                                }
-                              }}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
-                                solicitarEntrega 
-                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
-                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                              }`}
-                            >
-                              <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'local_shipping' : 'directions_car'}</span>
-                              {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar Transporte'}
-                            </button>
+                            <div className="flex flex-col items-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSolicitarEntrega(!solicitarEntrega);
+                                  if (!solicitarEntrega) {
+                                      setTransporteSuporte(true);
+                                      setTransporteOrigem('CAP5.3');
+                                      
+                                      // Pega o nome do local
+                                      let locName = '';
+                                      if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
+                                          const loc = locations.find(l => l.id === locationState.fixedId);
+                                          if (loc) locName = loc.name;
+                                      } else if (locationState.mode === 'free' && locationState.freeText) {
+                                          locName = locationState.freeText;
+                                      }
+                                      if (locName) setTransporteDestino(locName);
+                                      
+                                      // Pega os horários do evento (Date Start e Date End)
+                                      if (dateStart) {
+                                          const d = new Date(dateStart);
+                                          if (!isNaN(d.getTime())) {
+                                              setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                          }
+                                      }
+                                      if (dateEnd) {
+                                          const d = new Date(dateEnd);
+                                          if (!isNaN(d.getTime())) {
+                                              setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                          }
+                                      }
+                                  }
+                                }}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                  solicitarEntrega 
+                                    ? 'bg-emerald-500 text-white border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:bg-emerald-600 hover:scale-[1.02]' 
+                                    : 'bg-primary text-white border-primary shadow-[0_0_15px_rgba(28,46,74,0.5)] animate-pulse hover:animate-none hover:bg-primary-hover hover:scale-[1.02]'
+                                }`}
+                              >
+                                <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'check_circle' : 'directions_car'}</span>
+                                {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar transporte para os recursos'}
+                              </button>
+                              {solicitarEntrega && (
+                                <div className="flex items-start sm:items-center gap-1 text-slate-400 max-w-[200px] sm:max-w-none text-right sm:text-left animate-in fade-in slide-in-from-top-1 duration-300">
+                                  <span className="material-symbols-outlined text-[12px] mt-0.5 sm:mt-0">info</span>
+                                  <span className="text-[9px] font-bold tracking-wider leading-tight">Para ajustes, acesse a aba Transporte.</span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                         
