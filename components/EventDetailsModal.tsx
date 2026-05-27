@@ -507,21 +507,24 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
     setIsRequesting(true);
     try {
-      const participants = event.participants || [];
-      const updatedParticipants = participants.includes(user.id) ? participants : [...participants, user.id];
-      const updatedStatus = { ...(event.participants_status || {}), [user.id]: 'accepted' };
-      const updatedRoles = { ...(event.participants_roles || {}), [user.id]: 'PARTICIPANTE' };
-
-      try {
-        await pb.collection('agenda_cap53_eventos').update(event.id, {
-          participants: updatedParticipants,
-          participants_status: updatedStatus,
-          participants_roles: updatedRoles
-        });
-      } catch (updateErr) {
-        console.warn('Não foi possível atualizar o evento diretamente (permissão), mas o registro será criado:', updateErr);
+      // 1. Fetch event fresh state to ensure we have latest participants list
+      const freshEvent = await pb.collection('agenda_cap53_eventos').getOne(event.id);
+      
+      // 2. Add user to participants list if not there
+      const currentParticipants = freshEvent.participants || [];
+      if (!currentParticipants.includes(user.id)) {
+        const updatedParticipants = [...currentParticipants, user.id];
+        
+        try {
+          await pb.collection('agenda_cap53_eventos').update(event.id, {
+            participants: updatedParticipants
+          });
+        } catch (updateErr) {
+          console.warn('Não foi possível atualizar o evento diretamente (permissão):', updateErr);
+        }
       }
 
+      // 3. Create or update participant record
       const existingParticipant = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
           filter: `event = "${event.id}" && user = "${user.id}"`,
           requestKey: null
@@ -669,9 +672,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         participantsRes.forEach(p => {
             // Se o participante não está na lista de participantes (foi removido do evento)
             // e o criador não teve permissão de atualizar o registro de p.status para 'rejected',
-            // nós forçamos o status para 'rejected' localmente.
+            // nós forçamos o status para 'rejected' localmente,
+            // EXCETO se ele acabou de entrar (status 'accepted') e a API pocketbase ainda não sincronizou o array participants
             const isRemovedFromEvent = !freshEvent.participants?.includes(p.user);
-            const status = isRemovedFromEvent && p.status !== 'withdrawn' && p.status !== 'rejected' 
+            const status = (isRemovedFromEvent && p.status !== 'withdrawn' && p.status !== 'rejected' && p.status !== 'accepted')
                 ? 'rejected' 
                 : p.status;
 

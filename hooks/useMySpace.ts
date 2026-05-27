@@ -121,10 +121,10 @@ export const useMySpace = () => {
           // Ensure we capture if the user was removed from the event's participant list
           const isRemoved = !evt.participants?.includes(user.id);
           
-          // CRITICAL FIX: se o evento não tiver o usuário e o status do participante não for withdrawn/rejected, força rejected (Removido pelo criador)
-          // Mas se for withdrawn (retirou-se), mantemos withdrawn.
+          // CRITICAL FIX: se o evento não tiver o usuário e o status do participante não for withdrawn/rejected/accepted, força rejected
+          // Mas se for withdrawn (retirou-se), mantemos withdrawn. Se accepted, mantemos accepted.
           let computedStatus = p.status;
-          if (isRemoved && p.status !== 'withdrawn' && p.status !== 'rejected') {
+          if (isRemoved && p.status !== 'withdrawn' && p.status !== 'rejected' && p.status !== 'accepted') {
              computedStatus = 'rejected';
           }
           
