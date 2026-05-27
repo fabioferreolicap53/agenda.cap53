@@ -1199,38 +1199,50 @@ const InformaticsManagement: React.FC = () => {
                                                             {group.requests.map((req: any) => (
                                                                 <div key={req.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex flex-col gap-2">
                                                                     <div className="flex items-center justify-between gap-3">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className="size-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-xs shadow-sm shrink-0">
-                                                                                {req.quantity || 1}
-                                                                            </div>
-                                                                            <span className="text-slate-800 font-bold text-xs">{req.expand?.item?.name || 'Item não encontrado'}</span>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="size-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-xs shadow-sm shrink-0">
+                                                                            {req.quantity || 1}
                                                                         </div>
-                                                                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
-                                                                            req.status === 'approved' 
-                                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
-                                                                            : req.status === 'rejected'
-                                                                            ? 'bg-rose-50 text-rose-700 border-rose-100'
-                                                                            : 'bg-amber-50 text-amber-600 border-amber-100'
-                                                                        }`}>
-                                                                            {req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Negado' : 'Pendente'}
-                                                                        </span>
+                                                                        <span className="text-slate-800 font-bold text-xs">{req.expand?.item?.name || 'Item não encontrado'}</span>
                                                                     </div>
-                                                                    {req.justification && (
-                                                                        <p className="text-[9px] text-rose-500 italic font-medium px-1 leading-tight">
-                                                                            "{req.justification}"
-                                                                        </p>
-                                                                    )}
-                                                                    <div className="flex justify-end pt-1">
-                                                                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-                                                                            {new Date(req.created).toLocaleDateString('pt-BR')} às {new Date(req.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                                                        </span>
-                                                                    </div>
+                                                                    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${
+                                                                        req.status === 'approved' 
+                                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                                                                        : req.status === 'rejected' 
+                                                                        ? 'bg-rose-50 text-rose-700 border-rose-100'
+                                                                        : 'bg-amber-50 text-amber-600 border-amber-100'
+                                                                    }`}>
+                                                                        {req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Negado' : 'Pendente'}
+                                                                    </span>
                                                                 </div>
-                                                            ))}
-                                                        </div>
+                                                                {req.justification && (
+                                                                    <p className="text-[9px] text-rose-500 italic font-medium px-1 leading-tight">
+                                                                        "{req.justification}"
+                                                                    </p>
+                                                                )}
+                                                                <div className="flex justify-end pt-1">
+                                                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">
+                                                                        {new Date(req.created).toLocaleDateString('pt-BR')} às {new Date(req.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
+                                                {group.event.transporte_suporte && (
+                                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100">
+                                                        <span className={`text-[9px] font-black uppercase tracking-wide px-2 py-1 rounded border flex items-center gap-1 ${
+                                                            group.event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
+                                                            (group.event.transporte_status === 'rejected' || group.event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
+                                                            'bg-yellow-50 border-yellow-200 text-yellow-600'
+                                                        }`}>
+                                                            <span className="material-symbols-outlined text-[12px]">local_shipping</span>
+                                                            Transporte para Entrega: {group.event.transporte_status === 'confirmed' ? 'Aprovado' : (group.event.transporte_status === 'rejected' || group.event.transporte_status === 'refused') ? 'Recusado' : 'Pendente'}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
+                                        </div>
                                         );
                                     })
                                 )}
@@ -1462,7 +1474,19 @@ const InformaticsManagement: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-3 mb-6">
-                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Recursos Solicitados ({r.length})</h4>
+                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
+                                                                    Recursos Solicitados ({r.length})
+                                                                    {event.transporte_suporte && (
+                                                                        <span className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border ${
+                                                                            event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
+                                                                            (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
+                                                                            'bg-yellow-50 border-yellow-200 text-yellow-600'
+                                                                        }`} title="Transporte de Entrega">
+                                                                            <span className="material-symbols-outlined text-[8px] mr-1 align-middle">local_shipping</span>
+                                                                            {event.transporte_status === 'confirmed' ? 'Transporte Aprovado' : (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'Transporte Recusado' : 'Transporte Pendente'}
+                                                                        </span>
+                                                                    )}
+                                                                </h4>
                                                 <ul className="space-y-2 max-h-[160px] overflow-y-auto pr-1 flex flex-col gap-1 custom-scrollbar">
                                                     {r.map((req: any) => (
                                                         <li key={req.id} className="flex flex-col p-2.5 rounded-xl bg-slate-50/50 border border-slate-100/50">
@@ -1473,7 +1497,16 @@ const InformaticsManagement: React.FC = () => {
                                                                     </div>
                                                                     <span className="text-xs font-bold text-slate-700 truncate" title={req.expand?.item?.name || 'Recurso desconhecido'}>{req.expand?.item?.name || 'Recurso desconhecido'}</span>
                                                                 </div>
-                                                                <div className="shrink-0 ml-2">
+                                                                <div className="shrink-0 ml-2 flex items-center gap-2">
+                                                                    {event.transporte_suporte && (
+                                                                        <span className={`text-[8px] px-1.5 py-0.5 rounded border ${
+                                                                            event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
+                                                                            (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
+                                                                            'bg-yellow-50 border-yellow-200 text-yellow-600'
+                                                                        }`} title="Transporte de Entrega">
+                                                                            <span className="material-symbols-outlined text-[10px] align-middle">local_shipping</span>
+                                                                        </span>
+                                                                    )}
                                                                     {req.status === 'approved' ? (
                                                                         <span className="material-symbols-outlined text-[16px] text-emerald-500" title="Aprovado">check_circle</span>
                                                                     ) : req.status === 'rejected' ? (
@@ -1522,11 +1555,18 @@ const InformaticsManagement: React.FC = () => {
                                                                 dataFim: (group.event.date_end && group.event.date_end !== group.event.date_start) ? new Date(group.event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem Previsão',
                                                                 observacoes: group.event.observacoes || group.event.description || '',
                                                                 participantes: group.event.estimated_participants || 'Não informado',
-                                                                insumos: r.map((req: any) => ({
-                                                                    quantidade: req.quantity || 1,
-                                                                    nome: req.expand?.item?.name || 'Recurso desconhecido',
-                                                                    status: req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Não Liberado' : 'Pendente'
-                                                                })),
+                                                                insumos: [
+                                                                            ...r.map((req: any) => ({
+                                                                                quantidade: req.quantity || 1,
+                                                                                nome: req.expand?.item?.name || 'Item desconhecido',
+                                                                                status: req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Não Liberado' : 'Pendente'
+                                                                            })),
+                                                                            ...(event.transporte_suporte ? [{
+                                                                                quantidade: 1,
+                                                                                nome: 'Transporte Solicitado',
+                                                                                status: event.transporte_status === 'confirmed' ? 'Aprovado' : event.transporte_status === 'rejected' ? 'Recusado' : 'Pendente'
+                                                                            }] : [])
+                                                                        ],
                                                                 departamento: 'Informática'
                                                             });
                                                         }}

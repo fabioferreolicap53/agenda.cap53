@@ -122,6 +122,7 @@ const CreateEvent: React.FC = () => {
   const [selectedCategorias, setSelectedCategorias] = useState<string[]>([]);
   const [envolverProfissionais, setEnvolverProfissionais] = useState(false);
   const [logisticaRecursos, setLogisticaRecursos] = useState(false);
+  const [solicitarEntrega, setSolicitarEntrega] = useState(false);
   const [participantSearch, setParticipantSearch] = useState('');
   const [showParticipants, setShowParticipants] = useState(true);
   const [activeTab, setActiveTab] = useState<'almoxarifado' | 'copa' | 'informatica' | 'transporte'>('almoxarifado');
@@ -2488,11 +2489,56 @@ const CreateEvent: React.FC = () => {
                   {activeTab === 'almoxarifado' && (
                     <div className="space-y-6">
                       <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-400 shadow-xl shadow-slate-200">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex flex-col">
                             <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Almoxarifado</span>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Insumos extras para a atividade</span>
                           </div>
+                          
+                          {almoxarifadoItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSolicitarEntrega(!solicitarEntrega);
+                                if (!solicitarEntrega) {
+                                    setTransporteSuporte(true);
+                                    setTransporteOrigem('CAP5.3');
+                                    
+                                    // Pega o nome do local
+                                    let locName = '';
+                                    if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
+                                        const loc = locations.find(l => l.id === locationState.fixedId);
+                                        if (loc) locName = loc.name;
+                                    } else if (locationState.mode === 'free' && locationState.freeText) {
+                                        locName = locationState.freeText;
+                                    }
+                                    if (locName) setTransporteDestino(locName);
+                                    
+                                    // Pega os horários do evento (Date Start e Date End)
+                                    if (dateStart) {
+                                        const d = new Date(dateStart);
+                                        if (!isNaN(d.getTime())) {
+                                            setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                        }
+                                    }
+                                    if (dateEnd) {
+                                        const d = new Date(dateEnd);
+                                        if (!isNaN(d.getTime())) {
+                                            setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                        }
+                                    }
+                                }
+                              }}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                solicitarEntrega 
+                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
+                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'local_shipping' : 'directions_car'}</span>
+                              {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar Transporte'}
+                            </button>
+                          )}
                         </div>
                         
                         <div className="mt-8 flex flex-wrap gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -2508,11 +2554,56 @@ const CreateEvent: React.FC = () => {
                   {activeTab === 'copa' && (
                     <div className="space-y-6">
                       <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-400 shadow-xl shadow-slate-200">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex flex-col">
                             <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Serviço de Copa</span>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Coffee, lanches e descartáveis</span>
                           </div>
+                          
+                          {copaItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSolicitarEntrega(!solicitarEntrega);
+                                if (!solicitarEntrega) {
+                                    setTransporteSuporte(true);
+                                    setTransporteOrigem('CAP5.3');
+                                    
+                                    // Pega o nome do local
+                                    let locName = '';
+                                    if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
+                                        const loc = locations.find(l => l.id === locationState.fixedId);
+                                        if (loc) locName = loc.name;
+                                    } else if (locationState.mode === 'free' && locationState.freeText) {
+                                        locName = locationState.freeText;
+                                    }
+                                    if (locName) setTransporteDestino(locName);
+                                    
+                                    // Pega os horários do evento (Date Start e Date End)
+                                    if (dateStart) {
+                                        const d = new Date(dateStart);
+                                        if (!isNaN(d.getTime())) {
+                                            setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                        }
+                                    }
+                                    if (dateEnd) {
+                                        const d = new Date(dateEnd);
+                                        if (!isNaN(d.getTime())) {
+                                            setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                        }
+                                    }
+                                }
+                              }}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                solicitarEntrega 
+                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
+                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'local_shipping' : 'directions_car'}</span>
+                              {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar Transporte'}
+                            </button>
+                          )}
                         </div>
                         
                         <div className="mt-8 flex flex-wrap gap-3 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -2528,11 +2619,56 @@ const CreateEvent: React.FC = () => {
                   {activeTab === 'informatica' && (
                     <div className="space-y-6">
                       <div className="p-8 rounded-2xl border transition-all duration-500 bg-white border-slate-400 shadow-xl shadow-slate-200">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex flex-col">
                             <span className="text-[14px] font-black uppercase tracking-tight text-slate-900">Informática</span>
                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">Recursos tecnológicos e apoio técnico</span>
                           </div>
+                          
+                          {informaticaItems.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSolicitarEntrega(!solicitarEntrega);
+                                if (!solicitarEntrega) {
+                                    setTransporteSuporte(true);
+                                    setTransporteOrigem('CAP5.3');
+                                    
+                                    // Pega o nome do local
+                                    let locName = '';
+                                    if (locationState.mode === 'fixed' && locationState.fixedId && locationState.fixedId !== 'not_applicable') {
+                                        const loc = locations.find(l => l.id === locationState.fixedId);
+                                        if (loc) locName = loc.name;
+                                    } else if (locationState.mode === 'free' && locationState.freeText) {
+                                        locName = locationState.freeText;
+                                    }
+                                    if (locName) setTransporteDestino(locName);
+                                    
+                                    // Pega os horários do evento (Date Start e Date End)
+                                    if (dateStart) {
+                                        const d = new Date(dateStart);
+                                        if (!isNaN(d.getTime())) {
+                                            setTransporteHorarioLevar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                        }
+                                    }
+                                    if (dateEnd) {
+                                        const d = new Date(dateEnd);
+                                        if (!isNaN(d.getTime())) {
+                                            setTransporteHorarioBuscar(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`);
+                                        }
+                                    }
+                                }
+                              }}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all ${
+                                solicitarEntrega 
+                                  ? 'bg-indigo-50 border-indigo-200 text-indigo-700 shadow-sm' 
+                                  : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[16px]">{solicitarEntrega ? 'local_shipping' : 'directions_car'}</span>
+                              {solicitarEntrega ? 'Transporte Solicitado' : 'Solicitar Transporte'}
+                            </button>
+                          )}
                         </div>
                         
                         <div className="mt-8 flex flex-wrap gap-3 animate-in fade-in slide-in-from-top-4 duration-500">

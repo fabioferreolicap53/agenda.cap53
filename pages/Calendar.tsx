@@ -1840,8 +1840,8 @@ const Calendar: React.FC = () => {
                                   event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
                                   (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
                                   'bg-yellow-50 border-yellow-200 text-yellow-600'
-                               }`} >
-                                 <span className="material-symbols-outlined text-[12px]">directions_car</span>
+                               }`} title={event.transporte_origem || event.transporte_destino ? "Transporte Solicitado" : "Entrega de Recursos"}>
+                                 <span className="material-symbols-outlined text-[12px]">{event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}</span>
                                </div>
                              )}
 
@@ -2757,8 +2757,8 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
                 event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
                 (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
                 'bg-yellow-50 border-yellow-200 text-yellow-600'
-             }`}>
-               <span className="material-symbols-outlined text-[12px]">directions_car</span>
+             }`} title={event.transporte_origem || event.transporte_destino ? "Transporte Solicitado" : "Entrega de Recursos"}>
+               <span className="material-symbols-outlined text-[12px]">{event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}</span>
              </div>
            )}
 

@@ -1396,22 +1396,28 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         
                         {loadingRequests ? (
                             <div className="py-12 flex justify-center"><div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full" /></div>
-                        ) : requests.length > 0 ? (
+                        ) : (requests.length > 0 || (event.transporte_suporte && (event.almoxarifado_items?.length || event.copa_items?.length || event.informatica_items?.length))) ? (
                             <div className="space-y-6">
-                                {['ALMOXARIFADO', 'COPA', 'INFORMATICA'].map(category => {
-                                    const categoryRequests = requests.filter(req => {
+                                {['ALMOXARIFADO', 'COPA', 'INFORMATICA', 'ENTREGA'].map(category => {
+                                    const isEntrega = category === 'ENTREGA';
+                                    const hasEntrega = isEntrega && event.transporte_suporte && (event.almoxarifado_items?.length > 0 || event.copa_items?.length > 0 || event.informatica_items?.length > 0);
+                                    
+                                    if (isEntrega && !hasEntrega) return null;
+
+                                    const categoryRequests = isEntrega ? [] : requests.filter(req => {
                                         const cat = req.expand?.item?.category || (req as any).type;
                                         return cat === category || 
                                                (category === 'ALMOXARIFADO' && cat === 'ALMC') ||
                                                (category === 'INFORMATICA' && cat === 'INFO');
                                     });
 
-                                    if (categoryRequests.length === 0) return null;
+                                    if (!isEntrega && categoryRequests.length === 0) return null;
 
                                     const config = {
                                         ALMOXARIFADO: { label: 'Almoxarifado', icon: 'inventory_2', color: 'text-blue-500', bg: 'bg-blue-50' },
                                         COPA: { label: 'Copa', icon: 'local_cafe', color: 'text-orange-500', bg: 'bg-orange-50' },
-                                        INFORMATICA: { label: 'Informática', icon: 'laptop_mac', color: 'text-indigo-500', bg: 'bg-indigo-50' }
+                                        INFORMATICA: { label: 'Informática', icon: 'laptop_mac', color: 'text-indigo-500', bg: 'bg-indigo-50' },
+                                        ENTREGA: { label: 'Transporte de Recursos', icon: 'local_shipping', color: 'text-emerald-500', bg: 'bg-emerald-50' }
                                     }[category] || { label: category, icon: 'category', color: 'text-slate-500', bg: 'bg-slate-50' };
 
                                     return (
@@ -1423,7 +1429,28 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                             </div>
 
                                             <div className="grid grid-cols-1 gap-3">
-                                                {categoryRequests.map(req => (
+                                                {isEntrega ? (
+                                                    <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all duration-200">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className={`size-10 rounded-xl flex items-center justify-center text-xl ${config.bg} ${config.color}`}>
+                                                                <span className="material-symbols-outlined text-lg">{config.icon}</span>
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2 mb-0.5">
+                                                                    <span className="text-sm font-bold text-slate-900">Entrega de Insumos</span>
+                                                                    <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full border ${getStatusStyle(event.transporte_status || 'pending')}`}>
+                                                                        {getStatusLabel(event.transporte_status || 'pending')}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] font-bold text-slate-500">
+                                                                        Será entregue via Transporte
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : categoryRequests.map(req => (
                                                     <div key={req.id} className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between group hover:shadow-md transition-all duration-200">
                                                         <div className="flex items-center gap-4">
                                                             <div className={`size-10 rounded-xl flex items-center justify-center text-xl ${config.bg} ${config.color}`}>
@@ -1575,34 +1602,47 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         {event.transporte_suporte ? (
                             <div className="space-y-4">
                                 <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm flex items-start gap-5">
-                                    <div className="size-14 rounded-[1.5rem] bg-slate-50 flex items-center justify-center text-primary shadow-inner">
-                                        <span className="material-symbols-outlined text-3xl">directions_car</span>
+                                    <div className="size-14 rounded-[1.5rem] bg-slate-50 flex items-center justify-center text-primary shadow-inner shrink-0">
+                                        <span className="material-symbols-outlined text-3xl">
+                                            {event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}
+                                        </span>
                                     </div>
                                     <div className="flex-1">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div>
-                                                <h4 className="text-sm font-bold text-slate-900 mb-0.5">Veículo Solicitado</h4>
-                                                <p className="text-[11px] text-slate-500 font-medium">O evento necessita de suporte para deslocamento.</p>
-                                            </div>
-                                            {event.transporte_status === 'rejected' && transportRefusalAck === false && (
-                                                <div className="flex items-center gap-2 text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
-                                                    <span className="material-symbols-outlined text-lg animate-pulse">warning</span>
-                                                    <span className="text-[10px] font-bold uppercase">Ciência Pendente</span>
-                                                </div>
-                                            )}
-                                        </div>
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <div>
+                                                                <h4 className="text-sm font-bold text-slate-900 mb-0.5">
+                                                                    {event.transporte_origem || event.transporte_destino ? 'Veículo Solicitado' : 'Transporte de Insumos'}
+                                                                </h4>
+                                                                <p className="text-[11px] text-slate-500 font-medium">
+                                                                    {event.transporte_origem || event.transporte_destino 
+                                                                        ? 'O evento necessita de suporte para deslocamento.' 
+                                                                        : 'O evento necessita de transporte para a entrega de recursos logísticos.'}
+                                                                </p>
+                                                            </div>
+                                                            {event.transporte_status === 'rejected' && transportRefusalAck === false && (
+                                                                <div className="flex items-center gap-2 text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+                                                                    <span className="material-symbols-outlined text-lg animate-pulse">warning</span>
+                                                                    <span className="text-[10px] font-bold uppercase">Ciência Pendente</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
 
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                                        <div className="grid grid-cols-2 gap-4 mb-4">
                                             <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Local de Origem</span>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">
+                                                    {event.transporte_origem || event.transporte_destino ? 'Local de Origem' : 'Tipo de Entrega'}
+                                                </span>
                                                 <span className="text-xs font-bold text-slate-700 truncate block">
-                                                    {event.transporte_origem || 'Não definido'}
+                                                    {event.transporte_origem || event.transporte_destino 
+                                                        ? (event.transporte_origem || 'Não definido')
+                                                        : 'Entrega de Insumos'
+                                                    }
                                                 </span>
                                             </div>
                                             <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100">
                                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Local de Destino</span>
                                                 <span className="text-xs font-bold text-slate-700 truncate block">
-                                                    {event.transporte_destino || 'Não definido'}
+                                                    {event.transporte_destino || event.custom_location || event.expand?.location?.name || 'Local do Evento'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1620,17 +1660,19 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                     {event.transporte_horario_buscar || 'Não definido'}
                                                 </span>
                                             </div>
-                                            <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 col-span-2 flex items-center justify-between">
-                                                <div>
-                                                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Passageiros</span>
-                                                    <span className="text-xs font-bold text-slate-700 truncate block">
-                                                        {event.transporte_passageiro ? `${event.transporte_passageiro} pessoas` : 'Não informado'}
-                                                    </span>
+                                            {(event.transporte_origem || event.transporte_destino) && (
+                                                <div className="p-4 rounded-2xl bg-slate-50/50 border border-slate-100 col-span-2 flex items-center justify-between">
+                                                    <div>
+                                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Passageiros</span>
+                                                        <span className="text-xs font-bold text-slate-700 truncate block">
+                                                            {event.transporte_passageiro ? `${event.transporte_passageiro} pessoas` : 'Não informado'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="size-8 rounded-lg bg-white flex items-center justify-center border border-slate-100">
+                                                        <span className="material-symbols-outlined text-slate-400 text-[18px]">groups</span>
+                                                    </div>
                                                 </div>
-                                                <div className="size-8 rounded-lg bg-white flex items-center justify-center border border-slate-100">
-                                                    <span className="material-symbols-outlined text-slate-400 text-[18px]">groups</span>
-                                                </div>
-                                            </div>
+                                            )}
                                         </div>
 
                                         {/* Detalhes do Transporte */}

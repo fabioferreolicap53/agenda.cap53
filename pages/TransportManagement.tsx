@@ -319,7 +319,18 @@ const TransportManagement: React.FC = () => {
                 sort: '-created',
                 expand: 'location,user'
             });
-            setTransportRequests(transportRecords);
+
+            // Fetch all almac requests to display logistics items needed
+            const almacRequests = await pb.collection('agenda_cap53_almac_requests').getFullList({
+                expand: 'item'
+            });
+
+            const enrichedRecords = transportRecords.map(event => {
+                const items = almacRequests.filter(req => req.event === event.id);
+                return { ...event, almac_requests: items };
+            });
+
+            setTransportRequests(enrichedRecords);
         } catch (error) {
             console.error('Error loading transport data:', error);
         } finally {
@@ -722,25 +733,27 @@ const TransportManagement: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-4 mb-6">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">trip_origin</span> Origem</span>
-                                                    <span className="text-sm font-bold text-slate-700">{event.transporte_origem || '---'}</span>
-                                                </div>
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">location_on</span> Destino</span>
-                                                    <span className="text-sm font-bold text-slate-700">{event.transporte_destino || '---'}</span>
-                                                </div>
-                                                
-                                                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">schedule</span> Saída/Retorno</span>
-                                                        <span className="text-xs font-bold text-slate-700">{event.transporte_horario_levar || '--:--'} às {event.transporte_horario_buscar || '--:--'}</span>
-                                                    </div>
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">group</span> Passageiros</span>
-                                                        <span className="text-xs font-bold text-slate-700">{event.transporte_passageiro || '-'}</span>
-                                                    </div>
-                                                </div>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">trip_origin</span> {event.transporte_origem || event.transporte_destino ? 'Origem' : 'Tipo de Entrega'}</span>
+                                        <span className="text-sm font-bold text-slate-700">{event.transporte_origem || event.transporte_destino ? (event.transporte_origem || '---') : 'Entrega de Insumos'}</span>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">location_on</span> Destino</span>
+                                        <span className="text-sm font-bold text-slate-700">{event.transporte_destino || event.custom_location || event.expand?.location?.name || '---'}</span>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">schedule</span> Saída/Retorno</span>
+                                            <span className="text-xs font-bold text-slate-700">{event.transporte_horario_levar || '--:--'} às {event.transporte_horario_buscar || '--:--'}</span>
+                                        </div>
+                                        {(event.transporte_origem || event.transporte_destino) && (
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">group</span> Passageiros</span>
+                                                <span className="text-xs font-bold text-slate-700">{event.transporte_passageiro || '-'}</span>
+                                            </div>
+                                        )}
+                                    </div>
 
                                                 <div className="flex items-center gap-3 pt-4 border-t border-slate-50 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
                                                     <div className="flex items-center gap-1" title="Data de Solicitação">
@@ -781,7 +794,12 @@ const TransportManagement: React.FC = () => {
                                                                 insumos: [
                                                                     { quantidade: 1, nome: `Origem: ${event.transporte_origem || '---'}`, status: 'Transporte' },
                                                                     { quantidade: 1, nome: `Destino: ${event.transporte_destino || '---'}` },
-                                                                    { quantidade: 1, nome: `Saída: ${event.transporte_horario_levar || '--:--'} | Retorno: ${event.transporte_horario_buscar || '--:--'}` }
+                                                                    { quantidade: 1, nome: `Saída: ${event.transporte_horario_levar || '--:--'} | Retorno: ${event.transporte_horario_buscar || '--:--'}` },
+                                                                    ...(event.almac_requests?.map((req: any) => ({
+                                                                        quantidade: req.quantity || 1,
+                                                                        nome: req.expand?.item?.name || 'Item',
+                                                                        status: req.expand?.item?.category || 'Entrega'
+                                                                    })) || [])
                                                                 ],
                                                                 departamento: 'Transporte'
                                                             });
@@ -1138,16 +1156,31 @@ const TransportManagement: React.FC = () => {
                                                                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Logística Solicitada</span>
                                                                     <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col gap-3">
                                                                         <div className="flex items-start gap-3">
-                                                                            <div className="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-sm shadow-sm shrink-0">
-                                                                                <span className="material-symbols-outlined text-[20px] text-slate-600">directions_car</span>
+                                                                <div className="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-sm shadow-sm shrink-0">
+                                                                    <span className="material-symbols-outlined text-[20px] text-slate-600">{event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}</span>
+                                                                </div>
+                                                                <div className="flex flex-col gap-1">
+                                                                    <span className="text-slate-900 font-bold text-xs">{event.transporte_origem || event.transporte_destino ? (event.transporte_origem || '---') : 'Entrega de Insumos'} <span className="text-slate-400 font-normal mx-1">→</span> {event.transporte_destino || event.custom_location || event.expand?.location?.name || '---'}</span>
+                                                                    <span className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">
+                                                                        Ida: {event.transporte_horario_levar || '--:--'} | Retorno: {event.transporte_horario_buscar || '--:--'} {event.transporte_origem || event.transporte_destino ? `| ${event.transporte_passageiro || '0'} Pax` : ''}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+
+                                                                        {event.almac_requests && event.almac_requests.length > 0 && (
+                                                                            <div className="pt-3 border-t border-slate-200/50 flex flex-col gap-2">
+                                                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Insumos para Entrega</span>
+                                                                                <div className="flex flex-wrap gap-2">
+                                                                                    {event.almac_requests.map((req: any) => (
+                                                                                        <div key={req.id} className="flex items-center gap-1.5 px-2 py-1 bg-white border border-slate-200 rounded-lg shadow-sm">
+                                                                                            <span className="text-[10px] font-bold text-slate-700">{req.quantity || 1}x</span>
+                                                                                            <span className="text-[10px] font-medium text-slate-600 truncate max-w-[150px]" title={req.expand?.item?.name}>{req.expand?.item?.name || 'Item'}</span>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
                                                                             </div>
-                                                                            <div className="flex flex-col gap-1">
-                                                                                <span className="text-slate-900 font-bold text-xs">{event.transporte_origem || '---'} <span className="text-slate-400 font-normal mx-1">→</span> {event.transporte_destino || '---'}</span>
-                                                                                <span className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">
-                                                                                    Ida: {event.transporte_horario_levar || '--:--'} | Retorno: {event.transporte_horario_buscar || '--:--'} | {event.transporte_passageiro || '?'} Pax
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
+                                                                        )}
+
                                                                         <div className="flex items-center justify-between pt-2 border-t border-slate-200/50">
                                                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
                                                                                 event.transporte_status === 'confirmed' 
@@ -1260,17 +1293,17 @@ const TransportManagement: React.FC = () => {
                                                         <td className="px-6 py-6 align-top">
                                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all group/item">
                                                                 <div className="flex items-start gap-3">
-                                                                    <div className="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-sm shadow-sm shrink-0">
-                                                                        <span className="material-symbols-outlined text-[20px] text-slate-600">directions_car</span>
-                                                                    </div>
-                                                                    <div className="flex flex-col gap-1">
-                                                                        <span className="text-slate-900 font-bold text-xs">{event.transporte_origem || '---'} <span className="text-slate-400 font-normal mx-1">→</span> {event.transporte_destino || '---'}</span>
-                                                                        <span className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">
-                                                                            Ida: {event.transporte_horario_levar || '--:--'} | Retorno: {event.transporte_horario_buscar || '--:--'} | {event.transporte_passageiro || '?'} Pax
-                                                                        </span>
-                                                                        <span className="text-slate-400 text-[9px] font-medium uppercase tracking-wider mt-0.5">Sol: {new Date(event.created).toLocaleDateString('pt-BR')} às {new Date(event.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                    </div>
-                                                                </div>
+                                                <div className="size-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-900 font-black text-sm shadow-sm shrink-0">
+                                                    <span className="material-symbols-outlined text-[20px] text-slate-600">{event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}</span>
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-slate-900 font-bold text-xs">{event.transporte_origem || event.transporte_destino ? (event.transporte_origem || '---') : 'Entrega de Insumos'} <span className="text-slate-400 font-normal mx-1">→</span> {event.transporte_destino || event.custom_location || event.expand?.location?.name || '---'}</span>
+                                                    <span className="text-slate-500 text-[10px] font-medium uppercase tracking-wider">
+                                                        Ida: {event.transporte_horario_levar || '--:--'} | Retorno: {event.transporte_horario_buscar || '--:--'} {event.transporte_origem || event.transporte_destino ? `| ${event.transporte_passageiro || '?'} Pax` : ''}
+                                                    </span>
+                                                    <span className="text-slate-400 text-[9px] font-medium uppercase tracking-wider mt-0.5">Sol: {new Date(event.created).toLocaleDateString('pt-BR')} às {new Date(event.created).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                </div>
+                                            </div>
                                                                 <div className="flex flex-col items-end gap-1">
                                                                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${
                                                                         event.transporte_status === 'confirmed' 
@@ -1394,10 +1427,10 @@ const TransportManagement: React.FC = () => {
                                                 <div className="flex-1 flex flex-col gap-2">
                                                     <div className="flex items-center gap-2">
                                                         <div className="size-2 rounded-full bg-slate-400"></div>
-                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Origem</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{event.transporte_origem || event.transporte_destino ? 'Origem' : 'Tipo de Entrega'}</span>
                                                     </div>
                                                     <p className="text-[13px] font-bold text-slate-900 leading-tight pl-4">
-                                                        {event.transporte_origem || '---'}
+                                                        {event.transporte_origem || event.transporte_destino ? (event.transporte_origem || '---') : 'Entrega de Insumos'}
                                                     </p>
                                                 </div>
                                                 
@@ -1413,7 +1446,7 @@ const TransportManagement: React.FC = () => {
                                                         <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Destino</span>
                                                     </div>
                                                     <p className="text-[13px] font-bold text-slate-900 leading-tight pl-4">
-                                                        {event.transporte_destino || '---'}
+                                                        {event.transporte_destino || event.custom_location || event.expand?.location?.name || '---'}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1441,15 +1474,17 @@ const TransportManagement: React.FC = () => {
                                                                 <span className="text-[13px] font-black text-slate-900 tabular-nums leading-none">{event.transporte_horario_buscar || '--:--'}</span>
                                                             </div>
                                                         </div>
-                                                        <div className="flex-1 flex items-center justify-center gap-3 px-4 py-2">
-                                                            <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
-                                                                <span className="material-symbols-outlined text-slate-500 text-[18px]">groups</span>
+                                                        {(event.transporte_origem || event.transporte_destino) && (
+                                                            <div className="flex-1 flex items-center justify-center gap-3 px-4 py-2">
+                                                                <div className="size-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0">
+                                                                    <span className="material-symbols-outlined text-slate-500 text-[18px]">groups</span>
+                                                                </div>
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Passageiros</span>
+                                                                    <span className="text-[13px] font-black text-slate-900 leading-none">{event.transporte_passageiro || '-'}</span>
+                                                                </div>
                                                             </div>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1">Passageiros</span>
-                                                                <span className="text-[13px] font-black text-slate-900 leading-none">{event.transporte_passageiro || '-'}</span>
-                                                            </div>
-                                                        </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>

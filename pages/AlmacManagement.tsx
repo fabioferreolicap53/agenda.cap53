@@ -1577,7 +1577,19 @@ const AlmacManagement: React.FC = () => {
                                             </div>
 
                                             <div className="space-y-3 mb-6">
-                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">Itens Solicitados ({r.length})</h4>
+                                                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
+                                                                    Itens Solicitados ({r.length})
+                                                                    {event.transporte_suporte && (
+                                                                        <span className={`ml-2 text-[8px] px-1.5 py-0.5 rounded border ${
+                                                                            event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
+                                                                            (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
+                                                                            'bg-yellow-50 border-yellow-200 text-yellow-600'
+                                                                        }`} title="Transporte de Entrega">
+                                                                            <span className="material-symbols-outlined text-[8px] mr-1 align-middle">local_shipping</span>
+                                                                            {event.transporte_status === 'confirmed' ? 'Transporte Aprovado' : (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'Transporte Recusado' : 'Transporte Pendente'}
+                                                                        </span>
+                                                                    )}
+                                                                </h4>
                                                 <ul className="space-y-2 max-h-[160px] overflow-y-auto pr-1 flex flex-col gap-1 custom-scrollbar">
                                                     {r.map((req: any) => (
                                                         <li key={req.id} className="flex flex-col p-2.5 rounded-xl bg-slate-50/50 border border-slate-100/50">
@@ -1588,7 +1600,16 @@ const AlmacManagement: React.FC = () => {
                                                                     </div>
                                                                     <span className="text-xs font-bold text-slate-700 truncate" title={req.expand?.item?.name || 'Item desconhecido'}>{req.expand?.item?.name || 'Item desconhecido'}</span>
                                                                 </div>
-                                                                <div className="shrink-0 ml-2">
+                                                                <div className="shrink-0 ml-2 flex items-center gap-2">
+                                                                    {event.transporte_suporte && (
+                                                                        <span className={`text-[8px] px-1.5 py-0.5 rounded border ${
+                                                                            event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
+                                                                            (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
+                                                                            'bg-yellow-50 border-yellow-200 text-yellow-600'
+                                                                        }`} title="Transporte de Entrega">
+                                                                            <span className="material-symbols-outlined text-[10px] align-middle">local_shipping</span>
+                                                                        </span>
+                                                                    )}
                                                                     {req.status === 'approved' ? (
                                                                         <span className="material-symbols-outlined text-[16px] text-emerald-500" title="Aprovado">check_circle</span>
                                                                     ) : req.status === 'rejected' ? (
@@ -1637,11 +1658,18 @@ const AlmacManagement: React.FC = () => {
                                                                 dataFim: (group.event.date_end && group.event.date_end !== group.event.date_start) ? new Date(group.event.date_end.replace(' ', 'T')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : 'Sem Previsão',
                                                                 observacoes: group.event.observacoes || group.event.description || '',
                                                                 participantes: group.event.estimated_participants || 'Não informado',
-                                                                insumos: r.map((req: any) => ({
-                                                                    quantidade: req.quantity || 1,
-                                                                    nome: req.expand?.item?.name || 'Item desconhecido',
-                                                                    status: req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Não Liberado' : 'Pendente'
-                                                                })),
+                                                                insumos: [
+                                                                            ...r.map((req: any) => ({
+                                                                                quantidade: req.quantity || 1,
+                                                                                nome: req.expand?.item?.name || 'Item desconhecido',
+                                                                                status: req.status === 'approved' ? 'Liberado' : req.status === 'rejected' ? 'Não Liberado' : 'Pendente'
+                                                                            })),
+                                                                            ...(event.transporte_suporte ? [{
+                                                                                quantidade: 1,
+                                                                                nome: 'Transporte Solicitado',
+                                                                                status: event.transporte_status === 'confirmed' ? 'Aprovado' : event.transporte_status === 'rejected' ? 'Recusado' : 'Pendente'
+                                                                            }] : [])
+                                                                        ],
                                                                 departamento: 'Almoxarifado e Copa'
                                                             });
                                                         }}
