@@ -508,20 +508,18 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     setIsRequesting(true);
     try {
       const participants = event.participants || [];
-      if (!participants.includes(user.id)) {
-        const updatedParticipants = [...participants, user.id];
-        const updatedStatus = { ...(event.participants_status || {}), [user.id]: 'accepted' };
-        const updatedRoles = { ...(event.participants_roles || {}), [user.id]: 'PARTICIPANTE' };
+      const updatedParticipants = participants.includes(user.id) ? participants : [...participants, user.id];
+      const updatedStatus = { ...(event.participants_status || {}), [user.id]: 'accepted' };
+      const updatedRoles = { ...(event.participants_roles || {}), [user.id]: 'PARTICIPANTE' };
 
-        try {
-          await pb.collection('agenda_cap53_eventos').update(event.id, {
-            participants: updatedParticipants,
-            participants_status: updatedStatus,
-            participants_roles: updatedRoles
-          });
-        } catch (updateErr) {
-          console.warn('Não foi possível atualizar o evento diretamente (permissão), mas o registro será criado:', updateErr);
-        }
+      try {
+        await pb.collection('agenda_cap53_eventos').update(event.id, {
+          participants: updatedParticipants,
+          participants_status: updatedStatus,
+          participants_roles: updatedRoles
+        });
+      } catch (updateErr) {
+        console.warn('Não foi possível atualizar o evento diretamente (permissão), mas o registro será criado:', updateErr);
       }
 
       const existingParticipant = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
