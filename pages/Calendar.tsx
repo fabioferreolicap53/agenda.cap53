@@ -306,7 +306,7 @@ const Calendar: React.FC = () => {
     let result = events;
 
     // Filter Private Events
-    // Only Creator, Participants, or Special Roles can see Private Events
+    // Only Creator, Participants, or specific Roles (if related resources are requested) can see Private Events
     result = result.filter(e => {
         if (!e.is_private) return true;
         if (!user) return false;
@@ -314,9 +314,32 @@ const Calendar: React.FC = () => {
         const isCreator = e.user === user.id;
         const isParticipant = (e.participants && e.participants.includes(user.id)) || 
                               e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === user.id && (p.status === 'accepted' || p.status === 'withdrawn'));
-        const isSpecialRole = ['ADMIN', 'ALMC', 'TRA', 'CE'].includes(user.role);
         
-        return isCreator || isParticipant || isSpecialRole;
+        if (isCreator || isParticipant) return true;
+
+        if (user.role === 'ADMIN' || user.role === 'CE') return true;
+
+        if (user.role === 'DCA') {
+            const hasInformatica = e.almac_requests?.some(r => {
+                const cat = r.expand?.item?.category;
+                return cat === 'INFORMATICA' || cat === 'INFO';
+            });
+            if (hasInformatica) return true;
+        }
+
+        if (user.role === 'TRA') {
+            if (e.transporte_suporte) return true;
+        }
+
+        if (user.role === 'ALMC') {
+            const hasAlmc = e.almac_requests?.some(r => {
+                const cat = r.expand?.item?.category;
+                return cat === 'ALMOXARIFADO' || cat === 'ALMC' || cat === 'COPA';
+            });
+            if (hasAlmc) return true;
+        }
+
+        return false;
     });
 
     // Text Search
