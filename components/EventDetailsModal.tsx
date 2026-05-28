@@ -1619,12 +1619,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                                                         : 'O evento necessita de transporte para a entrega de recursos logísticos.'}
                                                                 </p>
                                                             </div>
-                                                            {event.transporte_status === 'rejected' && transportRefusalAck === false && (
-                                                                <div className="flex items-center gap-2 text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
-                                                                    <span className="material-symbols-outlined text-lg animate-pulse">warning</span>
-                                                                    <span className="text-[10px] font-bold uppercase">Ciência Pendente</span>
-                                                                </div>
-                                                            )}
                                                         </div>
 
                                                         <div className="grid grid-cols-2 gap-4 mb-4">

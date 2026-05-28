@@ -145,22 +145,11 @@ const AlmacManagement: React.FC = () => {
     };
 
     const [categoryFilter, setCategoryFilter] = useState<'ALL' | 'ALMOXARIFADO' | 'COPA'>('ALL');
-    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'date', direction: 'asc' });
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'date', direction: 'desc' });
+    const [visibleHistoryCount, setVisibleHistoryCount] = useState(15);
 
-    const [filterMonth, setFilterMonth] = useState<number>(new Date().getMonth());
-    const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
     const [filterRequesters, setFilterRequesters] = useState<string[]>([]);
     const [filterStatuses, setFilterStatuses] = useState<string[]>(['Planejado', 'Em andamento', 'Concluído', 'Cancelado']);
-
-    const months = [
-        'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-        'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-    ];
-
-    const years = React.useMemo(() => {
-        const currentYear = new Date().getFullYear();
-        return Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
-    }, []);
 
     const getEventStatusBadge = (event: any) => {
         if (!event) return { label: 'Excluído', icon: 'delete', classes: 'bg-slate-500 text-white shadow-sm' };
@@ -206,10 +195,6 @@ const AlmacManagement: React.FC = () => {
                    itemName.includes(lowerSearch);
 
             if (!matchesSearch) return false;
-
-            const eventDate = req.expand?.event?.date_start ? new Date(req.expand.event.date_start.replace(' ', 'T')) : new Date(req.created);
-            
-            if (eventDate.getMonth() !== filterMonth || eventDate.getFullYear() !== filterYear) return false;
 
             const reqName = req.expand?.created_by?.name || req.expand?.created_by?.email;
             if (filterRequesters.length > 0 && !filterRequesters.includes(reqName)) return false;
@@ -271,7 +256,7 @@ const AlmacManagement: React.FC = () => {
         }
         
         return result;
-    }, [history, searchTerm, sortConfig, filterMonth, filterYear, filterRequesters, filterStatuses]);
+    }, [history, searchTerm, sortConfig, filterRequesters, filterStatuses]);
 
     const handleSort = (key: string) => {
         let direction: 'asc' | 'desc' = 'asc';
@@ -937,7 +922,7 @@ const AlmacManagement: React.FC = () => {
                                             <p className="text-slate-400 font-medium text-xs max-w-xs mx-auto text-balance">Não encontramos solicitações com os termos pesquisados.</p>
                                         </div>
                                     ) : (
-                                        filteredHistoryGroups.map((group) => {
+                                        filteredHistoryGroups.slice(0, visibleHistoryCount).map((group) => {
                                             const eventDate = group.event?.date_start ? new Date(group.event.date_start.replace(' ', 'T')) : null;
                                             const eventDateEnd = group.event?.date_end ? new Date(group.event.date_end.replace(' ', 'T')) : null;
                                             const eventStatusBadge = getEventStatusBadge(group.event);
@@ -1142,82 +1127,6 @@ const AlmacManagement: React.FC = () => {
                             ref={dropdownRef}
                             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:flex xl:flex-row xl:items-stretch xl:justify-between gap-4 md:gap-6 border-t border-slate-50 pt-4 md:pt-6"
                         >
-                            {/* Período */}
-                            <div className="flex flex-col gap-2 md:w-full">
-                                <div className="flex items-center justify-center md:justify-start gap-2 px-1 shrink-0 h-4">
-                                    <span className="material-symbols-outlined text-slate-400 text-[14px] md:text-[16px]">calendar_month</span>
-                                    <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Período</span>
-                                </div>
-                                <div className="h-12 md:h-14 flex items-center bg-slate-50/50 rounded-2xl border border-slate-100 transition-all hover:bg-white hover:shadow-sm overflow-visible">
-                                    <div className="flex items-center justify-center flex-1 min-w-0 h-full">
-                                        {/* Dropdown Mês */}
-                                        <div className="relative flex-1 h-full">
-                                            <div 
-                                                onClick={() => setActiveDropdown(activeDropdown === 'month' ? null : 'month')}
-                                                className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2"
-                                            >
-                                                <span className="text-[10px] md:text-xs font-black text-slate-700 uppercase tracking-widest truncate">{months[filterMonth]}</span>
-                                                <span className={`material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0 transition-transform ${activeDropdown === 'month' ? 'rotate-180' : ''}`}>expand_more</span>
-                                            </div>
-                                            {activeDropdown === 'month' && (
-                                                <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 animate-in fade-in zoom-in-95 duration-200">
-                                                    <div className="px-4 py-2 border-b border-slate-50">
-                                                        <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Mês</span>
-                                                    </div>
-                                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                        {months.map((month, index) => (
-                                                            <div 
-                                                                key={month}
-                                                                onClick={() => {
-                                                                    setFilterMonth(index);
-                                                                    setActiveDropdown(null);
-                                                                }}
-                                                                className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterMonth === index ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
-                                                            >
-                                                                {month}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="w-px h-5 md:h-6 bg-slate-200 shrink-0" />
-
-                                        {/* Dropdown Ano */}
-                                        <div className="relative flex-1 h-full">
-                                            <div 
-                                                onClick={() => setActiveDropdown(activeDropdown === 'year' ? null : 'year')}
-                                                className="flex items-center justify-center gap-1.5 cursor-pointer w-full h-full hover:bg-slate-50 transition-colors px-2"
-                                            >
-                                                <span className="text-[10px] md:text-xs font-black text-slate-700 outline-none">{filterYear}</span>
-                                                <span className={`material-symbols-outlined text-slate-400 text-[16px] md:text-[18px] shrink-0 transition-transform ${activeDropdown === 'year' ? 'rotate-180' : ''}`}>expand_more</span>
-                                            </div>
-                                            {activeDropdown === 'year' && (
-                                                <div className="absolute top-full right-0 mt-1 w-32 bg-white rounded-xl shadow-xl border border-slate-100 z-[120] py-2 animate-in fade-in zoom-in-95 duration-200">
-                                                    <div className="px-4 py-2 border-b border-slate-50">
-                                                        <span className="text-[9px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Ano</span>
-                                                    </div>
-                                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                                        {years.map(year => (
-                                                            <div 
-                                                                key={year}
-                                                                onClick={() => {
-                                                                    setFilterYear(year);
-                                                                    setActiveDropdown(null);
-                                                                }}
-                                                                className={`px-4 py-2.5 hover:bg-primary/5 cursor-pointer transition-colors text-xs font-bold ${filterYear === year ? 'text-primary bg-primary/5' : 'text-slate-600'}`}
-                                                            >
-                                                                {year}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             
                             {/* Solicitante */}
                             <div className="flex flex-col gap-2 md:w-full">
@@ -1335,12 +1244,10 @@ const AlmacManagement: React.FC = () => {
                                 </div>
                             </div>
                             
-                            {(filterMonth !== new Date().getMonth() || filterYear !== new Date().getFullYear() || filterRequesters.length > 0 || filterStatuses.length !== 4) && (
+                            {(filterRequesters.length > 0 || filterStatuses.length !== 4) && (
                                 <div className="w-full flex justify-center mt-2 md:col-span-2 lg:col-span-3 xl:col-auto xl:w-fit xl:mt-0 xl:self-end">
                                     <button 
                                         onClick={() => {
-                                            setFilterMonth(new Date().getMonth());
-                                            setFilterYear(new Date().getFullYear());
                                             setFilterRequesters([]);
                                             setFilterStatuses(['Planejado', 'Em andamento', 'Concluído', 'Cancelado']);
                                         }}
@@ -1412,7 +1319,7 @@ const AlmacManagement: React.FC = () => {
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredHistoryGroups.map((group) => {
+                                        filteredHistoryGroups.slice(0, visibleHistoryCount).map((group) => {
                                             const eventDate = group.event?.date_start ? new Date(group.event.date_start.replace(' ', 'T')) : null;
                                             const eventDateEnd = group.event?.date_end ? new Date(group.event.date_end.replace(' ', 'T')) : null;
                                             const eventStatusBadge = getEventStatusBadge(group.event);
@@ -1451,12 +1358,12 @@ const AlmacManagement: React.FC = () => {
                                                                     className="text-slate-900 font-bold hover:text-primary transition-colors flex items-start gap-1.5 group/link text-base"
                                                                     title="Ver detalhes do evento na aba recursos"
                                                                 >
-                                                                    <span className="leading-tight">{group.event.title || 'Evento não encontrado'}</span>
+                                                                    <span className="leading-tight">{group.event.title ? group.event.title.trim().toUpperCase() : 'EVENTO NÃO ENCONTRADO'}</span>
                                                                     <span className="material-symbols-outlined text-[16px] opacity-0 group-hover/link:opacity-100 transition-opacity mt-0.5 text-primary">open_in_new</span>
                                                                 </Link>
                                                             );
                                                         })() : (
-                                                            <span className="text-slate-900 font-bold text-base leading-tight line-through opacity-60" title="Evento Excluído">{group.requests[0]?.expand?.event?.title || 'Evento Excluído'}</span>
+                                                            <span className="text-slate-900 font-bold text-base leading-tight line-through opacity-60" title="Evento Excluído">{group.requests[0]?.expand?.event?.title ? group.requests[0].expand.event.title.trim().toUpperCase() : 'EVENTO EXCLUÍDO'}</span>
                                                         )}
                                                         <div className="flex items-center gap-2">
                                                             <div className="size-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
@@ -1514,6 +1421,17 @@ const AlmacManagement: React.FC = () => {
                                 </tbody>
                             </table>
                         </div>
+                        {filteredHistoryGroups.length > visibleHistoryCount && (
+                            <div className="p-6 flex justify-center border-t border-slate-50 bg-slate-50/30">
+                                <button 
+                                    onClick={() => setVisibleHistoryCount(prev => prev + 15)}
+                                    className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-xs rounded-xl shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                                    Carregar mais eventos ({filteredHistoryGroups.length - visibleHistoryCount})
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -1578,7 +1496,7 @@ const AlmacManagement: React.FC = () => {
                                                             persistScroll(activeView, getCurrentScroll());
                                                         }}
                                                     >
-                                                        {group.event.title || 'Evento sem título'}
+                                                        {group.event.title ? group.event.title.trim().toUpperCase() : 'EVENTO SEM TÍTULO'}
                                                     </Link>
                                                 </h3>
                                                 {group.event.expand?.location ? (
