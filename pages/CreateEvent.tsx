@@ -10,6 +10,7 @@ import CustomDatePicker from '../components/CustomDatePicker';
 import CustomTimePicker from '../components/CustomTimePicker';
 import LocationField, { LocationState, normalizeBoolean } from '../components/LocationField';
 import ConflictModal from '../components/ConflictModal';
+import LogisticsWarningModal from '../components/LogisticsWarningModal';
 import { EVENT_TYPES_ORDER, INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
 
 const UNIDADES = [
@@ -306,6 +307,8 @@ const CreateEvent: React.FC = () => {
 
   // Conflict Modal State
   const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
+  const [isWarning48hOpen, setIsWarning48hOpen] = useState(false);
+  const [hasAcknowledged48hWarning, setHasAcknowledged48hWarning] = useState(false);
   const [conflictModalData, setConflictModalData] = useState<{
     title: string;
     message: string;
@@ -1666,6 +1669,21 @@ const CreateEvent: React.FC = () => {
         }
       }
 
+      // 48h Check for Logistics
+      const now = new Date();
+      const startEventDate = new Date(dateStart);
+      const diffMs = startEventDate.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      const hasLogistics = almoxarifadoItems.length > 0 || copaItems.length > 0 || informaticaItems.length > 0 || transporteSuporte;
+
+      if (diffHours <= 48 && hasLogistics) {
+        setIsConflictCheckLoading(false);
+        setLoading(false);
+        setIsWarning48hOpen(true);
+        return;
+      }
+
       // If no conflicts or confirmed, save the event
       setIsConflictCheckLoading(false);
       await saveEvent();
@@ -1674,6 +1692,20 @@ const CreateEvent: React.FC = () => {
       console.error("Erro ao processar submissão:", err);
       alert(`Erro: ${err.message || 'Erro desconhecido'}`);
       setLoading(false);
+    }
+  };
+
+  const handleLogisticsInteraction = () => {
+    if (hasAcknowledged48hWarning) return;
+    if (!dateStart) return;
+
+    const now = new Date();
+    const startEventDate = new Date(dateStart);
+    const diffMs = startEventDate.getTime() - now.getTime();
+    const diffHours = diffMs / (1000 * 60 * 60);
+
+    if (diffHours <= 48) {
+      setIsWarning48hOpen(true);
     }
   };
 
@@ -1687,7 +1719,10 @@ const CreateEvent: React.FC = () => {
     });
   };
 
-  const toggleResourceItem = (_array: string[], setArray: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+  const toggleResourceItem = (currentArray: string[], setArray: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+    if (!currentArray.includes(item)) {
+      handleLogisticsInteraction();
+    }
     setArray(prev => {
       if (prev.includes(item)) {
         // Remove item and its quantity
@@ -1734,7 +1769,7 @@ const CreateEvent: React.FC = () => {
         <button 
           type="button" 
           disabled={!isClickable}
-          onClick={() => toggleArrayItem(selectedItems, setSelectedItems, item.id)}
+          onClick={() => toggleResourceItem(selectedItems, setSelectedItems, item.id)}
           className={`flex-1 h-full px-4 py-2 sm:py-0 text-[11px] font-bold uppercase tracking-wider text-left transition-all ${isSelected ? 'text-white' : (isAvailable ? 'text-slate-600' : 'text-slate-300')}`}
         >
           <div className="flex flex-col leading-tight">
@@ -2566,6 +2601,7 @@ const CreateEvent: React.FC = () => {
                                   if (!solicitarEntrega) {
                                       setTransporteSuporte(true);
                                       setTransporteOrigem('CAP5.3');
+                                      handleLogisticsInteraction();
                                       
                                       // Pega o nome do local
                                       let locName = '';
@@ -2639,6 +2675,7 @@ const CreateEvent: React.FC = () => {
                                   if (!solicitarEntrega) {
                                       setTransporteSuporte(true);
                                       setTransporteOrigem('CAP5.3');
+                                      handleLogisticsInteraction();
                                       
                                       // Pega o nome do local
                                       let locName = '';
@@ -2712,6 +2749,7 @@ const CreateEvent: React.FC = () => {
                                   if (!solicitarEntrega) {
                                       setTransporteSuporte(true);
                                       setTransporteOrigem('CAP5.3');
+                                      handleLogisticsInteraction();
                                       
                                       // Pega o nome do local
                                       let locName = '';
@@ -2806,7 +2844,10 @@ const CreateEvent: React.FC = () => {
                                 tabIndex={activeTab === 'transporte' ? 0 : -1}
                                 onChange={(e) => {
                                   setTransporteOrigem(e.target.value);
-                                  if (e.target.value) setTransporteSuporte(true);
+                                  if (e.target.value) {
+                                    setTransporteSuporte(true);
+                                    handleLogisticsInteraction();
+                                  }
                                 }}
                                 placeholder="De onde o veículo deve sair?"
                                 className="w-full h-12 px-5 pr-12 rounded-2xl bg-white border border-slate-400 text-slate-900 font-bold text-sm focus:outline-none focus:border-slate-500 transition-all duration-300 placeholder:text-slate-500"
@@ -3003,6 +3044,15 @@ const CreateEvent: React.FC = () => {
         message={conflictModalData.message}
         conflictDetails={conflictModalData.details}
         type={conflictModalData.type}
+      />
+
+      <LogisticsWarningModal
+        isOpen={isWarning48hOpen}
+        onClose={() => setIsWarning48hOpen(false)}
+        onConfirm={() => {
+          setIsWarning48hOpen(false);
+          setHasAcknowledged48hWarning(true);
+        }}
       />
     </div>
   );
