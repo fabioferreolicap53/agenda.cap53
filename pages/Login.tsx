@@ -13,8 +13,10 @@ const Login: React.FC = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [sector, setSector] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -34,7 +36,12 @@ const Login: React.FC = () => {
         return;
       }
       if (isRegistering) {
-        const result = await register({ name, email, password, sector });
+        if (password !== confirmPassword) {
+          setError('As senhas não coincidem.');
+          setLoading(false);
+          return;
+        }
+        const result = await register({ name, email, password, passwordConfirm, sector });
         if (result.needsVerification) {
           setSuccessMessage('Cadastro realizado com sucesso! Por favor, verifique seu e-mail para ativar sua conta antes de fazer login.');
           setIsRegistering(false);
@@ -159,6 +166,31 @@ const Login: React.FC = () => {
             </label>
           )}
 
+          {!isResetting && isRegistering && (
+            <label className="flex flex-col w-full">
+              <p className="text-text-main text-sm font-medium pb-2">Confirmar Senha</p>
+              <div className="relative flex w-full flex-1 items-stretch rounded-lg">
+                <input
+                  className="w-full rounded-lg border border-gray-300 h-11 px-4 pr-12 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm"
+                  placeholder="Repita a senha"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-0 top-0 bottom-0 px-4 text-gray-400 hover:text-primary"
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                  </span>
+                </button>
+              </div>
+            </label>
+          )}
+
           {!isResetting && !isRegistering && (
             <div className="flex justify-end mt-[-8px]">
               <button 
@@ -203,6 +235,7 @@ const Login: React.FC = () => {
                   setIsRegistering(!isRegistering);
                   setError('');
                   setSuccessMessage('');
+                  setConfirmPassword('');
                 }}
                 className="text-primary font-bold hover:underline"
               >

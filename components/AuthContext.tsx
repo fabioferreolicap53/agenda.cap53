@@ -29,7 +29,7 @@ interface AuthContextType {
     isSidebarOpen: boolean;
     setSidebarOpen: (open: boolean) => void;
     login: (email: string, password: string) => Promise<void>;
-    register: (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => Promise<{ needsVerification: boolean }>;
+    register: (data: { name: string; email: string; password: string; passwordConfirm: string; sector: string; role?: UserRole }) => Promise<{ needsVerification: boolean }>;
     logout: () => void;
     updateProfile: (data: Partial<User>) => Promise<void>;
     updateAvatar: (file: File) => Promise<void>;
@@ -325,11 +325,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const register = async (data: { name: string; email: string; password: string; sector: string; role?: UserRole }) => {
+    const register = async (data: { name: string; email: string; password: string; passwordConfirm: string; sector: string; role?: UserRole }) => {
         try {
             // Basic validation
             if (data.password.length < 8) {
                 throw new Error('A senha deve ter pelo menos 8 caracteres.');
+            }
+
+            if (data.password !== data.passwordConfirm) {
+                throw new Error('As senhas não coincidem.');
             }
 
             // Generate a clean username (alphanumeric only)
@@ -343,7 +347,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     name: data.name,
                     email: data.email,
                     password: data.password,
-                    passwordConfirm: data.password,
+                    passwordConfirm: data.passwordConfirm,
                     sector: data.sector,
                     role: data.role || 'USER',
                     status: 'Online',
