@@ -1669,21 +1669,6 @@ const CreateEvent: React.FC = () => {
         }
       }
 
-      // 48h Check for Logistics
-      const now = new Date();
-      const startEventDate = new Date(dateStart);
-      const diffMs = startEventDate.getTime() - now.getTime();
-      const diffHours = diffMs / (1000 * 60 * 60);
-
-      const hasLogistics = almoxarifadoItems.length > 0 || copaItems.length > 0 || informaticaItems.length > 0 || transporteSuporte;
-
-      if (diffHours <= 48 && hasLogistics) {
-        setIsConflictCheckLoading(false);
-        setLoading(false);
-        setIsWarning48hOpen(true);
-        return;
-      }
-
       // If no conflicts or confirmed, save the event
       setIsConflictCheckLoading(false);
       await saveEvent();
