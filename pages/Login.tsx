@@ -41,7 +41,7 @@ const Login: React.FC = () => {
           setLoading(false);
           return;
         }
-        const result = await register({ name, email, password, passwordConfirm, sector });
+        const result = await register({ name, email, password, passwordConfirm: confirmPassword, sector });
         if (result.needsVerification) {
           setSuccessMessage('Cadastro realizado com sucesso! Por favor, verifique seu e-mail para ativar sua conta antes de fazer login.');
           setIsRegistering(false);
