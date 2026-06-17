@@ -86,6 +86,10 @@ const fixNotifications = () => {
 
 // API endpoint for manual trigger
 routerAdd("POST", "/api/fix-notifications", (c) => {
+    const user = c.get("authRecord");
+    if (!user) {
+        return c.json(401, { message: "Unauthorized" });
+    }
     const count = fixNotifications();
     return c.json(200, { message: "Fixed notifications", count: count });
-}, $apis.requireRecordAuth());
+});
