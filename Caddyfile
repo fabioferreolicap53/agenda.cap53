@@ -1,22 +1,27 @@
-﻿{
-    servers {
-        protocols h1 h2
-    }
-}
-
-centraldedados.dev.br {
+﻿centraldedados.dev.br {
     encode gzip zstd
 
-    # Headers de SeguranÃ§a e CORS (Permite acesso de qualquer origem)
     header {
-        # Permite acesso de qualquer origem (Ãºtil para redes locais/desenvolvimento)
-        Access-Control-Allow-Origin *
-        Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
-        Access-Control-Allow-Headers "Origin, Content-Type, Authorization, X-Requested-With"
-        
-        # SeguranÃ§a HTTPS
-        Strict-Transport-Security "max-age=31536000;"
-        X-Content-Type-Options "nosniff"
+        Access-Control-Allow-Origin "{http.request.header.Origin}"
+        Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+        Access-Control-Allow-Credentials "true"
+        Access-Control-Max-Age "86400"
+    }
+
+    @options {
+        method OPTIONS
+    }
+
+    handle @options {
+        header {
+            Access-Control-Allow-Origin "{http.request.header.Origin}"
+            Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+            Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+            Access-Control-Allow-Credentials "true"
+            Access-Control-Max-Age "86400"
+        }
+        respond 204
     }
 
     reverse_proxy 127.0.0.1:8090 {
@@ -24,10 +29,16 @@ centraldedados.dev.br {
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
         header_up X-Forwarded-Proto {scheme}
+
+        # Remove CORS headers do PocketBase para evitar duplicidade
+        header_down -Access-Control-Allow-Origin
+        header_down -Access-Control-Allow-Methods
+        header_down -Access-Control-Allow-Headers
+        header_down -Access-Control-Allow-Credentials
+        header_down -Access-Control-Max-Age
     }
 
     tls {
         protocols tls1.2 tls1.3
     }
 }
-
