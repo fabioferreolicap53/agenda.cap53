@@ -19,6 +19,7 @@ import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import Header from './components/Header';
 import { AuthProvider, useAuth, UserRole } from './components/AuthContext';
+import { ViewModeProvider } from './components/ViewModeContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -176,6 +177,7 @@ const App: React.FC = () => {
       <HashRouter>
         <ScrollToTop />
         <AuthProvider>
+          <ViewModeProvider>
           <LayoutContent>
             <Routes>
               <Route path="/" element={<Navigate to="/calendar" replace />} />
@@ -204,6 +206,7 @@ const App: React.FC = () => {
               <Route path="/equipe" element={<TeamManagement />} />
             </Routes>
           </LayoutContent>
+          </ViewModeProvider>
         </AuthProvider>
       </HashRouter>
     </ErrorBoundary>

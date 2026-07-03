@@ -1,8 +1,8 @@
 import PocketBase, { RecordService } from 'pocketbase';
 import { CollectionResponses } from './pocketbase-types';
 
-// URL fixa para garantir que sempre aponte para o servidor correto
-const PB_URL = 'https://centraldedados.dev.br';
+// URL configurável via variável de ambiente (.env) para desenvolvimento local
+const PB_URL = import.meta.env.VITE_POCKETBASE_URL || 'https://centraldedados.dev.br';
 
 console.log('--- POCKETBASE INIT ---');
 console.log('Target URL:', PB_URL);

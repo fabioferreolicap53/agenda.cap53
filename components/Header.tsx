@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { useViewMode } from './ViewModeContext';
 import { pb } from '../lib/pocketbase';
 import { useNotifications } from '../hooks/useNotifications';
 import { EventsResponse, UsersResponse } from '../lib/pocketbase-types';
@@ -14,6 +15,7 @@ const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, setSidebarOpen } = useAuth();
+  const { viewMode, toggleViewMode } = useViewMode();
   const { unreadCount } = useNotifications();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -258,6 +260,17 @@ const Header: React.FC = () => {
             )}
           </button>
 
+          {/* Mobile View Mode Toggle */}
+          <button
+            onClick={toggleViewMode}
+            className="md:hidden flex items-center justify-center size-9 rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-300 shrink-0 group"
+            title={viewMode === 'all' ? 'Mostrando Geral — clique para Pessoal' : 'Mostrando Pessoal — clique para Geral'}
+          >
+            <span className={`material-symbols-outlined text-[18px] transition-colors duration-300 ${viewMode === 'all' ? 'text-slate-500 group-hover:text-primary' : 'text-primary'}`}>
+              {viewMode === 'all' ? 'public' : 'person'}
+            </span>
+          </button>
+
           {location.pathname !== '/calendar' && (
             <button
               onClick={() => navigate(-1)}
@@ -272,14 +285,27 @@ const Header: React.FC = () => {
               <h2 className="text-text-main text-base md:text-2xl font-black leading-tight tracking-tight truncate">
                 {getTitle()}
               </h2>
+              {viewMode === 'all' && (
+                <span className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] text-slate-400 font-semibold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[10px]">public</span>
+                  Geral
+                </span>
+              )}
+              {viewMode === 'personal' && (
+                <span className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded bg-primary/[0.08] border border-primary/15 text-[9px] text-primary/70 font-semibold uppercase tracking-wider">
+                  <span className="material-symbols-outlined text-[10px]">person</span>
+                  Pessoal
+                </span>
+              )}
             </div>
             <p className="text-text-secondary text-[10px] md:text-sm font-normal hidden md:block mt-0.5 truncate">
               {getDescription()}
             </p>
           </div>
+
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <div ref={searchRef} className="relative hidden lg:block">
             <div className="flex items-center bg-white rounded-lg px-3 py-2 border border-border-light w-64 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary transition-all shadow-sm">
               <span className="material-symbols-outlined text-text-secondary text-[20px]">
@@ -372,6 +398,18 @@ const Header: React.FC = () => {
               document.body
             )}
           </div>
+
+          {/* Desktop View Mode Toggle */}
+          <button
+            onClick={toggleViewMode}
+            className="hidden lg:flex items-center gap-0 rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden h-9 transition-all duration-300 group shrink-0"
+            title={viewMode === 'all' ? 'Mostrando todos os eventos — clique para ver apenas seus' : 'Mostrando seus eventos — clique para ver todos'}
+          >
+            <span className={`flex items-center gap-1.5 px-3 h-full transition-all duration-300 text-[10px] font-bold uppercase tracking-wider ${viewMode === 'all' ? 'bg-slate-100 text-slate-500' : 'bg-primary text-white shadow-sm'}`}>
+              <span className="material-symbols-outlined text-[14px]">{viewMode === 'all' ? 'public' : 'person'}</span>
+              {viewMode === 'all' ? 'Geral' : 'Pessoal'}
+            </span>
+          </button>
         </div>
       </div>
     </header>

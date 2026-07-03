@@ -252,6 +252,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
   };
   
   const isCancelled = event.transporte_status === 'canceled' || (event as any).status === 'canceled';
+  const isEventFinished = (event.date_end ? new Date(event.date_end) : new Date(event.date_start || '')) < new Date();
 
   // Fetch participation requests
   const fetchParticipationRequests = async () => {
@@ -1106,6 +1107,89 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-4 md:pb-8 custom-scrollbar">
                 {activeTab === 'details' && (
                     <div className="space-y-3 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                        {/* Restricted Event Notice */}
+                        {event.is_restricted && (
+                            <div className="flex items-center gap-3 p-4 rounded-xl bg-violet-50/50 border border-violet-200/60">
+                                <span className="material-symbols-outlined text-base text-violet-500">lock</span>
+                                <div>
+                                    <p className="text-[11px] font-bold text-violet-700 tracking-wide uppercase">Evento Restrito</p>
+                                    <p className="text-[10px] text-violet-500/70 leading-tight mt-0.5">Acesso limitado aos participantes convidados pelo criador.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Participation Management - Top of Details */}
+                        {user && event.user !== user.id && !['TRA', 'ALMC', 'DCA'].includes(user.role) && !isEventFinished && !event.is_restricted && (
+                            <div className="p-4 md:p-6 rounded-[2rem] bg-gradient-to-br from-primary/[0.03] to-primary/[0.01] border border-primary/10 space-y-4">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
+                                    <div className="flex items-center gap-3">
+                                        <div className="size-10 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/10 flex items-center justify-center text-primary shrink-0 shadow-sm shadow-primary/10">
+                                            <span className="material-symbols-outlined">person_add</span>
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-black text-slate-900 tracking-wide uppercase">Participação no Evento</h4>
+                                            <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
+                                                {participantStatus[user.id] === 'accepted' ? 'Você faz parte deste evento.' : 
+                                                 participantStatus[user.id] === 'rejected' ? 'Seu convite foi recusado.' :
+                                                 hasRequestedParticipation ? 'Solicitação enviada para o criador.' : 
+                                                 'Deseja participar deste evento?'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Action Buttons based on status */}
+                                    <div className="flex justify-end w-full md:w-auto">
+                                        {(!participantStatus[user.id] || participantStatus[user.id] === 'withdrawn') && !hasRequestedParticipation && !isCancelled && (
+                                            <button 
+                                                onClick={handleRequestParticipation}
+                                                disabled={isRequesting}
+                                                className="group w-full md:w-auto px-5 py-2.5 rounded-full bg-gradient-to-r from-primary to-primary-hover text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+                                            >
+                                                <span className="material-symbols-outlined text-base md:hidden transition-transform duration-300 group-hover:rotate-12">person_add</span>
+                                                {isRequesting ? 'Entrando...' : 'Participar do Evento'}
+                                            </button>
+                                        )}
+
+                                        {participantStatus[user.id] === 'accepted' && !isCancelled && (
+                                            <button 
+                                                onClick={() => handleRemoveParticipant(user.id, user.name || 'Você')}
+                                                className="group w-full md:w-auto px-5 py-2.5 rounded-full bg-gradient-to-r from-red-50 to-red-100/50 text-red-600 border border-red-200/80 text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:from-red-500 hover:to-red-600 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-200/50 hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-base md:hidden transition-transform duration-300 group-hover:rotate-12">person_remove</span>
+                                                Sair do Evento
+                                            </button>
+                                        )}
+
+                                        {isCancelled && !participantStatus[user.id] && (
+                                            <div className="px-5 py-2.5 rounded-full bg-gradient-to-r from-red-50 to-red-100/50 border border-red-200/80 text-red-600 text-[10px] md:text-[11px] font-black uppercase tracking-wider flex items-center justify-center gap-2">
+                                                <span className="material-symbols-outlined text-base">event_busy</span>
+                                                Evento Cancelado
+                                            </div>
+                                        )}
+
+                                        {participantStatus[user.id] === 'pending' && (
+                                            <div className="flex gap-2 w-full md:w-auto">
+                                                <button 
+                                                    onClick={() => handleInvitationResponse('rejected')}
+                                                    className="flex-1 md:flex-none px-4 py-2.5 rounded-full bg-white border border-red-200/80 text-red-600 text-[10px] md:text-[11px] font-black uppercase tracking-wider hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-lg hover:shadow-red-200/50 hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-1"
+                                                >
+                                                    <span className="material-symbols-outlined text-base md:hidden">close</span>
+                                                    Recusar
+                                                </button>
+                                                <button 
+                                                    onClick={() => handleInvitationResponse('accepted')}
+                                                    className="flex-1 md:flex-none px-4 py-2.5 rounded-full bg-gradient-to-r from-primary to-primary-hover text-white text-[10px] md:text-[11px] font-black uppercase tracking-wider shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all duration-300 flex items-center justify-center gap-1"
+                                                >
+                                                    <span className="material-symbols-outlined text-base md:hidden">check</span>
+                                                    Aceitar
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Summary Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Date & Time Block */}
@@ -1216,78 +1300,6 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                 </div>
                             )}
                         </div>
-
-                        {/* Participation Management */}
-                        {user && event.user !== user.id && !['TRA', 'ALMC', 'DCA'].includes(user.role) && (
-                            <div className="p-4 md:p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-4">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
-                                    <div className="flex items-center gap-3">
-                                        <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                                            <span className="material-symbols-outlined">person_add</span>
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-slate-900">Participação no Evento</h4>
-                                            <p className="text-[11px] text-slate-500 font-medium leading-tight">
-                                                {participantStatus[user.id] === 'accepted' ? 'Você faz parte deste evento.' : 
-                                                 participantStatus[user.id] === 'rejected' ? 'Seu convite foi recusado.' :
-                                                 hasRequestedParticipation ? 'Solicitação enviada para o criador.' : 
-                                                 'Deseja participar deste evento?'}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Action Buttons based on status */}
-                                    <div className="flex justify-end w-full md:w-auto">
-                                        {(!participantStatus[user.id] || participantStatus[user.id] === 'withdrawn') && !hasRequestedParticipation && !isCancelled && (
-                                            <button 
-                                                onClick={handleRequestParticipation}
-                                                disabled={isRequesting}
-                                                className="w-full md:w-auto px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                            >
-                                                <span className="material-symbols-outlined text-base md:hidden">person_add</span>
-                                                {isRequesting ? 'Entrando...' : 'Participar do Evento'}
-                                            </button>
-                                        )}
-
-                                        {participantStatus[user.id] === 'accepted' && !isCancelled && (
-                                            <button 
-                                                onClick={() => handleRemoveParticipant(user.id, user.name || 'Você')}
-                                                className="w-full md:w-auto px-4 py-2 md:px-5 md:py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-red-100 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <span className="material-symbols-outlined text-base md:hidden">person_remove</span>
-                                                Sair do Evento
-                                            </button>
-                                        )}
-
-                                        {isCancelled && !participantStatus[user.id] && (
-                                            <div className="px-4 py-2 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[10px] md:text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-2">
-                                                <span className="material-symbols-outlined text-base">event_busy</span>
-                                                Evento Cancelado
-                                            </div>
-                                        )}
-
-                                        {participantStatus[user.id] === 'pending' && (
-                                            <div className="flex gap-2 w-full md:w-auto">
-                                                <button 
-                                                    onClick={() => handleInvitationResponse('rejected')}
-                                                    className="flex-1 md:flex-none px-3 py-2 md:px-4 md:py-2 rounded-xl bg-white border border-red-100 text-red-600 text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-red-50 transition-all flex items-center justify-center gap-1"
-                                                >
-                                                    <span className="material-symbols-outlined text-base md:hidden">close</span>
-                                                    Recusar
-                                                </button>
-                                                <button 
-                                                    onClick={() => handleInvitationResponse('accepted')}
-                                                    className="flex-1 md:flex-none px-3 py-2 md:px-4 md:py-2 rounded-xl bg-primary text-white text-[10px] md:text-[11px] font-bold uppercase tracking-wider hover:bg-primary-hover shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-1"
-                                                >
-                                                    <span className="material-symbols-outlined text-base md:hidden">check</span>
-                                                    Aceitar
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
 

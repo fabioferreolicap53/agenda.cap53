@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 import { useAuth, SECTORS, UserRole } from '../components/AuthContext';
+import { useViewMode } from '../components/ViewModeContext';
 import { notificationService } from '../lib/notifications';
 import { 
   EventsResponse, 
@@ -106,6 +107,7 @@ interface CalendarEvent extends EventsResponse<CalendarExpand> {
 
 const Calendar: React.FC = () => {
   const { user } = useAuth();
+  const { viewMode } = useViewMode();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   // State for search query
@@ -279,6 +281,7 @@ const Calendar: React.FC = () => {
   const userOptions = useMemo(() => {
       const opts: { value: string; label: string }[] = [
           { value: 'Todos', label: 'Todos os usuários' },
+          { value: 'pessoal', label: 'Meus eventos' },
           { value: 'me', label: `Eu (${user?.name || '...'})` }
       ];
       users.filter(u => u.id !== user?.id).forEach(u => {
@@ -304,6 +307,17 @@ const Calendar: React.FC = () => {
 
   const filteredEvents = useMemo(() => {
     let result = events;
+
+    // View Mode Filter: personal = only events user is involved in
+    if (viewMode === 'personal') {
+      result = result.filter(e => {
+        if (!user) return false;
+        const isCreator = e.user === user.id;
+        const isParticipant = (e.participants && e.participants.includes(user.id)) ||
+                              e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === user.id);
+        return isCreator || isParticipant;
+      });
+    }
 
     // Filter Private Events
     // Only Creator, Participants, or specific Roles (if related resources are requested) can see Private Events
@@ -367,14 +381,24 @@ const Calendar: React.FC = () => {
 
     // User Filter
     if (!filterUser.includes('Todos') && filterUser.length > 0) {
-        result = result.filter(e => {
-            const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
-        return targetUserIds.some(targetId => {
-                const inParticipantsArray = e.participants && e.participants.includes(targetId);
-                const inParticipantesCollection = e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === targetId && (p.status === 'accepted' || p.status === 'withdrawn'));
-                return e.user === targetId || inParticipantsArray || inParticipantesCollection;
+        if (filterUser.includes('pessoal')) {
+            // "Meus eventos" filter: user created, participates, or private
+            result = result.filter(e => {
+                const isCreator = e.user === user?.id;
+                const isParticipant = (e.participants && e.participants.includes(user?.id || '')) ||
+                    e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === user?.id);
+                return isCreator || isParticipant;
             });
-        });
+        } else {
+            result = result.filter(e => {
+                const targetUserIds = filterUser.map(id => id === 'me' ? user?.id : id).filter(Boolean);
+                return targetUserIds.some(targetId => {
+                    const inParticipantsArray = e.participants && e.participants.includes(targetId);
+                    const inParticipantesCollection = e.expand?.['agenda_cap53_participantes(event)']?.some((p: any) => p.user === targetId && (p.status === 'accepted' || p.status === 'withdrawn'));
+                    return e.user === targetId || inParticipantsArray || inParticipantesCollection;
+                });
+            });
+        }
     }
 
     // Type Filter
@@ -383,7 +407,7 @@ const Calendar: React.FC = () => {
     }
 
     return result;
-  }, [events, searchQuery, filterUser, filterTypes, filterSectors, user]);
+  }, [events, searchQuery, filterUser, filterTypes, filterSectors, user, viewMode]);
 
   // Group events by date for efficient lookup
   const eventsByDate = useMemo(() => {
@@ -907,6 +931,86 @@ const Calendar: React.FC = () => {
     setRefusalModalOpen(true);
   };
 
+  // Quick join/leave handlers for card buttons
+  const [quickJoinLoading, setQuickJoinLoading] = useState<string | null>(null);
+
+  const handleQuickJoin = async (event: CalendarEvent) => {
+    if (!user) return;
+    setQuickJoinLoading(event.id);
+    try {
+      const currentParticipants = event.participants || [];
+      if (!currentParticipants.includes(user.id)) {
+        await pb.collection('agenda_cap53_eventos').update(event.id, {
+          participants: [...currentParticipants, user.id]
+        }).catch(() => {});
+      }
+      const existing = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
+        filter: `event = "${event.id}" && user = "${user.id}"`,
+        requestKey: null
+      });
+      if (existing.items.length > 0) {
+        await pb.collection('agenda_cap53_participantes').update(existing.items[0].id, { status: 'accepted', role: 'PARTICIPANTE' });
+      } else {
+        await pb.collection('agenda_cap53_participantes').create({ event: event.id, user: user.id, status: 'accepted', role: 'PARTICIPANTE' });
+      }
+      if (event.user && event.user !== user.id) {
+        await notificationService.createNotification({
+          user: event.user,
+          title: 'Nova Participação',
+          message: `${user.name} ingressou no seu evento "${event.title}".`,
+          type: 'event_participation_request',
+          event: event.id,
+          invite_status: 'accepted',
+          data: { kind: 'participation_auto_accepted', participant_id: user.id, participant_name: user.name }
+        });
+      }
+    } catch (err) {
+      console.error('Quick join error:', err);
+    } finally {
+      setQuickJoinLoading(null);
+    }
+  };
+
+  const handleQuickLeave = async (event: CalendarEvent) => {
+    if (!user) return;
+    if (!confirm(`Tem certeza que deseja sair do evento "${event.title}"?`)) return;
+    setQuickJoinLoading(event.id);
+    try {
+      const currentParticipants = event.participants || [];
+      const updatedParticipants = currentParticipants.filter(id => id !== user.id);
+      const updatedStatus = { ...(event.participants_status || {}) };
+      delete updatedStatus[user.id];
+      const updatedRoles = { ...(event.participants_roles || {}) };
+      delete updatedRoles[user.id];
+      await pb.collection('agenda_cap53_eventos').update(event.id, {
+        participants: updatedParticipants,
+        participants_status: updatedStatus,
+        participants_roles: updatedRoles
+      }).catch(() => {});
+      const existing = await pb.collection('agenda_cap53_participantes').getList(1, 1, {
+        filter: `event = "${event.id}" && user = "${user.id}"`,
+        requestKey: null
+      });
+      if (existing.items.length > 0) {
+        await pb.collection('agenda_cap53_participantes').update(existing.items[0].id, { status: 'withdrawn' });
+      }
+      if (event.user && event.user !== user.id) {
+        await notificationService.createNotification({
+          user: event.user,
+          title: 'Participação Removida',
+          message: `${user.name} retirou sua participação do evento "${event.title}".`,
+          type: 'system',
+          event: event.id,
+          data: { kind: 'participation_removed' }
+        });
+      }
+    } catch (err) {
+      console.error('Quick leave error:', err);
+    } finally {
+      setQuickJoinLoading(null);
+    }
+  };
+
   const handleConfirmCancellation = async (justification: string) => {
     if (!eventToCancel) return;
 
@@ -1419,6 +1523,10 @@ const Calendar: React.FC = () => {
                             onCancel={handleCancelEvent}
                             setTooltipData={setTooltipData}
                             onSelect={setSelectedEvent}
+                            onQuickJoin={handleQuickJoin}
+                            onQuickLeave={handleQuickLeave}
+                            quickJoinLoading={quickJoinLoading}
+                            restrictedBadge="icon"
                           />
                         ))}
                       </div>
@@ -1502,6 +1610,10 @@ const Calendar: React.FC = () => {
                             onCancel={handleCancelEvent}
                             setTooltipData={setTooltipData}
                             onSelect={setSelectedEvent}
+                            onQuickJoin={handleQuickJoin}
+                            onQuickLeave={handleQuickLeave}
+                            quickJoinLoading={quickJoinLoading}
+                            restrictedBadge="icon"
                           />
                         ))
                       ) : (
@@ -1601,6 +1713,10 @@ const Calendar: React.FC = () => {
                               onCancel={handleCancelEvent}
                               setTooltipData={setTooltipData}
                               onSelect={setSelectedEvent}
+                              onQuickJoin={handleQuickJoin}
+                              onQuickLeave={handleQuickLeave}
+                              quickJoinLoading={quickJoinLoading}
+                              restrictedBadge="icon"
                             />
                           ))
                         ) : (
@@ -1695,6 +1811,10 @@ const Calendar: React.FC = () => {
                             onCancel={handleCancelEvent}
                             setTooltipData={setTooltipData}
                             onSelect={setSelectedEvent}
+                            onQuickJoin={handleQuickJoin}
+                            onQuickLeave={handleQuickLeave}
+                            quickJoinLoading={quickJoinLoading}
+                            restrictedBadge="icon"
                           />
                         ))
                       ) : (
@@ -1797,6 +1917,11 @@ const Calendar: React.FC = () => {
                           forceShowDetails={!isMobileOrTablet}
                           setTooltipData={setTooltipData}
                           onSelect={setSelectedEvent}
+                          onQuickJoin={handleQuickJoin}
+                          onQuickLeave={handleQuickLeave}
+                          quickJoinLoading={quickJoinLoading}
+                          showParticipation
+                          restrictedBadge="subtle"
                         />
                       </div>
 
@@ -1852,24 +1977,15 @@ const Calendar: React.FC = () => {
 
                           {/* Status Badges Row */}
                           <div className="flex items-center gap-1.5 mt-1">
-                             {event.status === 'canceled' && (
-                               <span className="text-[9px] font-black text-white bg-red-400 px-1.5 py-0.5 rounded border border-red-500 uppercase tracking-wide">
-                                   CANCELADO
-                               </span>
-                             )}
-                             {/* Transport */}
-                             {event.transporte_suporte && (
-                               <div className={`flex items-center justify-center size-5 rounded border ${
-                                  event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 
-                                  (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' :
-                                  'bg-yellow-50 border-yellow-200 text-yellow-600'
-                               }`} title={event.transporte_origem || event.transporte_destino ? "Transporte Solicitado" : "Entrega de Recursos"}>
-                                 <span className="material-symbols-outlined text-[12px]">{event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}</span>
-                               </div>
-                             )}
-
-                             {/* Resources - Using helper logic inline since we are in map */}
                              {(() => {
+                               const isCancelled = event.status === 'canceled';
+                               const isPast = event.date_end ? new Date(event.date_end) < new Date() : false;
+                               const mUser = user as any;
+                               const isCreator = mUser?.id && event.user === mUser.id;
+                               const canJoin = mUser && !isCreator && !['TRA','ALMC','DCA'].includes(mUser?.role) && !event.is_restricted && !isCancelled;
+                               const evFinished = event.date_end ? new Date(event.date_end) < new Date() : isPast;
+                               const userPS = (event.participants_status as any)?.[mUser?.id] || (event.participants?.includes(mUser?.id) ? 'accepted' : null);
+                               const isJoiningMobile = quickJoinLoading === event.id;
                                const getStatus = (cat: string) => {
                                   const categoryRequests = event.almac_requests?.filter((r) => {
                                       let currCat = r.expand?.item?.category;
@@ -1877,38 +1993,45 @@ const Calendar: React.FC = () => {
                                       if (currCat === 'INFO') currCat = 'INFORMATICA';
                                       return currCat === cat;
                                   }) || [];
-                                  
                                   if (categoryRequests.length === 0) return null;
-                                  
                                   const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
                                   const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
-                            
                                   if (anyRejected) return 'rejected';
                                   if (allConfirmed) return 'confirmed';
                                   return 'pending';
                                };
-
-                               const almc = getStatus('ALMOXARIFADO');
-                               const copa = getStatus('COPA');
-                               const inf = getStatus('INFORMATICA');
-
                                return (
                                  <>
-                                   {almc && (
-                                     <div className={`flex items-center justify-center size-5 rounded border ${almc === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}>
-                                       <span className="material-symbols-outlined text-[12px]">inventory_2</span>
-                                     </div>
+                                   {isCancelled && (
+                                     <span className="text-[9px] font-black text-white bg-red-400 px-1.5 py-0.5 rounded border border-red-500 uppercase tracking-wide">CANCELADO</span>
                                    )}
-                                   {copa && (
-                                     <div className={`flex items-center justify-center size-5 rounded border ${copa === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}>
-                                       <span className="material-symbols-outlined text-[12px]">local_cafe</span>
-                                     </div>
+                                   {event.is_restricted && (
+                                     <span className="flex items-center justify-center size-[18px] rounded bg-violet-50 border border-violet-200 text-violet-500" title="Evento Restrito">
+                                       <span className="material-symbols-outlined text-[11px]">lock</span>
+                                     </span>
                                    )}
-                                   {inf && (
-                                     <div className={`flex items-center justify-center size-5 rounded border ${inf === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}>
-                                       <span className="material-symbols-outlined text-[12px]">laptop_mac</span>
-                                     </div>
+                                   {canJoin && !evFinished && !userPS && (
+                                     <button onClick={(e) => { e.stopPropagation(); handleQuickJoin(event); }} disabled={isJoiningMobile} className="flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-primary/[0.08] text-primary text-[9px] font-bold uppercase tracking-wide border border-primary/[0.15] hover:bg-primary hover:text-white hover:border-primary hover:shadow-md hover:shadow-primary/20 active:scale-[0.97] transition-all duration-200 disabled:opacity-50">
+                                       <span className="material-symbols-outlined text-[11px]">{isJoiningMobile ? 'hourglass_top' : 'group_add'}</span>{isJoiningMobile ? '...' : 'Participar'}
+                                     </button>
                                    )}
+                                   {canJoin && !evFinished && userPS === 'accepted' && (
+                                     <button onClick={(e) => { e.stopPropagation(); handleQuickLeave(event); }} disabled={isJoiningMobile} className="flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-emerald-500/[0.08] text-emerald-700 text-[9px] font-bold uppercase tracking-wide border border-emerald-400/[0.2] hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-md hover:shadow-red-300/20 active:scale-[0.97] transition-all duration-200 disabled:opacity-50">
+                                       <span className="material-symbols-outlined text-[11px]">{isJoiningMobile ? 'hourglass_top' : 'logout'}</span>{isJoiningMobile ? '...' : 'Sair'}
+                                     </button>
+                                   )}
+                                   {canJoin && !evFinished && userPS === 'pending' && (
+                                     <span className="flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-amber-500/[0.08] text-amber-700 text-[9px] font-bold uppercase tracking-wide border border-amber-400/[0.2]">
+                                       <span className="material-symbols-outlined text-[11px]">schedule</span>Pendente
+                                     </span>
+                                   )}
+                                   {event.transporte_suporte && (() => {
+                                     const statusColor = event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600';
+                                     return (<div className={`flex items-center justify-center size-5 rounded border ${statusColor}`} title="Transporte"><span className="material-symbols-outlined text-[12px]">{event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}</span></div>);
+                                   })()}
+                                   {getStatus('ALMOXARIFADO') && (<div className={`flex items-center justify-center size-5 rounded border ${getStatus('ALMOXARIFADO') === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}><span className="material-symbols-outlined text-[12px]">inventory_2</span></div>)}
+                                   {getStatus('COPA') && (<div className={`flex items-center justify-center size-5 rounded border ${getStatus('COPA') === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}><span className="material-symbols-outlined text-[12px]">local_cafe</span></div>)}
+                                   {getStatus('INFORMATICA') && (<div className={`flex items-center justify-center size-5 rounded border ${getStatus('INFORMATICA') === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}><span className="material-symbols-outlined text-[12px]">laptop_mac</span></div>)}
                                  </>
                                );
                              })()}
@@ -2038,6 +2161,11 @@ const Calendar: React.FC = () => {
                                             forceShowDetails={!isMobileOrTablet}
                                             setTooltipData={setTooltipData}
                                             onSelect={setSelectedEvent}
+                                            onQuickJoin={handleQuickJoin}
+                                            onQuickLeave={handleQuickLeave}
+                                            quickJoinLoading={quickJoinLoading}
+                                            showParticipation
+                                            restrictedBadge="subtle"
                                         />
                                     </div>
                                 ))}
@@ -2467,9 +2595,14 @@ interface CalendarEventCardProps {
   detailed?: boolean;
   forceShowDetails?: boolean;
   onSelect: (event: CalendarEvent) => void;
+  onQuickJoin?: (event: CalendarEvent) => void;
+  onQuickLeave?: (event: CalendarEvent) => void;
+  quickJoinLoading?: string | null;
+  showParticipation?: boolean;
+  restrictedBadge?: 'icon' | 'subtle';
 }
 
-const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, forceShowDetails, onSelect }) => {
+const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, forceShowDetails, onSelect, onQuickJoin, onQuickLeave, quickJoinLoading, showParticipation, restrictedBadge }) => {
   const isCancelled = event.status === 'canceled';
   const isPast = event.date_end ? new Date(event.date_end) < new Date() : false;
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -2583,6 +2716,13 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
   if (event.user && !pStatus[event.user]) {
     participantCount++;
   }
+
+  // Participation button logic
+  const isCreator = user?.id && event.user === user.id;
+  const isEventFinished = event.date_end ? new Date(event.date_end) < new Date() : isPast;
+  const canParticipate = user && !isCreator && !['TRA', 'ALMC', 'DCA'].includes(user?.role) && !isCancelled && !event.is_restricted && !isEventFinished;
+  const userParticipantStatus = pStatus[user?.id || ''] || (event.participants?.includes(user?.id) ? 'accepted' : null);
+  const isJoining = quickJoinLoading === event.id;
 
   return (
     <div
@@ -2802,10 +2942,49 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
              </div>
            )}
 
+           {/* Restricted Badge */}
+           {event.is_restricted && (
+             <div className="flex items-center justify-center size-[18px] rounded bg-violet-50 border border-violet-200 text-violet-500" title="Evento Restrito">
+               <span className="material-symbols-outlined text-[11px]">lock</span>
+             </div>
+           )}
+
            {/* Cancelled Label */}
            {isCancelled && (
              <span className="text-[9px] font-black text-white uppercase tracking-wider bg-red-500 px-2 py-0.5 rounded shadow-sm shadow-red-200 ml-auto">
                Cancelado
+             </span>
+           )}
+
+           {/* Participation Button */}
+           {showParticipation && canParticipate && !userParticipantStatus && !isCancelled && (
+             <button
+               onClick={(e) => { e.stopPropagation(); onQuickJoin?.(event); }}
+               disabled={isJoining}
+               className="ml-auto flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-primary/[0.08] text-primary text-[9px] font-bold uppercase tracking-wider border border-primary/[0.15] hover:bg-primary hover:text-white hover:border-primary hover:shadow-md hover:shadow-primary/20 active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
+               title="Participar do Evento"
+             >
+               <span className="material-symbols-outlined text-[11px]">{isJoining ? 'hourglass_top' : 'group_add'}</span>
+               <span className="hidden sm:inline">{isJoining ? '...' : 'Participar'}</span>
+             </button>
+           )}
+
+           {showParticipation && canParticipate && userParticipantStatus === 'accepted' && (
+             <button
+               onClick={(e) => { e.stopPropagation(); onQuickLeave?.(event); }}
+               disabled={isJoining}
+               className="ml-auto flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-emerald-500/[0.08] text-emerald-700 text-[9px] font-bold uppercase tracking-wider border border-emerald-400/[0.2] hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-md hover:shadow-red-300/20 active:scale-[0.97] transition-all duration-200 disabled:opacity-50"
+               title="Sair do Evento"
+             >
+               <span className="material-symbols-outlined text-[11px]">{isJoining ? 'hourglass_top' : 'logout'}</span>
+               <span className="hidden sm:inline">{isJoining ? '...' : 'Sair'}</span>
+             </button>
+           )}
+
+           {showParticipation && canParticipate && userParticipantStatus === 'pending' && (
+             <span className="ml-auto flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-amber-500/[0.08] text-amber-700 text-[9px] font-bold uppercase tracking-wider border border-amber-400/[0.2]">
+               <span className="material-symbols-outlined text-[11px]">schedule</span>
+               <span className="hidden sm:inline">Pendente</span>
              </span>
            )}
         </div>
