@@ -83,7 +83,7 @@ const Sidebar: React.FC = () => {
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 w-72 flex-col z-[999] transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:w-[211px] h-full border-r ${
+      <aside className={`fixed inset-y-0 left-0 w-[245px] flex-col z-[999] transform transition-all duration-300 ease-in-out lg:relative lg:translate-x-0 lg:flex lg:w-[211px] h-full border-r ${
         viewMode === 'personal'
           ? 'bg-gradient-to-b from-white to-[#e9edf2] border-[rgba(28,46,74,0.15)]'
           : 'bg-gradient-to-b from-white to-[#fafbfc] border-slate-200/60'

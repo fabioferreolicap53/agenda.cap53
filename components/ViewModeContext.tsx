@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { pb } from '../lib/pocketbase';
 
 type ViewMode = 'personal' | 'all';
@@ -28,55 +28,62 @@ export const ViewModeProvider: React.FC<{ children: ReactNode }> = ({ children }
   });
   const [loaded, setLoaded] = useState(false);
 
-  // Busca viewMode do servidor — usa refresh do auth para garantir dados atualizados
+  // Ref pra saber se auth estava válido antes (detectar transição login/logout)
+  const wasValidRef = useRef(pb.authStore.isValid);
+  // Ref pra evitar chamadas duplicadas de loadFromServer
+  const loadingRef = useRef(false);
+
   const loadFromServer = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     try {
-      const userId = pb.authStore.model?.id;
-      if (!userId) {
+      if (!pb.authStore.isValid || !pb.authStore.model?.id) {
         setLoaded(true);
         return;
       }
 
-      // Refresh auth para garantir calendar_filters atualizado no model
-      try {
-        const authData = await pb.collection('agenda_cap53_usuarios').authRefresh();
-        const freshFilters = (authData.record as any).calendar_filters;
-        if (freshFilters?.viewMode === 'personal' || freshFilters?.viewMode === 'all') {
-          setViewModeState(freshFilters.viewMode);
-          localStorage.setItem(LS_KEY, freshFilters.viewMode);
-          setLoaded(true);
-          return;
-        }
-      } catch {
-        // authRefresh falhou — tenta fetch direto
-      }
+      const authData = await pb.collection('agenda_cap53_usuarios').authRefresh();
+      const freshFilters = (authData.record as any)?.calendar_filters;
 
-      // Fallback: fetch direto do registro
-      try {
-        const record = await pb.collection('agenda_cap53_usuarios').getOne(userId);
-        const filters = (record as any).calendar_filters;
-        if (filters?.viewMode === 'personal' || filters?.viewMode === 'all') {
-          setViewModeState(filters.viewMode);
-          localStorage.setItem(LS_KEY, filters.viewMode);
-          // Atualiza o auth store local com os dados frescos
-          if (pb.authStore.model) {
-            (pb.authStore.model as any).calendar_filters = filters;
-          }
-        }
-      } catch {
-        // Ignora erro
+      if (freshFilters?.viewMode === 'personal' || freshFilters?.viewMode === 'all') {
+        setViewModeState(freshFilters.viewMode);
+        localStorage.setItem(LS_KEY, freshFilters.viewMode);
       }
-    } catch (e) {
-      console.warn('Failed to load viewMode from server:', e);
+    } catch (err) {
+      console.warn('ViewMode: Failed to load from server, using localStorage', err);
     } finally {
+      loadingRef.current = false;
       setLoaded(true);
     }
   }, []);
 
-  // Sync from PocketBase when user changes
+  // Carrega no mount
   useEffect(() => {
     loadFromServer();
-  }, [pb.authStore.token, loadFromServer]);
+  }, [loadFromServer]);
+
+  // Escuta mudanças de auth — SÓ reage quando auth passa de inválido para válido (login real)
+  // NÃO reage quando token é renovado (refresh) ou quando update interno dispara onChange
+  useEffect(() => {
+    const unsubscribe = pb.authStore.onChange((token, model) => {
+      const nowValid = !!token;
+      const wasValid = wasValidRef.current;
+
+      // Login real: passou de inválido para válido → buscar viewMode do servidor
+      if (nowValid && !wasValid) {
+        loadFromServer();
+      }
+
+      // Reset flag quando deslogar
+      if (!nowValid) {
+        wasValidRef.current = false;
+      } else {
+        wasValidRef.current = true;
+      }
+    });
+
+    return () => unsubscribe?.();
+  }, [loadFromServer]);
 
   // Aplica tema visual global baseado no viewMode
   useEffect(() => {
@@ -84,7 +91,6 @@ export const ViewModeProvider: React.FC<{ children: ReactNode }> = ({ children }
     const body = document.body;
 
     if (viewMode === 'personal') {
-      // Tema pessoal — tons de primary (azul marinho profundo)
       root.style.setProperty('--app-bg', 'rgb(246, 247, 249)');
       root.style.setProperty('--app-bg-surface', 'rgb(255, 255, 255)');
       root.style.setProperty('--app-border', 'rgba(28, 46, 74, 0.08)');
@@ -94,7 +100,6 @@ export const ViewModeProvider: React.FC<{ children: ReactNode }> = ({ children }
       body.classList.add('theme-personal');
       body.classList.remove('theme-all');
     } else {
-      // Tema geral — tons neutros slate
       root.style.setProperty('--app-bg', 'rgb(249, 250, 251)');
       root.style.setProperty('--app-bg-surface', 'rgb(255, 255, 255)');
       root.style.setProperty('--app-border', 'rgba(226, 232, 240, 0.6)');
@@ -114,19 +119,14 @@ export const ViewModeProvider: React.FC<{ children: ReactNode }> = ({ children }
     setViewModeState(mode);
     localStorage.setItem(LS_KEY, mode);
 
-    // Persist to PocketBase — merge com dados existentes para não sobrescrever filtros do Calendar
     const user = pb.authStore.model;
     if (user?.id) {
-      // Busca dados frescos do servidor antes de merge
-      pb.collection('agenda_cap53_usuarios').getOne(user.id).then((record) => {
-        const currentFilters = (record as any).calendar_filters || {};
-        const newFilters = { ...currentFilters, viewMode: mode };
+      const currentFilters = (user as any).calendar_filters || {};
+      const newFilters = { ...currentFilters, viewMode: mode };
+      (user as any).calendar_filters = newFilters;
 
-        (user as any).calendar_filters = newFilters;
-
-        return pb.collection('agenda_cap53_usuarios').update(user.id, {
-          calendar_filters: newFilters
-        });
+      pb.collection('agenda_cap53_usuarios').update(user.id, {
+        calendar_filters: newFilters
       }).catch((err) => {
         console.warn('Failed to persist viewMode to server:', err);
       });

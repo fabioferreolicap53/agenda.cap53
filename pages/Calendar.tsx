@@ -1541,10 +1541,10 @@ const Calendar: React.FC = () => {
                               e.stopPropagation();
                               updateURL('day', dateObj.date);
                             }}
-                            className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-slate-100 backdrop-blur-sm border border-slate-300 group/badge hover:bg-primary/10 hover:border-primary/30 transition-all duration-300 active:scale-95 hover:shadow-sm"
+                            className="flex items-center gap-[3px] px-[7px] py-[2px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 backdrop-blur-sm border border-slate-300/80 group/badge hover:bg-primary/10 hover:border-primary/30 active:scale-95 count-glow"
                           >
-                            <span className="material-symbols-outlined text-[10px] text-slate-600 group-hover/badge:text-primary transition-colors">calendar_today</span>
-                            <span className="text-[9px] font-black text-slate-700 group-hover/badge:text-primary transition-colors">
+                            <span className="material-symbols-outlined text-[9px] text-primary/70 group-hover/badge:text-primary transition-colors" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>calendar_today</span>
+                            <span className="text-[9px] font-black text-primary/80 group-hover/badge:text-primary transition-colors tabular-nums">
                               {dayEvents.length}
                             </span>
                           </button>
@@ -1564,6 +1564,7 @@ const Calendar: React.FC = () => {
                             onQuickLeave={handleQuickLeave}
                             quickJoinLoading={quickJoinLoading}
                             restrictedBadge="icon"
+                            boldTitle={isMobileOrTablet}
                           />
                         ))}
                       </div>
@@ -1622,9 +1623,9 @@ const Calendar: React.FC = () => {
 
                       <div className="flex items-center gap-3">
                         {dayEvents.length > 0 && (
-                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-slate-300 shadow-sm">
-                            <span className="material-symbols-outlined text-[14px] text-primary">event</span>
-                            <span className="text-[11px] font-black text-text-main">
+                          <div className="flex items-center gap-[5px] px-[7px] py-[3px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow">
+                            <span className="material-symbols-outlined text-[12px] text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
+                            <span className="text-[10px] font-black text-primary/80 tabular-nums">
                               {dayEvents.length}
                             </span>
                           </div>
@@ -1652,6 +1653,7 @@ const Calendar: React.FC = () => {
                             quickJoinLoading={quickJoinLoading}
                             showParticipation
                             restrictedBadge="icon"
+                            boldTitle
                           />
                         ))
                       ) : (
@@ -1701,10 +1703,10 @@ const Calendar: React.FC = () => {
                             e.stopPropagation();
                             updateURL('day', date);
                           }}
-                          className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-white border border-slate-300 group/badge hover:bg-primary/5 hover:border-primary/20 active:scale-95 breathe-glow"
+                          className="flex items-center gap-[3px] px-[7px] py-[2px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 group/badge hover:bg-primary/5 hover:border-primary/20 active:scale-95 count-glow"
                         >
-                          <span className="material-symbols-outlined text-[10px] text-slate-600 group-hover/badge:text-primary transition-colors">calendar_today</span>
-                          <span className="text-[9px] font-black text-slate-700 group-hover/badge:text-primary transition-colors">
+                          <span className="material-symbols-outlined text-[9px] text-primary/70 group-hover/badge:text-primary transition-colors" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>calendar_today</span>
+                          <span className="text-[9px] font-black text-primary/80 group-hover/badge:text-primary transition-colors tabular-nums">
                             {(eventsByDate[date.toDateString()] || []).length}
                           </span>
                         </button>
@@ -1755,6 +1757,7 @@ const Calendar: React.FC = () => {
                               onQuickLeave={handleQuickLeave}
                               quickJoinLoading={quickJoinLoading}
                               restrictedBadge="icon"
+                              boldTitle={isMobileOrTablet}
                             />
                           ))
                         ) : (
@@ -1824,9 +1827,9 @@ const Calendar: React.FC = () => {
 
                       <div className="flex items-center gap-3">
                         {dayEvents.length > 0 && (
-                          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white border border-slate-300 shadow-sm">
-                            <span className="material-symbols-outlined text-[14px] text-primary">event</span>
-                            <span className="text-[11px] font-black text-text-main">
+                          <div className="flex items-center gap-[5px] px-[7px] py-[3px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow">
+                            <span className="material-symbols-outlined text-[12px] text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
+                            <span className="text-[10px] font-black text-primary/80 tabular-nums">
                               {dayEvents.length}
                             </span>
                           </div>
@@ -1854,6 +1857,7 @@ const Calendar: React.FC = () => {
                             quickJoinLoading={quickJoinLoading}
                             showParticipation
                             restrictedBadge="icon"
+                            boldTitle
                           />
                         ))
                       ) : (
@@ -1894,11 +1898,11 @@ const Calendar: React.FC = () => {
                         {currentDate.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
                       </h2>
                       {(eventsByDate[currentDate.toDateString()] || []).length > 0 && (
-                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border shadow-sm ${
-                          isWeekend && !isToday ? 'bg-orange-100/50 border-orange-200' : 'bg-primary/5 border-primary/10'
+                        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border shadow-sm count-glow ${
+                          isWeekend && !isToday ? 'bg-gradient-to-br from-orange-100/50 via-orange-50/80 to-orange-100/50 border-orange-200' : 'bg-gradient-to-br from-white via-primary/5 to-primary/10 border-primary/15'
                         }`}>
-                          <span className={`material-symbols-outlined text-sm md:text-lg ${isWeekend && !isToday ? 'text-orange-500/60' : 'text-primary/60'}`}>event_available</span>
-                          <span className={`text-[10px] md:text-xs font-black ${isWeekend && !isToday ? 'text-orange-600/70' : 'text-primary'}`}>
+                          <span className={`material-symbols-outlined text-sm md:text-lg ${isWeekend && !isToday ? 'text-orange-500/60' : 'text-primary/60'}`} style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event_available</span>
+                          <span className={`text-[10px] md:text-xs font-black ${isWeekend && !isToday ? 'text-orange-600/70' : 'text-primary'} tabular-nums`}>
                             {(eventsByDate[currentDate.toDateString()] || []).length}
                             <span className="ml-1 opacity-60 text-[9px] md:text-[11px] uppercase tracking-wider hidden sm:inline">Eventos</span>
                           </span>
@@ -1954,6 +1958,7 @@ const Calendar: React.FC = () => {
                           user={user}
                           onCancel={handleCancelEvent}
                           forceShowDetails={!isMobileOrTablet}
+                          boldTitle={isMobileOrTablet}
                           setTooltipData={setTooltipData}
                           onSelect={setSelectedEvent}
                           onQuickJoin={handleQuickJoin}
@@ -1987,7 +1992,7 @@ const Calendar: React.FC = () => {
 
                         {/* Content Column */}
                         <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                          <h4 className={`text-[11px] uppercase font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
+                          <h4 className={`text-[11px] uppercase font-bold leading-tight break-words px-3 py-1 rounded-lg ${event.status === 'canceled' ? 'line-through bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white/60 decoration-red-300/60 shadow-md shadow-slate-400/30 border border-slate-600/30' : isPast ? 'bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white/60 shadow-md shadow-slate-400/30 border border-slate-600/30' : 'bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white shadow-md shadow-slate-400/30 border border-slate-600/30'}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
                             {event.title}
                           </h4>
                           
@@ -2198,6 +2203,7 @@ const Calendar: React.FC = () => {
                                             user={user}
                                             onCancel={handleCancelEvent}
                                             forceShowDetails={!isMobileOrTablet}
+                                            boldTitle={isMobileOrTablet}
                                             setTooltipData={setTooltipData}
                                             onSelect={setSelectedEvent}
                                             onQuickJoin={handleQuickJoin}
@@ -2633,6 +2639,7 @@ interface CalendarEventCardProps {
   setTooltipData: (data: { event: CalendarEvent, x: number, y: number, height: number } | null) => void;
   detailed?: boolean;
   forceShowDetails?: boolean;
+  boldTitle?: boolean;
   onSelect: (event: CalendarEvent) => void;
   onQuickJoin?: (event: CalendarEvent) => void;
   onQuickLeave?: (event: CalendarEvent) => void;
@@ -2641,7 +2648,7 @@ interface CalendarEventCardProps {
   restrictedBadge?: 'icon' | 'subtle';
 }
 
-const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, forceShowDetails, onSelect, onQuickJoin, onQuickLeave, quickJoinLoading, showParticipation, restrictedBadge }) => {
+const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCancel, setTooltipData, detailed, forceShowDetails, boldTitle, onSelect, onQuickJoin, onQuickLeave, quickJoinLoading, showParticipation, restrictedBadge }) => {
   const isCancelled = event.status === 'canceled';
   const isPast = event.date_end ? new Date(event.date_end) < new Date() : false;
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -2808,7 +2815,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
             )}
 
             <div className="flex flex-col gap-1.5 min-w-0 pr-2">
-             <p className={`font-black leading-tight uppercase ${(detailed || forceShowDetails) ? 'text-[16px] pr-14' : 'text-[10px] line-clamp-4'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
+             <p className={`font-black leading-tight uppercase ${boldTitle ? 'text-[10px] pr-14 px-3 py-1 rounded-lg bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white shadow-md shadow-slate-400/30 border border-slate-600/30 line-clamp-4' : (detailed || forceShowDetails) ? 'text-[17px] pr-14 px-3 py-1 rounded-lg bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white shadow-md shadow-slate-400/30 border border-slate-600/30' : 'text-[10px] line-clamp-4'} ${isCancelled ? (boldTitle || detailed || forceShowDetails ? 'line-through decoration-red-300/60 text-white/60' : 'text-red-800/60 line-through decoration-red-300') : isPast ? (boldTitle || detailed || forceShowDetails ? 'text-white/60' : 'text-slate-400') : (boldTitle || detailed || forceShowDetails ? '' : 'text-slate-800')}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
                {event.title}
              </p>
              {/* Mobile/Tablet Extra Details */}
