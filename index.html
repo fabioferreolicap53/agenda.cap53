@@ -18,6 +18,14 @@
 
   <title>Agenda Cap 5.3</title>
 
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1C2E4A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Agenda Cap" />
+  <link rel="apple-touch-icon" href="pwa-192x192.png" />
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -253,6 +261,11 @@
 <body>
   <div id="root"></div>
   <script type="module" src="index.tsx"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function() {});
+    }
+  </script>
 </body>
 
 </html>

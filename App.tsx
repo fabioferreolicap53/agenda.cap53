@@ -20,6 +20,7 @@ import RightSidebar from './components/RightSidebar';
 import Header from './components/Header';
 import { AuthProvider, useAuth, UserRole } from './components/AuthContext';
 import { ViewModeProvider, useViewMode } from './components/ViewModeContext';
+import InstallBanner from './components/InstallBanner';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -164,6 +165,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           : 'bg-gradient-to-br from-[#f8fafc] via-[#f9fafb] to-white'
       } ${isRightSidebarOpen ? 'lg:mr-72' : 'mr-0'}`}>
         <Header />
+        <InstallBanner />
         <div 
           id="main-scroll-container"
           className={`flex-1 overflow-y-auto custom-scrollbar ${location.pathname === '/calendar' ? '' : 'p-3 md:p-4 lg:p-6'}`}

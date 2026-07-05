@@ -38,3 +38,23 @@
   animation: pulse-count 3s ease-in-out infinite !important;
   transition: none !important;
 }
+
+/* Glow âmbar para botão toggle agenda geral/pessoal */
+@keyframes pulse-toggle {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0 rgba(217, 119, 6, 0),
+      0 0 0 0 rgba(217, 119, 6, 0);
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+  50% {
+    box-shadow:
+      0 0 8px 2px rgba(217, 119, 6, 0.2),
+      0 0 20px 5px rgba(217, 119, 6, 0.08);
+    border-color: rgba(217, 119, 6, 0.45);
+  }
+}
+
+.toggle-glow {
+  animation: pulse-toggle 3s ease-in-out infinite !important;
+}

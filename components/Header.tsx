@@ -267,11 +267,25 @@ const Header: React.FC = () => {
           {/* Mobile View Mode Toggle */}
           <button
             onClick={toggleViewMode}
-            className="md:hidden flex items-center justify-center size-9 rounded-lg border border-slate-200 bg-white shadow-sm transition-all duration-300 shrink-0 group"
-            title={viewMode === 'all' ? 'Mostrando Geral — clique para Pessoal' : 'Mostrando Pessoal — clique para Geral'}
+            className={`md:hidden flex items-center gap-1.5 h-10 px-3 rounded-xl border shadow-sm transition-all duration-300 shrink-0 group active:scale-95 ${
+              viewMode === 'all'
+                ? 'border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 hover:border-primary/40 toggle-glow'
+                : 'border-primary/30 bg-gradient-to-br from-primary/10 to-primary/20 shadow-primary/15'
+            }`}
+            title={viewMode === 'all' ? 'Agenda Geral ativa — toque para Pessoal' : 'Agenda Pessoal ativa — toque para Geral'}
           >
-            <span className={`material-symbols-outlined text-[18px] transition-colors duration-300 ${viewMode === 'all' ? 'text-slate-500 group-hover:text-primary' : 'text-primary'}`}>
+            <span className={`material-symbols-outlined text-[18px] transition-all duration-300 ${viewMode === 'all' ? 'text-slate-400 group-hover:text-primary' : 'text-primary'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
               {viewMode === 'all' ? 'public' : 'person'}
+            </span>
+            <span className={`flex flex-col items-start leading-none transition-all duration-300 ${viewMode === 'all' ? 'text-slate-500' : 'text-primary'}`}>
+              <span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Agenda</span>
+              <span className="text-[10px] font-black uppercase tracking-wider">
+                {viewMode === 'all' ? 'Geral' : 'Pessoal'}
+                <span className="ml-1 inline-flex items-center gap-0.5">
+                  <span className={`size-1.5 rounded-full ${viewMode === 'all' ? 'bg-amber-400' : 'bg-primary'} animate-pulse`} />
+                  <span className="text-[8px] font-bold opacity-60">Ativa</span>
+                </span>
+              </span>
             </span>
           </button>
 
@@ -354,7 +368,7 @@ const Header: React.FC = () => {
                     : 'text-primary/45'
                 }`}>
                   {viewMode === 'all'
-                    ? 'Visualizando a agenda compartilhada de toda a equipe'
+                    ? 'Visualizando a agenda geral de toda a equipe'
                     : 'Exibindo apenas seus eventos e participações'}
                 </p>
               </div>
@@ -460,12 +474,45 @@ const Header: React.FC = () => {
           {/* Desktop View Mode Toggle */}
           <button
             onClick={toggleViewMode}
-            className="hidden lg:flex items-center gap-0 rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden h-9 transition-all duration-300 group shrink-0"
-            title={viewMode === 'all' ? 'Mostrando todos os eventos — clique para ver apenas seus' : 'Mostrando seus eventos — clique para ver todos'}
+            className={`hidden lg:flex items-center gap-0 rounded-xl border overflow-hidden h-10 transition-all duration-300 group shrink-0 active:scale-[0.97] ${
+              viewMode === 'all'
+                ? 'border-slate-200 bg-gradient-to-br from-white to-slate-50 shadow-sm hover:shadow-md hover:border-primary/30 toggle-glow'
+                : 'border-primary/30 bg-gradient-to-br from-primary to-primary-hover shadow-md shadow-primary/20'
+            }`}
+            title={viewMode === 'all' ? 'Agenda Geral ativa — clique para Pessoal' : 'Agenda Pessoal ativa — clique para Geral'}
           >
-            <span className={`flex items-center gap-1.5 px-3 h-full transition-all duration-300 text-[10px] font-bold uppercase tracking-wider ${viewMode === 'all' ? 'bg-slate-100 text-slate-500' : 'bg-primary text-white shadow-sm'}`}>
-              <span className="material-symbols-outlined text-[14px]">{viewMode === 'all' ? 'public' : 'person'}</span>
-              {viewMode === 'all' ? 'Geral' : 'Pessoal'}
+            {/* Ícone lado esquerdo */}
+            <span className={`flex items-center justify-center size-10 transition-all duration-300 ${
+              viewMode === 'all'
+                ? 'bg-slate-100 text-slate-400 group-hover:text-primary group-hover:bg-primary/5'
+                : 'bg-white/20 text-white'
+            }`}>
+              <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                {viewMode === 'all' ? 'public' : 'person'}
+              </span>
+            </span>
+            {/* Label */}
+            <span className={`flex flex-col items-start px-3 py-1.5 transition-all duration-300 ${
+              viewMode === 'all' ? 'text-slate-600' : 'text-white'
+            }`}>
+              <span className="text-[9px] font-black uppercase tracking-[0.15em] leading-none opacity-60">
+                Agenda
+              </span>
+              <span className="text-[11px] font-black uppercase tracking-wider leading-tight flex items-center gap-1.5">
+                {viewMode === 'all' ? 'Geral' : 'Pessoal'}
+                <span className="inline-flex items-center gap-0.5">
+                  <span className={`size-1.5 rounded-full ${viewMode === 'all' ? 'bg-amber-400' : 'bg-white/70'} animate-pulse`} />
+                  <span className={`text-[8px] font-bold uppercase tracking-wider ${viewMode === 'all' ? 'text-amber-500/70' : 'text-white/60'}`}>Ativa</span>
+                </span>
+              </span>
+            </span>
+            {/* Seta indicando alternância */}
+            <span className={`pr-2.5 transition-all duration-300 ${
+              viewMode === 'all'
+                ? 'text-slate-300 group-hover:text-primary group-hover:translate-x-0.5'
+                : 'text-white/50 group-hover:text-white group-hover:translate-x-0.5'
+            }`}>
+              <span className="material-symbols-outlined text-[16px]">swap_horiz</span>
             </span>
           </button>
         </div>
