@@ -6,7 +6,7 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, { icon: string; label: string; ste
     icon: 'android',
     label: 'Android',
     steps: [
-      'Toque nos três pontinhos (⋮) no canto superior',
+      'Toque nos três pontinhos (⋮) no canto superior direito',
       'Toque em "Adicionar à tela inicial"',
       'Confirme "Adicionar"',
     ],
@@ -15,8 +15,8 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, { icon: string; label: string; ste
     icon: 'phone_iphone',
     label: 'iPhone / iPad',
     steps: [
-      'Toque no ícone de compartilhar (📤)',
-      'Toque em "Adicionar à Tela de Início"',
+      'Toque no ícone de compartilhar (📤) na barra inferior',
+      'Role para baixo e toque em "Adicionar à Tela de Início"',
       'Confirme "Adicionar"',
     ],
   },
@@ -24,8 +24,8 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, { icon: string; label: string; ste
     icon: 'desktop_windows',
     label: 'Windows',
     steps: [
-      'Clique no ícone ⬇️ na barra de endereços',
-      'Ou menu ⋯ > "Aplicativos > Instalar"',
+      'Clique no ícone de instalar (⬇️) na barra de endereços',
+      'Ou acesse o menu ⋯ > "Aplicativos" > "Instalar"',
       'Confirme a instalação',
     ],
   },
@@ -33,8 +33,8 @@ const PLATFORM_INSTRUCTIONS: Record<Platform, { icon: string; label: string; ste
     icon: 'computer',
     label: 'Computador',
     steps: [
-      'Abra o menu do navegador',
-      'Clique em "Instalar aplicativo"',
+      'Acesse o menu do navegador',
+      'Procure "Instalar aplicativo" ou "Adicionar à tela inicial"',
       'Confirme a instalação',
     ],
   },
@@ -52,7 +52,8 @@ const InstallBanner: React.FC = () => {
   const handleInstall = async () => {
     setInstalling(true);
     try {
-      await install();
+      const result = await install();
+      if (result) dismiss();
     } finally {
       setInstalling(false);
     }
@@ -70,20 +71,20 @@ const InstallBanner: React.FC = () => {
           <div className="flex items-center gap-3 min-w-0 flex-1">
             <div className="shrink-0 size-10 flex items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm border border-white/30 shadow-lg shadow-black/10">
               <span className="material-symbols-outlined text-[20px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
-                {instructions.icon}
+                {canNativeInstall ? 'download_for_offline' : instructions.icon}
               </span>
             </div>
             <p className="text-[11px] md:text-xs font-bold text-white leading-snug">
               {canNativeInstall ? (
                 <>
-                  <span className="text-white/70">Acesse rápido como app!</span>{' '}
-                  <span className="text-white font-black">Toque para instalar agora</span>
+                  <span className="text-white/70">Instale o app agora!</span>{' '}
+                  <span className="text-white font-black">Um toque e pronto.</span>
                 </>
               ) : (
                 <>
-                  Adicione à tela inicial e acesse{' '}
-                  <span className="text-white font-black">com um toque</span>{' '}
-                  — pelo menu do navegador!
+                  Adicione à tela inicial pelo{' '}
+                  <span className="text-white font-black">menu do navegador</span>{' '}
+                  e acesse com um toque!
                 </>
               )}
             </p>
@@ -91,7 +92,7 @@ const InstallBanner: React.FC = () => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {canNativeInstall && (
+            {canNativeInstall ? (
               <button
                 onClick={handleInstall}
                 disabled={installing}
@@ -102,8 +103,7 @@ const InstallBanner: React.FC = () => {
                 </span>
                 <span>{installing ? 'Instalando...' : 'Instalar'}</span>
               </button>
-            )}
-            {!canNativeInstall && (
+            ) : (
               <button
                 onClick={() => setExpanded(!expanded)}
                 className="h-9 px-4 flex items-center justify-center gap-1.5 rounded-xl bg-white/15 border border-white/30 hover:bg-white/25 transition-all duration-200 text-[10px] font-bold uppercase tracking-wider text-white"
@@ -123,7 +123,7 @@ const InstallBanner: React.FC = () => {
           </div>
         </div>
 
-        {/* Expanded instructions */}
+        {/* Manual instructions — always visible when no native install */}
         {!canNativeInstall && expanded && (
           <div className="mt-3 animate-in slide-in-from-top-1 fade-in duration-300">
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/15 p-4">
@@ -151,7 +151,6 @@ const InstallBanner: React.FC = () => {
           </div>
         )}
       </div>
-
     </div>
   );
 };
