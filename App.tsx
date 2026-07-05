@@ -123,15 +123,6 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     console.log('LayoutContent render:', { loading, hasUser: !!user, isAuthPage, path: location.pathname });
   }
 
-  React.useEffect(() => {
-    if (!loading && !user && !isAuthPage) {
-      if (import.meta.env.DEV) {
-        console.log('Redirecting to login...');
-      }
-      navigate('/login');
-    }
-  }, [user, loading, isAuthPage, navigate]);
-
   if (loading) {
     if (import.meta.env.DEV) {
       console.log('Rendering loading spinner...');
@@ -153,6 +144,10 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
   );
 }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className={`flex h-[100dvh] w-full overflow-hidden transition-all duration-700 ease-out ${
@@ -201,7 +196,7 @@ const App: React.FC = () => {
               <Route path="/reset-password/:token" element={<ResetPassword />} />
               <Route path="/reset-password/*" element={<ResetPassword />} />
               <Route path="/confirm-password-reset/*" element={<ResetPassword />} />
-              <Route path="/calendar" element={<Calendar />} />
+              <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
               <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
               <Route path="/chat" element={<Mensagens />} />
