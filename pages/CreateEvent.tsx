@@ -1828,7 +1828,7 @@ const CreateEvent: React.FC = () => {
                     <div className="flex-1 relative group/title">
                       <input
                         required value={title} onChange={(e) => setTitle(e.target.value)}
-                        className="w-full h-14 px-4 sm:px-6 pr-12 sm:pr-14 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 uppercase"
+                        className="w-full h-14 px-4 sm:px-6 pr-12 sm:pr-14 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-300/70 placeholder:font-normal uppercase"
                         placeholder="Ex: Reunião Geral de Indicadores"
                       />
                       {title && (
@@ -2021,7 +2021,7 @@ const CreateEvent: React.FC = () => {
                     value={observacoes}
                     onChange={(e) => setObservacoes(e.target.value)}
                     placeholder="Informações relevantes sobre o evento (objetivos, pautas, orientações)..."
-                    className="w-full min-h-[120px] p-5 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-500 resize-none"
+                    className="w-full min-h-[120px] p-5 rounded-2xl bg-white border border-slate-400 focus:border-primary focus:ring-4 focus:ring-primary/10 outline-none font-semibold text-sm text-slate-900 transition-all duration-300 placeholder:text-slate-300/70 placeholder:font-normal resize-none"
                   />
                 </div>
 
@@ -2051,7 +2051,7 @@ const CreateEvent: React.FC = () => {
                           <p className={`text-[10px] font-bold leading-relaxed ${isRestricted ? 'text-amber-700' : 'text-slate-500'}`}>
                             {isRestricted 
                               ? 'Apenas convidados podem participar.' 
-                              : 'Usuários podem solicitar participação.'}
+                              : 'Usuários podem incluir sua participação.'}
                           </p>
                         )}
                       </div>

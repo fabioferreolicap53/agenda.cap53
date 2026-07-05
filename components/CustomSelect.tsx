@@ -206,7 +206,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     {startIcon}
                 </span>
             )}
-            <span className={`text-sm font-semibold truncate ${value && (Array.isArray(value) ? value.length > 0 : value !== '') ? 'text-slate-800' : 'text-slate-400'}`}>
+            <span className={`text-sm font-semibold truncate ${value && (Array.isArray(value) ? value.length > 0 : value !== '') ? 'text-slate-800' : 'text-slate-400/60 font-normal'}`}>
               {getLabel()}
             </span>
         </div>

@@ -1109,11 +1109,19 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     <div className="space-y-3 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500">
                         {/* Restricted Event Notice */}
                         {event.is_restricted && (
-                            <div className="flex items-center gap-3 p-4 rounded-xl bg-violet-50/50 border border-violet-200/60">
-                                <span className="material-symbols-outlined text-base text-violet-500">lock</span>
-                                <div>
-                                    <p className="text-[11px] font-bold text-violet-700 tracking-wide uppercase">Evento Restrito</p>
-                                    <p className="text-[10px] text-violet-500/70 leading-tight mt-0.5">Acesso limitado aos participantes convidados pelo criador.</p>
+                            <div className="flex items-center justify-between gap-4 p-4 md:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_12px_rgba(0,0,0,0.03)]">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="size-10 rounded-full bg-slate-100 border border-slate-200/60 flex items-center justify-center flex-shrink-0">
+                                        <span className="material-symbols-outlined text-[20px] text-slate-500">lock</span>
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-bold text-slate-800 uppercase tracking-wide">Evento Restrito</p>
+                                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">Acesso limitado aos participantes convidados</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200/80 flex-shrink-0">
+                                    <span className="material-symbols-outlined text-[13px] text-slate-400">shield</span>
+                                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Acesso Restrito</span>
                                 </div>
                             </div>
                         )}

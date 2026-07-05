@@ -19,7 +19,7 @@ import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import Header from './components/Header';
 import { AuthProvider, useAuth, UserRole } from './components/AuthContext';
-import { ViewModeProvider } from './components/ViewModeContext';
+import { ViewModeProvider, useViewMode } from './components/ViewModeContext';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -102,6 +102,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; roles?: UserRole[] }
 
 const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
+  const { viewMode } = useViewMode();
   const location = useLocation();
   const navigate = useNavigate();
   const [isRightSidebarOpen, setIsRightSidebarOpen] = React.useState(() => {
@@ -153,9 +154,15 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 }
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-white">
+    <div className={`flex h-[100dvh] w-full overflow-hidden transition-all duration-700 ease-out ${
+      viewMode === 'personal' ? 'bg-[#e9edf2]' : 'bg-[#fafbfc]'
+    }`}>
       <Sidebar />
-      <main className={`flex-1 flex flex-col h-full overflow-hidden relative bg-slate-50/30 transition-all duration-500 ease-in-out ${isRightSidebarOpen ? 'lg:mr-72' : 'mr-0'}`}>
+      <main className={`flex-1 flex flex-col h-full overflow-hidden relative transition-all duration-700 ease-out ${
+        viewMode === 'personal'
+          ? 'bg-gradient-to-br from-[#e2e7ee] via-[#e8ecf1] to-[#dfe5ec]'
+          : 'bg-gradient-to-br from-[#f8fafc] via-[#f9fafb] to-white'
+      } ${isRightSidebarOpen ? 'lg:mr-72' : 'mr-0'}`}>
         <Header />
         <div 
           id="main-scroll-container"

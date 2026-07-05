@@ -244,7 +244,11 @@ const Header: React.FC = () => {
   };
 
   return (
-    <header className="bg-white border-b border-border-light px-4 md:px-6 py-3 md:py-4 flex-shrink-0 sticky top-0 z-[110] w-full">
+    <header className={`border-b px-4 md:px-6 py-2.5 md:py-3 flex-shrink-0 sticky top-0 z-[110] w-full transition-all duration-500 ${
+      viewMode === 'personal'
+        ? 'bg-gradient-to-b from-white to-[#e9edf2] border-[rgba(28,46,74,0.15)]'
+        : 'bg-gradient-to-b from-white to-[#fafbfc] border-slate-200/60'
+    }`}>
       <div className="max-w-[1600px] mx-auto w-full flex items-center justify-between gap-2 md:gap-4">
         <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1 md:flex-none">
           {/* Hamburger Button Mobile */}
@@ -274,33 +278,73 @@ const Header: React.FC = () => {
           {location.pathname !== '/calendar' && (
             <button
               onClick={() => navigate(-1)}
-              className="hidden md:flex items-center justify-center size-10 rounded-full bg-white border border-slate-200/60 text-slate-500 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all duration-300 shadow-sm active:scale-90 group shrink-0"
+              className="hidden md:flex items-center justify-center size-10 rounded-xl bg-gradient-to-br from-white to-slate-50 border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/40 hover:bg-primary/5 hover:shadow-[0_0_12px_rgba(28,46,74,0.08)] transition-all duration-300 shadow-sm active:scale-90 group shrink-0"
             >
               <span className="material-symbols-outlined text-[22px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
             </button>
           )}
           
-          <div className="flex flex-col min-w-0">
-            <div className="flex items-center gap-2">
-              <h2 className="text-text-main text-base md:text-2xl font-black leading-tight tracking-tight truncate">
-                {getTitle()}
-              </h2>
-              {viewMode === 'all' && (
-                <span className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[9px] text-slate-400 font-semibold uppercase tracking-wider">
-                  <span className="material-symbols-outlined text-[10px]">public</span>
-                  Geral
+          {/* Container premium do título — muda com viewMode */}
+          <div className={`flex flex-col min-w-0 rounded-xl px-3 py-2 -mx-1 transition-all duration-500 ease-out relative ${
+            viewMode === 'all'
+              ? 'bg-gradient-to-r from-slate-50/80 via-white/60 to-slate-50/80'
+              : 'bg-gradient-to-r from-primary/[0.03] via-primary/[0.07] to-primary/[0.03]'
+          }`}>
+            {/* Accent line inferior */}
+            <div className={`absolute bottom-0 left-4 right-4 h-[2px] rounded-full transition-all duration-500 ${
+              viewMode === 'all'
+                ? 'bg-gradient-to-r from-transparent via-slate-200/80 to-transparent'
+                : 'bg-gradient-to-r from-transparent via-primary/30 to-transparent shadow-[0_0_10px_rgba(28,46,74,0.12)]'
+            }`} />
+
+            <div className="flex items-center gap-2 transition-all duration-500">
+              {/* Ícone de modo */}
+              <div className={`hidden md:flex items-center justify-center size-9 rounded-xl transition-all duration-500 ease-out ${
+                viewMode === 'all'
+                  ? 'bg-gradient-to-br from-slate-100 to-slate-50/80 text-slate-400 border border-slate-200/70 shadow-sm'
+                  : 'bg-gradient-to-br from-primary/20 to-primary/10 text-primary border border-primary/25 shadow-[0_0_20px_rgba(28,46,74,0.12),0_2px_8px_rgba(28,46,74,0.08)]'
+              }`}>
+                <span
+                  className="material-symbols-outlined text-[20px] transition-all duration-500"
+                  style={{ fontVariationSettings: viewMode === 'personal' ? "'FILL' 1, 'wght' 600" : "'FILL' 0, 'wght' 400" }}
+                >
+                  {viewMode === 'all' ? 'public' : 'person'}
                 </span>
-              )}
-              {viewMode === 'personal' && (
-                <span className="hidden md:flex items-center gap-1 px-2 py-0.5 rounded bg-primary/[0.08] border border-primary/15 text-[9px] text-primary/70 font-semibold uppercase tracking-wider">
-                  <span className="material-symbols-outlined text-[10px]">person</span>
-                  Pessoal
-                </span>
-              )}
+              </div>
+
+              <div className="flex flex-col min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 className={`text-base md:text-2xl font-black leading-tight tracking-tight truncate transition-all duration-500 ${
+                    viewMode === 'all'
+                      ? 'text-slate-600'
+                      : 'text-primary drop-shadow-[0_0_10px_rgba(28,46,74,0.1)]'
+                  }`}>
+                    {getTitle()}
+                  </h2>
+                  {viewMode === 'all' && (
+                    <span className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/80 text-[9px] text-slate-500 font-bold uppercase tracking-wider shadow-sm">
+                      <span className="material-symbols-outlined text-[11px]">public</span>
+                      Agenda Geral
+                    </span>
+                  )}
+                  {viewMode === 'personal' && (
+                    <span className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-primary/15 to-primary/8 border border-primary/25 text-[9px] text-primary font-bold uppercase tracking-wider shadow-[0_0_16px_rgba(28,46,74,0.1)]">
+                      <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>person</span>
+                      Meus Eventos
+                    </span>
+                  )}
+                </div>
+                <p className={`text-[10px] md:text-xs font-medium hidden md:block mt-0.5 truncate transition-all duration-500 ${
+                  viewMode === 'all'
+                    ? 'text-slate-400'
+                    : 'text-primary/45'
+                }`}>
+                  {viewMode === 'all'
+                    ? 'Visualizando a agenda compartilhada de toda a equipe'
+                    : 'Exibindo apenas seus eventos e participações'}
+                </p>
+              </div>
             </div>
-            <p className="text-text-secondary text-[10px] md:text-sm font-normal hidden md:block mt-0.5 truncate">
-              {getDescription()}
-            </p>
           </div>
 
         </div>
@@ -359,7 +403,7 @@ const Header: React.FC = () => {
                             <span className="material-symbols-outlined text-sm">event</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-700 truncate group-hover:text-primary transition-colors">
+                            <p className="text-xs font-bold text-slate-700 truncate uppercase group-hover:text-primary transition-colors">
                               {event.title}
                             </p>
                             <div className="flex items-center gap-2 mt-1">

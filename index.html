@@ -114,6 +114,26 @@
       background: #cbd5e1;
     }
 
+    /* Breathing glow animation — neon sutil */
+    @keyframes breathe {
+      0%, 100% {
+        box-shadow:
+          0 0 0 0 rgba(28, 46, 74, 0),
+          0 0 0 0 rgba(28, 46, 74, 0) !important;
+        border-color: rgba(148, 163, 184, 0.4) !important;
+      }
+      50% {
+        box-shadow:
+          0 0 6px 1px rgba(28, 46, 74, 0.15),
+          0 0 16px 4px rgba(28, 46, 74, 0.06) !important;
+        border-color: rgba(28, 46, 74, 0.25) !important;
+      }
+    }
+    .breathe-glow {
+      animation: breathe 3s ease-in-out infinite !important;
+      transition: none !important;
+    }
+
     /* Bento-box animation */
     @keyframes float {
       0% {
@@ -147,6 +167,65 @@
       background-position: right 1rem center;
       background-size: 1.25rem;
       padding-right: 3rem;
+    }
+
+    /* ═══════════════════════════════════════
+       TEMA VISUAL — MODO PESSOAL
+       Tons de azul marinho profundo,
+       bordas sutis com primary,
+       texturas com glow azulado
+       ═══════════════════════════════════════ */
+    body.theme-personal {
+      background-color: #f6f7f9;
+      transition: background-color 0.6s ease;
+    }
+    body.theme-personal main,
+    body.theme-personal .app-main {
+      background: linear-gradient(135deg, rgba(28,46,74,0.01) 0%, rgba(28,46,74,0.025) 100%);
+      transition: background 0.6s ease;
+    }
+    body.theme-personal .event-card {
+      border-color: rgba(28,46,74,0.08);
+    }
+    body.theme-personal .event-card:hover {
+      box-shadow: 0 0 20px rgba(28,46,74,0.06), 0 4px 12px rgba(28,46,74,0.04);
+    }
+    body.theme-personal header,
+    body.theme-personal .app-header {
+      border-bottom-color: rgba(28,46,74,0.08);
+      background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(246,247,249,0.95) 100%);
+    }
+    body.theme-personal .nav-link-active {
+      background: linear-gradient(135deg, rgba(28,46,74,0.1) 0%, rgba(28,46,74,0.05) 100%);
+    }
+
+    /* ═══════════════════════════════════════
+       TEMA VISUAL — MODO GERAL
+       Tons neutros slate, clean e aberto
+       ═══════════════════════════════════════ */
+    body.theme-all {
+      background-color: #f9fafb;
+      transition: background-color 0.6s ease;
+    }
+    body.theme-all main,
+    body.theme-all .app-main {
+      background: linear-gradient(135deg, rgba(241,245,249,0.3) 0%, rgba(248,250,252,0.5) 100%);
+      transition: background 0.6s ease;
+    }
+    body.theme-all header,
+    body.theme-all .app-header {
+      border-bottom-color: rgba(226,232,240,0.6);
+      background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(249,250,251,0.98) 100%);
+    }
+
+    /* Transição global entre temas */
+    body {
+      transition: background-color 0.6s ease;
+    }
+    body * {
+      transition-property: border-color, background-color, box-shadow;
+      transition-duration: 0.4s;
+      transition-timing-function: ease;
     }
   </style>
 </head>

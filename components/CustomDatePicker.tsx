@@ -26,9 +26,18 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
   tabIndex
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hoursRef = useRef<HTMLDivElement>(null);
   const minutesRef = useRef<HTMLDivElement>(null);
+  
+  // Detectar mobile
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
   
   // State for calendar navigation
   const inputRef = useRef<HTMLInputElement>(null);
@@ -506,8 +515,8 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                 value={inputValue}
                 onKeyDown={handleKeyDown}
                 onChange={handleInputChange}
-                onFocus={() => setIsOpen(true)}
-                placeholder="DD/MM/AAAA HH:mm"
+                onFocus={() => { if (!isMobile) setIsOpen(true); }}
+                placeholder={isMobile ? "DD/MM/AAAA HH:mm" : "DD/MM/AAAA HH:mm"}
                 tabIndex={tabIndex}
                 className={`font-semibold text-sm bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-400 w-full outline-none transition-colors duration-200 ${isInvalid ? 'text-red-500' : value ? 'text-slate-800' : 'text-slate-800'}`}
             />
@@ -547,148 +556,156 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
       />
 
       {isOpen && ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 md:p-6">
+        <div className="fixed inset-0 z-[1200]">
           <div 
             className="absolute inset-0 bg-black/30"
             onClick={() => setIsOpen(false)}
           />
-          <div 
-            role="dialog"
-            aria-label="Calendário e seletor de horário"
-            className="relative bg-white rounded-[20px] shadow-lg border border-slate-100 w-full max-w-[440px] md:max-w-[560px] p-3 md:p-5 max-h-[90vh] overflow-hidden"
-          >
-            <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col md:flex-row gap-4 md:gap-6">
-              <div className="flex-[1.2] min-w-0">
-                <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
-                  <div className="flex flex-col">
-                    <span className="font-bold text-base md:text-lg text-slate-800 tracking-tight capitalize">
-                      {MONTHS[viewDate.getMonth()]}
-                    </span>
-                    <span className="text-slate-400 text-[10px] md:text-[11px] font-medium tracking-wider">
-                      {viewDate.getFullYear()}
-                    </span>
+          {/* Mobile: bottom sheet compacto | Desktop: centro */}
+          <div className="absolute inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center md:p-6">
+            <div 
+              role="dialog"
+              aria-label="Calendário e seletor de horário"
+              className="relative bg-white rounded-t-[24px] md:rounded-[20px] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-lg border border-slate-100 w-full md:max-w-[560px] max-h-[65vh] md:max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300"
+            >
+              {/* Drag handle — mobile */}
+              <div className="md:hidden flex justify-center pt-3 pb-1 shrink-0">
+                <div className="w-10 h-1 rounded-full bg-slate-200" />
+              </div>
+
+              <div className="flex-1 overflow-y-auto no-scrollbar flex flex-col md:flex-row gap-3 md:gap-6 p-3 md:p-5 pt-0 md:pt-5">
+                <div className="flex-[1.2] min-w-0">
+                  <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
+                    <div className="flex flex-col">
+                      <span className="font-bold text-base md:text-lg text-slate-800 tracking-tight capitalize">
+                        {MONTHS[viewDate.getMonth()]}
+                      </span>
+                      <span className="text-slate-400 text-[10px] md:text-[11px] font-medium tracking-wider">
+                        {viewDate.getFullYear()}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                        <span className="material-symbols-outlined text-lg md:text-xl">chevron_left</span>
+                      </button>
+                      <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
+                        <span className="material-symbols-outlined text-lg md:text-xl">chevron_right</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <button onClick={(e) => { e.preventDefault(); handlePrevMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                      <span className="material-symbols-outlined text-lg md:text-xl">chevron_left</span>
+                  <div className="flex gap-2 mb-2 md:mb-3 overflow-x-auto no-scrollbar pb-0.5">
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const today = new Date();
+                        setViewDate(today);
+                        handleDateSelect(today.getDate());
+                      }}
+                      className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
+                    >
+                      HOJE
                     </button>
-                    <button onClick={(e) => { e.preventDefault(); handleNextMonth(); }} className="size-8 md:size-9 flex items-center justify-center hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-800 transition-all">
-                      <span className="material-symbols-outlined text-lg md:text-xl">chevron_right</span>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const tomorrow = new Date();
+                        tomorrow.setDate(tomorrow.getDate() + 1);
+                        setViewDate(tomorrow);
+                        handleDateSelect(tomorrow.getDate());
+                      }}
+                      className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
+                    >
+                      AMANHÃ
                     </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-px mb-2">
+                    {DAYS_OF_WEEK.map((day, index) => {
+                      const isWeekend = index === 0 || index === 6;
+                      return (
+                        <div key={`header-unified-${index}`} className={`text-center text-[10px] md:text-[11px] font-black py-1.5 md:py-2.5 uppercase tracking-widest ${isWeekend ? 'text-orange-500/30' : 'text-slate-200'}`}>
+                          {day}
+                        </div>
+                      );
+                    })}
+                    {renderCalendarDays()}
                   </div>
                 </div>
-                <div className="flex gap-2 mb-3 md:mb-3 overflow-x-auto no-scrollbar pb-0.5">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const today = new Date();
-                      setViewDate(today);
-                      handleDateSelect(today.getDate());
-                    }}
-                    className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
-                  >
-                    HOJE
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const tomorrow = new Date();
-                      tomorrow.setDate(tomorrow.getDate() + 1);
-                      setViewDate(tomorrow);
-                      handleDateSelect(tomorrow.getDate());
-                    }}
-                    className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
-                  >
-                    AMANHÃ
-                  </button>
-                </div>
-                <div className="grid grid-cols-7 gap-px mb-2">
-                  {DAYS_OF_WEEK.map((day, index) => {
-                    const isWeekend = index === 0 || index === 6;
-                    return (
-                      <div key={`header-unified-${index}`} className={`text-center text-[10px] md:text-[11px] font-black py-2 md:py-2.5 uppercase tracking-widest ${isWeekend ? 'text-orange-500/30' : 'text-slate-200'}`}>
-                        {day}
+                <div className="h-px md:w-px md:h-auto bg-slate-100/60 my-1 mx-1 md:my-0 md:mx-2" />
+                <div className="flex-1 min-w-0 shrink-0">
+                  <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
+                    <h3 className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Horário</h3>
+                    <div className="px-2 md:px-2.5 py-0.5 md:py-1 bg-slate-50 rounded-lg md:rounded-xl border border-slate-100">
+                      <span className="text-xs md:text-[13px] font-bold text-slate-700">
+                        {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-1 h-[110px] md:h-[180px] relative bg-transparent rounded-2xl overflow-hidden">
+                    <div 
+                      ref={hoursRef}
+                      className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
+                    >
+                      <div className="flex flex-col gap-1 py-10 px-0.5">
+                        {hours.map(h => {
+                          const isSel = h === currentHour;
+                          return (
+                            <button
+                              key={h}
+                              data-selected={isSel}
+                              onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
+                              className={`
+                                flex-shrink-0 h-8 md:h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                                ${isSel 
+                                  ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                  : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
+                              `}
+                            >
+                              {String(h).padStart(2, '0')}
+                            </button>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                  {renderCalendarDays()}
+                    </div>
+                    <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
+                    <div 
+                      ref={minutesRef}
+                      className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
+                    >
+                      <div className="flex flex-col gap-1 py-10 px-0.5">
+                        {allMinutes.map(m => {
+                          const isSel = m === currentMinute;
+                          return (
+                            <button
+                              key={m}
+                              data-selected={isSel}
+                              onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
+                              className={`
+                                flex-shrink-0 h-8 md:h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
+                                ${isSel 
+                                  ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
+                                  : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
+                              `}
+                            >
+                              {String(m).padStart(2, '0')}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="absolute top-0 left-0 right-0 h-6 md:h-10 bg-gradient-to-b from-white to-transparent pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-6 md:h-10 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+                    <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
+                  </div>
                 </div>
               </div>
-              <div className="h-px md:w-px md:h-auto bg-slate-100/60 my-1 mx-1 md:my-0 md:mx-2" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-2 md:mb-3 px-1">
-                  <h3 className="text-[10px] md:text-[11px] font-bold text-slate-400 uppercase tracking-wider">Horário</h3>
-                  <div className="px-2 md:px-2.5 py-0.5 md:py-1 bg-slate-50 rounded-lg md:rounded-xl border border-slate-100">
-                    <span className="text-xs md:text-[13px] font-bold text-slate-700">
-                      {String(currentHour).padStart(2, '0')}:{String(currentMinute).padStart(2, '0')}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-1 h-[120px] md:h-[180px] relative bg-transparent rounded-2xl overflow-hidden">
-                  <div 
-                    ref={hoursRef}
-                    className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
-                  >
-                    <div className="flex flex-col gap-1 py-12 px-0.5">
-                      {hours.map(h => {
-                        const isSel = h === currentHour;
-                        return (
-                          <button
-                            key={h}
-                            data-selected={isSel}
-                            onClick={(e) => { e.preventDefault(); handleTimeChange('hours', h); }}
-                            className={`
-                              flex-shrink-0 h-9 md:h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
-                              ${isSel 
-                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
-                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
-                            `}
-                          >
-                            {String(h).padStart(2, '0')}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="w-[1px] bg-slate-100 my-4 shrink-0" />
-                  <div 
-                    ref={minutesRef}
-                    className="flex-1 overflow-y-auto scroll-smooth no-scrollbar"
-                  >
-                    <div className="flex flex-col gap-1 py-12 px-0.5">
-                      {allMinutes.map(m => {
-                        const isSel = m === currentMinute;
-                        return (
-                          <button
-                            key={m}
-                            data-selected={isSel}
-                            onClick={(e) => { e.preventDefault(); handleTimeChange('minutes', m); }}
-                            className={`
-                              flex-shrink-0 h-9 md:h-10 w-full rounded-xl text-sm transition-all duration-300 flex items-center justify-center
-                              ${isSel 
-                                ? 'bg-slate-800 text-white font-bold shadow-lg scale-105 z-10' 
-                                : 'text-slate-400 font-medium hover:text-slate-800 hover:bg-slate-50'}
-                            `}
-                          >
-                            {String(m).padStart(2, '0')}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="absolute top-0 left-0 right-0 h-8 md:h-10 bg-gradient-to-b from-white to-transparent pointer-events-none"></div>
-                  <div className="absolute bottom-0 left-0 right-0 h-8 md:h-10 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
-                  <div className="absolute top-1/2 left-0 right-0 h-10 -translate-y-1/2 border-y border-slate-100 pointer-events-none -z-10"></div>
-                </div>
+              <div className="pt-2 md:pt-3 px-3 md:px-5 pb-3 md:pb-5 border-t border-slate-100 shrink-0">
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="w-full py-3 bg-primary text-white rounded-2xl font-bold text-xs md:text-[11px] uppercase tracking-widest shadow-md hover:bg-primary-hover transition-all active:scale-95"
+                >
+                  Confirmar
+                </button>
               </div>
-            </div>
-            <div className="pt-2 md:pt-3 border-t border-slate-100">
-              <button
-                onClick={() => setIsOpen(false)}
-                className="w-full py-3 md:py-3 bg-primary text-white rounded-2xl font-bold text-xs md:text-[11px] uppercase tracking-widest shadow-md hover:bg-primary-hover transition-all active:scale-95"
-              >
-                Confirmar
-              </button>
             </div>
           </div>
         </div>,

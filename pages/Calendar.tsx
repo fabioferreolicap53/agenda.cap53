@@ -124,6 +124,14 @@ const Calendar: React.FC = () => {
     }
     setSearchParams(newParams, { replace: true });
   }, [searchQuery]);
+
+  // Sync with URL changes from Header search
+  useEffect(() => {
+    const urlSearch = searchParams.get('search') || '';
+    if (urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+    }
+  }, [searchParams]);
   
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -259,23 +267,37 @@ const Calendar: React.FC = () => {
       localStorage.setItem(keys.types, JSON.stringify(filterTypes));
       localStorage.setItem(keys.sectors, JSON.stringify(filterSectors));
 
-      const filtersToSave: CalendarFiltersPreference = {
+      const filtersToSave: CalendarFiltersPreference & { viewMode?: string } = {
         persist: true,
         user: getValidFilterArray(filterUser),
         types: getValidFilterArray(filterTypes),
         sectors: getValidFilterArray(filterSectors)
       };
 
-      // Salvar no backend rapidamente para não perder preferências ao trocar de dispositivo.
-      const timeoutId = setTimeout(() => {
-        pb.collection(Collections.AgendaCap53Usuarios).update(
-          user.id,
-          { calendar_filters: filtersToSave },
-          { requestKey: null }
-        ).catch(err => console.error('Erro ao salvar preferências no servidor:', err));
-      }, 400);
+      // Busca dados frescos do servidor para preservar viewMode do ViewModeContext
+      pb.collection(Collections.AgendaCap53Usuarios).getOne(user.id).then((record) => {
+        const serverFilters = (record as any).calendar_filters || {};
+        const merged = { ...serverFilters, ...filtersToSave };
 
-      return () => clearTimeout(timeoutId);
+        const timeoutId = setTimeout(() => {
+          pb.collection(Collections.AgendaCap53Usuarios).update(
+            user.id,
+            { calendar_filters: merged },
+            { requestKey: null }
+          ).catch(err => console.error('Erro ao salvar preferências no servidor:', err));
+        }, 400);
+
+        return () => clearTimeout(timeoutId);
+      }).catch(() => {
+        // Se getOne falhar, salva sem merge
+        const timeoutId = setTimeout(() => {
+          pb.collection(Collections.AgendaCap53Usuarios).update(
+            user.id,
+            { calendar_filters: filtersToSave },
+            { requestKey: null }
+          ).catch(err => console.error('Erro ao salvar preferências no servidor:', err));
+        }, 400);
+      });
   }, [filterUser, filterTypes, filterSectors, user?.id, isFiltersLoaded]);
 
   const userOptions = useMemo(() => {
@@ -855,19 +877,34 @@ const Calendar: React.FC = () => {
     fetchEvents();
 
     let unsubscribe: (() => void) | undefined;
+    let retryCount = 0;
+    const MAX_RETRIES = 5;
+    const BASE_DELAY = 2000;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
+
     const setupSubscription = async () => {
+      if (disposed) return;
       try {
         unsubscribe = await pb.collection('agenda_cap53_eventos').subscribe('*', () => {
           fetchEvents();
         });
+        retryCount = 0; // sucesso → reset
       } catch (err) {
-        console.error('Failed to subscribe to real-time events:', err);
+        console.warn('Realtime subscribe falhou, tentando novamente...', err);
+        if (retryCount < MAX_RETRIES && !disposed) {
+          retryCount++;
+          const delay = Math.min(BASE_DELAY * Math.pow(2, retryCount - 1), 30000);
+          retryTimer = setTimeout(setupSubscription, delay);
+        }
       }
     };
 
     setupSubscription();
 
     return () => {
+      disposed = true;
+      if (retryTimer) clearTimeout(retryTimer);
       if (unsubscribe) unsubscribe();
     };
   }, [currentDate]);
@@ -1288,8 +1325,8 @@ const Calendar: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Caixa de Busca - Visibilidade controlada em Tablet/Mobile, fixa em Desktop (xl) */}
-                <div className={`${showMobileSearch || searchQuery ? 'flex' : 'hidden xl:flex'} items-center flex-1 xl:flex-none min-w-0 md:min-w-[200px] xl:max-w-xs relative group w-full xl:w-auto animate-in slide-in-from-top-1 duration-300`}>
+                {/* Caixa de Busca - Visibilidade controlada em Tablet/Mobile (desktop usa a do Header) */}
+                <div className={`${showMobileSearch || searchQuery ? 'flex' : 'hidden xl:hidden'} items-center flex-1 xl:flex-none min-w-0 md:min-w-[200px] xl:max-w-xs relative group w-full xl:w-auto animate-in slide-in-from-top-1 duration-300`}>
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-[20px] text-slate-400 group-focus-within:text-primary transition-colors">search</span>
                   <input
                     type="text"
@@ -1613,6 +1650,7 @@ const Calendar: React.FC = () => {
                             onQuickJoin={handleQuickJoin}
                             onQuickLeave={handleQuickLeave}
                             quickJoinLoading={quickJoinLoading}
+                            showParticipation
                             restrictedBadge="icon"
                           />
                         ))
@@ -1663,7 +1701,7 @@ const Calendar: React.FC = () => {
                             e.stopPropagation();
                             updateURL('day', date);
                           }}
-                          className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-white border border-slate-300 group/badge hover:bg-primary/5 hover:border-primary/20 transition-all duration-300 active:scale-95"
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-white border border-slate-300 group/badge hover:bg-primary/5 hover:border-primary/20 active:scale-95 breathe-glow"
                         >
                           <span className="material-symbols-outlined text-[10px] text-slate-600 group-hover/badge:text-primary transition-colors">calendar_today</span>
                           <span className="text-[9px] font-black text-slate-700 group-hover/badge:text-primary transition-colors">
@@ -1814,6 +1852,7 @@ const Calendar: React.FC = () => {
                             onQuickJoin={handleQuickJoin}
                             onQuickLeave={handleQuickLeave}
                             quickJoinLoading={quickJoinLoading}
+                            showParticipation
                             restrictedBadge="icon"
                           />
                         ))
@@ -1948,7 +1987,7 @@ const Calendar: React.FC = () => {
 
                         {/* Content Column */}
                         <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                          <h4 className={`text-xs uppercase font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
+                          <h4 className={`text-[11px] uppercase font-bold leading-tight break-words ${event.status === 'canceled' ? 'line-through text-red-800/60 decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
                             {event.title}
                           </h4>
                           
@@ -2006,8 +2045,8 @@ const Calendar: React.FC = () => {
                                      <span className="text-[9px] font-black text-white bg-red-400 px-1.5 py-0.5 rounded border border-red-500 uppercase tracking-wide">CANCELADO</span>
                                    )}
                                    {event.is_restricted && (
-                                     <span className="flex items-center justify-center size-[18px] rounded bg-violet-50 border border-violet-200 text-violet-500" title="Evento Restrito">
-                                       <span className="material-symbols-outlined text-[11px]">lock</span>
+                                     <span className="flex items-center justify-center size-[18px] rounded bg-primary/10 border border-primary/25 text-primary" title="Evento Restrito">
+                                       <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>lock</span>
                                      </span>
                                    )}
                                    {canJoin && !evFinished && !userPS && (
@@ -2450,7 +2489,7 @@ const CalendarTooltip: React.FC<{
                   <span className="material-symbols-outlined text-[12px] font-bold">visibility</span>
                 </div>
               )}
-              <h4 className={`text-sm font-black leading-tight uppercase ${isCancelled ? 'text-red-500 line-through decoration-2' : 'text-primary'}`}>
+              <h4 className={`text-[13px] font-black leading-tight uppercase ${isCancelled ? 'text-red-500 line-through decoration-2' : 'text-primary'}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
                 {event.title}
               </h4>
             </div>
@@ -2769,7 +2808,7 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
             )}
 
             <div className="flex flex-col gap-1.5 min-w-0 pr-2">
-             <p className={`font-bold leading-tight uppercase ${detailed ? 'text-base pr-14' : 'text-[11px] line-clamp-4'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`}>
+             <p className={`font-black leading-tight uppercase ${(detailed || forceShowDetails) ? 'text-[16px] pr-14' : 'text-[10px] line-clamp-4'} ${isCancelled ? 'text-red-800/60 line-through decoration-red-300' : isPast ? 'text-slate-400' : 'text-slate-800'}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
                {event.title}
              </p>
              {/* Mobile/Tablet Extra Details */}
@@ -2944,8 +2983,8 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
 
            {/* Restricted Badge */}
            {event.is_restricted && (
-             <div className="flex items-center justify-center size-[18px] rounded bg-violet-50 border border-violet-200 text-violet-500" title="Evento Restrito">
-               <span className="material-symbols-outlined text-[11px]">lock</span>
+             <div className="flex items-center justify-center size-[18px] rounded bg-primary/10 border border-primary/25 text-primary" title="Evento Restrito">
+               <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>lock</span>
              </div>
            )}
 
