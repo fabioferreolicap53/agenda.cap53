@@ -336,18 +336,7 @@ const Header: React.FC = () => {
                     {getTitle()}
                   </h2>
                   {/* Badge mobile — pequeno e compacto */}
-                  {viewMode === 'all' && (
-                    <span className="md:hidden flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/80 text-[9px] text-slate-500 font-bold uppercase tracking-wider shrink-0">
-                      <span className="material-symbols-outlined text-[10px]">public</span>
-                      Geral
-                    </span>
-                  )}
-                  {viewMode === 'personal' && (
-                    <span className="md:hidden flex items-center gap-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-primary/15 to-primary/8 border border-primary/25 text-[9px] text-primary font-bold uppercase tracking-wider shrink-0">
-                      <span className="material-symbols-outlined text-[10px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>person</span>
-                      Pessoal
-                    </span>
-                  )}
+                  {/* Badges mobile removidos conforme solicitado */}
                   {/* Badge desktop */}
                   {viewMode === 'all' && (
                     <span className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200/80 text-[9px] text-slate-500 font-bold uppercase tracking-wider shadow-sm">

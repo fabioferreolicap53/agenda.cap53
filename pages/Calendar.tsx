@@ -2093,7 +2093,7 @@ const Calendar: React.FC = () => {
 
         {viewType === 'agenda' && (
           <div className="flex-1 flex flex-col bg-white relative">
-            <div ref={agendaViewRef} className={`p-4 md:p-8 flex flex-col gap-12 max-w-5xl mx-auto w-full ${scrollMarginClass}`}>
+            <div ref={agendaViewRef} className={`w-full flex flex-col gap-6 md:gap-12 ${scrollMarginClass}`}>
               {(() => {
                  // Filter events for the current month and year using filteredEvents instead of events
                  const monthEvents = filteredEvents.filter(e => {
@@ -2129,7 +2129,7 @@ const Calendar: React.FC = () => {
                         <div 
                             key={dateStr} 
                             ref={dateStr === agendaTargetDateKey ? agendaTargetRef : (isToday ? todayRef : null)}
-                            className={`flex flex-col md:flex-row gap-6 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out p-6 -mx-4 rounded-[2rem] transition-all relative overflow-hidden hover:z-10 ${scrollMarginClass} ${
+                            className={`w-full flex flex-col md:flex-row gap-4 md:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out p-3 md:p-6 rounded-3xl md:rounded-[2rem] transition-all relative overflow-hidden hover:z-10 ${scrollMarginClass} ${
                                 isToday 
                                     ? `bg-primary/[0.04] border border-primary/30 relative shadow-xl shadow-primary/10 ring-2 ring-primary/10 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20' : ''}` 
                                     : isWeekend && isCurrentMonth
@@ -2191,12 +2191,12 @@ const Calendar: React.FC = () => {
                                     )}
                                 </div>
                             </div>
-                            <div className={`flex-1 flex flex-col gap-4 border-l-2 border-slate-50 pl-6 md:pl-12 pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
+                            <div className={`w-full flex-1 flex flex-col gap-2 md:gap-4 border-l-0 md:border-l-2 border-slate-100 pl-0 md:pl-12 pb-4 md:pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                                 {dayEvents.map((event) => (
                                     <div 
                                         key={event.id} 
                                         ref={isToday ? firstEventRef : null}
-                                        className={`hover:translate-x-1 transition-transform duration-300 ${scrollMarginClass}`}
+                                        className={`w-full hover:translate-x-1 transition-transform duration-300 ${scrollMarginClass}`}
                                     >
                                         <CalendarEventCard
                                             event={event}
