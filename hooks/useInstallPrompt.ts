@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const DISMISS_KEY = 'pwa_install_banner_dismissed';
 
@@ -19,34 +19,58 @@ function isStandalone(): boolean {
   return false;
 }
 
+// Captura evento antes do hook montar — previne perda quando dispara durante login/loading
+let capturedPrompt: any = null;
+let capturedPlatform: Platform = 'other';
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeinstallprompt', (e: Event) => {
+    e.preventDefault();
+    capturedPrompt = e;
+    capturedPlatform = getPlatform();
+  });
+}
+
 export function useInstallPrompt() {
-  const [shouldShow, setShouldShow] = useState(false);
-  const [platform, setPlatform] = useState<Platform>('other');
-  const [canNativeInstall, setCanNativeInstall] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [shouldShow, setShouldShow] = useState(() => {
+    if (capturedPrompt && !isStandalone()) return true;
+    return false;
+  });
+  const [platform, setPlatform] = useState<Platform>(capturedPlatform);
+  const [canNativeInstall, setCanNativeInstall] = useState(() => !!capturedPrompt);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(capturedPrompt);
 
   useEffect(() => {
     const dismissed = localStorage.getItem(DISMISS_KEY);
     if (dismissed) return;
 
-    const plat = getPlatform();
-    setPlatform(plat);
-
-    if (!isStandalone()) {
-      setShouldShow(true);
-    }
+    setPlatform(getPlatform());
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
+      capturedPrompt = e;
       setDeferredPrompt(e);
       setCanNativeInstall(true);
+      if (!isStandalone()) {
+        setShouldShow(true);
+      }
     };
 
     const handleInstalled = () => {
+      capturedPrompt = null;
       setShouldShow(false);
       setDeferredPrompt(null);
       setCanNativeInstall(false);
     };
+
+    // Se evento já foi capturado globalmente, usar
+    if (capturedPrompt && !deferredPrompt) {
+      setDeferredPrompt(capturedPrompt);
+      setCanNativeInstall(true);
+      if (!isStandalone()) {
+        setShouldShow(true);
+      }
+    }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('appinstalled', handleInstalled);
@@ -70,6 +94,7 @@ export function useInstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice;
     setDeferredPrompt(null);
     setCanNativeInstall(false);
+    capturedPrompt = null;
     return outcome === 'accepted';
   };
 
