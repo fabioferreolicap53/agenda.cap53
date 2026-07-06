@@ -1,4 +1,4 @@
-const CACHE_NAME = 'agenda-cap53-v1';
+const CACHE_NAME = 'agenda-cap53-v2';
 const PRECACHE = ['/', '/index.html'];
 
 self.addEventListener('install', (e) => {
