@@ -1222,14 +1222,11 @@ const Calendar: React.FC = () => {
                   {showBackButton && (
                     <button
                       onClick={() => navigate(-1)}
-                      className="size-[42px] flex items-center justify-center rounded-xl bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group relative"
+                      className="h-[42px] flex items-center gap-2 px-4 rounded-xl bg-white border border-slate-200 shadow-sm text-slate-500 hover:text-primary hover:border-primary/30 hover:bg-slate-50 transition-all duration-300 active:scale-95 shrink-0 group"
+                      title="Retornar para a tela anterior"
                     >
-                      <span className="material-symbols-outlined text-[20px] font-light group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
-                      
-                      {/* Tooltip harmonioso para o hover no desktop */}
-                      <span className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2 py-1 bg-slate-800 text-white text-[10px] font-bold uppercase tracking-wider rounded-md opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-[100] shadow-sm">
-                        Voltar
-                      </span>
+                      <span className="material-symbols-outlined text-[18px] font-light group-hover:-translate-x-0.5 transition-transform duration-200">arrow_back</span>
+                      <span className="text-xs font-semibold uppercase tracking-wide hidden lg:inline">Retornar</span>
                     </button>
                   )}
 
