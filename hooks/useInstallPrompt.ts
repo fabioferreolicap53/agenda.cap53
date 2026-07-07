@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 const DISMISS_KEY = 'pwa_install_banner_dismissed';
 
@@ -19,7 +19,13 @@ function isStandalone(): boolean {
   return false;
 }
 
-// Captura evento antes do hook montar — previne perda quando dispara durante login/loading
+function canShowManualBanner(platform: Platform): boolean {
+  // iOS e Android sempre mostram banner manual (iOS não suporta beforeinstallprompt)
+  if (platform === 'ios' || platform === 'android') return true;
+  return false;
+}
+
+// Captura evento antes do hook montar
 let capturedPrompt: any = null;
 let capturedPlatform: Platform = 'other';
 
@@ -33,10 +39,13 @@ if (typeof window !== 'undefined') {
 
 export function useInstallPrompt() {
   const [shouldShow, setShouldShow] = useState(() => {
-    if (capturedPrompt && !isStandalone()) return true;
+    if (isStandalone()) return false;
+    const plat = capturedPlatform || getPlatform();
+    if (capturedPrompt) return true;
+    if (canShowManualBanner(plat)) return true;
     return false;
   });
-  const [platform, setPlatform] = useState<Platform>(capturedPlatform);
+  const [platform, setPlatform] = useState<Platform>(capturedPlatform || getPlatform());
   const [canNativeInstall, setCanNativeInstall] = useState(() => !!capturedPrompt);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(capturedPrompt);
 
@@ -44,16 +53,17 @@ export function useInstallPrompt() {
     const dismissed = localStorage.getItem(DISMISS_KEY);
     if (dismissed) return;
 
-    setPlatform(getPlatform());
+    const plat = getPlatform();
+    setPlatform(plat);
+
+    if (isStandalone()) return;
 
     const handleBeforeInstall = (e: Event) => {
       e.preventDefault();
       capturedPrompt = e;
       setDeferredPrompt(e);
       setCanNativeInstall(true);
-      if (!isStandalone()) {
-        setShouldShow(true);
-      }
+      setShouldShow(true);
     };
 
     const handleInstalled = () => {
@@ -67,9 +77,12 @@ export function useInstallPrompt() {
     if (capturedPrompt && !deferredPrompt) {
       setDeferredPrompt(capturedPrompt);
       setCanNativeInstall(true);
-      if (!isStandalone()) {
-        setShouldShow(true);
-      }
+      setShouldShow(true);
+    }
+
+    // iOS/Android sem native install → banner manual
+    if (!capturedPrompt && canShowManualBanner(plat)) {
+      setShouldShow(true);
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
