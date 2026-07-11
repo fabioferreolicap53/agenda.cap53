@@ -138,10 +138,14 @@ const CreateEvent: React.FC = () => {
     // Pegar apenas tipos ativos
     const activeTypes = eventTypes.filter(t => t.active !== false);
     
-    // Ordenar: tipos no EVENT_TYPES_ORDER primeiro, depois o resto alfabeticamente
+    // Ordenar: LEMBRETE sempre por último, depois tipos no EVENT_TYPES_ORDER primeiro, depois o resto alfabeticamente
     return [...activeTypes].sort((a, b) => {
       const nameA = String(a.name || '').trim().toUpperCase();
       const nameB = String(b.name || '').trim().toUpperCase();
+      
+      // LEMBRETE sempre no final
+      if (nameA === 'LEMBRETE' && nameB !== 'LEMBRETE') return 1;
+      if (nameB === 'LEMBRETE' && nameA !== 'LEMBRETE') return -1;
       
       const indexA = EVENT_TYPES_ORDER.indexOf(nameA);
       const indexB = EVENT_TYPES_ORDER.indexOf(nameB);
@@ -1506,10 +1510,10 @@ const CreateEvent: React.FC = () => {
 
         let eventFilter = '';
         if (!noEndPreview && endFilter) {
-            eventFilter = `status != "canceled" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
+            eventFilter = `status != "canceled" && type != "LEMBRETE" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
         } else {
             const startDateStr = startFilter.split(' ')[0]; // YYYY-MM-DD
-            eventFilter = `status != "canceled" && date_start >= "${startDateStr} 00:00:00" && date_start <= "${startDateStr} 23:59:59"`;
+            eventFilter = `status != "canceled" && type != "LEMBRETE" && date_start >= "${startDateStr} 00:00:00" && date_start <= "${startDateStr} 23:59:59"`;
         }
         if (isEditing && editingEventId) {
            eventFilter += ` && id != "${editingEventId}"`;
@@ -1574,7 +1578,7 @@ const CreateEvent: React.FC = () => {
       const selectedLoc = locations.find(l => l.id === locationState.fixedId);
       const isLembrete = type?.trim().toUpperCase() === 'LEMBRETE';
       if (!isLembrete && !noEndPreview && locationState.mode === 'fixed' && selectedLoc && normalizeBoolean(selectedLoc.conflict_control)) {
-        let filter = `location = "${locationState.fixedId}" && status != "canceled" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
+        let filter = `location = "${locationState.fixedId}" && status != "canceled" && type != "LEMBRETE" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
         if (isEditing && editingEventId) {
            filter += ` && id != "${editingEventId}"`;
         }
@@ -1619,7 +1623,7 @@ const CreateEvent: React.FC = () => {
         const categoryFilters = categoryParts.length > 1 ? `(${categoryParts.join(' || ')})` : categoryParts[0];
         const unitFilters = unitParts.length > 1 ? `(${unitParts.join(' || ')})` : unitParts[0];
         
-        let categoryFilter = `${categoryFilters} && ${unitFilters} && status != "canceled" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
+        let categoryFilter = `${categoryFilters} && ${unitFilters} && status != "canceled" && type != "LEMBRETE" && date_start < "${endFilter}" && date_end > "${startFilter}"`;
         
         if (isEditing && editingEventId) {
           categoryFilter += ` && id != "${editingEventId}"`;
