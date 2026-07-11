@@ -566,7 +566,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
             <div 
               role="dialog"
               aria-label="Calendário e seletor de horário"
-              className="relative bg-white rounded-t-[24px] md:rounded-[20px] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-lg border border-slate-100 w-full md:max-w-[560px] max-h-[65vh] md:max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300"
+              className="relative bg-white rounded-t-[24px] md:rounded-[20px] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] md:shadow-lg border border-slate-100 w-full md:max-w-[560px] max-h-[88vh] md:max-h-[90vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300"
             >
               {/* Drag handle — mobile */}
               <div className="md:hidden flex justify-center pt-3 pb-1 shrink-0">
