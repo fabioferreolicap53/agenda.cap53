@@ -462,10 +462,6 @@ const Calendar: React.FC = () => {
      if (view === 'month' || view === 'week' || view === 'day' || view === 'agenda') {
        return view;
      }
-     // Mobile/Tablet default view: Agenda (AGE)
-     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
-         return 'agenda';
-     }
      return 'month';
     });
 
@@ -507,18 +503,16 @@ const Calendar: React.FC = () => {
     // Enforce initial view if no view parameter is present
     useEffect(() => {
         if (!viewParam) {
-            const defaultView = isMobileOrTablet ? 'agenda' : 'month';
-            if (viewType !== defaultView) {
-              setViewType(defaultView);
+            if (viewType !== 'month') {
+              setViewType('month');
             }
-            updateURL(defaultView, currentDate, true);
+            updateURL('month', currentDate, true);
         }
     }, [isMobileOrTablet, viewType, currentDate, viewParam]);
 
     // Check if we are on the initial default view
     const isInitialView = useMemo(() => {
-        const defaultView = isMobileOrTablet ? 'agenda' : 'month';
-        return viewType === defaultView;
+        return viewType === 'month';
     }, [viewType, isMobileOrTablet]);
 
     const showBackButton = !isMobileOrTablet && !isInitialView;
@@ -597,24 +591,8 @@ const Calendar: React.FC = () => {
   }, [agendaMonthEvents]);
 
   const monthTargetDateKey = useMemo(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    if (agendaMonthEvents.length === 0) {
-      const today = new Date();
-      if (today >= monthRangeStart && today <= monthRangeEnd) return today.toDateString();
-      return monthRangeStart.toDateString();
-    }
-    const todayEvent = agendaMonthEvents.find(e => {
-      const d = new Date(e.date_start || '');
-      return d >= todayStart && d <= todayEnd;
-    });
-    if (todayEvent) return new Date(todayEvent.date_start || '').toDateString();
-    const nextEvent = agendaMonthEvents.find(e => new Date(e.date_start || '') > todayEnd);
-    if (nextEvent) return new Date(nextEvent.date_start || '').toDateString();
-    return monthRangeStart.toDateString();
-  }, [agendaMonthEvents, monthRangeStart, monthRangeEnd]);
+    return new Date().toDateString();
+  }, [currentDate]);
 
   const weekEvents = useMemo(() => {
     return filteredEvents
@@ -626,24 +604,8 @@ const Calendar: React.FC = () => {
   }, [filteredEvents, weekRangeStart, weekRangeEnd]);
 
   const weekTargetDateKey = useMemo(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    if (weekEvents.length === 0) {
-      const today = new Date();
-      if (today >= weekRangeStart && today <= weekRangeEnd) return today.toDateString();
-      return weekRangeStart.toDateString();
-    }
-    const todayEvent = weekEvents.find(e => {
-      const d = new Date(e.date_start || '');
-      return d >= todayStart && d <= todayEnd;
-    });
-    if (todayEvent) return new Date(todayEvent.date_start || '').toDateString();
-    const nextEvent = weekEvents.find(e => new Date(e.date_start || '') > todayEnd);
-    if (nextEvent) return new Date(nextEvent.date_start || '').toDateString();
-    return weekRangeStart.toDateString();
-  }, [weekEvents, weekRangeStart, weekRangeEnd]);
+    return new Date().toDateString();
+  }, [currentDate]);
 
   // Animation States
   const [animStage, setAnimStage] = useState<'idle' | 'exiting' | 'entering'>('idle');
@@ -677,50 +639,52 @@ const Calendar: React.FC = () => {
   }, []);
 
   const scrollToToday = () => {
-    // No DIA view no desktop, não fazemos scroll automático para evitar saltos indesejados
     if (viewType === 'day' && !isMobileOrTablet) return;
 
-    setTimeout(() => {
-      // Configuração base de scroll
-      const scrollConfig: ScrollIntoViewOptions = {
-        behavior: 'smooth',
-        block: viewType === 'agenda' || viewType === 'day' ? 'start' : 'center',
-        inline: 'center'
-      };
+    const isMobileScroll = isMobileOrTablet && (viewType === 'month' || viewType === 'week');
+    const scrollConfig: ScrollIntoViewOptions = {
+      behavior: isMobileScroll ? 'instant' : 'smooth',
+      block: (viewType === 'agenda' || viewType === 'day' || isMobileOrTablet) ? 'start' : 'center',
+      inline: 'center'
+    };
 
-      // Prioritize focusing on the first event if it exists (only for DIA view on desktop/tablet)
-      if (viewType === 'day' && firstEventRef.current && !isMobile) {
-        firstEventRef.current.scrollIntoView(scrollConfig);
-        return;
-      }
+    let attempts = 0;
+    const maxAttempts = 15;
 
-      if ((viewType === 'month' || viewType === 'week') && monthWeekTargetRef.current) {
-        monthWeekTargetRef.current.scrollIntoView(scrollConfig);
-        return;
-      }
+    const tryScroll = () => {
+      if (attempts >= maxAttempts) return;
+      attempts++;
 
-      if (viewType === 'agenda' && agendaTargetRef.current) {
-        agendaTargetRef.current.scrollIntoView(scrollConfig);
-        return;
-      }
+      requestAnimationFrame(() => {
+        if (viewType === 'day' && firstEventRef.current && !isMobile) {
+          firstEventRef.current.scrollIntoView(scrollConfig);
+          return;
+        }
+        if ((viewType === 'month' || viewType === 'week') && monthWeekTargetRef.current) {
+          monthWeekTargetRef.current.scrollIntoView(scrollConfig);
+          return;
+        }
+        if (viewType === 'agenda' && agendaTargetRef.current) {
+          agendaTargetRef.current.scrollIntoView(scrollConfig);
+          return;
+        }
+        if (todayRef.current) {
+          todayRef.current.scrollIntoView(scrollConfig);
+          return;
+        }
+        if (viewType === 'day' && dayViewRef.current) {
+          dayViewRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+          return;
+        }
+        if (viewType === 'agenda' && agendaViewRef.current) {
+          agendaViewRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
+          return;
+        }
+        tryScroll();
+      });
+    };
 
-      if (todayRef.current) {
-        todayRef.current.scrollIntoView(scrollConfig);
-        return;
-      }
-
-      if (viewType === 'day' && dayViewRef.current) {
-        dayViewRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      } else if (viewType === 'agenda' && agendaViewRef.current) {
-        agendaViewRef.current.scrollIntoView({ 
-          behavior: 'smooth', 
-          block: 'start' 
-        });
-      }
-    }, 600); // Aumentado para 600ms para garantir que animações de entrada terminaram
+    requestAnimationFrame(() => tryScroll());
   };
 
   // Handle openChat or eventId from URL
@@ -1620,18 +1584,33 @@ const Calendar: React.FC = () => {
 
                       <div className="flex items-center gap-3">
                         {dayEvents.length > 0 && (
-                          <div className="flex items-center gap-[5px] px-[7px] py-[3px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateURL('day', date);
+                            }}
+                            className="flex items-center gap-[5px] px-[7px] py-[3px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
+                          >
                             <span className="material-symbols-outlined text-[12px] text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
                             <span className="text-[10px] font-black text-primary/80 tabular-nums">
                               {dayEvents.length}
                             </span>
-                          </div>
+                          </button>
                         )}
                         <button 
-                          onClick={() => updateURL('day', date)}
-                          className="size-9 flex items-center justify-center rounded-xl bg-white text-text-main hover:text-primary transition-all shadow-sm border border-border-light hover:border-primary/40 active:scale-95"
+                          onClick={() => {
+                            if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+                              alert('Você não tem permissão para criar eventos.');
+                              return;
+                            }
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                            const d = String(date.getDate()).padStart(2, '0');
+                            navigate(`/create-event?date=${y}-${m}-${d}`);
+                          }}
+                          className="size-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
                         >
-                          <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                          <span className="material-symbols-outlined text-[18px]">add_circle</span>
                         </button>
                       </div>
                     </div>
@@ -1824,18 +1803,33 @@ const Calendar: React.FC = () => {
 
                       <div className="flex items-center gap-3">
                         {dayEvents.length > 0 && (
-                          <div className="flex items-center gap-[5px] px-[7px] py-[3px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateURL('day', date);
+                            }}
+                            className="flex items-center gap-[5px] px-[7px] py-[3px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
+                          >
                             <span className="material-symbols-outlined text-[12px] text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
                             <span className="text-[10px] font-black text-primary/80 tabular-nums">
                               {dayEvents.length}
                             </span>
-                          </div>
+                          </button>
                         )}
                         <button 
-                          onClick={() => updateURL('day', date)}
-                          className="size-9 flex items-center justify-center rounded-xl bg-white text-text-main hover:text-primary transition-all shadow-sm border border-border-light hover:border-primary/40 active:scale-95"
+                          onClick={() => {
+                            if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+                              alert('Você não tem permissão para criar eventos.');
+                              return;
+                            }
+                            const y = date.getFullYear();
+                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                            const d = String(date.getDate()).padStart(2, '0');
+                            navigate(`/create-event?date=${y}-${m}-${d}`);
+                          }}
+                          className="size-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
                         >
-                          <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                          <span className="material-symbols-outlined text-[18px]">add_circle</span>
                         </button>
                       </div>
                     </div>
@@ -1966,118 +1960,21 @@ const Calendar: React.FC = () => {
                         />
                       </div>
 
-                      {/* Mobile View - Optimized Layout */}
-                      <div 
-                        className={`md:hidden rounded-2xl border p-4 flex gap-3 active:scale-[0.98] transition-all duration-300 hover:shadow-md ${event.status === 'canceled' 
-                          ? 'bg-red-50/40 border-red-300 shadow-sm shadow-red-100/50' 
-                          : isPast 
-                            ? 'bg-slate-50/80 border-slate-300 opacity-80 shadow-sm' 
-                            : 'bg-white border-primary/30 hover:border-primary/60 shadow-sm shadow-primary/5'}`}
-                        onClick={() => setSelectedEvent(event)}
-                      >
-                        {/* Time Column */}
-                        <div className="flex flex-col items-center justify-center px-2 border-r border-slate-50 min-w-[60px]">
-                          <span className={`text-sm font-black ${isPast ? 'text-slate-400' : 'text-primary'}`}>
-                            {new Date(event.date_start || '').toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                          {event.date_end && event.date_end !== event.date_start && (
-                            <span className="text-[10px] font-medium text-text-secondary/60">
-                              {new Date(event.date_end).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-
-                        {/* Content Column */}
-                        <div className="flex-1 flex flex-col justify-center gap-1 min-w-0">
-                          <h4 className={`text-[11px] uppercase font-bold leading-tight break-words px-3 py-1 rounded-lg ${event.status === 'canceled' ? 'line-through bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white/60 decoration-red-300/60 shadow-md shadow-slate-400/30 border border-slate-600/30' : isPast ? 'bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white/60 shadow-md shadow-slate-400/30 border border-slate-600/30' : 'bg-gradient-to-br from-slate-800 via-primary/90 to-slate-900 text-white shadow-md shadow-slate-400/30 border border-slate-600/30'}`} style={{ fontFamily: 'Calibri, sans-serif' }}>
-                            {event.title}
-                          </h4>
-                          
-                          <div className="flex items-start gap-2 text-xs text-slate-500 mt-0.5">
-                            {event.type && (
-                              <div className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
-                                <span className="material-symbols-outlined text-[12px] text-slate-500">category</span>
-                                <span className="text-[9px] font-bold uppercase tracking-wide">{event.type}</span>
-                              </div>
-                            )}
-                            {(event.expand?.location?.name || event.custom_location) && (
-                              <div className="flex items-start gap-1 min-w-0">
-                                <span className="material-symbols-outlined text-[14px] text-slate-400 flex-shrink-0 mt-0.5">location_on</span>
-                                <span className="break-words leading-relaxed">
-                                  {event.expand?.location?.name || event.custom_location}
-                                </span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1 min-w-0">
-                                <span className="material-symbols-outlined text-[14px] text-slate-400 flex-shrink-0">person</span>
-                                <span className="truncate leading-relaxed">
-                                  {event.expand?.user?.name || 'Desconhecido'}
-                                </span>
-                            </div>
-                          </div>
-
-                          {/* Status Badges Row */}
-                          <div className="flex items-center gap-1.5 mt-1">
-                             {(() => {
-                               const isCancelled = event.status === 'canceled';
-                               const isPast = event.date_end ? new Date(event.date_end) < new Date() : false;
-                               const mUser = user as any;
-                               const isCreator = mUser?.id && event.user === mUser.id;
-                               const canJoin = mUser && !isCreator && !['TRA','ALMC','DCA'].includes(mUser?.role) && !event.is_restricted && !isCancelled;
-                               const evFinished = event.date_end ? new Date(event.date_end) < new Date() : isPast;
-                               const userPS = (event.participants_status as any)?.[mUser?.id] || (event.participants?.includes(mUser?.id) ? 'accepted' : null);
-                               const isJoiningMobile = quickJoinLoading === event.id;
-                               const getStatus = (cat: string) => {
-                                  const categoryRequests = event.almac_requests?.filter((r) => {
-                                      let currCat = r.expand?.item?.category;
-                                      if (currCat === 'ALMC') currCat = 'ALMOXARIFADO';
-                                      if (currCat === 'INFO') currCat = 'INFORMATICA';
-                                      return currCat === cat;
-                                  }) || [];
-                                  if (categoryRequests.length === 0) return null;
-                                  const allConfirmed = categoryRequests.every((r) => r.status === 'approved');
-                                  const anyRejected = categoryRequests.some((r) => r.status === 'rejected');
-                                  if (anyRejected) return 'rejected';
-                                  if (allConfirmed) return 'confirmed';
-                                  return 'pending';
-                               };
-                               return (
-                                 <>
-                                   {isCancelled && (
-                                     <span className="text-[9px] font-black text-white bg-red-400 px-1.5 py-0.5 rounded border border-red-500 uppercase tracking-wide">CANCELADO</span>
-                                   )}
-                                   {event.is_restricted && (
-                                     <span className="flex items-center justify-center size-[18px] rounded bg-primary/10 border border-primary/25 text-primary" title="Evento Restrito">
-                                       <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>lock</span>
-                                     </span>
-                                   )}
-                                   {canJoin && !evFinished && !userPS && (
-                                     <button onClick={(e) => { e.stopPropagation(); handleQuickJoin(event); }} disabled={isJoiningMobile} className="flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-primary/[0.08] text-primary text-[9px] font-bold uppercase tracking-wide border border-primary/[0.15] hover:bg-primary hover:text-white hover:border-primary hover:shadow-md hover:shadow-primary/20 active:scale-[0.97] transition-all duration-200 disabled:opacity-50">
-                                       <span className="material-symbols-outlined text-[11px]">{isJoiningMobile ? 'hourglass_top' : 'group_add'}</span>{isJoiningMobile ? '...' : 'Participar'}
-                                     </button>
-                                   )}
-                                   {canJoin && !evFinished && userPS === 'accepted' && (
-                                     <button onClick={(e) => { e.stopPropagation(); handleQuickLeave(event); }} disabled={isJoiningMobile} className="flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-emerald-500/[0.08] text-emerald-700 text-[9px] font-bold uppercase tracking-wide border border-emerald-400/[0.2] hover:bg-red-500 hover:text-white hover:border-red-500 hover:shadow-md hover:shadow-red-300/20 active:scale-[0.97] transition-all duration-200 disabled:opacity-50">
-                                       <span className="material-symbols-outlined text-[11px]">{isJoiningMobile ? 'hourglass_top' : 'logout'}</span>{isJoiningMobile ? '...' : 'Sair'}
-                                     </button>
-                                   )}
-                                   {canJoin && !evFinished && userPS === 'pending' && (
-                                     <span className="flex items-center gap-1 px-2.5 py-[3px] rounded-md bg-amber-500/[0.08] text-amber-700 text-[9px] font-bold uppercase tracking-wide border border-amber-400/[0.2]">
-                                       <span className="material-symbols-outlined text-[11px]">schedule</span>Pendente
-                                     </span>
-                                   )}
-                                   {event.transporte_suporte && (() => {
-                                     const statusColor = event.transporte_status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : (event.transporte_status === 'rejected' || event.transporte_status === 'refused') ? 'bg-red-50 border-red-200 text-red-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600';
-                                     return (<div className={`flex items-center justify-center size-5 rounded border ${statusColor}`} title="Transporte"><span className="material-symbols-outlined text-[12px]">{event.transporte_origem || event.transporte_destino ? 'directions_car' : 'local_shipping'}</span></div>);
-                                   })()}
-                                   {getStatus('ALMOXARIFADO') && (<div className={`flex items-center justify-center size-5 rounded border ${getStatus('ALMOXARIFADO') === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}><span className="material-symbols-outlined text-[12px]">inventory_2</span></div>)}
-                                   {getStatus('COPA') && (<div className={`flex items-center justify-center size-5 rounded border ${getStatus('COPA') === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}><span className="material-symbols-outlined text-[12px]">local_cafe</span></div>)}
-                                   {getStatus('INFORMATICA') && (<div className={`flex items-center justify-center size-5 rounded border ${getStatus('INFORMATICA') === 'confirmed' ? 'bg-green-50 border-green-200 text-green-600' : 'bg-yellow-50 border-yellow-200 text-yellow-600'}`}><span className="material-symbols-outlined text-[12px]">laptop_mac</span></div>)}
-                                 </>
-                               );
-                             })()}
-                          </div>
-                        </div>
+                      {/* Mobile View */}
+                      <div className="md:hidden">
+                        <CalendarEventCard
+                          event={event}
+                          user={user}
+                          onCancel={handleCancelEvent}
+                          showParticipation
+                          restrictedBadge="icon"
+                          boldTitle
+                          setTooltipData={setTooltipData}
+                          onSelect={setSelectedEvent}
+                          onQuickJoin={handleQuickJoin}
+                          onQuickLeave={handleQuickLeave}
+                          quickJoinLoading={quickJoinLoading}
+                        />
                       </div>
                     </div>
                   );

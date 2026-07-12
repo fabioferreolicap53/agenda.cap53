@@ -87,7 +87,7 @@ const Sidebar: React.FC = () => {
         viewMode === 'personal'
           ? 'bg-gradient-to-b from-white to-[#e9edf2] border-[rgba(28,46,74,0.15)]'
           : 'bg-gradient-to-b from-white to-[#fafbfc] border-slate-200/60'
-      } ${isSidebarOpen ? 'translate-x-0 shadow-2xl shadow-slate-900/10' : '-translate-x-full'}`}>
+      } ${isSidebarOpen ? 'translate-x-0 shadow-2xl shadow-slate-900/10 lg:opacity-100 lg:pointer-events-auto' : '-translate-x-full opacity-0 pointer-events-none lg:opacity-100 lg:pointer-events-auto'}`}>
         <div className="flex flex-col h-full justify-between p-3.5">
           <div className="flex flex-col gap-4">
             {/* Logo */}
