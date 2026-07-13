@@ -660,12 +660,24 @@ const Calendar: React.FC = () => {
         const target = getTargetEl();
         if (!target) { tryScroll(); return; }
 
+        const scrollContainer = document.getElementById('main-scroll-container');
         const isMobileView = isMobileOrTablet && (viewType === 'month' || viewType === 'week');
-        target.scrollIntoView({
-          behavior: isMobileView ? 'instant' : 'smooth',
-          block: (viewType === 'agenda' || viewType === 'day' || isMobileView) ? 'start' : 'center',
-          inline: 'center'
-        });
+
+        if (isMobileView && scrollContainer) {
+          // Scroll manual — mais confiável em Android 9 Chrome
+          const containerTop = scrollContainer.getBoundingClientRect().top;
+          const targetTop = target.getBoundingClientRect().top;
+          const currentScroll = scrollContainer.scrollTop;
+          const headerOffset = showFilters ? 412 : 180;
+          const scrollTarget = currentScroll + (targetTop - containerTop) - headerOffset;
+          scrollContainer.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'instant' });
+        } else {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: (viewType === 'agenda' || viewType === 'day') ? 'start' : 'center',
+            inline: 'center'
+          });
+        }
       });
     };
 
