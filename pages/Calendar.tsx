@@ -1515,6 +1515,22 @@ const Calendar: React.FC = () => {
                             </span>
                           </button>
                         )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+                              alert('Você não tem permissão para criar eventos.');
+                              return;
+                            }
+                            const y = dateObj.date.getFullYear();
+                            const m = String(dateObj.date.getMonth() + 1).padStart(2, '0');
+                            const d = String(dateObj.date.getDate()).padStart(2, '0');
+                            navigate(`/create-event?date=${y}-${m}-${d}`);
+                          }}
+                          className="size-5 flex items-center justify-center rounded-md text-primary/30 hover:text-primary hover:bg-primary/10 transition-all duration-300 active:scale-90 opacity-50 group-hover:opacity-100"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">add</span>
+                        </button>
                       </div>
 
                       <div className={`flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar pr-0.5 max-h-[100px] transition-all duration-300 ${dateObj.type !== 'current' ? 'opacity-50 grayscale-[0.3]' : ''}`}>
@@ -1571,30 +1587,30 @@ const Calendar: React.FC = () => {
                       <div className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 ${shouldPulseToday ? 'bg-gradient-to-r from-primary/[0.15] via-transparent to-transparent' : 'bg-gradient-to-r from-primary/[0.08] via-transparent to-transparent'}`}></div>
                     )}
                     
-                    <div className={`px-4 py-4 md:px-6 md:py-5 flex items-center justify-between border-b border-slate-200 relative z-10 ${isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-100/30' : 'bg-slate-100/50')}`}>
-                      <div className="flex items-center gap-4 md:gap-5">
-                        <span className={`text-4xl md:text-5xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-700' : 'text-text-main opacity-50')}`}>
+                    <div className={`px-3 py-3 sm:px-4 sm:py-3 md:px-6 md:py-4 flex items-center justify-between border-b border-slate-200 relative z-10 gap-3 ${isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-100/30' : 'bg-slate-100/50')}`}>
+                      <div className="flex items-center gap-3 sm:gap-4 md:gap-5 min-w-0">
+                        <span className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter leading-none transition-all duration-500 shrink-0 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-700' : 'text-text-main opacity-50')}`}>
                           {String(date.getDate()).padStart(2, '0')}
                         </span>
-                        <div className="flex flex-col leading-tight">
-                          <span className={`text-[11px] md:text-xs font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-800/80' : 'text-text-main')}`}>
+                        <div className="flex flex-col leading-none gap-0.5">
+                          <span className={`text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-800/80' : 'text-text-main')}`}>
                             {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
                           </span>
-                          <span className={`text-[9px] md:text-[11px] font-bold uppercase tracking-widest ${isToday ? 'text-primary/80' : 'text-text-secondary'}`}>
+                          <span className={`text-[9px] sm:text-[9px] md:text-[11px] font-bold uppercase tracking-widest ${isToday ? 'text-primary/80' : 'text-text-secondary'}`}>
                             {date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                           </span>
-                          {isToday && <span className="text-[8px] md:text-[10px] font-black bg-primary text-white px-1.5 md:px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
+                          {isToday && <span className="text-[7px] sm:text-[8px] md:text-[10px] font-black bg-primary text-white px-1.5 md:px-2 py-0.5 rounded-full uppercase tracking-widest mt-0.5 w-fit shadow-md shadow-primary/20">Hoje</span>}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-3 md:gap-4">
+                      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
                         {dayEvents.length > 0 && (
                           <button 
                             onClick={(e) => {
                               e.stopPropagation();
                               updateURL('day', date);
                             }}
-                            className="flex items-center gap-[5px] md:gap-1.5 px-[7px] md:px-2.5 py-[3px] md:py-1 rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
+                            className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1 md:py-1 rounded-lg bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[12px] md:text-sm text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
                             <span className="text-[10px] md:text-xs font-black text-primary/80 tabular-nums">
@@ -1613,9 +1629,9 @@ const Calendar: React.FC = () => {
                             const d = String(date.getDate()).padStart(2, '0');
                             navigate(`/create-event?date=${y}-${m}-${d}`);
                           }}
-                          className="size-9 md:size-11 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
+                          className="size-8 sm:size-9 md:size-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
                         >
-                          <span className="material-symbols-outlined text-[18px] md:text-xl">add_circle</span>
+                          <span className="material-symbols-outlined text-[16px] sm:text-[18px] md:text-xl">add_circle</span>
                         </button>
                       </div>
                     </div>
@@ -1666,7 +1682,7 @@ const Calendar: React.FC = () => {
                     }`}>
                       {daysLabels[idx]}
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-center gap-1.5">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1692,6 +1708,22 @@ const Calendar: React.FC = () => {
                           </span>
                         </button>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+                            alert('Você não tem permissão para criar eventos.');
+                            return;
+                          }
+                          const y = date.getFullYear();
+                          const m = String(date.getMonth() + 1).padStart(2, '0');
+                          const d = String(date.getDate()).padStart(2, '0');
+                          navigate(`/create-event?date=${y}-${m}-${d}`);
+                        }}
+                        className="size-6 flex items-center justify-center rounded-lg bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
+                      >
+                        <span className="material-symbols-outlined text-xs">add</span>
+                      </button>
                     </div>
                   </div>
                 );
@@ -1894,30 +1926,30 @@ const Calendar: React.FC = () => {
                 <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-orange-500/[0.03] via-transparent to-transparent"></div>
               )}
 
-              {/* Mobile header - matches AGE view */}
-              <div className={`px-4 py-4 md:px-6 md:py-5 flex items-center justify-between border-b border-slate-200 relative z-10 ${isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-100/30' : 'bg-slate-100/50')}`}>
-                <div className="flex items-center gap-4 md:gap-5">
-                  <span className={`text-4xl md:text-5xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-700' : 'text-text-main opacity-50')}`}>
+              {/* Header - matches improved style */}
+              <div className={`px-3 py-3 sm:px-4 sm:py-3 md:px-6 md:py-4 flex items-center justify-between border-b border-slate-200 relative z-10 gap-3 ${isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-100/30' : 'bg-slate-100/50')}`}>
+                <div className="flex items-center gap-3 sm:gap-4 md:gap-5 min-w-0">
+                  <span className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter leading-none transition-all duration-500 shrink-0 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-700' : 'text-text-main opacity-50')}`}>
                     {String(currentDate.getDate()).padStart(2, '0')}
                   </span>
-                  <div className="flex flex-col leading-tight">
-                    <span className={`text-[11px] md:text-xs font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-800/80' : 'text-text-main')}`}>
+                  <div className="flex flex-col leading-none gap-0.5">
+                    <span className={`text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-800/80' : 'text-text-main')}`}>
                       {currentDate.toLocaleDateString('pt-BR', { weekday: 'short' })}
                     </span>
-                    <span className={`text-[9px] md:text-[11px] font-bold uppercase tracking-widest ${isToday ? 'text-primary/80' : 'text-text-secondary'}`}>
+                    <span className={`text-[9px] sm:text-[9px] md:text-[11px] font-bold uppercase tracking-widest ${isToday ? 'text-primary/80' : 'text-text-secondary'}`}>
                       {currentDate.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                     </span>
-                    {isToday && <span className="text-[8px] md:text-[10px] font-black bg-primary text-white px-1.5 md:px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
+                    {isToday && <span className="text-[7px] sm:text-[8px] md:text-[10px] font-black bg-primary text-white px-1.5 md:px-2 py-0.5 rounded-full uppercase tracking-widest mt-0.5 w-fit shadow-md shadow-primary/20">Hoje</span>}
                   </div>
                 </div>
-                <div className="flex items-center gap-3 md:gap-4">
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
                   {dayEvents.length > 0 && (
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
                         updateURL('day', currentDate);
                       }}
-                      className="flex items-center gap-[5px] md:gap-1.5 px-[7px] md:px-2.5 py-[3px] md:py-1 rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
+                      className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1 md:py-1 rounded-lg bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[12px] md:text-sm text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
                       <span className="text-[10px] md:text-xs font-black text-primary/80 tabular-nums">
@@ -1936,9 +1968,9 @@ const Calendar: React.FC = () => {
                       const d = String(currentDate.getDate()).padStart(2, '0');
                       navigate(`/create-event?date=${y}-${m}-${d}`);
                     }}
-                    className="size-9 md:size-11 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
+                    className="size-8 sm:size-9 md:size-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
                   >
-                    <span className="material-symbols-outlined text-[18px] md:text-xl">add_circle</span>
+                    <span className="material-symbols-outlined text-[16px] sm:text-[18px] md:text-xl">add_circle</span>
                   </button>
                 </div>
               </div>
@@ -2036,7 +2068,7 @@ const Calendar: React.FC = () => {
                         <div 
                             key={dateStr} 
                             ref={dateStr === agendaTargetDateKey ? agendaTargetRef : (isToday ? todayRef : null)}
-                            className={`w-full flex flex-col md:flex-row gap-4 md:gap-8 lg:gap-12 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out p-3 md:p-4 lg:p-6 rounded-3xl md:rounded-3xl lg:rounded-[2rem] transition-all relative overflow-hidden hover:z-10 ${scrollMarginClass} ${
+                            className={`w-full flex flex-col lg:flex-row gap-0 animate-in fade-in slide-in-from-bottom-4 duration-500 ease-out rounded-3xl lg:rounded-[2rem] transition-all relative overflow-hidden hover:z-10 ${scrollMarginClass} ${
                                 isToday 
                                     ? `bg-primary/[0.04] border border-primary/30 relative shadow-xl shadow-primary/10 ring-2 ring-primary/10 hover:shadow-2xl hover:shadow-primary/20 hover:-translate-y-1 ${shouldPulseToday ? 'animate-pulse scale-[1.02] z-20' : ''}` 
                                     : isWeekend && isCurrentMonth
@@ -2059,29 +2091,29 @@ const Calendar: React.FC = () => {
                               <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-orange-500/[0.03] via-transparent to-transparent"></div>
                             )}
                             {/* Mobile header - matches month view */}
-                            <div className={`px-4 py-4 md:px-6 md:py-5 flex items-center justify-between border-b border-slate-200 relative z-10 lg:hidden ${isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-100/30' : 'bg-slate-100/50')}`}>
-                              <div className="flex items-center gap-4 md:gap-5">
-                                <span className={`text-4xl md:text-5xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-700' : 'text-text-main opacity-50')}`}>
+                            <div className={`px-3 py-3 sm:px-4 sm:py-3 md:px-6 md:py-4 flex items-center justify-between border-b border-slate-200 relative z-10 gap-3 lg:hidden ${isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-100/30' : 'bg-slate-100/50')}`}>
+                              <div className="flex items-center gap-3 sm:gap-4 md:gap-5 min-w-0">
+                                <span className={`text-3xl sm:text-4xl md:text-5xl font-black tracking-tighter leading-none transition-all duration-500 shrink-0 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-700' : 'text-text-main opacity-50')}`}>
                                   {String(date.getDate()).padStart(2, '0')}
                                 </span>
-                                <div className="flex flex-col leading-tight">
-                                  <span className={`text-[11px] md:text-xs font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-800/80' : 'text-text-main')}`}>
+                                <div className="flex flex-col leading-none gap-0.5">
+                                  <span className={`text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-800/80' : 'text-text-main')}`}>
                                     {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
                                   </span>
-                                  <span className={`text-[9px] md:text-[11px] font-bold uppercase tracking-widest ${isToday ? 'text-primary/80' : 'text-text-secondary'}`}>
+                                  <span className={`text-[9px] sm:text-[9px] md:text-[11px] font-bold uppercase tracking-widest ${isToday ? 'text-primary/80' : 'text-text-secondary'}`}>
                                     {date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
                                   </span>
-                                  {isToday && <span className="text-[8px] md:text-[10px] font-black bg-primary text-white px-1.5 md:px-2 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
+                                  {isToday && <span className="text-[7px] sm:text-[8px] md:text-[10px] font-black bg-primary text-white px-1.5 md:px-2 py-0.5 rounded-full uppercase tracking-widest mt-0.5 w-fit shadow-md shadow-primary/20">Hoje</span>}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3 md:gap-4">
+                              <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
                                 {dayEvents.length > 0 && (
                                   <button 
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       updateURL('day', date);
                                     }}
-                                    className="flex items-center gap-[5px] md:gap-1.5 px-[7px] md:px-2.5 py-[3px] md:py-1 rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
+                                    className="flex items-center gap-1 md:gap-1.5 px-2 md:px-2.5 py-1 md:py-1 rounded-lg bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
                                   >
                                     <span className="material-symbols-outlined text-[12px] md:text-sm text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
                                     <span className="text-[10px] md:text-xs font-black text-primary/80 tabular-nums">
@@ -2100,54 +2132,81 @@ const Calendar: React.FC = () => {
                                     const d = String(date.getDate()).padStart(2, '0');
                                     navigate(`/create-event?date=${y}-${m}-${d}`);
                                   }}
-                                  className="size-9 md:size-11 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
+                                  className="size-8 sm:size-9 md:size-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
                                 >
-                                  <span className="material-symbols-outlined text-[18px] md:text-xl">add_circle</span>
+                                  <span className="material-symbols-outlined text-[16px] sm:text-[18px] md:text-xl">add_circle</span>
                                 </button>
                               </div>
                             </div>
-                            {/* Desktop header - original agenda layout */}
-                            <div className="hidden lg:flex lg:flex-col items-start lg:w-32 shrink-0 relative z-10">
-                                <span className={`text-5xl font-black transition-transform duration-500 ${
-                                    isToday 
-                                        ? 'text-primary scale-110 drop-shadow-md' 
-                                        : isWeekend && isCurrentMonth
-                                            ? 'text-orange-600/80'
-                                            : isCurrentMonth 
-                                                ? 'text-text-main opacity-30' 
-                                                : 'text-slate-400'
-                                }`}>
-                                    {String(date.getDate()).padStart(2, '0')}
-                                </span>
-                                <div className="flex flex-col leading-tight">
-                                    <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${
+                            {/* Desktop header - vertical column matching image */}
+                            <div className="hidden lg:flex flex-col items-center shrink-0 w-40 relative z-10 p-4 lg:p-5 bg-slate-50/50 border-r border-slate-100">
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className={`text-5xl font-black tracking-tighter leading-none transition-all duration-500 ${
                                         isToday 
                                             ? 'text-primary' 
                                             : isWeekend && isCurrentMonth
-                                                ? 'text-orange-600/70'
-                                                : 'text-text-secondary'
+                                                ? 'text-orange-600/80'
+                                                : isCurrentMonth 
+                                                    ? 'text-text-main opacity-30' 
+                                                    : 'text-slate-400'
                                     }`}>
-                                        {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                                        {String(date.getDate()).padStart(2, '0')}
                                     </span>
-                                    <span className={`text-[9px] font-medium uppercase tracking-widest ${
-                                        isToday 
-                                            ? 'text-primary/60' 
-                                            : isWeekend && isCurrentMonth
-                                                ? 'text-orange-600/50'
-                                                : 'text-text-secondary/60'
-                                    }`}>
-                                      {date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '')}
-                                    </span>
-                                    {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
-                                    {isWeekend && !isToday && isCurrentMonth && (
-                                        <span className="text-[7px] font-black text-orange-600/60 uppercase tracking-widest mt-1 flex items-center gap-1">
-                                            <span className="w-1 h-1 rounded-full bg-orange-500/50"></span>
-                                            Fim de semana
+                                    <div className="flex flex-col leading-none">
+                                        <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${
+                                            isToday 
+                                                ? 'text-primary' 
+                                                : isWeekend && isCurrentMonth
+                                                    ? 'text-orange-600/70'
+                                                    : 'text-text-secondary'
+                                        }`}>
+                                            {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
                                         </span>
+                                        <span className={`text-[9px] font-medium uppercase tracking-widest ${
+                                            isToday 
+                                                ? 'text-primary/60' 
+                                                : isWeekend && isCurrentMonth
+                                                    ? 'text-orange-600/50'
+                                                    : 'text-text-secondary/60'
+                                        }`}>
+                                            {date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                        </span>
+                                    </div>
+                                </div>
+                                {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest mt-1.5 w-fit shadow-md shadow-primary/20">Hoje</span>}
+                                <div className="flex items-center gap-2 mt-3">
+                                    {dayEvents.length > 0 && (
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                updateURL('day', date);
+                                            }}
+                                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-sm text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
+                                            <span className="text-xs font-black text-primary/80 tabular-nums">
+                                                {dayEvents.length}
+                                            </span>
+                                        </button>
                                     )}
+                                    <button 
+                                        onClick={() => {
+                                            if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+                                                alert('Você não tem permissão para criar eventos.');
+                                                return;
+                                            }
+                                            const y = date.getFullYear();
+                                            const m = String(date.getMonth() + 1).padStart(2, '0');
+                                            const d = String(date.getDate()).padStart(2, '0');
+                                            navigate(`/create-event?date=${y}-${m}-${d}`);
+                                        }}
+                                        className="size-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">add_circle</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div className={`w-full flex-1 flex flex-col gap-2 md:gap-3 lg:gap-4 border-l-0 lg:border-l-2 border-slate-100 pl-0 lg:pl-12 pb-4 md:pb-6 lg:pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
+                            <div className={`w-full flex flex-col gap-2 md:gap-3 lg:gap-4 lg:pl-8 pb-4 md:pb-6 lg:pb-8 transition-all duration-300 ${!isCurrentMonth ? 'opacity-50 grayscale-[0.3]' : ''}`}>
                                 {dayEvents.map((event) => (
                                     <div 
                                         key={event.id} 
