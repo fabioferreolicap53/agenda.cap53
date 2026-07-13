@@ -661,7 +661,7 @@ const Calendar: React.FC = () => {
         if (!target) { tryScroll(); return; }
 
         const scrollContainer = document.getElementById('main-scroll-container');
-        const isMobileView = isMobileOrTablet && (viewType === 'month' || viewType === 'week');
+        const isMobileView = isMobileOrTablet && (viewType === 'month' || viewType === 'week' || viewType === 'agenda');
 
         if (isMobileView && scrollContainer) {
           // Scroll manual — mais confiável em Android 9 Chrome
@@ -879,10 +879,18 @@ const Calendar: React.FC = () => {
     if (viewType !== 'agenda' || !isMobileOrTablet) return;
     if (!agendaTargetRef.current) return;
     const timeout = setTimeout(() => {
-      agendaTargetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const scrollContainer = document.getElementById('main-scroll-container');
+      const target = agendaTargetRef.current;
+      if (!scrollContainer || !target) return;
+      const containerTop = scrollContainer.getBoundingClientRect().top;
+      const targetTop = target.getBoundingClientRect().top;
+      const currentScroll = scrollContainer.scrollTop;
+      const headerOffset = showFilters ? 412 : 180;
+      const scrollTarget = currentScroll + (targetTop - containerTop) - headerOffset;
+      scrollContainer.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'instant' });
     }, 200);
     return () => clearTimeout(timeout);
-  }, [viewType, isMobileOrTablet, agendaTargetDateKey]);
+  }, [viewType, isMobileOrTablet, agendaTargetDateKey, showFilters]);
 
   const fetchEvents = async () => {
     setLoading(true);
