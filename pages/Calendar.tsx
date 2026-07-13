@@ -639,46 +639,39 @@ const Calendar: React.FC = () => {
   const scrollToToday = () => {
     if (viewType === 'day' && !isMobileOrTablet) return;
 
-    const isMobileScroll = isMobileOrTablet && (viewType === 'month' || viewType === 'week');
-    const scrollConfig: ScrollIntoViewOptions = {
-      behavior: isMobileScroll ? 'instant' : 'smooth',
-      block: (viewType === 'agenda' || viewType === 'day' || isMobileOrTablet) ? 'start' : 'center',
-      inline: 'center'
-    };
-
+    const MOBILE_HEADER_OFFSET = 180; // Header(~56px) + CalToolbar(112px) + gap
     let attempts = 0;
     const maxAttempts = 15;
+
+    const getTargetEl = (): HTMLElement | null => {
+      if (viewType === 'day' && firstEventRef.current && !isMobile) return firstEventRef.current;
+      if ((viewType === 'month' || viewType === 'week') && monthWeekTargetRef.current) return monthWeekTargetRef.current;
+      if (viewType === 'agenda' && agendaTargetRef.current) return agendaTargetRef.current;
+      if (todayRef.current) return todayRef.current;
+      if (viewType === 'day' && dayViewRef.current) return dayViewRef.current;
+      if (viewType === 'agenda' && agendaViewRef.current) return agendaViewRef.current;
+      return null;
+    };
 
     const tryScroll = () => {
       if (attempts >= maxAttempts) return;
       attempts++;
 
       requestAnimationFrame(() => {
-        if (viewType === 'day' && firstEventRef.current && !isMobile) {
-          firstEventRef.current.scrollIntoView(scrollConfig);
-          return;
+        const target = getTargetEl();
+        if (!target) { tryScroll(); return; }
+
+        if (isMobileOrTablet && (viewType === 'month' || viewType === 'week')) {
+          const rect = target.getBoundingClientRect();
+          const absoluteTop = window.scrollY + rect.top;
+          window.scrollTo({ top: Math.max(0, absoluteTop - MOBILE_HEADER_OFFSET), behavior: 'instant' });
+        } else {
+          target.scrollIntoView({
+            behavior: (viewType === 'month' || viewType === 'week') ? 'smooth' : 'smooth',
+            block: (viewType === 'agenda' || viewType === 'day') ? 'start' : 'center',
+            inline: 'center'
+          });
         }
-        if ((viewType === 'month' || viewType === 'week') && monthWeekTargetRef.current) {
-          monthWeekTargetRef.current.scrollIntoView(scrollConfig);
-          return;
-        }
-        if (viewType === 'agenda' && agendaTargetRef.current) {
-          agendaTargetRef.current.scrollIntoView(scrollConfig);
-          return;
-        }
-        if (todayRef.current) {
-          todayRef.current.scrollIntoView(scrollConfig);
-          return;
-        }
-        if (viewType === 'day' && dayViewRef.current) {
-          dayViewRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
-          return;
-        }
-        if (viewType === 'agenda' && agendaViewRef.current) {
-          agendaViewRef.current.scrollIntoView({ behavior: 'instant', block: 'start' });
-          return;
-        }
-        tryScroll();
       });
     };
 
