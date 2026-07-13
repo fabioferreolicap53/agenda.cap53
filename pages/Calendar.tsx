@@ -529,14 +529,12 @@ const Calendar: React.FC = () => {
 
   // Dynamic Scroll Margin based on sticky bars and filters state
   const scrollMarginClass = useMemo(() => {
-    // Height of the sticky toolbar inside the scroll container
-    // Mobile: py-2(16) + Row1(42) + gap-3(12) + Row2(42) = 112px
-    // Desktop: py-2(16) + Row1(42) = 58px
+    // Mobile: Header(~56px) + CalToolbar(112px) = ~168px → use 180px
+    // Desktop: Header(~48px) + CalToolbar(58px) = ~106px → use 58px (header handled by layout)
     if (showFilters) {
-      // Mobile filters: ~300px, Desktop filters: ~120px
       return 'scroll-mt-[412px] md:scroll-mt-[178px]';
     }
-    return 'scroll-mt-[112px] md:scroll-mt-[58px]';
+    return 'scroll-mt-[180px] md:scroll-mt-[58px]';
   }, [showFilters]);
 
   const agendaMonthEvents = useMemo(() => {
