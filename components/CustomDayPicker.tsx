@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useSwipe } from '../hooks/useSwipe';
 
@@ -21,6 +21,14 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
     const [viewDate, setViewDate] = useState(new Date(value));
     const containerRef = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
+    const [buttonPos, setButtonPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+    const updateButtonPos = useCallback(() => {
+        if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setButtonPos({ top: rect.bottom + 8, left: rect.left });
+        }
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -157,7 +165,10 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
     return (
         <div ref={containerRef} className={`relative ${className}`}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    if (!isOpen) updateButtonPos();
+                    setIsOpen(!isOpen);
+                }}
                 className={`h-[42px] flex items-center gap-2.5 px-5 rounded-xl border transition-all duration-300 group ${
                     isOpen 
                         ? 'bg-[#1e293b] text-white border-[#1e293b] shadow-lg shadow-slate-200' 
@@ -186,7 +197,8 @@ const CustomDayPicker: React.FC<CustomDayPickerProps> = ({ value, onChange, clas
                     <div 
                         ref={popupRef}
                         {...swipeHandlers}
-                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 lg:translate-x-0 lg:absolute lg:inset-auto lg:top-full lg:left-0 lg:-translate-y-0 lg:translate-y-0 mt-3 w-[min(320px,85vw)] lg:w-72 bg-white rounded-[28px] lg:rounded-2xl shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] border border-slate-100 p-5 lg:p-5 z-[9999] animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300 origin-center lg:origin-top-left"
+                        className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(320px,85vw)] lg:translate-x-0 lg:-translate-y-0 lg:w-72 bg-white rounded-[28px] lg:rounded-2xl shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] border border-slate-100 p-5 lg:p-5 z-[9999] animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-300 origin-center lg:origin-top-left"
+                        style={window.innerWidth >= 1024 ? { top: buttonPos.top, left: buttonPos.left } : undefined}
                     >
                         <div className="flex items-center justify-between mb-4 lg:mb-4">
                             <button 
