@@ -639,7 +639,6 @@ const Calendar: React.FC = () => {
   const scrollToToday = () => {
     if (viewType === 'day' && !isMobileOrTablet) return;
 
-    const MOBILE_HEADER_OFFSET = 180; // Header(~56px) + CalToolbar(112px) + gap
     let attempts = 0;
     const maxAttempts = 15;
 
@@ -661,17 +660,12 @@ const Calendar: React.FC = () => {
         const target = getTargetEl();
         if (!target) { tryScroll(); return; }
 
-        if (isMobileOrTablet && (viewType === 'month' || viewType === 'week')) {
-          const rect = target.getBoundingClientRect();
-          const absoluteTop = window.scrollY + rect.top;
-          window.scrollTo({ top: Math.max(0, absoluteTop - MOBILE_HEADER_OFFSET), behavior: 'instant' });
-        } else {
-          target.scrollIntoView({
-            behavior: (viewType === 'month' || viewType === 'week') ? 'smooth' : 'smooth',
-            block: (viewType === 'agenda' || viewType === 'day') ? 'start' : 'center',
-            inline: 'center'
-          });
-        }
+        const isMobileView = isMobileOrTablet && (viewType === 'month' || viewType === 'week');
+        target.scrollIntoView({
+          behavior: isMobileView ? 'instant' : 'smooth',
+          block: (viewType === 'agenda' || viewType === 'day' || isMobileView) ? 'start' : 'center',
+          inline: 'center'
+        });
       });
     };
 
@@ -1895,11 +1889,28 @@ const Calendar: React.FC = () => {
                       {currentDate.toLocaleDateString('pt-BR', { weekday: 'long' })}
                     </p>
                   </div>
-                  {isToday && (
-                    <span className="px-3 py-1 md:px-5 md:py-2 bg-primary text-white text-[8px] md:text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 shrink-0">
-                      Hoje
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {isToday && (
+                      <span className="px-3 py-1 md:px-5 md:py-2 bg-primary text-white text-[8px] md:text-[11px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-primary/20 shrink-0">
+                        Hoje
+                      </span>
+                    )}
+                    <button 
+                      onClick={() => {
+                        if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+                          alert('Você não tem permissão para criar eventos.');
+                          return;
+                        }
+                        const y = currentDate.getFullYear();
+                        const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+                        const d = String(currentDate.getDate()).padStart(2, '0');
+                        navigate(`/create-event?date=${y}-${m}-${d}`);
+                      }}
+                      className="size-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2036,8 +2047,57 @@ const Calendar: React.FC = () => {
                             {isWeekend && !isToday && isCurrentMonth && (
                               <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-orange-500/[0.03] via-transparent to-transparent"></div>
                             )}
-                            <div className="flex md:flex-col items-center md:items-start gap-4 md:gap-0 md:w-32 shrink-0 relative z-10">
-                                <span className={`text-4xl md:text-5xl font-black transition-transform duration-500 ${
+                            {/* Mobile header - matches month view */}
+                            <div className={`px-4 py-4 flex items-center justify-between border-b border-slate-200 relative z-10 md:hidden ${isToday ? 'bg-primary/10' : (isWeekend ? 'bg-orange-100/30' : 'bg-slate-100/50')}`}>
+                              <div className="flex items-center gap-4">
+                                <span className={`text-4xl font-black tracking-tighter transition-all duration-500 ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-700' : 'text-text-main opacity-50')}`}>
+                                  {String(date.getDate()).padStart(2, '0')}
+                                </span>
+                                <div className="flex flex-col leading-tight">
+                                  <span className={`text-[11px] font-black uppercase tracking-[0.15em] ${isToday ? 'text-primary' : (isWeekend ? 'text-orange-800/80' : 'text-text-main')}`}>
+                                    {date.toLocaleDateString('pt-BR', { weekday: 'short' })}
+                                  </span>
+                                  <span className={`text-[9px] font-bold uppercase tracking-widest ${isToday ? 'text-primary/80' : 'text-text-secondary'}`}>
+                                    {date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')}
+                                  </span>
+                                  {isToday && <span className="text-[8px] font-black bg-primary text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest mt-1 w-fit shadow-md shadow-primary/20">Hoje</span>}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                {dayEvents.length > 0 && (
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      updateURL('day', date);
+                                    }}
+                                    className="flex items-center gap-[5px] px-[7px] py-[3px] rounded-md bg-gradient-to-br from-white via-slate-50 to-slate-100/80 border border-slate-300/80 shadow-sm count-glow hover:bg-primary/10 hover:border-primary/30 active:scale-95 transition-all cursor-pointer"
+                                  >
+                                    <span className="material-symbols-outlined text-[12px] text-primary/70" style={{ fontVariationSettings: "'FILL' 1, 'wght' 500" }}>event</span>
+                                    <span className="text-[10px] font-black text-primary/80 tabular-nums">
+                                      {dayEvents.length}
+                                    </span>
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
+                                      alert('Você não tem permissão para criar eventos.');
+                                      return;
+                                    }
+                                    const y = date.getFullYear();
+                                    const m = String(date.getMonth() + 1).padStart(2, '0');
+                                    const d = String(date.getDate()).padStart(2, '0');
+                                    navigate(`/create-event?date=${y}-${m}-${d}`);
+                                  }}
+                                  className="size-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/5 to-primary/10 text-primary hover:from-primary hover:to-primary-hover hover:text-white transition-all duration-300 shadow-sm border border-primary/10 hover:border-primary/30 hover:shadow-md hover:shadow-primary/20 active:scale-90"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">add_circle</span>
+                                </button>
+                              </div>
+                            </div>
+                            {/* Desktop header - original agenda layout */}
+                            <div className="hidden md:flex md:flex-col items-start md:w-32 shrink-0 relative z-10">
+                                <span className={`text-5xl font-black transition-transform duration-500 ${
                                     isToday 
                                         ? 'text-primary scale-110 drop-shadow-md' 
                                         : isWeekend && isCurrentMonth

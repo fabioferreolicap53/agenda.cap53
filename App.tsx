@@ -164,6 +164,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <div 
           id="main-scroll-container"
           className={`flex-1 overflow-y-auto custom-scrollbar ${location.pathname === '/calendar' ? '' : 'p-3 md:p-4 lg:p-6'}`}
+          style={{ scrollPaddingTop: location.pathname === '/calendar' ? '180px' : '0px' }}
         >
           <div className={`${location.pathname === '/calendar' ? '' : 'max-w-[1600px] mx-auto w-full'}`}>
             {children}
