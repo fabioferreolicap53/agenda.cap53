@@ -46,6 +46,27 @@ const CreateEvent: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [loading, setLoading] = useState(false);
+  // Estado da sidebar direita para ajustar posição do botão
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(() => {
+    return localStorage.getItem('right_sidebar_open') === 'true';
+  });
+
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'right_sidebar_open') {
+        setIsRightSidebarOpen(e.newValue === 'true');
+      }
+    };
+    // Polling para mudanças via同一 aba (storage event só dispara em outras abas)
+    const interval = setInterval(() => {
+      setIsRightSidebarOpen(localStorage.getItem('right_sidebar_open') === 'true');
+    }, 500);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -2946,7 +2967,7 @@ const CreateEvent: React.FC = () => {
           </section>
 
           {/* Submit Button Section */}
-          <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100] transition-all duration-300">
+          <div className={`fixed bottom-6 md:bottom-10 z-[100] transition-all duration-300 ${isRightSidebarOpen ? 'right-6 md:right-[308px]' : 'right-6 md:right-10'}`}>
             <button
               type="submit"
               disabled={loading || isDateInvalid || isDurationInvalid || isTransportTimeInvalid}
