@@ -599,7 +599,9 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                         e.preventDefault();
                         const today = new Date();
                         setViewDate(today);
-                        handleDateSelect(today.getDate());
+                        const currentVal = value ? new Date(value) : new Date();
+                        const date = new Date(today.getFullYear(), today.getMonth(), today.getDate(), currentVal.getHours(), currentVal.getMinutes());
+                        onChange(toUTCISOString(date));
                       }}
                       className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
                     >
@@ -611,7 +613,9 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                         const tomorrow = new Date();
                         tomorrow.setDate(tomorrow.getDate() + 1);
                         setViewDate(tomorrow);
-                        handleDateSelect(tomorrow.getDate());
+                        const currentVal = value ? new Date(value) : new Date();
+                        const date = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate(), currentVal.getHours(), currentVal.getMinutes());
+                        onChange(toUTCISOString(date));
                       }}
                       className="whitespace-nowrap px-3 md:px-3.5 py-1 md:py-1.5 rounded-full bg-slate-50 text-slate-500 text-[10px] md:text-[11px] font-bold hover:bg-slate-800 hover:text-white transition-all"
                     >
