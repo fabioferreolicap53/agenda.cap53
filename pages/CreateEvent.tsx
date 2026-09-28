@@ -1985,7 +1985,9 @@ const CreateEvent: React.FC = () => {
                     value={responsibility}
                     onChange={(val) => {
                       setResponsibility(val);
-                      if (val === 'EXTERNO_COMPROMISSO') {
+                      if (val === 'INTERNO_COMPROMISSO' || val === 'INTERNO_COLETIVO') {
+                        setInvolvementLevel('ORGANIZADOR');
+                      } else if (val === 'EXTERNO_COMPROMISSO') {
                         setInvolvementLevel('PARTICIPANTE');
                       } else if (val === 'NAO_SE_APLICA') {
                         setInvolvementLevel('ORGANIZADOR');
@@ -2107,7 +2109,7 @@ const CreateEvent: React.FC = () => {
                         value={estimatedParticipants}
                         onChange={(e) => setEstimatedParticipants(e.target.value)}
                         disabled={responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA'}
-                        className={`w-full bg-transparent border-none outline-none font-black text-sm p-0 h-5 placeholder:text-slate-500 ${responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA' ? 'text-slate-500' : 'text-slate-900'}`}
+                        className={`w-full bg-transparent border-none outline-none font-black text-sm p-0 h-5 placeholder:text-slate-300/70 placeholder:font-normal ${responsibility === 'EXTERNO_COMPROMISSO' || responsibility === 'NAO_SE_APLICA' ? 'text-slate-500' : 'text-slate-900'}`}
                         placeholder="Ex: 50"
                         title={responsibility === 'EXTERNO_COMPROMISSO' ? 'Indisponível para Participações externas' : responsibility === 'NAO_SE_APLICA' ? 'Indisponível para Lembretes' : undefined}
                       />
