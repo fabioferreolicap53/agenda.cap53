@@ -2235,9 +2235,13 @@ const CreateEvent: React.FC = () => {
                                     {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || 'PARTICIPANTE'))?.label || 'Selecione'}
                                   </span>
                                 </div>
-                                <div className={`grid gap-1 ${responsibility === 'EXTERNO_COMPROMISSO' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                                <div className="grid gap-1 grid-cols-1">
                                   {INVOLVEMENT_LEVELS.filter(level => {
-                                    // Se for evento externo, só permite PARTICIPANTE
+                                    // Na criação: participantes convidados são sempre PARTICIPANTE
+                                    if (!isEditing) {
+                                      return level.value === 'PARTICIPANTE';
+                                    }
+                                    // Na edição: se for evento externo, só permite PARTICIPANTE
                                     if (responsibility === 'EXTERNO_COMPROMISSO') {
                                       return level.value === 'PARTICIPANTE';
                                     }
