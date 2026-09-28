@@ -137,6 +137,7 @@ export interface ItensServicoRecord {
     is_available?: boolean
     description?: string
     image?: string
+    stock?: number
 }
 
 // Solicitacoes Evento

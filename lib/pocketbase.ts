@@ -44,6 +44,18 @@ export const getAvatarUrl = (record: any): string | null => {
 // Desabilitar cancelamento automático para evitar aborts em re-renders rápidos do React
 pb.autoCancellation(false);
 
+// Suprimir erros de conexão SSE do real-time no console (reconexão automática)
+if (import.meta.env.DEV) {
+    const originalConsoleError = console.error;
+    console.error = (...args: any[]) => {
+        const msg = args[0]?.toString?.() || '';
+        if (msg.includes('ClientResponseError') && msg.includes('Something went wrong')) {
+            return; // Suprime erros de SSE/reconnect
+        }
+        originalConsoleError.apply(console, args);
+    };
+}
+
 // Lógica de sincronização de auth em múltiplas abas/janelas
 const globalKey = '__pb_realtime_auth_sync__';
 const g = globalThis as any;

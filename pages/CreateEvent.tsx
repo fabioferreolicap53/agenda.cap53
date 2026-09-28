@@ -1898,7 +1898,7 @@ const CreateEvent: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Tipo & Natureza</label>
+                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Tipo ou Natureza</label>
                   <CustomSelect
                     value={type}
                     onChange={setType}
@@ -1921,7 +1921,7 @@ const CreateEvent: React.FC = () => {
 
                 <div className="space-y-2">
                   <div className="flex items-center h-5">
-                    <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Data & Início</label>
+                    <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1">Data e Início</label>
                   </div>
                   <CustomDatePicker
                     required
