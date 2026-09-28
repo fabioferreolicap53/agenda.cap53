@@ -2177,6 +2177,9 @@ const CreateEvent: React.FC = () => {
                         {sortedFilteredUsers.slice(0, visibleParticipantsCount).map(u => {
                         const isSel = selectedParticipants.includes(u.id);
                         const isCreatorUser = u.id === user?.id;
+                        // Na criação o convidado começa sem nível escolhido (usuário precisa clicar em "Participante").
+                        // Na edição mantém o nível salvo, com fallback para PARTICIPANTE.
+                        const currentRole = participantRoles[u.id] || (isEditing ? 'PARTICIPANTE' : '');
                         
                         const avatarUrl = getAvatarUrl(u);
 
@@ -2232,7 +2235,7 @@ const CreateEvent: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <span className="text-[9px] font-black text-primary/70 uppercase tracking-widest">Nível de Envolvimento:</span>
                                   <span className="text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                    {INVOLVEMENT_LEVELS.find(l => l.value === (participantRoles[u.id] || 'PARTICIPANTE'))?.label || 'Selecione'}
+                                    {INVOLVEMENT_LEVELS.find(l => l.value === currentRole)?.label || 'Selecione'}
                                   </span>
                                 </div>
                                 <div className="grid gap-1 grid-cols-1">
@@ -2247,7 +2250,7 @@ const CreateEvent: React.FC = () => {
                                     }
                                     return true;
                                   }).map(level => {
-                                    const isSelected = (participantRoles[u.id] || 'PARTICIPANTE') === level.value;
+                                    const isSelected = currentRole === level.value;
                                     const getIcon = (val: string) => {
                                       switch(val) {
                                         case 'ORGANIZADOR': return 'assignment_ind';
