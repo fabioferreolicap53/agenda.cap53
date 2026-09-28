@@ -159,6 +159,19 @@ const Login: React.FC = () => {
             {resendSuccess && (
               <p className="mt-2 text-green-600 text-xs font-medium">E-mail reenviado com sucesso!</p>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setNeedsVerificationView(false);
+                setResendSuccess(false);
+                setIsRegistering(false);
+                setSuccessMessage('');
+              }}
+              className="mt-4 inline-flex items-center gap-1.5 text-amber-700 hover:text-amber-900 text-xs font-bold transition-all group"
+            >
+              <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+              Voltar para o login
+            </button>
           </div>
         )}
 
