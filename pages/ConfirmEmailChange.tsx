@@ -1,71 +1,68 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { useAuth } from '../components/AuthContext';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { pb } from '../lib/pocketbase';
 
-const ResetPassword: React.FC = () => {
+const ConfirmEmailChange: React.FC = () => {
     const { token } = useParams<{ token: string }>();
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const { confirmPasswordReset } = useAuth();
-    
+
     const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
+    const [hasToken, setHasToken] = useState(false);
 
     useEffect(() => {
-        // Extrair token: params da URL > query string ?token=
-        const rawToken = (token && token !== '*') ? token : searchParams.get('token');
+        const rawToken = token && token !== '*' ? token : searchParams.get('token');
         if (!rawToken || rawToken.length < 10) {
             setStatus('error');
-            setMessage('Token de recuperação inválido ou ausente.');
+            setMessage('Link de confirmação inválido ou ausente.');
+        } else {
+            setHasToken(true);
         }
     }, [token, searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
-        if (password.length < 8) {
+
+        if (!password || password.length < 8) {
             setStatus('error');
             setMessage('A senha deve ter pelo menos 8 caracteres.');
             return;
         }
 
-        if (password !== confirmPassword) {
-            setStatus('error');
-            setMessage('As senhas não coincidem.');
-            return;
-        }
-
         setStatus('loading');
-        setMessage('Redefinindo sua senha...');
+        setMessage('Confirmando alteração de e-mail...');
 
         try {
             let cleanToken = token && token !== '*' ? token : searchParams.get('token');
 
             if (!cleanToken || cleanToken.length < 30) {
-                throw new Error('Token de recuperação inválido ou incompleto.');
+                throw new Error('Token de confirmação inválido ou incompleto.');
             }
 
-            await confirmPasswordReset(cleanToken, password);
+            await pb.collection('agenda_cap53_usuarios').confirmEmailChange(cleanToken, password);
             setStatus('success');
-            setMessage('Senha redefinida com sucesso! Redirecionando para o login...');
-            
+            setMessage('E-mail alterado com sucesso! Redirecionando para o login...');
+
             setTimeout(() => {
                 navigate('/login');
             }, 3000);
         } catch (error: any) {
-            console.error('Reset password error:', error);
+            console.error('Erro na confirmação de troca de e-mail:', error);
             setStatus('error');
-            
+
             const errorMessage = error?.message || '';
+
             if (error.status === 400 || errorMessage.includes('failed to load')) {
-                setMessage('Este link de recuperação é inválido, expirou ou já foi utilizado.');
+                setMessage('Este link é inválido, expirou ou já foi utilizado. A senha pode estar incorreta.');
             } else if (errorMessage.includes('Something went wrong') || error.status === 500) {
                 setMessage('Ocorreu um erro interno no servidor. Tente novamente mais tarde.');
+            } else if (errorMessage.includes('Failed to fetch') || error.status === 0) {
+                setMessage('Erro de conexão. Verifique sua internet.');
             } else {
-                setMessage(errorMessage || 'Falha ao redefinir senha. O link pode ter expirado.');
+                setMessage('Não foi possível confirmar a alteração de e-mail. Verifique sua senha.');
             }
         }
     };
@@ -75,12 +72,12 @@ const ResetPassword: React.FC = () => {
             <div className="relative w-full max-w-[480px] flex flex-col items-center rounded-xl bg-white p-8 shadow-2xl border border-border-light z-10">
                 <div className="flex items-center justify-center size-16 rounded-full bg-primary/10 mb-6">
                     <span className={`material-symbols-outlined text-[40px] ${status === 'error' ? 'text-red-500' : 'text-primary'}`}>
-                        {status === 'loading' ? 'sync' : status === 'success' ? 'verified' : status === 'error' ? 'error' : 'lock_reset'}
+                        {status === 'loading' ? 'sync' : status === 'success' ? 'verified' : status === 'error' ? 'error' : 'mark_email_read'}
                     </span>
                 </div>
 
                 <h1 className="text-text-main text-2xl font-bold mb-4">
-                    {status === 'success' ? 'Senha Alterada!' : 'Nova Senha'}
+                    {status === 'success' ? 'E-mail Confirmado!' : 'Confirmar Novo E-mail'}
                 </h1>
 
                 {message && (
@@ -89,14 +86,18 @@ const ResetPassword: React.FC = () => {
                     </p>
                 )}
 
-                {status !== 'success' && status !== 'loading' && status !== 'error' && (
+                {hasToken && status !== 'success' && status !== 'loading' && (
                     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
+                        <p className="text-text-secondary text-xs text-center">
+                            Informe sua senha atual para confirmar a alteração do e-mail.
+                        </p>
+
                         <label className="flex flex-col w-full">
-                            <p className="text-text-main text-sm font-medium pb-2 text-left">Nova Senha</p>
+                            <p className="text-text-main text-sm font-medium pb-2 text-left">Senha Atual</p>
                             <div className="relative flex w-full flex-1 items-stretch rounded-lg">
                                 <input
                                     className="w-full rounded-lg border border-gray-300 h-11 px-4 pr-12 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm"
-                                    placeholder="Mínimo 8 caracteres"
+                                    placeholder="Digite sua senha"
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -114,27 +115,15 @@ const ResetPassword: React.FC = () => {
                             </div>
                         </label>
 
-                        <label className="flex flex-col w-full">
-                            <p className="text-text-main text-sm font-medium pb-2 text-left">Confirmar Nova Senha</p>
-                            <input
-                                className="w-full rounded-lg border border-gray-300 h-11 px-4 focus:ring-2 focus:ring-primary focus:border-transparent outline-none text-sm"
-                                placeholder="Repita a nova senha"
-                                type={showPassword ? 'text' : 'password'}
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                            />
-                        </label>
-
                         <button
                             type="submit"
                             className="flex w-full items-center justify-center rounded-lg h-11 px-4 bg-primary hover:bg-primary-hover text-white font-bold shadow-lg shadow-primary/20 transition-all text-sm uppercase mt-2"
                         >
-                            Alterar Senha
+                            Confirmar Alteração
                         </button>
                     </form>
                 )}
-                
+
                 {status === 'loading' && (
                     <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                 )}
@@ -152,4 +141,4 @@ const ResetPassword: React.FC = () => {
     );
 };
 
-export default ResetPassword;
+export default ConfirmEmailChange;

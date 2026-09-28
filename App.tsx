@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Calendar from './pages/Calendar';
 import CreateEvent from './pages/CreateEvent';
 import Reports from './pages/Reports';
@@ -15,6 +15,7 @@ import LocationManagement from './pages/LocationManagement';
 import TeamManagement from './pages/TeamManagement';
 import VerifyEmail from './pages/VerifyEmail';
 import ResetPassword from './pages/ResetPassword';
+import ConfirmEmailChange from './pages/ConfirmEmailChange';
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import Header from './components/Header';
@@ -117,7 +118,8 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const isAuthPage = location.pathname === '/login' || 
                     location.pathname.startsWith('/verify-email') || 
-                    location.pathname.startsWith('/reset-password');
+                    location.pathname.startsWith('/reset-password') ||
+                    location.pathname.startsWith('/confirm-email-change');
 
   if (import.meta.env.DEV) {
     console.log('LayoutContent render:', { loading, hasUser: !!user, isAuthPage, path: location.pathname });
@@ -179,7 +181,7 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <HashRouter>
+      <BrowserRouter>
         <ScrollToTop />
         <AuthProvider>
           <ViewModeProvider>
@@ -188,15 +190,15 @@ const App: React.FC = () => {
               <Route path="/" element={<Navigate to="/calendar" replace />} />
               <Route path="/login" element={<Login />} />
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
-              {/* Rotas de contingência para capturar variações de links malformados ou encodados */}
               <Route path="/verify-email" element={<VerifyEmail />} />
-              <Route path="/verify-email/*" element={<VerifyEmail />} />
-              <Route path="/%23/verify-email/*" element={<VerifyEmail />} />
-              <Route path="/confirm-verification/*" element={<VerifyEmail />} />
+              <Route path="/confirm-verification/:token" element={<VerifyEmail />} />
               
               <Route path="/reset-password/:token" element={<ResetPassword />} />
-              <Route path="/reset-password/*" element={<ResetPassword />} />
-              <Route path="/confirm-password-reset/*" element={<ResetPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/confirm-password-reset/:token" element={<ResetPassword />} />
+              
+              <Route path="/confirm-email-change/:token" element={<ConfirmEmailChange />} />
+              <Route path="/confirm-email-change" element={<ConfirmEmailChange />} />
               <Route path="/calendar" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
               <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
               <Route path="/reports" element={<ProtectedRoute roles={['ADMIN']}><Reports /></ProtectedRoute>} />
@@ -213,7 +215,7 @@ const App: React.FC = () => {
           </LayoutContent>
           </ViewModeProvider>
         </AuthProvider>
-      </HashRouter>
+      </BrowserRouter>
     </ErrorBoundary>
   );
 };

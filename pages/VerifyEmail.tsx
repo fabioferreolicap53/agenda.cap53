@@ -1,96 +1,56 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
 
 const VerifyEmail: React.FC = () => {
     const { token } = useParams<{ token: string }>();
+    const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('Verificando seu e-mail...');
 
     useEffect(() => {
-        console.log('VerifyEmail: Component mounted.');
-        
         const verify = async () => {
-            // Check if global PB instance is pointing to the wrong URL
-            let currentPb = pb;
-            if (pb.baseUrl.includes('duckdns.org')) {
-                console.error('CRITICAL ERROR: Global PocketBase instance is pointing to duckdns.org!');
-                console.log('Creating a temporary local PocketBase instance with correct URL: https://centraldedados.dev.br');
-                
-                // Dynamic import to avoid circular dependency issues or just use the global class if available
-                // We can't easily import PocketBase class if it wasn't exported as default or named in a way we can use here without 'import'
-                // But we have 'pb' imported. We can try to use its constructor if possible, or just hack the baseUrl.
-                // Creating a new instance is safer.
-                // Since we import { pb } from '../lib/pocketbase', we can't access the class constructor easily unless exported.
-                // lib/pocketbase.ts exports 'pb' (instance) and 'TypedPocketBase' (interface).
-                // It does NOT export the class 'PocketBase' itself directly in the snippet I saw?
-                // Wait, line 1: import PocketBase, { RecordService } from 'pocketbase';
-                // It does NOT export PocketBase class.
-                
-                // So fallback to hacking the baseUrl, but do it aggressively.
-                (pb as any).baseUrl = 'https://centraldedados.dev.br';
-                console.log('Fixed pb.baseUrl to:', pb.baseUrl);
-            } else {
-                console.log('VerifyEmail: Global PB URL is correct:', pb.baseUrl);
-            }
+            // Extrair token: params da URL > query string ?verify=
+            let rawToken = token && token !== '*' ? token : searchParams.get('verify');
 
-            console.log('VerifyEmail: Starting verification process...');
-            // Estratégia Multinível de Extração de Token
-            let rawToken = token;
-            
-            // 1. Tenta pegar da URL se o React Router falhar ou o token vier com asterisco
-            if (!rawToken || rawToken === '*' || rawToken === 'undefined') {
-                const searchParams = new URLSearchParams(window.location.search);
-                rawToken = searchParams.get('token'); // Tenta ?token=...
-                
-                if (!rawToken) {
-                    // Tenta extrair da parte final do path (considerando hash routing)
-                    const pathParts = window.location.hash.split('/');
-                    rawToken = pathParts[pathParts.length - 1];
-                }
-            }
-
-            if (!rawToken || rawToken.length < 10 || rawToken.includes('login')) {
-                // Se ainda não temos um token válido, aguardamos ou mostramos erro
-                console.warn('Token ainda não detectado ou inválido:', rawToken);
+            if (!rawToken || rawToken.length < 10) {
+                console.warn('Token não detectado ou inválido:', rawToken);
+                setStatus('error');
+                setMessage('Link de verificação inválido ou ausente.');
                 return;
             }
 
             try {
-                // Limpeza profunda do token
+                // Limpeza do token
                 let cleanToken = rawToken.trim()
-                    .replace(/['"”]/g, '')     // Remove aspas
-                    .split('?')[0]             // Remove query params
-                    .split('&')[0];            // Remove outros params
-                
-                // Se o token vier com prefixos de rota devido a encoding de email
+                    .replace(/['""]/g, '')
+                    .split('?')[0]
+                    .split('&')[0];
+
                 if (cleanToken.includes('/')) {
                     cleanToken = cleanToken.split('/').pop() || '';
                 }
 
-                console.log('Iniciando verificação para o token:', cleanToken.substring(0, 10) + '...');
-                
-                // Removemos a validação estrita de 3 partes para evitar falsos negativos se o formato mudar
+                console.log('Iniciando verificação para token:', cleanToken.substring(0, 10) + '...');
+
                 if (cleanToken.length < 30) {
-                     throw new Error('Token de verificação parece inválido ou incompleto.');
+                    throw new Error('Token de verificação parece inválido ou incompleto.');
                 }
-                
+
                 await pb.collection('agenda_cap53_usuarios').confirmVerification(cleanToken);
                 setStatus('success');
                 setMessage('E-mail verificado com sucesso! Redirecionando para o login...');
-                
+
                 setTimeout(() => {
-                    // Forçamos o redirecionamento para o domínio correto do frontend
-                    window.location.href = 'https://agenda-cap53.pages.dev/#/login';
+                    navigate('/login');
                 }, 3000);
             } catch (error: any) {
                 console.error('Erro na verificação:', error);
                 setStatus('error');
-                
-                // Tradução de erros comuns do PocketBase
+
                 const errorMessage = error?.message || '';
-                
+
                 if (error.status === 400 || errorMessage.includes('failed to load')) {
                     setMessage('Este link de verificação é inválido, expirou ou já foi utilizado.');
                 } else if (errorMessage.includes('Something went wrong') || error.status === 500) {
@@ -104,7 +64,7 @@ const VerifyEmail: React.FC = () => {
         };
 
         verify();
-    }, [token, navigate]);
+    }, [token, searchParams, navigate]);
 
     return (
         <div className="relative flex min-h-screen w-full flex-col items-center justify-center bg-white p-4">
@@ -125,7 +85,7 @@ const VerifyEmail: React.FC = () => {
 
                 {status !== 'loading' && (
                     <button
-                        onClick={() => window.location.href = 'https://agenda-cap53.pages.dev/#/login'}
+                        onClick={() => navigate('/login')}
                         className="flex w-full items-center justify-center rounded-lg h-11 px-4 bg-primary hover:bg-primary-hover text-white font-bold shadow-lg shadow-primary/20 transition-all text-sm uppercase"
                     >
                         Ir para o Login

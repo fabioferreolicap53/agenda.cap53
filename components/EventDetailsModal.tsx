@@ -958,7 +958,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
 
   const handleShare = () => {
     const eventDateStr = new Date(event.date_start || '').toISOString().split('T')[0];
-    const link = `${window.location.origin}/#/calendar?date=${eventDateStr}&view=day&eventId=${event.id}&tab=details`;
+    const link = `${window.location.origin}/calendar?date=${eventDateStr}&view=day&eventId=${event.id}&tab=details`;
     const locationName = event.expand?.location?.name || event.custom_location || 'Local não definido';
     
     const text = `📅 ${event.title}\n🕒 ${startDate.toLocaleDateString('pt-BR')} ${startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n📍 ${locationName}\n\n🔗 Link: ${link}`;
@@ -1416,11 +1416,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         
                         {loadingRequests ? (
                             <div className="py-12 flex justify-center"><div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full" /></div>
-                        ) : (requests.length > 0 || (event.transporte_suporte && (event.almoxarifado_items?.length || event.copa_items?.length || event.informatica_items?.length))) ? (
+                        ) : (requests.length > 0 || (event.transporte_suporte && ((event as any).almoxarifado_items?.length || (event as any).copa_items?.length || (event as any).informatica_items?.length))) ? (
                             <div className="space-y-6">
                                 {['ALMOXARIFADO', 'COPA', 'INFORMATICA', 'ENTREGA'].map(category => {
                                     const isEntrega = category === 'ENTREGA';
-                                    const hasEntrega = isEntrega && event.transporte_suporte && (event.almoxarifado_items?.length > 0 || event.copa_items?.length > 0 || event.informatica_items?.length > 0);
+                                    const hasEntrega = isEntrega && event.transporte_suporte && ((event as any).almoxarifado_items?.length > 0 || (event as any).copa_items?.length > 0 || (event as any).informatica_items?.length > 0);
                                     
                                     if (isEntrega && !hasEntrega) return null;
 

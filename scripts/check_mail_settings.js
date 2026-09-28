@@ -8,7 +8,7 @@ async function checkSettings() {
 
     try {
         // 1. Authenticate as Admin
-        const authResponse = await fetch(`${pbUrl}/api/admins/auth-with-password`, {
+        const authResponse = await fetch(`${pbUrl}/api/collections/_superusers/auth-with-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ identity: adminEmail, password: adminPass })
