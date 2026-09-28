@@ -160,7 +160,7 @@ const LocationField: React.FC<LocationFieldProps> = ({ value, onChange, required
         className="h-14"
         disabled={loading}
         options={[
-          { value: 'external', label: '📍 LUGAR EXTERNO NÃO FIXO' },
+          { value: 'external', label: '📍 LUGAR NÃO FIXO (EDITÁVEL)' },
           ...locations
             .filter(loc => normalizeBoolean(loc.is_available) || loc.id === value.fixedId)
             .map(loc => {
