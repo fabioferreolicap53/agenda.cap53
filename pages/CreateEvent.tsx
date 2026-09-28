@@ -2183,15 +2183,29 @@ const CreateEvent: React.FC = () => {
                         
                         const avatarUrl = getAvatarUrl(u);
 
+                        // Um clique já convida/define o usuário como PARTICIPANTE (ou remove, se já selecionado)
+                        const toggleParticipant = () => {
+                          if (isCreatorUser) return;
+                          const willSelect = !isSel;
+                          toggleArrayItem(selectedParticipants, setSelectedParticipants, u.id);
+                          setParticipantRoles(prev => {
+                            const next = { ...prev };
+                            if (willSelect) {
+                              next[u.id] = 'PARTICIPANTE';
+                            } else {
+                              delete next[u.id];
+                            }
+                            return next;
+                          });
+                        };
+
                         return (
                           <div
                             key={u.id}
                             onClick={(e) => {
                               // Se clicar nos botões de role não aciona o toggle do participante
                               if ((e.target as HTMLElement).closest('button')) return;
-                              if (!isCreatorUser) {
-                                toggleArrayItem(selectedParticipants, setSelectedParticipants, u.id);
-                              }
+                              toggleParticipant();
                             }}
                             className={`flex flex-col gap-2 p-3.5 rounded-2xl border transition-all duration-300 ${!isCreatorUser ? 'cursor-pointer' : ''} ${
                               isSel 
@@ -2222,7 +2236,7 @@ const CreateEvent: React.FC = () => {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => toggleArrayItem(selectedParticipants, setSelectedParticipants, u.id)}
+                                  onClick={toggleParticipant}
                                   className={`material-symbols-outlined text-xl transition-all duration-300 shrink-0 ${isSel ? 'text-primary scale-110' : 'text-slate-400 hover:text-primary/60'}`}
                                 >
                                   {isSel ? 'check_circle' : 'add_circle'}
@@ -2238,12 +2252,9 @@ const CreateEvent: React.FC = () => {
                                     {INVOLVEMENT_LEVELS.find(l => l.value === currentRole)?.label || 'Selecione'}
                                   </span>
                                 </div>
+                                {isEditing && (
                                 <div className="grid gap-1 grid-cols-1">
                                   {INVOLVEMENT_LEVELS.filter(level => {
-                                    // Na criação: participantes convidados são sempre PARTICIPANTE
-                                    if (!isEditing) {
-                                      return level.value === 'PARTICIPANTE';
-                                    }
                                     // Na edição: se for evento externo, só permite PARTICIPANTE
                                     if (responsibility === 'EXTERNO_COMPROMISSO') {
                                       return level.value === 'PARTICIPANTE';
@@ -2279,6 +2290,7 @@ const CreateEvent: React.FC = () => {
                                     );
                                   })}
                                 </div>
+                                )}
                               </div>
                             )}
                           </div>
