@@ -131,7 +131,9 @@ export const useMySpace = () => {
           return {
             ...evt,
             category: evt.expand?.type?.name || evt.type,
-            userRole: p.role || 'PARTICIPANTE',
+            // O papel (nível de envolvimento) vive no EVENTO, em participants_roles,
+            // preenchido na criação/edição. O registro de participante não tem campo "role".
+            userRole: evt.participants_roles?.[user.id] || p.role || 'PARTICIPANTE',
             type: 'participation' as const,
             participationStatus: computedStatus
           };
@@ -143,7 +145,8 @@ export const useMySpace = () => {
       const managedEventIds = new Set<string>();
       createdRes.forEach(e => managedEventIds.add(e.id));
       participationsRes.forEach(p => {
-        const role = (p.role || '').toUpperCase();
+        // Papel do usuário no evento vem de participants_roles (registro não tem campo "role")
+        const role = (p.expand?.event?.participants_roles?.[user.id] || '').toUpperCase();
         if (role === 'ORGANIZADOR') {
           if (p.event) managedEventIds.add(p.event);
         }
@@ -181,7 +184,7 @@ export const useMySpace = () => {
           category: r.expand.event.expand?.type?.name || r.expand.event.type,
           type: 'request' as const,
           requestStatus: r.status === 'approved' ? 'accepted' : r.status,
-          userRole: r.role || 'PARTICIPANTE'
+          userRole: r.expand.event.participants_roles?.[user.id] || r.role || 'PARTICIPANTE'
         }));
 
       // Combine and deduplicate
