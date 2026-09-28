@@ -12,7 +12,7 @@ const VerifyEmail: React.FC = () => {
     useEffect(() => {
         const verify = async () => {
             // Extrair token: params da URL > query string ?verify=
-            let rawToken = token && token !== '*' ? token : searchParams.get('verify');
+            let rawToken = token && token !== '*' ? token : (searchParams.get('verify') || searchParams.get('token'));
 
             if (!rawToken || rawToken.length < 10) {
                 console.warn('Token não detectado ou inválido:', rawToken);

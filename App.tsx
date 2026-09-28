@@ -116,10 +116,12 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     localStorage.setItem('right_sidebar_open', String(isRightSidebarOpen));
   }, [isRightSidebarOpen]);
 
+  const hasAuthToken = new URLSearchParams(location.search).get('verify') || new URLSearchParams(location.search).get('token');
   const isAuthPage = location.pathname === '/login' || 
                     location.pathname.startsWith('/verify-email') || 
                     location.pathname.startsWith('/reset-password') ||
-                    location.pathname.startsWith('/confirm-email-change');
+                    location.pathname.startsWith('/confirm-email-change') ||
+                    (location.pathname === '/' && !!hasAuthToken);
 
   if (import.meta.env.DEV) {
     console.log('LayoutContent render:', { loading, hasUser: !!user, isAuthPage, path: location.pathname });
@@ -178,6 +180,40 @@ const LayoutContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   );
 };
 
+const RootRedirect: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = new URLSearchParams(location.search);
+
+  React.useEffect(() => {
+    const verify = params.get('verify');
+    const token = params.get('token');
+
+    if (verify && verify.length > 10) {
+      navigate(`/verify-email?verify=${encodeURIComponent(verify)}`, { replace: true });
+      return;
+    }
+    if (token && token.length > 10) {
+      const path = location.pathname;
+      if (path.includes('reset') || path.includes('password')) {
+        navigate(`/reset-password?token=${encodeURIComponent(token)}`, { replace: true });
+        return;
+      }
+      if (path.includes('confirm') || path.includes('email-change') || path.includes('change')) {
+        navigate(`/confirm-email-change?token=${encodeURIComponent(token)}`, { replace: true });
+        return;
+      }
+      if (location.pathname === '/' || location.pathname === '') {
+        navigate(`/reset-password?token=${encodeURIComponent(token)}`, { replace: true });
+        return;
+      }
+    }
+    navigate('/calendar', { replace: true });
+  }, [location.search, location.pathname, navigate, params]);
+
+  return null;
+};
+
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
@@ -187,7 +223,7 @@ const App: React.FC = () => {
           <ViewModeProvider>
           <LayoutContent>
             <Routes>
-              <Route path="/" element={<Navigate to="/calendar" replace />} />
+              <Route path="/" element={<RootRedirect />} />
               <Route path="/login" element={<Login />} />
               <Route path="/verify-email/:token" element={<VerifyEmail />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
