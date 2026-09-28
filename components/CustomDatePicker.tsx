@@ -515,7 +515,7 @@ const CustomDatePicker: React.FC<CustomDatePickerProps> = ({
                 value={inputValue}
                 onKeyDown={handleKeyDown}
                 onChange={handleInputChange}
-                onFocus={() => { if (!isMobile) setIsOpen(true); }}
+                onFocus={() => { if (isMobile) setIsOpen(true); }}
                 placeholder={isMobile ? "DD/MM/AAAA HH:mm" : "DD/MM/AAAA HH:mm"}
                 tabIndex={tabIndex}
                 className={`font-semibold text-sm bg-transparent border-none p-0 focus:ring-0 placeholder:text-slate-400 w-full outline-none transition-colors duration-200 ${isInvalid ? 'text-red-500' : value ? 'text-slate-800' : 'text-slate-800'}`}
