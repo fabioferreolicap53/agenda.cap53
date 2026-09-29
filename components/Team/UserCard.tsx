@@ -1,3 +1,4 @@
+import { toast } from '../../lib/toast';
 import React, { useState } from 'react';
 import { getAvatarUrl } from '../../lib/pocketbase';
 import { UsersResponse } from '../../lib/pocketbase-types';
@@ -53,7 +54,7 @@ export const UserCard: React.FC<UserCardProps> = ({
             setIsEditing(false);
         } catch (error) {
             console.error("Erro ao salvar perfil:", error);
-            alert("Erro ao salvar perfil. Verifique se você tem permissão para editar estes campos.");
+            toast.auto("Erro ao salvar perfil. Verifique se você tem permissão para editar estes campos.");
         } finally {
             setIsSaving(false);
         }

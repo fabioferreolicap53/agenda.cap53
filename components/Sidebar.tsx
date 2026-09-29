@@ -255,6 +255,17 @@ const Sidebar: React.FC = () => {
                   )}
                 </NavLink>
               )}
+
+              {(user?.role === 'ADMIN' || user?.role === 'USER' || user?.role === 'CE') && (
+                <NavLink to="/eventos-daps" className={linkClass} onClick={() => setSidebarOpen(false)}>
+                  {({ isActive }) => (
+                    <>
+                      <span className={iconClass(isActive)}>campaign</span>
+                      <p className="text-[12px] font-bold truncate">Eventos DAPS</p>
+                    </>
+                  )}
+                </NavLink>
+              )}
             </nav>
           </div>
 

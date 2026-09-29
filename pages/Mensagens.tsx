@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
@@ -304,7 +305,7 @@ const Chat: React.FC = () => {
     } catch (error: any) {
       console.error("Error sending message:", error);
       const errorMsg = error.response?.message || error.message || "Erro desconhecido";
-      alert(`Erro ao enviar mensagem: ${errorMsg}`);
+      toast.auto(`Erro ao enviar mensagem: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
@@ -393,7 +394,7 @@ const Chat: React.FC = () => {
           setConfirmationModalOpen(false);
         } catch (error) {
           console.error("Error hiding conversation:", error);
-          alert("Erro ao excluir conversa. Tente novamente.");
+          toast.auto("Erro ao excluir conversa. Tente novamente.");
         } finally {
           setLoading(false);
         }

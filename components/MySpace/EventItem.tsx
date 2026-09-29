@@ -66,27 +66,42 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
     let label = 'Participante';
     let icon = 'person';
     let classes = 'text-primary bg-primary/5 border-primary/20';
+    let title = 'Você foi definido como participante neste evento.';
 
-    if (role === 'ORGANIZADOR' || event.type === 'created') {
-      label = 'Organizador';
+    if (event.type === 'created') {
+      // Quem cria não é sempre organizador: em "Participação externa" quem cria
+      // apenas participa do evento.
+      const onlyParticipates = role === 'PARTICIPANTE';
+      label = 'Criador';
+      icon = 'workspace_premium';
+      classes = 'text-indigo-700 bg-indigo-50 border-indigo-200';
+      title = onlyParticipates
+        ? 'Você criou este evento e participa dele (participação externa).'
+        : 'Você criou este evento e é o organizador dele.';
+    } else if (role === 'ORGANIZADOR') {
+      label = 'Co-organizador';
       icon = 'assignment_ind';
       classes = 'text-primary bg-primary/10 border-primary/20';
+      title = 'Te definiram como organizador deste evento de outra pessoa.';
     } else if (event.requestStatus === 'pending') {
       label = 'Aguardando';
       icon = 'hourglass_top';
       classes = 'text-slate-500 bg-slate-50 border-slate-100';
+      title = 'Sua solicitação de participação aguarda aprovação.';
     } else if (event.participationStatus === 'withdrawn') {
       label = 'Desistente';
       icon = 'logout';
       classes = 'text-amber-700 bg-amber-50 border-amber-200';
+      title = 'Você retirou sua participação deste evento.';
     } else if (event.participationStatus === 'rejected') {
       label = 'Removido';
       icon = 'person_remove';
       classes = 'text-red-700 bg-red-50 border-red-200';
+      title = 'Você foi removido deste evento.';
     }
 
     return (
-      <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${classes}`}>
+      <span title={title} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${classes}`}>
         <span className="material-symbols-outlined text-[11px] sm:text-[12px]">{icon}</span>
         {label}
       </span>

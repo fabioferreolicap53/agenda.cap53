@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
@@ -317,24 +318,24 @@ const InformaticsManagement: React.FC = () => {
                     i.id !== editingId
                 );
                 if (existing) {
-                    alert('Já existe outro recurso com este nome.');
+                    toast.auto('Já existe outro recurso com este nome.');
                     return;
                 }
 
                 await pb.collection('agenda_cap53_itens_servico').update(editingId, itemData);
-                alert('Recurso atualizado com sucesso!');
+                toast.auto('Recurso atualizado com sucesso!');
                 setEditingId(null);
             } else {
                 const existing = items.find(i => 
                     i.name.toUpperCase().trim() === normalizedName
                 );
                 if (existing) {
-                    alert('Este recurso já existe.');
+                    toast.auto('Este recurso já existe.');
                     return;
                 }
 
                 await pb.collection('agenda_cap53_itens_servico').create(itemData);
-                alert('Recurso adicionado com sucesso!');
+                toast.auto('Recurso adicionado com sucesso!');
             }
             
             setNewItemName('');
@@ -344,7 +345,7 @@ const InformaticsManagement: React.FC = () => {
             fetchData();
         } catch (error: any) {
             console.error('Erro ao salvar recurso:', error);
-            alert(`Erro ao salvar recurso: ${error.message || 'Erro desconhecido'}`);
+            toast.auto(`Erro ao salvar recurso: ${error.message || 'Erro desconhecido'}`);
         }
     };
 
@@ -375,7 +376,7 @@ const InformaticsManagement: React.FC = () => {
         } catch (error: any) {
             console.error('Erro ao atualizar disponibilidade:', error);
             setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: previousStatus } : i));
-            alert(`Erro ao atualizar disponibilidade: ${error.message || 'Erro de conexão'}`);
+            toast.auto(`Erro ao atualizar disponibilidade: ${error.message || 'Erro de conexão'}`);
         }
     };
 

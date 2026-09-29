@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { pb } from '../lib/pocketbase';
@@ -248,7 +249,7 @@ const LocationManagement: React.FC = () => {
 
         if (!nameToUse) {
             console.log('Name is empty, returning');
-            alert('Por favor, insira o nome do local.');
+            toast.auto('Por favor, insira o nome do local.');
             return;
         }
         setAdding(true);
@@ -271,11 +272,11 @@ const LocationManagement: React.FC = () => {
         } catch (error: any) {
             console.error('Error adding location:', error);
             if (error.status === 404) {
-                alert(`Erro 404: A coleção 'agenda_cap53_locais' não foi encontrada. Verifique o setup.`);
+                toast.auto(`Erro 404: A coleção 'agenda_cap53_locais' não foi encontrada. Verifique o setup.`);
             } else if (error.status === 403) {
-                alert('Erro 403: Você não tem permissão para adicionar locais (ADMIN/CE).');
+                toast.auto('Erro 403: Você não tem permissão para adicionar locais (ADMIN/CE).');
             } else {
-                alert(`Erro ao adicionar local: ${error.data?.message || error.message}`);
+                toast.auto(`Erro ao adicionar local: ${error.data?.message || error.message}`);
             }
         } finally {
             setAdding(false);
@@ -297,7 +298,7 @@ const LocationManagement: React.FC = () => {
 
         if (!nameToUse) {
             console.log('Event type name is empty, returning');
-            alert('Por favor, insira o nome do tipo de evento.');
+            toast.auto('Por favor, insira o nome do tipo de evento.');
             return;
         }
         setAddingType(true);
@@ -318,11 +319,11 @@ const LocationManagement: React.FC = () => {
             console.error('Error adding event type:', error);
             // Se o erro for 404, pode ser o nome da coleção errado
             if (error.status === 404) {
-                alert(`Erro 404: A coleção 'agenda_cap53_tipos_evento' não foi encontrada no PocketBase. Verifique se o setup foi executado.`);
+                toast.auto(`Erro 404: A coleção 'agenda_cap53_tipos_evento' não foi encontrada no PocketBase. Verifique se o setup foi executado.`);
             } else if (error.status === 403) {
-                alert('Erro 403: Você não tem permissão para adicionar tipos de evento (ADMIN/CE).');
+                toast.auto('Erro 403: Você não tem permissão para adicionar tipos de evento (ADMIN/CE).');
             } else {
-                alert(`Erro ao adicionar tipo de evento: ${error.data?.message || error.message}`);
+                toast.auto(`Erro ao adicionar tipo de evento: ${error.data?.message || error.message}`);
             }
         } finally {
             setAddingType(false);
@@ -336,7 +337,7 @@ const LocationManagement: React.FC = () => {
             });
         } catch (error) {
             console.error('Error toggling event type status:', error);
-            alert('Erro ao atualizar status do tipo de evento.');
+            toast.auto('Erro ao atualizar status do tipo de evento.');
         }
     };
 
@@ -415,7 +416,7 @@ const LocationManagement: React.FC = () => {
             } else {
                 errorMsg = `Erro: ${error.data?.message || error.message}`;
             }
-            alert(errorMsg);
+            toast.auto(errorMsg);
         }
     };
 
@@ -459,7 +460,7 @@ const LocationManagement: React.FC = () => {
             } else {
                 errorMsg = `Erro: ${error.data?.message || error.message}`;
             }
-            alert(errorMsg);
+            toast.auto(errorMsg);
         }
     };
 
@@ -506,7 +507,7 @@ const LocationManagement: React.FC = () => {
             fetchData();
         } catch (error) {
             console.error('Error updating location access:', error);
-            alert('Erro ao atualizar acesso do local.');
+            toast.auto('Erro ao atualizar acesso do local.');
         }
     };
 

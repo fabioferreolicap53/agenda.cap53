@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import { pb } from '../lib/pocketbase';
 import { NotificationRecord, isNotificationDeletable } from '../lib/notifications';
 import { useAuth } from '../components/AuthContext';
@@ -84,7 +85,7 @@ export const useNotificationActions = (
     const { canDelete, reason } = isNotificationDeletable(notification);
     
     if (!canDelete) {
-      alert(reason || 'Esta notificação não pode ser excluída no momento.');
+      toast.auto(reason || 'Esta notificação não pode ser excluída no momento.');
       return;
     }
 
@@ -106,7 +107,7 @@ export const useNotificationActions = (
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
-      alert('Erro ao excluir notificação.');
+      toast.auto('Erro ao excluir notificação.');
     }
   };
 
@@ -292,8 +293,11 @@ export const useNotificationActions = (
       }
       // 2. CASO: Decisão de Transporte
       else if (notification.type === 'transport_request') {
-        const rawEventId = notification.event;
-        const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+        const rawEventId = notification.event as unknown;
+        const eventId: string | undefined =
+          typeof rawEventId === 'object' && rawEventId !== null
+            ? (rawEventId as { id?: string }).id
+            : (rawEventId as string | undefined);
         
         if (!eventId) {
             console.error('handleDecision: eventId is missing for transport_request');

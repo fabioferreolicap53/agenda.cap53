@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
@@ -426,12 +427,12 @@ const AlmacManagement: React.FC = () => {
                     i.id !== editingId
                 );
                 if (existing) {
-                    alert('Já existe outro item com este nome nesta categoria.');
+                    toast.auto('Já existe outro item com este nome nesta categoria.');
                     return;
                 }
 
                 await pb.collection('agenda_cap53_itens_servico').update(editingId, itemData);
-                alert('Item atualizado com sucesso!');
+                toast.auto('Item atualizado com sucesso!');
                 setEditingId(null);
             } else {
                 const existing = items.find(i => 
@@ -439,12 +440,12 @@ const AlmacManagement: React.FC = () => {
                     i.category.toUpperCase() === normalizedCategory
                 );
                 if (existing) {
-                    alert('Este item já existe nesta categoria.');
+                    toast.auto('Este item já existe nesta categoria.');
                     return;
                 }
 
                 await pb.collection('agenda_cap53_itens_servico').create(itemData);
-                alert('Item adicionado com sucesso!');
+                toast.auto('Item adicionado com sucesso!');
             }
             
             setNewItemName('');
@@ -454,7 +455,7 @@ const AlmacManagement: React.FC = () => {
             fetchData();
         } catch (error: any) {
             console.error('Erro ao salvar item:', error);
-            alert(`Erro ao salvar item: ${error.message || 'Erro desconhecido'}`);
+            toast.auto(`Erro ao salvar item: ${error.message || 'Erro desconhecido'}`);
         }
     };
 
@@ -486,7 +487,7 @@ const AlmacManagement: React.FC = () => {
         } catch (error: any) {
             console.error('Erro ao atualizar disponibilidade:', error);
             setItems(prev => prev.map(i => i.id === itemId ? { ...i, is_available: previousStatus } : i));
-            alert(`Erro ao atualizar disponibilidade: ${error.message || 'Erro de conexão'}`);
+            toast.auto(`Erro ao atualizar disponibilidade: ${error.message || 'Erro de conexão'}`);
         }
     };
 
@@ -530,7 +531,7 @@ const AlmacManagement: React.FC = () => {
                     setConfirmationModalOpen(false);
                 } catch (error) {
                     console.error('Error deleting history record:', error);
-                    alert('Erro ao excluir registro do histórico.');
+                    toast.auto('Erro ao excluir registro do histórico.');
                 }
             }
         });
@@ -554,7 +555,7 @@ const AlmacManagement: React.FC = () => {
                     setConfirmationModalOpen(false);
                 } catch (error) {
                     console.error('Error clearing history:', error);
-                    alert('Erro ao limpar o histórico.');
+                    toast.auto('Erro ao limpar o histórico.');
                 } finally {
                     setLoading(false);
                 }

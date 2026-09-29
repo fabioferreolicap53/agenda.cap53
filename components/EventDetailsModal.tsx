@@ -1,3 +1,5 @@
+import { toast } from '../lib/toast';
+import { confirmDialog } from '../lib/dialog';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -13,7 +15,7 @@ import {
 } from '../lib/pocketbase-types';
 import { notificationService } from '../lib/notifications';
 import { getEstimatedParticipants } from '../lib/eventUtils';
-import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
+import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS, getInvolvementLabel } from '../lib/constants';
 import CustomSelect from './CustomSelect';
 import EventChatModal from './EventChatModal';
 import ReRequestModal from './ReRequestModal';
@@ -118,7 +120,12 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
         };
 
   const handleRemoveParticipant = async (participantId: string, participantName: string) => {
-    if (!confirm(`Tem certeza que deseja retirar a participação de ${participantName}?`)) return;
+    if (!(await confirmDialog({
+      title: 'Retirar participação',
+      message: `Tem certeza que deseja retirar a participação de ${participantName}?`,
+      detail: 'O participante deixará de constar na lista do evento.',
+      confirmLabel: 'Sim, retirar',
+    }))) return;
     
     try {
       const participants = event.participants || [];
@@ -193,10 +200,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       }
 
       await refreshEvent();
-      alert('Participação removida com sucesso.');
+      toast.auto('Participação removida com sucesso.');
     } catch (err) {
       console.error('Error removing participant:', err);
-      alert('Erro ao remover participante.');
+      toast.auto('Erro ao remover participante.');
     }
   };
 
@@ -406,10 +413,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           }) as EventsResponse<EventExpand>;
           setEvent(freshEvent);
 
-          alert(action === 'approve' ? 'Solicitação aprovada com sucesso!' : 'Solicitação recusada.');
+          toast.auto(action === 'approve' ? 'Solicitação aprovada com sucesso!' : 'Solicitação recusada.');
       } catch (err) {
           console.error('Error handling request action:', err);
-          alert('Erro ao processar ação.');
+          toast.auto('Erro ao processar ação.');
       }
   };
 
@@ -477,10 +484,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           // 3. Update local state
           setRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action === 'approve' ? 'approved' : 'rejected' } : r));
           
-          alert(action === 'approve' ? 'Recurso aprovado!' : 'Recurso recusado.');
+          toast.auto(action === 'approve' ? 'Recurso aprovado!' : 'Recurso recusado.');
       } catch (err) {
           console.error('Error handling resource action:', err);
-          alert('Erro ao processar ação.');
+          toast.auto('Erro ao processar ação.');
       }
   };
 
@@ -489,20 +496,20 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     
     // Verifica se o evento está cancelado
     if (isCancelled) {
-      alert('Este evento foi cancelado e não aceita novas participações.');
+      toast.auto('Este evento foi cancelado e não aceita novas participações.');
       return;
     }
 
     // Verifica se o evento é restrito
     if (event.is_restricted) {
-      alert('Este evento é restrito e não permite novas participações.');
+      toast.auto('Este evento é restrito e não permite novas participações.');
       return;
     }
 
     // Safety check for restricted roles
     // Permite que CE solicite participação, removendo-o da lista de bloqueio
     if (['TRA', 'ALMC', 'DCA'].includes(user.role as string)) {
-      alert('Seu perfil não possui permissão para participar de eventos.');
+      toast.auto('Seu perfil não possui permissão para participar de eventos.');
       return;
     }
 
@@ -565,10 +572,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       await refreshEvent();
       setShowRequestForm(false);
       setRequestMessage('');
-      alert('Participação confirmada com sucesso!');
+      toast.auto('Participação confirmada com sucesso!');
     } catch (err) {
       console.error('Error joining event:', err);
-      alert('Erro ao ingressar no evento.');
+      toast.auto('Erro ao ingressar no evento.');
     } finally {
       setIsRequesting(false);
     }
@@ -779,11 +786,11 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       
       // Refresh event data to update UI
       await refreshEvent();
-      alert(status === 'accepted' ? 'Convite aceito!' : 'Convite recusado.');
+      toast.auto(status === 'accepted' ? 'Convite aceito!' : 'Convite recusado.');
     } catch (err) {
       console.error('Error responding to invitation:', err);
       const msg = (err as any).data?.message || (err as Error).message || 'Erro desconhecido';
-      alert(`Erro ao processar resposta: ${msg}`);
+      toast.auto(`Erro ao processar resposta: ${msg}`);
     }
   };
 
@@ -840,10 +847,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
             setRefusalModalOpen(false);
         }
         
-        alert(decision === 'confirmed' ? 'Transporte confirmado!' : 'Transporte recusado!');
+        toast.auto(decision === 'confirmed' ? 'Transporte confirmado!' : 'Transporte recusado!');
     } catch (err) {
         console.error('Error processing transport decision:', err);
-        alert('Erro ao processar decisão de transporte.');
+        toast.auto('Erro ao processar decisão de transporte.');
     } finally {
         setProcessingTransport(false);
     }
@@ -964,7 +971,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     const text = `📅 ${event.title}\n🕒 ${startDate.toLocaleDateString('pt-BR')} ${startDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} - ${endDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}\n📍 ${locationName}\n\n🔗 Link: ${link}`;
     
     navigator.clipboard.writeText(text);
-    alert('Link e detalhes copiados para a área de transferência!');
+    toast.auto('Link e detalhes copiados para a área de transferência!');
   };
 
   const toggleItemAvailability = async (reqId: string, currentAvailability: boolean) => {
@@ -995,7 +1002,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
       }));
     } catch (error) {
       console.error('Error toggling item availability:', error);
-      alert('Erro ao atualizar disponibilidade do item.');
+      toast.auto('Erro ao atualizar disponibilidade do item.');
     }
   };
 
@@ -1994,7 +2001,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         <button 
                             onClick={() => {
                                 if (hasLogisticsRequests) {
-                                    alert('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
+                                    toast.auto('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
                                     return;
                                 }
                                 onDelete(event);
@@ -2103,7 +2110,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                             <div>
                                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Responsabilidade / Envolvimento</h3>
                                 <p className="text-[11px] font-bold text-slate-500 mt-0.5">Resp: <span className="font-bold text-slate-800">{RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label || event.event_responsibility || 'Não definido'}</span></p>
-                                <p className="text-[11px] font-bold text-slate-500">Env: <span className="font-bold text-slate-800">{INVOLVEMENT_LEVELS.find(l => l.value === event.creator_role)?.label || event.creator_role || 'Não definido'}</span></p>
+                                <p className="text-[11px] font-bold text-slate-500">Env: <span className="font-bold text-slate-800">{getInvolvementLabel(event.creator_role) || 'Não definido'}</span></p>
                             </div>
                             <div>
                                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 border-b border-slate-100 pb-0.5">Detalhes de Acesso</h3>

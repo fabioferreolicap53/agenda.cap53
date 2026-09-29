@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
@@ -454,7 +455,7 @@ const Notifications: React.FC = () => {
         }
 
         if (!guestId || !eventId) {
-            alert('Não foi possível identificar o usuário ou evento para reenviar o convite. (Dados antigos ou incompletos)');
+            toast.auto('Não foi possível identificar o usuário ou evento para reenviar o convite. (Dados antigos ou incompletos)');
             setProcessingId(null);
             return;
         }
@@ -466,7 +467,7 @@ const Notifications: React.FC = () => {
                  eventRecord = await pb.collection('agenda_cap53_eventos').getOne(eventId, { expand: 'user' });
             }
         } catch (e) {
-            alert('O evento associado a este convite não existe mais.');
+            toast.auto('O evento associado a este convite não existe mais.');
             setProcessingId(null);
             return;
         }
@@ -664,17 +665,17 @@ const Notifications: React.FC = () => {
         } catch (e: any) {
             console.error('CRITICAL: Could not update refusal notification status', e);
             const errorDetails = e.data?.data ? JSON.stringify(e.data.data) : e.message;
-            alert(`Aviso: O convite foi enviado ao convidado, mas houve um erro ao salvar o histórico no seu painel. Detalhes do erro: ${errorDetails}`);
+            toast.auto(`Aviso: O convite foi enviado ao convidado, mas houve um erro ao salvar o histórico no seu painel. Detalhes do erro: ${errorDetails}`);
         }
 
         // Refresh UI
         await refresh();
         setReInviteNotification(null);
-        alert('Convite reenviado com sucesso!');
+        toast.auto('Convite reenviado com sucesso!');
 
     } catch (error: any) {
         console.error('Erro ao reenviar convite:', error);
-        alert('Erro ao reenviar convite: ' + error.message);
+        toast.auto('Erro ao reenviar convite: ' + error.message);
     } finally {
         setProcessingId(null);
     }
@@ -706,7 +707,7 @@ const Notifications: React.FC = () => {
         setRejectingNotification(null);
     } catch (error) {
         console.error('Error rejecting notification:', error);
-        alert('Erro ao processar recusa. Tente novamente.');
+        toast.auto('Erro ao processar recusa. Tente novamente.');
     } finally {
         setProcessingId(null);
     }
@@ -887,7 +888,7 @@ const Notifications: React.FC = () => {
         }
 
         if (!silent) {
-            alert(`Concluído! ${count} notificações foram corrigidas e salvas permanentemente. ${errors > 0 ? `(${errors} falhas de permissão)` : ''}`);
+            toast.auto(`Concluído! ${count} notificações foram corrigidas e salvas permanentemente. ${errors > 0 ? `(${errors} falhas de permissão)` : ''}`);
             window.location.reload();
         } else if (count > 0) {
             console.log(`Auto-repaired ${count} notifications.`);
@@ -896,7 +897,7 @@ const Notifications: React.FC = () => {
 
     } catch (e: any) {
         console.error(e);
-        if (!silent) alert('Erro ao executar correção local: ' + (e.message || e));
+        if (!silent) toast.auto('Erro ao executar correção local: ' + (e.message || e));
     }
   };
 

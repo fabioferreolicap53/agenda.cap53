@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { pb } from '../lib/pocketbase';
 import { useAuth } from '../components/AuthContext';
@@ -214,7 +215,7 @@ const TransportManagement: React.FC = () => {
         }
 
         if (!targetUserId) {
-            alert('ERRO CRÍTICO: Não foi possível identificar o usuário criador do evento para enviar a notificação. A operação será abortada.');
+            toast.auto('ERRO CRÍTICO: Não foi possível identificar o usuário criador do evento para enviar a notificação. A operação será abortada.');
             setProcessingDecision(false);
             return;
         }
@@ -253,7 +254,7 @@ const TransportManagement: React.FC = () => {
                 console.error("Erro ao atualizar evento (possível erro de hook):", updateErr);
                 // Mesmo que dê erro no update (ex: hook falhando), tentamos enviar a notificação se o status for 400/500
                 // mas alertamos o usuário
-                alert(`Aviso: O status do evento foi enviado, mas o servidor retornou um erro: ${updateErr.message}. Tentaremos enviar a notificação mesmo assim.`);
+                toast.auto(`Aviso: O status do evento foi enviado, mas o servidor retornou um erro: ${updateErr.message}. Tentaremos enviar a notificação mesmo assim.`);
             }
             
             // Sync with Notifications: Find and update related transport_request notifications
@@ -285,13 +286,13 @@ const TransportManagement: React.FC = () => {
                 setSelectedEventId(null);
             }
 
-            alert(`Decisão registrada com sucesso!\n\nA solicitação foi ${actionText}. O solicitante será notificado automaticamente pelo sistema.`);
+            toast.auto(`Decisão registrada com sucesso!\n\nA solicitação foi ${actionText}. O solicitante será notificado automaticamente pelo sistema.`);
             
             fetchTransportRequests();
         } catch (err: any) {
             console.error(`Error processing transport ${status}:`, err);
             const errorMsg = err.data?.message || err.message || 'Erro desconhecido';
-            alert(`Erro ao atualizar evento: ${errorMsg}`);
+            toast.auto(`Erro ao atualizar evento: ${errorMsg}`);
         } finally {
             setProcessingDecision(false);
         }

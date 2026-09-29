@@ -1,3 +1,5 @@
+import { toast } from '../lib/toast';
+import { confirmDialog } from '../lib/dialog';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -979,7 +981,12 @@ const Calendar: React.FC = () => {
 
   const handleQuickLeave = async (event: CalendarEvent) => {
     if (!user) return;
-    if (!confirm(`Tem certeza que deseja sair do evento "${event.title}"?`)) return;
+    if (!(await confirmDialog({
+      title: 'Sair do evento',
+      message: `Tem certeza que deseja sair do evento "${event.title}"?`,
+      detail: 'Sua participação será removida da lista do evento.',
+      confirmLabel: 'Sim, sair',
+    }))) return;
     setQuickJoinLoading(event.id);
     try {
       const currentParticipants = event.participants || [];
@@ -1052,7 +1059,7 @@ const Calendar: React.FC = () => {
       }
     } catch (error) {
       console.error('Error cancelling event:', error);
-      alert('Erro ao cancelar evento.');
+      toast.auto('Erro ao cancelar evento.');
     } finally {
         setProcessingCancellation(false);
         setRefusalModalOpen(false);
@@ -1065,7 +1072,7 @@ const Calendar: React.FC = () => {
     const hasLogisticsRequests = (event.almac_requests && event.almac_requests.length > 0) || event.transporte_suporte === true;
     
     if (hasLogisticsRequests) {
-        alert('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
+        toast.auto('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
         return;
     }
 
@@ -1094,7 +1101,7 @@ const Calendar: React.FC = () => {
             } catch (error) {
                 console.error('Error deleting event:', error);
                 const msg = error instanceof Error ? error.message : 'Erro desconhecido';
-                alert(`Erro ao excluir evento: ${msg}`);
+                toast.auto(`Erro ao excluir evento: ${msg}`);
             }
         }
     });
@@ -1107,7 +1114,7 @@ const Calendar: React.FC = () => {
 
   const handleDayDoubleClick = (date: Date) => {
     if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-        alert('Você não tem permissão para criar eventos.');
+        toast.auto('Você não tem permissão para criar eventos.');
         return;
     }
 
@@ -1519,7 +1526,7 @@ const Calendar: React.FC = () => {
                           onClick={(e) => {
                             e.stopPropagation();
                             if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-                              alert('Você não tem permissão para criar eventos.');
+                              toast.auto('Você não tem permissão para criar eventos.');
                               return;
                             }
                             const y = dateObj.date.getFullYear();
@@ -1621,7 +1628,7 @@ const Calendar: React.FC = () => {
                         <button 
                           onClick={() => {
                             if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-                              alert('Você não tem permissão para criar eventos.');
+                              toast.auto('Você não tem permissão para criar eventos.');
                               return;
                             }
                             const y = date.getFullYear();
@@ -1712,7 +1719,7 @@ const Calendar: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-                            alert('Você não tem permissão para criar eventos.');
+                            toast.auto('Você não tem permissão para criar eventos.');
                             return;
                           }
                           const y = date.getFullYear();
@@ -1856,7 +1863,7 @@ const Calendar: React.FC = () => {
                         <button 
                           onClick={() => {
                             if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-                              alert('Você não tem permissão para criar eventos.');
+                              toast.auto('Você não tem permissão para criar eventos.');
                               return;
                             }
                             const y = date.getFullYear();
@@ -1960,7 +1967,7 @@ const Calendar: React.FC = () => {
                   <button 
                     onClick={() => {
                       if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-                        alert('Você não tem permissão para criar eventos.');
+                        toast.auto('Você não tem permissão para criar eventos.');
                         return;
                       }
                       const y = currentDate.getFullYear();
@@ -2124,7 +2131,7 @@ const Calendar: React.FC = () => {
                                 <button 
                                   onClick={() => {
                                     if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-                                      alert('Você não tem permissão para criar eventos.');
+                                      toast.auto('Você não tem permissão para criar eventos.');
                                       return;
                                     }
                                     const y = date.getFullYear();
@@ -2192,7 +2199,7 @@ const Calendar: React.FC = () => {
                                     <button 
                                         onClick={() => {
                                             if (user && ['DCA', 'ALMC', 'TRA'].includes(user.role)) {
-                                                alert('Você não tem permissão para criar eventos.');
+                                                toast.auto('Você não tem permissão para criar eventos.');
                                                 return;
                                             }
                                             const y = date.getFullYear();
@@ -2442,15 +2449,10 @@ const CalendarTooltip: React.FC<{
   const roleBreakdown: Record<string, number> = {};
   let totalConfirmed = 0;
 
-  const addRoleToBreakdown = (userId: string, roleValue: string) => {
-    let label = '';
-    if (userId === event.user) {
-      label = 'Criador e Participante';
-    } else {
-            const r = roleValue.toUpperCase();
-            const level = INVOLVEMENT_LEVELS.find(l => l.value === r);
-            label = level ? level.label : 'Participante';
-          }
+  const addRoleToBreakdown = (roleValue: string) => {
+    const r = (roleValue || '').toUpperCase();
+    const level = INVOLVEMENT_LEVELS.find(l => l.value === r);
+    const label = level ? level.label : 'Participante';
     roleBreakdown[label] = (roleBreakdown[label] || 0) + 1;
   };
 
@@ -2458,15 +2460,15 @@ const CalendarTooltip: React.FC<{
     if (status === 'accepted') {
       totalConfirmed++;
       const role = pRoles[userId] || 'PARTICIPANTE';
-      addRoleToBreakdown(userId, role);
+      addRoleToBreakdown(role);
     }
   });
 
-  // Se o criador não estiver na lista de participantes confirmados, 
-  // mas quisermos considerá-lo (geralmente o criador é o organizador padrão)
+  // Se o organizador não estiver na lista de participantes confirmados,
+  // mas quisermos considerá-lo (geralmente o organizador é o papel padrão)
   if (event.user && !pStatus[event.user]) {
     totalConfirmed++;
-    addRoleToBreakdown(event.user, event.creator_role || 'ORGANIZADOR');
+    addRoleToBreakdown(event.creator_role || 'ORGANIZADOR');
   }
 
   const getStatusStyle = (status: string) => {
@@ -2734,7 +2736,8 @@ const CalendarEventCard: React.FC<CalendarEventCardProps> = ({ event, user, onCa
   // Helper to determine involvement level
   const getInvolvementLevel = () => {
     if (!user?.id) return null;
-    if (event.user === user.id) return { label: 'Criador', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' };
+    // O responsável pelo evento é sempre exibido como Organizador.
+    if (event.user === user.id) return { label: 'Organizador', color: 'bg-indigo-50 text-indigo-700 border-indigo-100' };
     
     // Check role in participants_roles first
     const roleValue = (event.participants_roles?.[user.id] || '').toUpperCase();

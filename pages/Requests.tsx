@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthContext';
@@ -339,20 +340,20 @@ const Requests: React.FC = () => {
             await fetchHistoryNotifications(1, false);
         } catch (error) {
             console.error('Error handling action:', error);
-            alert('Erro ao processar a ação. Tente novamente.');
+            toast.auto('Erro ao processar a ação. Tente novamente.');
         }
     };
 
     const handleAlmcItemNotificationDecision = async (notification: any, action: 'approved' | 'rejected') => {
         try {
             if (!user || (user.role !== 'ALMC' && user.role !== 'DCA' && user.role !== 'ADMIN')) {
-                alert('Ação não permitida.');
+                toast.auto('Ação não permitida.');
                 return;
             }
 
             const requestId = notification.related_request || notification.expand?.related_request?.id;
             if (!requestId) {
-                alert('Solicitação vinculada não encontrada nesta notificação.');
+                toast.auto('Solicitação vinculada não encontrada nesta notificação.');
                 return;
             }
 
@@ -392,7 +393,7 @@ const Requests: React.FC = () => {
             await fetchHistoryNotifications(1, false);
         } catch (error) {
             console.error('Error handling ALMC item decision:', error);
-            alert('Erro ao processar a solicitação.');
+            toast.auto('Erro ao processar a solicitação.');
         }
     };
 
@@ -433,7 +434,7 @@ const Requests: React.FC = () => {
             setRefusalTarget(null);
         } catch (error) {
             console.error('Error confirming refusal:', error);
-            alert('Erro ao confirmar recusa.');
+            toast.auto('Erro ao confirmar recusa.');
         } finally {
             setProcessingRefusal(false);
         }
@@ -445,7 +446,7 @@ const Requests: React.FC = () => {
         if (notification) {
             const { canDelete, reason } = isNotificationDeletable(notification);
             if (!canDelete) {
-                alert(reason || 'Não é possível excluir esta notificação.');
+                toast.auto(reason || 'Não é possível excluir esta notificação.');
                 return;
             }
         }
@@ -464,7 +465,7 @@ const Requests: React.FC = () => {
                     setConfirmationModalOpen(false);
                 } catch (error) {
                     console.error('Error deleting notification:', error);
-                    alert('Erro ao excluir a notificação.');
+                    toast.auto('Erro ao excluir a notificação.');
                 }
             }
         });
@@ -486,7 +487,7 @@ const Requests: React.FC = () => {
                     const result = await pb.send('/api/notifications/clear_safe?read_only=true', { method: 'POST' });
 
                     if (result.skipped > 0) {
-                        alert(`Histórico limpo parcialmente. ${result.skipped} notificações não foram excluídas pois estão vinculadas a eventos futuros.`);
+                        toast.auto(`Histórico limpo parcialmente. ${result.skipped} notificações não foram excluídas pois estão vinculadas a eventos futuros.`);
                     } else {
                         setActionMessage('Todo o histórico foi limpo.');
                         setTimeout(() => setActionMessage(null), 5000);
@@ -497,7 +498,7 @@ const Requests: React.FC = () => {
                     setConfirmationModalOpen(false);
                 } catch (error) {
                     console.error('Error clearing history:', error);
-                    alert('Erro ao limpar o histórico.');
+                    toast.auto('Erro ao limpar o histórico.');
                 } finally {
                     setHistoryLoading(false);
                 }
@@ -645,7 +646,7 @@ const Requests: React.FC = () => {
         currentJustification?: string
     ) => {
         if (currentStatus && currentStatus !== 'pending' && user?.role !== 'ADMIN') {
-            alert('Esta solicitação já foi decidida e não pode ser alterada.');
+            toast.auto('Esta solicitação já foi decidida e não pode ser alterada.');
             return;
         }
 
@@ -798,11 +799,11 @@ const Requests: React.FC = () => {
 
             // Local update
             setAlmacRequests(prev => prev.map(r => r.id === requestId ? { ...r, status: action, justification } : r));
-            alert(`Solicitação ${action === 'approved' ? 'aprovada' : 'reprovada'} com sucesso!`);
+            toast.auto(`Solicitação ${action === 'approved' ? 'aprovada' : 'reprovada'} com sucesso!`);
 
         } catch (error: any) {
             console.error('Error updating request:', error);
-            alert(`Erro ao atualizar solicitação: ${error.message}`);
+            toast.auto(`Erro ao atualizar solicitação: ${error.message}`);
         }
     };
 

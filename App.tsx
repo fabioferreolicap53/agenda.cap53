@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Notifications from './pages/Notifications';
 import Requests from './pages/Requests';
 import MyInvolvement from './pages/MyInvolvement';
+import DapsEvents from './pages/DapsEvents';
 import AlmacManagement from './pages/AlmacManagement';
 import InformaticsManagement from './pages/InformaticsManagement';
 import TransportManagement from './pages/TransportManagement';
@@ -22,6 +23,8 @@ import Header from './components/Header';
 import { AuthProvider, useAuth, UserRole } from './components/AuthContext';
 import { ViewModeProvider, useViewMode } from './components/ViewModeContext';
 import InstallBanner from './components/InstallBanner';
+import ToastHost from './components/ToastHost';
+import ConfirmHost from './components/ConfirmHost';
 
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
   constructor(props: { children: React.ReactNode }) {
@@ -219,6 +222,8 @@ const App: React.FC = () => {
     <ErrorBoundary>
       <BrowserRouter>
         <ScrollToTop />
+        <ToastHost />
+        <ConfirmHost />
         <AuthProvider>
           <ViewModeProvider>
           <LayoutContent>
@@ -242,6 +247,7 @@ const App: React.FC = () => {
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/requests" element={<Navigate to="/notifications" replace />} />
               <Route path="/meu-envolvimento" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><MyInvolvement /></ProtectedRoute>} />
+              <Route path="/eventos-daps" element={<ProtectedRoute roles={['ADMIN', 'USER', 'CE']}><DapsEvents /></ProtectedRoute>} />
               <Route path="/almoxarifado" element={<ProtectedRoute roles={['ADMIN', 'ALMC']}><AlmacManagement /></ProtectedRoute>} />
               <Route path="/informatica" element={<ProtectedRoute roles={['ADMIN', 'DCA']}><InformaticsManagement /></ProtectedRoute>} />
               <Route path="/transporte" element={<ProtectedRoute roles={['ADMIN', 'TRA']}><TransportManagement /></ProtectedRoute>} />

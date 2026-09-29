@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
@@ -11,7 +12,7 @@ import CustomTimePicker from '../components/CustomTimePicker';
 import LocationField, { LocationState, normalizeBoolean } from '../components/LocationField';
 import ConflictModal from '../components/ConflictModal';
 import LogisticsWarningModal from '../components/LogisticsWarningModal';
-import { EVENT_TYPES_ORDER, INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS } from '../lib/constants';
+import { EVENT_TYPES_ORDER, INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS, CREATOR_INVOLVEMENT_BY_RESPONSIBILITY } from '../lib/constants';
 
 const UNIDADES = [
   'CF ALICE DE JESUS REGO', 'CF DEOLINDO COUTO', 'CF EDSON ABDALLA SAAD',
@@ -72,7 +73,7 @@ const CreateEvent: React.FC = () => {
     if (user) {
         const restrictedRoles = ['DCA', 'ALMC', 'TRA'];
         if (restrictedRoles.includes(user.role)) {
-            alert('Você não tem permissão para criar eventos.');
+            toast.auto('Você não tem permissão para criar eventos.');
             navigate('/calendar', { replace: true });
         }
     }
@@ -160,7 +161,7 @@ const CreateEvent: React.FC = () => {
     const activeTypes = eventTypes.filter(t => t.active !== false);
     
     // Ordenar: LEMBRETE sempre por último, depois tipos no EVENT_TYPES_ORDER primeiro, depois o resto alfabeticamente
-    return [...activeTypes].sort((a, b) => {
+    const options = [...activeTypes].sort((a, b) => {
       const nameA = String(a.name || '').trim().toUpperCase();
       const nameB = String(b.name || '').trim().toUpperCase();
       
@@ -186,6 +187,19 @@ const CreateEvent: React.FC = () => {
         description: isLembrete ? 'Registro pessoal' : undefined
       };
     });
+
+    // Opção especial "EVENTO DAPS": diferenciada igual ao LEMBRETE (ícone + subtítulo).
+    // Fica por último na lista.
+    if (!options.some(o => o.value.trim().toUpperCase() === 'EVENTO DAPS')) {
+      options.push({
+        value: 'EVENTO DAPS',
+        label: 'EVENTO DAPS',
+        icon: 'campaign',
+        description: 'Evento de mobilização da equipe DAPS'
+      });
+    }
+
+    return options;
   }, [eventTypes]);
   const [isTransportTimeInvalid, setIsTransportTimeInvalid] = useState(false);
   const [isConflictCheckLoading, setIsConflictCheckLoading] = useState(false);
@@ -203,8 +217,9 @@ const CreateEvent: React.FC = () => {
   // Handle auto-selections based on Type & Natureza
   useEffect(() => {
     if (type?.trim().toUpperCase() === 'LEMBRETE') {
+      // Marca como "Não se aplica" — o nível de envolvimento é tratado pelo
+      // efeito da responsabilidade (ver abaixo).
       setResponsibility('NAO_SE_APLICA');
-      setInvolvementLevel('ORGANIZADOR');
     }
   }, [type]);
 
@@ -218,15 +233,24 @@ const CreateEvent: React.FC = () => {
   }, [locationState.fixedId]);
 
   // Handle auto-selections based on Responsibility
+  // Fonte única da regra "Responsabilidade pela organização -> Seu Nível de
+  // Envolvimento". Vale para criação E edição (eventos antigos são normalizados).
   useEffect(() => {
+    if (!responsibility) {
+      setInvolvementLevel('');
+      return;
+    }
+
+    const definedLevel = CREATOR_INVOLVEMENT_BY_RESPONSIBILITY[responsibility];
+    if (definedLevel) {
+      setInvolvementLevel(definedLevel);
+    }
+
     if (responsibility === 'NAO_SE_APLICA') {
-      setInvolvementLevel('ORGANIZADOR');
       // Limpa os campos restritos
       setEstimatedParticipants('');
       setEnvolverProfissionais(false);
       setLogisticaRecursos(false);
-    } else if (responsibility === 'EXTERNO_COMPROMISSO') {
-      setInvolvementLevel('PARTICIPANTE');
     }
   }, [responsibility]);
 
@@ -234,6 +258,10 @@ const CreateEvent: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [creatorId, setCreatorId] = useState<string | null>(null);
+
+  // A seção "Convidar" só libera a seleção depois que "Responsabilidade pela
+  // organização" e "Seu Nível de Envolvimento" estiverem definidos.
+  const isInviteLocked = !responsibility || !involvementLevel;
 
   // Sync with global search
   useEffect(() => {
@@ -348,22 +376,22 @@ const CreateEvent: React.FC = () => {
 
   const saveEvent = async () => {
     if (!dateStart || (!noEndPreview && !dateEnd)) {
-      alert('Por favor, selecione as datas de início e fim.');
+      toast.auto('Por favor, selecione as datas de início e fim.');
       return;
     }
 
     if (isDateInvalid) {
-      alert('A data de início não pode ser posterior à data de término.');
+      toast.auto('A data de início não pode ser posterior à data de término.');
       return;
     }
 
     if (isDurationInvalid) {
-      alert('A duração do evento não pode exceder 23 horas e 59 minutos.');
+      toast.auto('A duração do evento não pode exceder 23 horas e 59 minutos.');
       return;
     }
 
     if (!involvementLevel) {
-      alert('Por favor, selecione o nível de envolvimento.');
+      toast.auto('Por favor, selecione o nível de envolvimento.');
       return;
     }
 
@@ -555,7 +583,7 @@ const CreateEvent: React.FC = () => {
               event: eventId,
               user: participantId,
               status: 'accepted',
-              role: participantsRoles[participantId] || involvementLevel || 'PARTICIPANTE'
+              role: participantsRoles[participantId] || 'PARTICIPANTE'
             })
           ));
 
@@ -815,7 +843,7 @@ const CreateEvent: React.FC = () => {
             }
           } catch (reqErr: any) {
             console.error('Falha ao criar/atualizar solicitações de logística:', reqErr);
-            alert(`Evento salvo, mas houve erro ao atualizar itens: ${reqErr.message || 'Erro desconhecido'}`);
+            toast.auto(`Evento salvo, mas houve erro ao atualizar itens: ${reqErr.message || 'Erro desconhecido'}`);
           }
       }
 
@@ -981,11 +1009,11 @@ const CreateEvent: React.FC = () => {
         details: { title, type, location: locationState.fixedId }
       });
 
-      alert(isEditing ? 'Evento atualizado!' : 'Evento criado!');
+      toast.auto(isEditing ? 'Evento atualizado!' : 'Evento criado!');
       navigate('/calendar');
     } catch (err: any) {
       console.error('Erro na submissão:', err);
-      alert(`Erro ao salvar: ${err.message || 'Erro desconhecido'}`);
+      toast.auto(`Erro ao salvar: ${err.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
@@ -995,7 +1023,7 @@ const CreateEvent: React.FC = () => {
   /*
   useEffect(() => {
     if (user && (user.role === 'ALMC' || user.role === 'TRA')) {
-      alert('Aviso: Usuários ALMC e TRA não podem criar eventos.');
+      toast.auto('Aviso: Usuários ALMC e TRA não podem criar eventos.');
       navigate('/calendar');
     }
   }, [user, navigate]);
@@ -1120,7 +1148,7 @@ const CreateEvent: React.FC = () => {
           console.log('--- DADOS PARA DUPLICAÇÃO CARREGADOS ---');
         } catch (err) {
            console.error("Erro ao carregar evento para duplicação", err);
-           alert("Erro ao carregar dados para duplicação.");
+           toast.auto("Erro ao carregar dados para duplicação.");
         } finally {
            setLoading(false);
         }
@@ -1229,7 +1257,7 @@ const CreateEvent: React.FC = () => {
           console.log('--- CARREGAMENTO CONCLUÍDO ---');
         } catch (err) {
            console.error("Erro ao carregar evento", err);
-           alert("Erro ao carregar evento para edição.");
+           toast.auto("Erro ao carregar evento para edição.");
         } finally {
            setLoading(false);
         }
@@ -1300,6 +1328,19 @@ const CreateEvent: React.FC = () => {
       });
     }
   }, [responsibility]);
+
+  // Co-organizadores convidados só existem quando quem cria o evento é organizador.
+  useEffect(() => {
+    if (involvementLevel === 'ORGANIZADOR') return;
+    setParticipantRoles(prev => {
+      if (!Object.values(prev).includes('ORGANIZADOR')) return prev;
+      const next = { ...prev };
+      Object.keys(next).forEach(key => {
+        if (next[key] === 'ORGANIZADOR') next[key] = 'PARTICIPANTE';
+      });
+      return next;
+    });
+  }, [involvementLevel]);
 
   useEffect(() => {
     console.log('--- CreateEvent: useEffect para fetchInitialData acionado ---');
@@ -1465,38 +1506,38 @@ const CreateEvent: React.FC = () => {
     console.log('=== INÍCIO DA SUBMISSÃO DO FORMULÁRIO ===');
     if (!user) { 
       console.log('Falha na validação: Usuário não autenticado'); 
-      alert('Você precisa estar logado para realizar esta ação.');
+      toast.auto('Você precisa estar logado para realizar esta ação.');
       return; 
     }
     if (!dateStart || (!noEndPreview && !dateEnd)) {
-      alert('Por favor, selecione os horários de início e término.');
+      toast.auto('Por favor, selecione os horários de início e término.');
       return;
     }
     if (!noEndPreview && new Date(dateStart) >= new Date(dateEnd)) {
-      alert('A data de início não pode ser posterior ou igual à data de término.');
+      toast.auto('A data de início não pode ser posterior ou igual à data de término.');
       return;
     }
     if (!noEndPreview && isDurationInvalid) {
       console.log('Falha na validação: Duração muito longa');
-      alert('A duração do evento não pode exceder 23 horas e 59 minutos.');
+      toast.auto('A duração do evento não pode exceder 23 horas e 59 minutos.');
       return;
     }
 
     if (selectedUnidades.length > 0 && selectedCategorias.length === 0) {
       console.log('Falha na validação: Unidades selecionadas sem categorias');
-      alert('Por favor, selecione pelo menos uma categoria profissional para as unidades envolvidas.');
+      toast.auto('Por favor, selecione pelo menos uma categoria profissional para as unidades envolvidas.');
       return;
     }
 
     if (transporteSuporte) {
       if (!transporteOrigem || !transporteDestino || !transporteHorarioLevar || !transporteHorarioBuscar) {
         console.log('Falha na validação: Campos de transporte ausentes');
-        alert('Por favor, preencha todos os campos obrigatórios de transporte (Origem, Destino, Horário de Ida e Volta).');
+        toast.auto('Por favor, preencha todos os campos obrigatórios de transporte (Origem, Destino, Horário de Ida e Volta).');
         return;
       }
       if (isTransportTimeInvalid) {
         console.log('Falha na validação: Horários de transporte inválidos');
-        alert('O horário de ida não pode ser posterior ou igual ao horário de volta.');
+        toast.auto('O horário de ida não pode ser posterior ou igual ao horário de volta.');
         return;
       }
     }
@@ -1509,7 +1550,7 @@ const CreateEvent: React.FC = () => {
     if (unavailableSelectedItems.length > 0) {
       console.log('Falha na validação: Itens indisponíveis selecionados');
       const itemNames = unavailableSelectedItems.map(i => i.name).join(', ');
-      alert(`Os seguintes itens estão indisponíveis no momento e devem ser removidos antes de salvar: ${itemNames}`);
+      toast.auto(`Os seguintes itens estão indisponíveis no momento e devem ser removidos antes de salvar: ${itemNames}`);
       setLoading(false);
       return;
     }
@@ -1700,7 +1741,7 @@ const CreateEvent: React.FC = () => {
     } catch (err: any) {
       setIsConflictCheckLoading(false);
       console.error("Erro ao processar submissão:", err);
-      alert(`Erro: ${err.message || 'Erro desconhecido'}`);
+      toast.auto(`Erro: ${err.message || 'Erro desconhecido'}`);
       setLoading(false);
     }
   };
@@ -1983,18 +2024,7 @@ const CreateEvent: React.FC = () => {
                   <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1 block truncate" title="Responsabilidade pela organização">Responsabilidade pela organização</label>
                   <CustomSelect
                     value={responsibility}
-                    onChange={(val) => {
-                      setResponsibility(val);
-                      if (val === 'INTERNO_COMPROMISSO' || val === 'INTERNO_COLETIVO') {
-                        setInvolvementLevel('ORGANIZADOR');
-                      } else if (val === 'EXTERNO_COMPROMISSO') {
-                        setInvolvementLevel('PARTICIPANTE');
-                      } else if (val === 'NAO_SE_APLICA') {
-                        setInvolvementLevel('ORGANIZADOR');
-                      } else if (!val) {
-                        setInvolvementLevel('');
-                      }
-                    }}
+                    onChange={setResponsibility}
                     placeholder="Selecione a responsabilidade..."
                     required
                     className={`h-14 font-semibold ${type?.trim().toUpperCase() === 'LEMBRETE' ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
@@ -2004,7 +2034,7 @@ const CreateEvent: React.FC = () => {
                 </div>
 
                 <div className="md:col-span-1 space-y-2">
-                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1 block truncate" title="Nível de Envolvimento">Nível de Envolvimento</label>
+                  <label className="text-[10px] font-bold text-primary uppercase tracking-[0.2em] ml-1 block truncate" title="Definido automaticamente pela Responsabilidade pela organização.">Seu Nível de Envolvimento</label>
                   <CustomSelect
                     value={involvementLevel}
                     onChange={setInvolvementLevel}
@@ -2013,15 +2043,19 @@ const CreateEvent: React.FC = () => {
                     className={`h-14 font-semibold ${(!responsibility || responsibility === 'NAO_SE_APLICA') ? 'opacity-50 cursor-not-allowed bg-slate-50' : ''}`}
                     disabled={!responsibility || responsibility === 'NAO_SE_APLICA'}
                     options={INVOLVEMENT_LEVELS.filter(level => {
-                      if (responsibility === 'EXTERNO_COMPROMISSO') {
-                        return level.value === 'PARTICIPANTE';
-                      }
-                      if (responsibility === 'NAO_SE_APLICA') {
-                        return level.value === 'ORGANIZADOR';
-                      }
-                      return true;
+                      // A responsabilidade define o único nível possível de quem cria.
+                      const definedLevel = CREATOR_INVOLVEMENT_BY_RESPONSIBILITY[responsibility];
+                      return definedLevel ? level.value === definedLevel : true;
                     })}
                   />
+                  <p className="text-[10px] ml-1 flex items-start gap-1.5 text-slate-400 font-semibold">
+                    <span className="material-symbols-outlined text-[13px] leading-none">info</span>
+                    <span className="leading-tight">
+                      {responsibility === 'NAO_SE_APLICA'
+                        ? 'Não se aplica: campo definido automaticamente e não selecionável.'
+                        : 'Definido automaticamente pela Responsabilidade pela organização.'}
+                    </span>
+                  </p>
                 </div>
 
                 {isDateInvalid && (
@@ -2138,6 +2172,17 @@ const CreateEvent: React.FC = () => {
                 </div>
               </div>
 
+              <div className="relative flex flex-col gap-5 flex-1 min-h-0">
+                {isInviteLocked && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 rounded-2xl bg-white/80 backdrop-blur-[2px] text-center px-6">
+                    <span className="material-symbols-outlined text-3xl text-primary/50">lock</span>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 leading-relaxed">
+                      Defina "Responsabilidade pela organização" e "Seu Nível de Envolvimento" para convidar
+                    </p>
+                  </div>
+                )}
+                <div className={`flex flex-col gap-5 flex-1 min-h-0 ${isInviteLocked ? 'opacity-40 pointer-events-none select-none' : ''}`}>
+
               <div className="relative group">
                 <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors duration-300">person_search</span>
                 <input
@@ -2177,15 +2222,23 @@ const CreateEvent: React.FC = () => {
                         {sortedFilteredUsers.slice(0, visibleParticipantsCount).map(u => {
                         const isSel = selectedParticipants.includes(u.id);
                         const isCreatorUser = u.id === user?.id;
-                        // Na criação o convidado começa sem nível escolhido (usuário precisa clicar em "Participante").
-                        // Na edição mantém o nível salvo, com fallback para PARTICIPANTE.
-                        const currentRole = participantRoles[u.id] || (isEditing ? 'PARTICIPANTE' : '');
+                        // Na criação o convidado entra como PARTICIPANTE por padrão,
+                        // mas pode ser promovido a ORGANIZADOR (co-organizador) na própria tela.
+                        const currentRole = participantRoles[u.id] || 'PARTICIPANTE';
+
+                        // Níveis disponíveis para este convidado dependem do nível de
+                        // envolvimento de quem está criando o evento:
+                        // - criador ORGANIZADOR  -> convidado pode ser co-organizador ou participante
+                        // - criador PARTICIPANTE -> convidado só pode ser participante
+                        const levelOptions = INVOLVEMENT_LEVELS
+                          .filter(level => involvementLevel === 'ORGANIZADOR' || level.value === 'PARTICIPANTE')
+                          .map(level => level.value === 'ORGANIZADOR' ? { ...level, label: 'Co-organizador' } : level);
                         
                         const avatarUrl = getAvatarUrl(u);
 
                         // Um clique já convida/define o usuário como PARTICIPANTE (ou remove, se já selecionado)
                         const toggleParticipant = () => {
-                          if (isCreatorUser) return;
+                          if (isCreatorUser || isInviteLocked) return;
                           const willSelect = !isSel;
                           toggleArrayItem(selectedParticipants, setSelectedParticipants, u.id);
                           setParticipantRoles(prev => {
@@ -2249,18 +2302,11 @@ const CreateEvent: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <span className="text-[9px] font-black text-primary/70 uppercase tracking-widest">Nível de Envolvimento:</span>
                                   <span className="text-[9px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                    {INVOLVEMENT_LEVELS.find(l => l.value === currentRole)?.label || 'Selecione'}
+                                    {levelOptions.find(l => l.value === currentRole)?.label || 'Participante'}
                                   </span>
                                 </div>
-                                {isEditing && (
-                                <div className="grid gap-1 grid-cols-1">
-                                  {INVOLVEMENT_LEVELS.filter(level => {
-                                    // Na edição: se for evento externo, só permite PARTICIPANTE
-                                    if (responsibility === 'EXTERNO_COMPROMISSO') {
-                                      return level.value === 'PARTICIPANTE';
-                                    }
-                                    return true;
-                                  }).map(level => {
+                                <div className={`grid gap-1 ${levelOptions.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                  {levelOptions.map(level => {
                                     const isSelected = currentRole === level.value;
                                     const getIcon = (val: string) => {
                                       switch(val) {
@@ -2273,6 +2319,7 @@ const CreateEvent: React.FC = () => {
                                       <button
                                         key={level.value}
                                         type="button"
+                                        title={level.description}
                                         onClick={() => setParticipantRoles(prev => ({ ...prev, [u.id]: level.value }))}
                                         className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-lg transition-all duration-300 border ${
                                           isSelected
@@ -2290,7 +2337,6 @@ const CreateEvent: React.FC = () => {
                                     );
                                   })}
                                 </div>
-                                )}
                               </div>
                             )}
                           </div>
@@ -2310,6 +2356,8 @@ const CreateEvent: React.FC = () => {
                     )}
                   </>
                 )}
+              </div>
+                </div>
               </div>
             </section>
           </div>

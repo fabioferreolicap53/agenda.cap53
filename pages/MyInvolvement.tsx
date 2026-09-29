@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMySpace, MySpaceEvent } from '../hooks/useMySpace';
@@ -14,6 +15,8 @@ import { FilterBar } from '../components/MySpace/FilterBar';
 import { AnalyticsSection } from '../components/MySpace/AnalyticsSection';
 import RefusalModal from '../components/RefusalModal';
 
+type TabId = 'all' | 'organizer' | 'participant' | 'withdrawn' | 'removed';
+
 const MyInvolvement: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -23,7 +26,8 @@ const MyInvolvement: React.FC = () => {
   const { events, loading, stats, analytics, refresh } = useMySpace();
   
   // Local state
-  const [activeTab, setActiveTab] = useState<'all' | 'organizer' | 'participant' | 'withdrawn' | 'removed'>('all');
+  // null = nenhum cartão selecionado: mostra todos os eventos sem filtro.
+  const [activeTab, setActiveTab] = useState<TabId | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
 
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
@@ -53,11 +57,11 @@ const MyInvolvement: React.FC = () => {
   const pendingRestoreScroll = useRef<number | null>(null);
   const pendingAnchorId = useRef<string | null>(null);
   const [restoreVersion, setRestoreVersion] = useState(0);
-  const getScrollStorageKey = (tab: string) => `scroll:${location.pathname}:${tab}`;
+  const getScrollStorageKey = (tab: TabId | null) => `scroll:${location.pathname}:${tab ?? 'none'}`;
   const getScrollContainer = () => document.getElementById('main-scroll-container');
   const getCurrentScroll = () => getScrollContainer()?.scrollTop || 0;
-  const persistScroll = (tab: string, value: number) => {
-    scrollPositions.current[tab] = value;
+  const persistScroll = (tab: TabId | null, value: number) => {
+    scrollPositions.current[tab ?? 'none'] = value;
     sessionStorage.setItem(getScrollStorageKey(tab), String(value));
   };
 
@@ -84,7 +88,7 @@ const MyInvolvement: React.FC = () => {
     if (loading) return;
     const stored = sessionStorage.getItem(getScrollStorageKey(activeTab));
     const fallback = stored ? parseInt(stored, 10) : 0;
-    const target = pendingRestoreScroll.current ?? scrollPositions.current[activeTab] ?? fallback;
+    const target = pendingRestoreScroll.current ?? scrollPositions.current[activeTab ?? 'none'] ?? fallback;
     pendingRestoreScroll.current = null;
     const apply = (attempt = 0) => {
       const container = getScrollContainer();
@@ -115,10 +119,13 @@ const MyInvolvement: React.FC = () => {
     const tabParam = params.get('tab');
     const scrollParam = params.get('scroll');
     const anchorParam = params.get('anchor');
-    if (tabParam && ['all','organizer','participant','withdrawn','removed'].includes(tabParam)) {
-      setActiveTab(tabParam as any);
+    const urlTab = tabParam && ['all','organizer','participant','withdrawn','removed'].includes(tabParam)
+      ? (tabParam as TabId)
+      : null;
+    if (urlTab) {
+      setActiveTab(urlTab);
     }
-    const targetTab = tabParam || activeTab;
+    const targetTab: TabId | null = urlTab || activeTab;
     if (anchorParam) {
       pendingAnchorId.current = anchorParam;
     }
@@ -132,7 +139,7 @@ const MyInvolvement: React.FC = () => {
       if (stored) {
         const parsed = parseInt(stored, 10);
         pendingRestoreScroll.current = parsed;
-        scrollPositions.current[targetTab] = parsed;
+        scrollPositions.current[targetTab ?? 'none'] = parsed;
         setRestoreVersion(v => v + 1);
       }
     }
@@ -169,7 +176,7 @@ const MyInvolvement: React.FC = () => {
       refresh();
     } catch (error) {
       console.error('Error cancelling event:', error);
-      alert('Erro ao cancelar evento.');
+      toast.auto('Erro ao cancelar evento.');
     } finally {
       setProcessingCancellation(false);
       setRefusalModalOpen(false);
@@ -187,7 +194,7 @@ const MyInvolvement: React.FC = () => {
       
       const hasLogisticsRequests = logisticsRequests.length > 0 || eventDetails.transporte_suporte === true;
       if (hasLogisticsRequests) {
-          alert('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
+          toast.auto('Este evento não pode ser excluído permanentemente porque possui solicitações de logística ou transporte atreladas. Por favor, utilize a opção "Cancelar Evento".');
           return;
       }
     } catch (e) {
@@ -207,7 +214,7 @@ const MyInvolvement: React.FC = () => {
         } catch (error: any) {
           console.error('Error deleting event:', error);
           const msg = error.data?.message || error.message || 'Erro desconhecido';
-          alert(`Erro ao excluir evento: ${msg}`);
+          toast.auto(`Erro ao excluir evento: ${msg}`);
         }
       }
     });
@@ -230,6 +237,12 @@ const MyInvolvement: React.FC = () => {
     navigate(`/create-event?edit_from=${event.id}`);
   };
 
+  // Cartões agem como filtro alternável: clicar no cartão já ativo desmarca e
+  // volta a mostrar todos os eventos, sem filtro.
+  const handleTabChange = (tab: TabId) => {
+    setActiveTab(prev => (prev === tab ? null : tab));
+  };
+
   // Reset pagination on tab or search change
   useEffect(() => {
     setVisibleCount(10);
@@ -241,11 +254,15 @@ const MyInvolvement: React.FC = () => {
     let result = events;
 
     // 1. Filtro por Tab (Status/Papel)
+    // REGRA: quem cria o evento é o organizador dele. Por isso os eventos que
+    // VOCÊ criou ficam em "Criados" e NÃO aparecem em "Organizador"/"Participante"
+    // — estas abas listam apenas eventos de OUTRAS pessoas.
     switch (activeTab) {
       case 'organizer': 
           result = events.filter(e => {
             const role = (e.userRole || '').toUpperCase();
-            return (role === 'ORGANIZADOR') && 
+            return e.type !== 'created' &&
+                   (role === 'ORGANIZADOR') && 
                    e.requestStatus !== 'pending' && 
                    e.participationStatus !== 'pending' && 
                    e.requestStatus !== 'rejected' && 
@@ -256,7 +273,8 @@ const MyInvolvement: React.FC = () => {
       case 'participant': 
         result = events.filter(e => {
             const role = (e.userRole || '').toUpperCase();
-            return role === 'PARTICIPANTE' && 
+            return e.type !== 'created' &&
+                   (role === 'PARTICIPANTE' || role === 'CONVIDADO') && 
                    e.requestStatus !== 'pending' && 
                    e.participationStatus !== 'pending' && 
                    e.requestStatus !== 'rejected' && 
@@ -271,8 +289,11 @@ const MyInvolvement: React.FC = () => {
         result = events.filter(e => e.participationStatus === 'withdrawn');
         break;
       case 'all':
-      default: 
         result = events.filter(e => e.type === 'created');
+        break;
+      default:
+        // activeTab === null: sem filtro — mostra todos os eventos.
+        result = events;
         break;
     }
 
@@ -301,49 +322,58 @@ const MyInvolvement: React.FC = () => {
     <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       
       {/* Header Section */}
-      <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-6">
-        <div className="space-y-2">
-           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-             Meu Espaço
-           </h1>
-           <p className="text-slate-500 font-medium max-w-xl">
-             Gerencie suas atividades, acompanhe solicitações e visualize seu impacto na agenda.
-           </p>
-        </div>
+      <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-indigo-50/30 to-violet-50/20 border border-slate-100/80 px-6 md:px-8 py-7 md:py-8 shadow-sm">
+        {/* Decoração de fundo — anéis sutis */}
+        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-indigo-100/30 blur-2xl" />
+        <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-violet-100/25 blur-2xl" />
 
-        {/* Action Controls */}
-        <div className="w-full xl:w-auto flex items-center justify-center p-1.5 gap-2 bg-white rounded-full border border-slate-200 shadow-sm">
-          <button 
-            onClick={() => navigate('/create-event')}
-            className="flex items-center gap-2 pl-3 pr-5 py-2.5 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 group"
-          >
-            <div className="flex items-center justify-center size-6 rounded-full bg-white/20 group-hover:bg-white/30 transition-colors">
-                <span className="material-symbols-outlined text-sm font-bold">add</span>
+        <div className="relative flex flex-col xl:flex-row xl:items-end justify-between gap-5">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center size-10 rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
+                <span className="material-symbols-outlined text-[20px]">dashboard</span>
+              </span>
+              <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                Meu Espaço
+              </h1>
             </div>
-            <span className="text-sm font-semibold tracking-wide">Novo</span>
-          </button>
+            <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-lg">
+              Seu envolvimento vem de três caminhos: eventos que <strong className="text-slate-700">você cria</strong> (nível definido pela responsabilidade pela organização), eventos em que <strong className="text-slate-700">alguém te inclui na criação</strong> (co-organizador ou participante) e eventos em que <strong className="text-slate-700">você entra por conta própria</strong> pelo detalhamento do evento (participante).
+            </p>
+          </div>
 
-          <button 
-            onClick={() => setShowAnalytics(!showAnalytics)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-              showAnalytics 
-                ? 'bg-slate-100 text-slate-900' 
-                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[20px]">{showAnalytics ? 'view_list' : 'analytics'}</span>
-            <span className="hidden sm:inline">{showAnalytics ? 'Lista' : 'Análises'}</span>
-          </button>
-          
-          <div className="w-px h-5 bg-slate-200 mx-1" />
+          {/* Action Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => navigate('/create-event')}
+              className="flex items-center gap-2 pl-3.5 pr-5 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 group"
+            >
+              <span className="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform duration-300">add</span>
+              <span className="text-sm font-semibold tracking-wide">Novo</span>
+            </button>
 
-          <button 
-            onClick={() => refresh()}
-            className="size-10 flex items-center justify-center rounded-full text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors group"
-            title="Sincronizar dados"
-          >
-            <span className="material-symbols-outlined text-[22px] transition-transform duration-700 group-hover:rotate-180">refresh</span>
-          </button>
+            <button
+              onClick={() => setShowAnalytics(!showAnalytics)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 border ${
+                showAnalytics
+                  ? 'bg-slate-800 text-white border-slate-800 shadow-md'
+                  : 'bg-white text-slate-500 border-slate-200 hover:text-slate-800 hover:border-slate-300 hover:shadow-sm'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px]">{showAnalytics ? 'view_list' : 'analytics'}</span>
+              <span className="hidden sm:inline">{showAnalytics ? 'Lista' : 'Análises'}</span>
+            </button>
+
+            <div className="w-px h-6 bg-slate-200/80 mx-1" />
+
+            <button
+              onClick={() => refresh()}
+              className="size-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all group"
+              title="Sincronizar dados"
+            >
+              <span className="material-symbols-outlined text-[20px] transition-transform duration-700 group-hover:rotate-180">refresh</span>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -351,7 +381,7 @@ const MyInvolvement: React.FC = () => {
       <StatsCards 
         stats={stats} 
         activeTab={activeTab} 
-        onTabChange={setActiveTab} 
+        onTabChange={handleTabChange} 
       />
 
       {/* Main Content Area */}

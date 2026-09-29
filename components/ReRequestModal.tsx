@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState } from 'react';
 import { pb } from '../lib/pocketbase';
 import { 
@@ -136,13 +137,13 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
         const eventData = await pb.collection('agenda_cap53_eventos').getOne(targetEventId);
         
         if (eventData.is_restricted) {
-          alert('Este evento é restrito e não permite novas solicitações de participação.');
+          toast.auto('Este evento é restrito e não permite novas solicitações de participação.');
           setLoading(false);
           return;
         }
 
         if (['TRA', 'ALMC', 'DCA'].includes(user.role)) {
-          alert('Seu perfil não possui permissão para solicitar participação em eventos.');
+          toast.auto('Seu perfil não possui permissão para solicitar participação em eventos.');
           setLoading(false);
           return;
         }
@@ -413,7 +414,7 @@ const ReRequestModal: React.FC<ReRequestModalProps> = ({ notification, request, 
           });
       }
 
-      alert(`Erro ao reenviar solicitação: ${error.message || 'Tente novamente.'}`);
+      toast.auto(`Erro ao reenviar solicitação: ${error.message || 'Tente novamente.'}`);
     } finally {
       setLoading(false);
     }

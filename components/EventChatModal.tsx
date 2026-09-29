@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { pb, getAvatarUrl } from '../lib/pocketbase';
 import { 
@@ -166,7 +167,7 @@ const EventChatModal: React.FC<EventChatModalProps> = ({ event, user, isAccepted
             await pb.collection('agenda_cap53_mensagens_salas').delete(messageId);
         } catch (error) {
             console.error('Error deleting message:', error);
-            alert('Erro ao excluir mensagem.');
+            toast.auto('Erro ao excluir mensagem.');
         }
     };
 

@@ -63,6 +63,10 @@ export const useMySpace = () => {
   const [stats, setStats] = useState({
     organizer: 0,
     participant: 0,
+    // Origem do papel "Participante" em eventos de outras pessoas:
+    // convidado por quem criou x por iniciativa própria (entrou pelo evento)
+    participantInvited: 0,
+    participantByRequest: 0,
     // Convites Recebidos
     invitesPending: 0,
     invitesAccepted: 0,
@@ -83,7 +87,10 @@ export const useMySpace = () => {
     // Totais
     totalCreated: 0,
     totalParticipated: 0,
-    confirmedEvents: 0
+    confirmedEvents: 0,
+    // Dentro dos eventos que eu criei
+    createdAsOrganizer: 0,
+    createdAsParticipant: 0
   });
 
   const fetchMySpaceData = useCallback(async () => {
@@ -104,7 +111,10 @@ export const useMySpace = () => {
           ...e, 
           category: e.expand?.type?.name || e.type,
           type: 'created' as const, 
-          userRole: e.creator_role || 'PARTICIPANTE'
+          // O nível de quem criou é definido pela "Responsabilidade pela organização"
+          // (Ação interna/Evento coletivo -> organizador; Participação externa -> participante).
+          // Eventos antigos, sem o campo, foram criados na época em que quem criava organizava.
+          userRole: e.creator_role || 'ORGANIZADOR'
         };
       });
 
@@ -239,6 +249,9 @@ export const useMySpace = () => {
         totalCreated: createdWithMeta.filter(e => e.status !== 'canceled').length,
         organizer: 0,
         participant: 0,
+        // Origem do papel "Participante": convidado por quem criou x iniciativa própria
+        participantInvited: 0,
+        participantByRequest: 0,
         // Recebidos
         invitesPending: 0,
         invitesAccepted: 0,
@@ -256,7 +269,10 @@ export const useMySpace = () => {
         receivedRequestsPending: 0,
         receivedRequestsAccepted: 0,
         receivedRequestsRejected: 0,
-        confirmed: 0
+        confirmed: 0,
+        // Dentro dos eventos que EU criei, como estou envolvido
+        createdAsOrganizer: 0,
+        createdAsParticipant: 0
       };
 
       // Count sent invites (from my created events)
@@ -277,19 +293,24 @@ export const useMySpace = () => {
         const eventIsActive = e.status === 'active' || e.status === 'confirmed';
         
         // Se for o criador do evento
+        // IMPORTANTE: quem cria o evento JÁ É o organizador dele. Por isso o
+        // evento criado NÃO é contado em `organizer`/`participant` — senão o
+        // mesmo evento apareceria em "Criados" e em "Organizador" ao mesmo tempo.
+        // O card "Organizador" mostra apenas eventos de OUTRAS pessoas em que
+        // te definiram como organizador/participante.
         if (e.type === 'created') {
           if (eventIsActive) {
-            const role = (e.userRole || '').toUpperCase();
-            
             // Check if withdrawn from own event
             if (e.participationStatus === 'withdrawn') {
                 breakdown.invitesWithdrawn++;
             } else if (e.participationStatus === 'rejected') {
                 breakdown.invitesRejected++;
             } else {
-                if (role === 'ORGANIZADOR') breakdown.organizer++;
-                else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
                 breakdown.confirmed++;
+                // Nos eventos que eu criei, separa do que eu organizo e do que
+                // eu apenas participo (quem cria é participante em "Participação externa").
+                if ((e.userRole || '').toUpperCase() === 'PARTICIPANTE') breakdown.createdAsParticipant++;
+                else breakdown.createdAsOrganizer++;
             }
           }
           return;
@@ -300,7 +321,11 @@ export const useMySpace = () => {
           if (e.participationStatus === 'accepted') {
             const role = (e.userRole || '').toUpperCase();
             if (role === 'ORGANIZADOR') breakdown.organizer++;
-            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
+            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') {
+              // Convidado por quem criou o evento
+              breakdown.participant++;
+              breakdown.participantInvited++;
+            }
             breakdown.invitesAccepted++;
             breakdown.confirmed++;
           } else if (e.participationStatus === 'pending') {
@@ -318,7 +343,11 @@ export const useMySpace = () => {
           if (e.requestStatus === 'accepted') {
             const role = (e.userRole || '').toUpperCase();
             if (role === 'ORGANIZADOR') breakdown.organizer++;
-            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') breakdown.participant++;
+            else if (role === 'PARTICIPANTE' || role === 'CONVIDADO') {
+              // Por iniciativa própria: entrou pelo detalhamento do evento
+              breakdown.participant++;
+              breakdown.participantByRequest++;
+            }
             breakdown.requestsAccepted++;
             breakdown.confirmed++;
           } else if (e.requestStatus === 'pending') {
@@ -333,6 +362,8 @@ export const useMySpace = () => {
         totalCreated: breakdown.totalCreated,
         organizer: breakdown.organizer,
         participant: breakdown.participant,
+        participantInvited: breakdown.participantInvited,
+        participantByRequest: breakdown.participantByRequest,
         invitesPending: breakdown.invitesPending,
         invitesAccepted: breakdown.invitesAccepted,
         invitesRejected: breakdown.invitesRejected,
@@ -347,7 +378,9 @@ export const useMySpace = () => {
         receivedRequestsAccepted: breakdown.receivedRequestsAccepted,
         receivedRequestsRejected: breakdown.receivedRequestsRejected,
         totalParticipated: breakdown.invitesAccepted + breakdown.requestsAccepted,
-        confirmedEvents: breakdown.confirmed
+        confirmedEvents: breakdown.confirmed,
+        createdAsOrganizer: breakdown.createdAsOrganizer,
+        createdAsParticipant: breakdown.createdAsParticipant
       };
 
       // Build initial analytics data with empty arrays

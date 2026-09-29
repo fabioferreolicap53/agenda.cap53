@@ -1,3 +1,4 @@
+import { toast } from '../lib/toast';
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { pb } from '../lib/pocketbase';
 
@@ -530,7 +531,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(prev => prev ? ({ ...prev, favorites: currentFavorites }) : null);
             
             // Show alert for immediate feedback
-            alert('Não foi possível salvar o favorito. Verifique sua conexão ou permissões.');
+            toast.auto('Não foi possível salvar o favorito. Verifique sua conexão ou permissões.');
             throw error;
         }
     };
