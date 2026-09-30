@@ -200,7 +200,7 @@ export const DapsCompetencia: React.FC<Props> = ({ events }) => {
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-[#1C2E4A]/10 bg-white p-5 md:p-6 shadow-sm">
+    <section className="relative flex flex-col overflow-hidden rounded-3xl border border-[#1C2E4A]/10 bg-white p-5 md:p-6 shadow-sm">
       <div className="absolute -top-24 -right-24 size-56 rounded-full bg-[#7C97BB]/10 blur-3xl" />
 
       {/* Cabeçalho + controles */}
@@ -211,7 +211,7 @@ export const DapsCompetencia: React.FC<Props> = ({ events }) => {
           </span>
           <div>
             <h3 className="text-base font-black uppercase tracking-widest text-slate-700">
-              Levantamento por competência
+              Eventos DAPS por mês
             </h3>
             <p className="text-[11px] font-semibold text-slate-400">
               Distribuição dos eventos DAPS por mês/ano, com o volume de envolvidos
@@ -265,8 +265,8 @@ export const DapsCompetencia: React.FC<Props> = ({ events }) => {
         </div>
       </div>
 
-      {/* Gráfico */}
-      <div className="relative mt-5 h-[280px]">
+      {/* Gráfico — cresce para acompanhar a linha do calendário ao lado */}
+      <div className="relative mt-5 flex-1 min-h-[280px]">
         {isEmpty ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-300">
             <span className="material-symbols-outlined text-[34px]">bar_chart</span>

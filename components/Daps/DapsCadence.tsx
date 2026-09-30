@@ -231,7 +231,7 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
 
   return (
     <div
-      className={`relative pl-10 ${
+      className={`relative pl-8 sm:pl-10 ${
         isPast ? 'opacity-70 hover:opacity-100 transition-opacity duration-300' : ''
       }`}
     >
@@ -258,10 +258,12 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
           className={`pointer-events-none absolute inset-y-4 left-0 w-[3px] rounded-full bg-gradient-to-b ${cardSkin.accent}`}
         />
 
-        <div className="relative flex items-start gap-4">
+        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
+          {/* Data + conteúdo dividem a linha; a contagem desce no mobile */}
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4">
           {/* Bloco de data */}
           <div
-            className={`flex min-w-[62px] shrink-0 flex-col items-center justify-center rounded-xl px-3 py-2.5 ${dateBox}`}
+            className={`flex min-w-[56px] shrink-0 flex-col items-center justify-center rounded-xl px-2.5 py-2.5 sm:min-w-[62px] sm:px-3 ${dateBox}`}
             title={`${fullDate}${weekLbl ? ` · ${weekLbl}` : ''}`}
           >
             <span className="text-2xl font-black leading-none tracking-tight">{dayNum}</span>
@@ -298,7 +300,7 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
             </div>
 
             <h4
-              className={`group/title mt-2 inline-flex items-start gap-1.5 text-lg font-black leading-snug tracking-tight transition-colors cursor-pointer decoration-[#7C97BB] decoration-2 underline-offset-4 hover:underline ${
+              className={`group/title mt-2 inline-flex min-w-0 max-w-full items-start gap-1.5 break-words text-base font-black leading-snug tracking-tight transition-colors cursor-pointer decoration-[#7C97BB] decoration-2 underline-offset-4 hover:underline sm:text-lg ${
                 isPast ? 'text-slate-500 hover:text-[#1C2E4A]' : 'text-slate-800 hover:text-[#1C2E4A]'
               }`}
               onClick={goToEvent}
@@ -553,21 +555,22 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
               </div>
             </div>
           </div>
+          </div>
 
           {/* Contagem regressiva em destaque */}
           {countdown && (
             <div
-              className={`flex min-w-[96px] shrink-0 flex-col items-center justify-center rounded-2xl px-3 py-3 ${countdown.box} ${countdown.pulse}`}
+              className={`flex w-full flex-row items-center justify-center gap-2 rounded-2xl px-3 py-2 sm:w-auto sm:min-w-[96px] sm:flex-col sm:gap-0 sm:py-3 ${countdown.box} ${countdown.pulse}`}
               title={isPast ? `Realizado há ${countdown.value} dias` : `${countdown.value} dias restantes`}
             >
-              <span className={`text-4xl font-black leading-none tracking-tight ${countdown.num}`}>
+              <span className={`text-3xl font-black leading-none tracking-tight sm:text-4xl ${countdown.num}`}>
                 {countdown.value}
               </span>
-              <span className="mt-1 text-[9px] font-black uppercase tracking-[0.15em] opacity-90">
+              <span className="mt-0 text-[9px] font-black uppercase tracking-[0.15em] opacity-90 sm:mt-1">
                 {countdown.label}
               </span>
               {!isPast && (
-                <span className="mt-0.5 text-center text-[8px] font-bold uppercase leading-tight tracking-wide opacity-70">
+                <span className="mt-0 text-center text-[8px] font-bold uppercase leading-tight tracking-wide opacity-70 sm:mt-0.5">
                   para o evento
                 </span>
               )}

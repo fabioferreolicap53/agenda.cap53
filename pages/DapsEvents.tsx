@@ -4,6 +4,7 @@ import { useDapsEvents } from '../hooks/useDapsEvents';
 import { DapsKpis } from '../components/Daps/DapsKpis';
 import { DapsCadence } from '../components/Daps/DapsCadence';
 import { DapsCompetencia } from '../components/Daps/DapsCompetencia';
+import { DapsCalendar } from '../components/Daps/DapsCalendar';
 import { DapsTeam } from '../components/Daps/DapsTeam';
 import { DAPS_ROLE_COLORS } from '../lib/constants';
 
@@ -126,8 +127,11 @@ const DapsEvents: React.FC = () => {
             </div>
           </section>
 
-          {/* 3. Levantamento por competência (mês/ano) */}
-          <DapsCompetencia events={events} />
+          {/* 3. Levantamento por competência (mês/ano) + calendário mensal na mesma linha */}
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 items-stretch">
+            <DapsCompetencia events={events} />
+            <DapsCalendar events={events} onSelectEvent={goToEvent} />
+          </div>
 
           {/* 4. Métricas destaque — Cards mini-resumo */}
           {highlightMetrics && (

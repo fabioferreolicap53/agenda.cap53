@@ -21,9 +21,9 @@ export const DapsTeam: React.FC<Props> = ({ people, sectors, pairs }) => {
   const maxSector = sectors[0]?.people || 1;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
       {/* Ranking de engajamento com 3 níveis */}
-      <section className="lg:col-span-2 rounded-3xl border border-slate-100 bg-white p-5 md:p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-100 bg-white p-5 md:p-6 shadow-sm">
         <div className="flex items-center gap-3">
           <span className="flex items-center justify-center size-10 rounded-xl bg-[#1C2E4A]/10 text-[#1C2E4A]">
             <span className="material-symbols-outlined text-[22px]">military_tech</span>
@@ -111,9 +111,9 @@ export const DapsTeam: React.FC<Props> = ({ people, sectors, pairs }) => {
         )}
       </section>
 
-      {/* Setores + parcerias */}
-      <div className="space-y-4">
-        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+      {/* Setores + parcerias — dividem a mesma linha com o ranking */}
+      <div className="flex flex-col gap-4">
+        <section className="flex-1 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="flex items-center justify-center size-10 rounded-xl bg-[#456086]/10 text-[#456086]">
               <span className="material-symbols-outlined text-[22px]">apartment</span>
@@ -151,7 +151,7 @@ export const DapsTeam: React.FC<Props> = ({ people, sectors, pairs }) => {
           )}
         </section>
 
-        <section className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <section className="flex-1 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="flex items-center justify-center size-10 rounded-xl bg-[#5B7DAA]/12 text-[#5B7DAA]">
               <span className="material-symbols-outlined text-[22px]">diversity_3</span>
