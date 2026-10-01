@@ -24,40 +24,48 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
   const getStatusDot = (event: MySpaceEvent) => {
     let color = 'bg-slate-400';
     let label = 'Desconhecido';
-    
+    // Fundo do chip de status — harmônico e discreto.
+    let colorClass = 'bg-slate-100 text-slate-600';
+
     if (event.participationStatus === 'pending') {
       color = 'bg-amber-500';
+      colorClass = 'bg-amber-50 text-amber-700';
       label = 'Convite Pendente';
     } else if (event.requestStatus === 'pending') {
       color = 'bg-blue-500';
+      colorClass = 'bg-blue-50 text-blue-700';
       label = 'Solicitação Pendente';
     } else if (event.participationStatus === 'rejected' || event.requestStatus === 'rejected') {
       color = 'bg-red-500';
+      colorClass = 'bg-red-50 text-red-700';
       label = 'Removido/Recusado';
     } else if (event.participationStatus === 'withdrawn') {
       color = 'bg-amber-600';
+      colorClass = 'bg-amber-50 text-amber-700';
       label = 'Retirou-se';
     } else if (event.status === 'canceled') {
       color = 'bg-red-600';
+      colorClass = 'bg-red-50 text-red-700';
       label = 'Cancelado';
     } else if (isPast(getSafeDate(event.date_end))) {
       color = 'bg-slate-300';
+      colorClass = 'bg-slate-200/70 text-slate-500';
       label = 'Concluído';
     } else if (isToday(getSafeDate(event.date_start))) {
       color = 'bg-green-500 animate-pulse';
+      colorClass = 'bg-emerald-50 text-emerald-700';
       label = 'Hoje';
     } else if (isFuture(getSafeDate(event.date_start))) {
       color = 'bg-indigo-500';
+      colorClass = 'bg-indigo-50 text-indigo-700';
       label = 'Agendado';
     }
 
     return (
-      <div className="flex items-center gap-1.5">
-        <span className={`h-2 w-2 rounded-full ${color}`} />
-        <span className="text-[10px] font-medium uppercase tracking-wide text-slate-500 hidden sm:inline-block">
-          {label}
-        </span>
-      </div>
+      <span className={`inline-flex items-center gap-1 px-1 py-[1px] rounded-full text-[8px] font-black uppercase tracking-wider leading-tight ${colorClass}`}>
+        <span className={`h-1.5 w-1.5 rounded-full ${color}`} />
+        {label}
+      </span>
     );
   };
 
@@ -101,8 +109,8 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
     }
 
     return (
-      <span title={title} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[9px] sm:text-[10px] font-bold uppercase tracking-wider ${classes}`}>
-        <span className="material-symbols-outlined text-[11px] sm:text-[12px]">{icon}</span>
+      <span title={title} className={`inline-flex items-center gap-0.5 px-1 py-[1px] rounded-full border text-[8px] font-black uppercase tracking-wider leading-tight ${classes}`}>
+        <span className="material-symbols-outlined text-[10px]">{icon}</span>
         {label}
       </span>
     );
@@ -111,34 +119,66 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
   const isCreator = event.type === 'created';
   const start = getSafeDate(event.date_start);
   const end = getSafeDate(event.date_end);
+  // Evento concluído vs. agendado — define o tratamento visual do cartão.
+  const isCompleted =
+    event.status !== 'canceled' &&
+    event.participationStatus !== 'pending' &&
+    event.participationStatus !== 'rejected' &&
+    event.participationStatus !== 'withdrawn' &&
+    event.requestStatus !== 'pending' &&
+    event.requestStatus !== 'rejected' &&
+    isPast(end);
 
   return (
-    <div data-anchor={`event-${event.id}`} className="group relative bg-white border border-slate-100 hover:border-slate-200 rounded-xl p-4 transition-all duration-200 hover:shadow-sm">
-      <div className="flex flex-col sm:flex-row gap-4">
+    <div
+      data-anchor={`event-${event.id}`}
+      className={`
+        group relative overflow-hidden rounded-xl border p-3 transition-all duration-200
+        ${isCompleted
+          ? 'bg-slate-50/70 border-slate-200/70 hover:shadow-[0_8px_20px_-14px_rgba(71,85,105,0.4)]'
+          : 'bg-white border-slate-100 hover:border-slate-200 hover:shadow-[0_10px_26px_-14px_rgba(28,46,74,0.35)]'}
+      `}
+    >
+      {/* Trilho lateral: sinaliza agendado (vivo) x concluído (arquivado) */}
+      <span
+        aria-hidden
+        className={`absolute left-0 top-0 h-full w-[3px] ${
+          isCompleted
+            ? 'bg-gradient-to-b from-slate-300 to-slate-400/60'
+            : 'bg-gradient-to-b from-[#1C2E4A] via-[#5B7DAA] to-[#9AB1D0]'
+        }`}
+      />
+      <div className="flex flex-col sm:flex-row gap-2.5 pl-1">
         {/* Date Block */}
-        <div className="flex sm:flex-col items-center sm:items-center justify-center sm:justify-start min-w-[60px] sm:w-[70px] bg-slate-50 rounded-lg p-2 border border-slate-100/50 gap-3 sm:gap-0">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{format(start, 'MMM', { locale: ptBR })}</span>
-          <span className="text-xl sm:text-2xl font-black text-slate-700">{format(start, 'dd')}</span>
-          <span className="text-[10px] font-medium text-slate-400 uppercase sm:mt-1">{format(start, 'EEE', { locale: ptBR })}</span>
+        <div
+          className={`flex sm:flex-col items-center sm:items-center justify-center sm:justify-start min-w-[56px] sm:w-[64px] rounded-lg p-1.5 border gap-2 sm:gap-0 ${
+            isCompleted
+              ? 'bg-slate-100/80 border-slate-200/60'
+              : 'bg-slate-50 border-slate-100/50'
+          }`}
+        >
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${isCompleted ? 'text-slate-400' : 'text-slate-400'}`}>{format(start, 'MMM', { locale: ptBR })}</span>
+          <span className={`text-lg sm:text-xl font-black leading-none ${isCompleted ? 'text-slate-500' : 'text-slate-700'}`}>{format(start, 'dd')}</span>
+          <span className="text-[9px] font-medium text-slate-400 uppercase sm:mt-0.5">{format(start, 'EEE', { locale: ptBR })}</span>
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0 py-0.5">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-2">
-            <div className="flex flex-col gap-2 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-1.5">
+            <div className="flex flex-col gap-1 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {getStatusDot(event)}
                 {getRoleBadge(event)}
               </div>
-              <h3 className="text-base font-bold text-slate-800 sm:truncate leading-tight uppercase flex items-center gap-1.5">
+              <h3 className={`text-sm font-bold sm:truncate leading-tight uppercase flex items-center gap-1.5 ${isCompleted ? 'text-slate-500' : 'text-slate-800'}`}>
                 {(event as any).is_private ? (
                   <span className="material-symbols-outlined text-[16px] text-amber-500 font-bold" title="Evento Particular (Invisível no calendário para os demais usuários)">visibility_off</span>
                 ) : (
-                  <span className="material-symbols-outlined text-[16px] text-emerald-500 font-bold" title="Evento Público (Visível por todos os usuários)">visibility</span>
+                  <span className={`material-symbols-outlined text-[16px] font-bold ${isCompleted ? 'text-slate-400' : 'text-emerald-500'}`} title="Evento Público (Visível por todos os usuários)">visibility</span>
                 )}
-                <button 
+                <button
                   type="button"
-                  onClick={() => onOpenCalendar(event)} 
+                  onClick={() => onOpenCalendar(event)}
                   className="text-left hover:text-primary transition-colors cursor-pointer"
                   title="Abrir no Calendário"
                 >
@@ -192,9 +232,9 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3 text-xs text-slate-500 font-medium">
+          <div className={`flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px] font-medium ${isCompleted ? 'text-slate-400' : 'text-slate-500'}`}>
             <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-slate-400">schedule</span>
+              <span className="material-symbols-outlined text-[14px] text-slate-400">schedule</span>
               <span>
                 {format(start, 'HH:mm')} - {format(end, 'HH:mm')}
               </span>
@@ -202,7 +242,7 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
 
             {event.event_responsibility && (
               <div className="flex items-center gap-1.5" title={`${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.label}\n${RESPONSIBILITY_LEVELS.find(l => l.value === event.event_responsibility)?.description}`}>
-                <span className="material-symbols-outlined text-[16px] text-slate-400">
+                <span className="material-symbols-outlined text-[14px] text-slate-400">
                   {event.event_responsibility.includes('EXTERNO') ? 'public' : 'domain'}
                 </span>
                 <span className="truncate max-w-[100px] sm:max-w-[150px]">
@@ -214,16 +254,16 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
             {(() => {
               const est = getEstimatedParticipants({ estimated_participants: event.estimated_participants });
               return event.event_responsibility !== 'EXTERNO_COMPROMISSO' && est > 0 ? (
-               <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md border border-amber-100/50 text-[11px]" title="Quantidade Estimada de Presentes">
-                 <span className="material-symbols-outlined text-[14px]">groups</span>
+               <div className="flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 text-amber-700 rounded-md border border-amber-100/50 text-[10px]" title="Quantidade Estimada de Presentes">
+                 <span className="material-symbols-outlined text-[12px]">groups</span>
                  <span className="font-bold">Est. {est}</span>
                </div>
               ) : null;
             })()}
-            
+
             {(event.location || event.custom_location) && (
               <div className="flex items-center gap-1.5 max-w-[200px] truncate">
-                <span className="material-symbols-outlined text-[16px] text-slate-400">location_on</span>
+                <span className="material-symbols-outlined text-[14px] text-slate-400">location_on</span>
                 <span className="truncate">
                   {event.expand?.location?.name || event.location || event.custom_location}
                 </span>
@@ -232,13 +272,13 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
 
             {event.category && (
               <div className="flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-slate-400">category</span>
+                <span className="material-symbols-outlined text-[14px] text-slate-400">category</span>
                 <span>{event.category}</span>
               </div>
             )}
           </div>
-          
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 pt-3 border-t border-slate-50 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1.5 pt-1.5 border-t border-slate-50 text-[9px] text-slate-400 font-bold uppercase tracking-wider">
             <div className="flex items-center gap-1" title="Data de Criação">
               <span className="material-symbols-outlined text-[12px]">add_circle</span>
               Criado: {event.created ? new Date(event.created.replace(' ', 'T') + (event.created.includes('Z') ? '' : 'Z')).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '---'}

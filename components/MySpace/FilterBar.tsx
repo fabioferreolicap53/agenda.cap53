@@ -16,7 +16,7 @@ export const FilterBar: React.FC<FilterBarProps> = ({
       {/* Glow effect background */}
       <div className="absolute -inset-0.5 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-[2rem] blur opacity-0 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
       
-      <div className="relative flex flex-col md:flex-row items-center gap-4 bg-white/80 backdrop-blur-xl p-3 sm:p-4 rounded-[1.8rem] border border-slate-200/60 shadow-xl shadow-slate-200/40">
+      <div className="relative flex flex-col md:flex-row items-center gap-4 bg-white/85 backdrop-blur-xl p-3 sm:p-4 rounded-[1.8rem] border border-slate-200/60 shadow-[0_22px_50px_-24px_rgba(28,46,74,0.55)] hover:shadow-[0_28px_60px_-24px_rgba(28,46,74,0.65)] transition-shadow duration-300">
         <div className="flex flex-1 w-full gap-3">
           <div className="relative flex-1 group/input">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center">

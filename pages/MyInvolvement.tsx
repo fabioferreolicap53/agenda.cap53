@@ -15,7 +15,15 @@ import { FilterBar } from '../components/MySpace/FilterBar';
 import { AnalyticsSection } from '../components/MySpace/AnalyticsSection';
 import RefusalModal from '../components/RefusalModal';
 
-type TabId = 'all' | 'organizer' | 'participant' | 'withdrawn' | 'removed';
+type TabId =
+  | 'all'
+  | 'lead'
+  | 'created_participant'
+  | 'others'
+  | 'organizer'
+  | 'participant'
+  | 'withdrawn'
+  | 'removed';
 
 const MyInvolvement: React.FC = () => {
   const { user } = useAuth();
@@ -119,7 +127,7 @@ const MyInvolvement: React.FC = () => {
     const tabParam = params.get('tab');
     const scrollParam = params.get('scroll');
     const anchorParam = params.get('anchor');
-    const urlTab = tabParam && ['all','organizer','participant','withdrawn','removed'].includes(tabParam)
+    const urlTab = tabParam && ['all','lead','created_participant','others','organizer','participant','withdrawn','removed'].includes(tabParam)
       ? (tabParam as TabId)
       : null;
     if (urlTab) {
@@ -255,31 +263,70 @@ const MyInvolvement: React.FC = () => {
 
     // 1. Filtro por Tab (Status/Papel)
     // REGRA: quem cria o evento é o organizador dele. Por isso os eventos que
-    // VOCÊ criou ficam em "Criados" e NÃO aparecem em "Organizador"/"Participante"
+    // VOCÊ criou ficam em "Criados" e NÃO aparecem em "Co-organizador"/"Participante"
     // — estas abas listam apenas eventos de OUTRAS pessoas.
+    // A árvore de cartões deriva de dois pais:
+    //   "Criados" → "Organizador" + "Participante" (eventos seus);
+    //   "Criados por outros usuários" → "Co-organizador" + "Participante".
+    // Condições de "envolvimento ativo" para eventos criados.
+    const isCreatedActive = (e: MySpaceEvent) =>
+      e.status !== 'canceled' &&
+      e.participationStatus !== 'pending' &&
+      e.participationStatus !== 'rejected' &&
+      e.participationStatus !== 'withdrawn';
+    // Condições de "envolvimento ativo" em eventos de outras pessoas.
+    const isOthersActive = (e: MySpaceEvent) => {
+      const role = (e.userRole || '').toUpperCase();
+      return (
+        e.type !== 'created' &&
+        (role === 'ORGANIZADOR' || role === 'PARTICIPANTE' || role === 'CONVIDADO') &&
+        e.requestStatus !== 'pending' &&
+        e.participationStatus !== 'pending' &&
+        e.requestStatus !== 'rejected' &&
+        e.participationStatus !== 'rejected' &&
+        e.participationStatus !== 'withdrawn'
+      );
+    };
+
     switch (activeTab) {
-      case 'organizer': 
-          result = events.filter(e => {
-            const role = (e.userRole || '').toUpperCase();
-            return e.type !== 'created' &&
-                   (role === 'ORGANIZADOR') && 
-                   e.requestStatus !== 'pending' && 
-                   e.participationStatus !== 'pending' && 
-                   e.requestStatus !== 'rejected' && 
-                   e.participationStatus !== 'rejected' &&
-                   e.participationStatus !== 'withdrawn';
-          });
-          break;
-      case 'participant': 
+      case 'all':
+        // Pai "Criados": união dos filhos (Organizador + Participante, em eventos ativos).
+        result = events.filter(e => e.type === 'created' && isCreatedActive(e));
+        break;
+      case 'lead':
+        // Filho "Organizador" do cartão "Criados".
+        result = events.filter(
+          e =>
+            e.type === 'created' &&
+            isCreatedActive(e) &&
+            (e.userRole || '').toUpperCase() !== 'PARTICIPANTE'
+        );
+        break;
+      case 'created_participant':
+        // Filho "Participante" do cartão "Criados".
+        result = events.filter(
+          e =>
+            e.type === 'created' &&
+            isCreatedActive(e) &&
+            (e.userRole || '').toUpperCase() === 'PARTICIPANTE'
+        );
+        break;
+      case 'others':
+        // Pai "Criados por outros usuários": união dos filhos.
+        result = events.filter(isOthersActive);
+        break;
+      case 'organizer':
+        // Filho "Co-organizador" do cartão "Criados por outros usuários".
+        result = events.filter(
+          e => isOthersActive(e) && (e.userRole || '').toUpperCase() === 'ORGANIZADOR'
+        );
+        break;
+      case 'participant':
+        // Filho "Participante" do cartão "Criados por outros usuários".
         result = events.filter(e => {
-            const role = (e.userRole || '').toUpperCase();
-            return e.type !== 'created' &&
-                   (role === 'PARTICIPANTE' || role === 'CONVIDADO') && 
-                   e.requestStatus !== 'pending' && 
-                   e.participationStatus !== 'pending' && 
-                   e.requestStatus !== 'rejected' && 
-                   e.participationStatus !== 'rejected' && 
-                   e.participationStatus !== 'withdrawn';
+          if (!isOthersActive(e)) return false;
+          const role = (e.userRole || '').toUpperCase();
+          return role === 'PARTICIPANTE' || role === 'CONVIDADO';
         });
         break;
       case 'removed': 
@@ -287,9 +334,6 @@ const MyInvolvement: React.FC = () => {
         break;
       case 'withdrawn':
         result = events.filter(e => e.participationStatus === 'withdrawn');
-        break;
-      case 'all':
-        result = events.filter(e => e.type === 'created');
         break;
       default:
         // activeTab === null: sem filtro — mostra todos os eventos.
@@ -319,10 +363,16 @@ const MyInvolvement: React.FC = () => {
   }, [filteredEvents, visibleCount]);
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-      
+    <div className="relative max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+      {/* Fundo com profundidade — os blocos da página ficam em primeiro plano */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-24 left-1/4 size-[420px] rounded-full bg-indigo-200/25 blur-3xl" />
+        <div className="absolute top-1/3 -right-32 size-[380px] rounded-full bg-violet-200/20 blur-3xl" />
+        <div className="absolute bottom-0 left-0 size-[320px] rounded-full bg-blue-200/20 blur-3xl" />
+      </div>
+
       {/* Header Section */}
-      <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-indigo-50/30 to-violet-50/20 border border-slate-100/80 px-6 md:px-8 py-7 md:py-8 shadow-sm">
+      <header className="relative z-10 overflow-hidden rounded-3xl bg-gradient-to-br from-white via-indigo-50/30 to-violet-50/20 border border-slate-100/80 px-6 md:px-8 py-7 md:py-8 shadow-[0_24px_55px_-28px_rgba(28,46,74,0.45)]">
         {/* Decoração de fundo — anéis sutis */}
         <div className="absolute -top-16 -right-16 size-48 rounded-full bg-indigo-100/30 blur-2xl" />
         <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-violet-100/25 blur-2xl" />
@@ -385,7 +435,7 @@ const MyInvolvement: React.FC = () => {
       />
 
       {/* Main Content Area */}
-      <div className="space-y-6">
+      <div className="relative z-10 space-y-6">
         {showAnalytics ? (
           <AnalyticsSection analytics={analytics || { byType: [], byNature: [], byTime: [], byResources: [] }} />
         ) : (
@@ -396,7 +446,7 @@ const MyInvolvement: React.FC = () => {
               resultCount={filteredEvents.length}
             />
             
-            <div className="space-y-6">
+            <div className="space-y-4">
               <EventList 
                 events={visibleEvents}
                 loading={loading}
@@ -408,7 +458,7 @@ const MyInvolvement: React.FC = () => {
               />
 
               {filteredEvents.length > visibleCount && (
-                <div className="flex justify-center pt-4">
+                <div className="relative z-10 flex justify-center pt-2">
                   <button
                     onClick={() => setVisibleCount(prev => prev + 10)}
                     className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm group"

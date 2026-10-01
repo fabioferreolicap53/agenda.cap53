@@ -48,9 +48,9 @@ export const EventList: React.FC<EventListProps> = ({
   const hasRemoved = events.some(e => e.participationStatus === 'rejected');
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {(hasWithdrawn || hasRemoved) && (
-        <div className="flex items-start gap-3 p-4 mb-4 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 animate-in fade-in slide-in-from-top-2">
+        <div className="flex items-start gap-3 p-3 mb-2 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-600 animate-in fade-in slide-in-from-top-2">
           <span className="material-symbols-outlined text-slate-400 mt-0.5">info</span>
           <div>
             <p className="font-medium text-slate-700 mb-0.5">Aviso sobre o seu envolvimento</p>
