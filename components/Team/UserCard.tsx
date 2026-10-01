@@ -1,6 +1,6 @@
 import { toast } from '../../lib/toast';
 import React, { useState } from 'react';
-import { getAvatarUrl } from '../../lib/pocketbase';
+import { pb, getAvatarUrl } from '../../lib/pocketbase';
 import { UsersResponse } from '../../lib/pocketbase-types';
 
 interface UserCardProps {
@@ -16,6 +16,32 @@ interface UserCardProps {
     isFavorite?: boolean;
     onToggleFavorite?: () => void;
 }
+
+// Gera uma URL de avatar nítida (thumbnail quadrado) quando há arquivo no PB.
+const getCleanAvatarUrl = (user: any): string | null => {
+    if (!user) return null;
+    try {
+        // Arquivo já em URL completa (http/blob): usa direto.
+        if (typeof user.avatar === 'string' && (user.avatar.startsWith('http') || user.avatar.startsWith('blob:'))) {
+            return user.avatar;
+        }
+        if (user.avatar && user.id && (user.collectionId || user.collectionName)) {
+            // Thumbnail 256x256 recortado ao quadrado — evita distorção.
+            return pb.files.getURL(user, user.avatar, { thumb: '256x256' });
+        }
+    } catch {
+        // ignora e cai no fallback
+    }
+    return getAvatarUrl(user);
+};
+
+// Iniciais do nome (até 2 letras) para o monograma de fallback.
+const getInitials = (name?: string): string => {
+    const parts = (name || 'User').trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'U';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 export const UserCard: React.FC<UserCardProps> = ({
     user,
@@ -232,18 +258,32 @@ export const UserCard: React.FC<UserCardProps> = ({
             {/* Header com Avatar e Ações Principais */}
             <div className="p-6 pb-4 border-b border-slate-100 flex flex-col items-center relative z-10">
                 <div className="relative mb-3">
-                    <div 
+                    <div
                         onClick={isMe ? onAvatarClick : undefined}
                         className={`relative w-24 h-24 rounded-full overflow-hidden border-4 transition-all duration-300 shadow-lg ${
                             isMe ? 'cursor-pointer border-primary group-hover:shadow-xl group-hover:shadow-primary/20 group-hover:scale-105' : 'border-slate-100 group-hover:border-primary/30 group-hover:scale-105'
                         }`}
                     >
-                        <img 
-                            src={imgError ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'U')}&background=E2E8F0&color=64748B&size=200&bold=true` : (getAvatarUrl(user) || '')} 
-                            alt={user.name} 
-                            className="w-full h-full object-cover"
-                            onError={handleImageError}
-                        />
+                        {(() => {
+                            const avatarUrl = getCleanAvatarUrl(user);
+                            const hasRealAvatar = !!avatarUrl && !imgError;
+                            return hasRealAvatar ? (
+                                <img
+                                    src={avatarUrl!}
+                                    alt={user.name}
+                                    className="w-full h-full object-cover object-center"
+                                    loading="lazy"
+                                    onError={handleImageError}
+                                />
+                            ) : (
+                                // Monograma local — nitidez total, sem depender de serviço externo.
+                                <div className="w-full h-full bg-gradient-to-br from-primary via-primary/85 to-[#5B7DAA] flex items-center justify-center select-none">
+                                    <span className="text-2xl font-black text-white tracking-wide drop-shadow-sm">
+                                        {getInitials(user?.name)}
+                                    </span>
+                                </div>
+                            );
+                        })()}
                         {isMe && (
                             <div className="absolute inset-0 bg-black/30 hover:bg-black/50 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100">
                                 <span className="material-symbols-outlined text-white text-2xl drop-shadow-md">photo_camera</span>
