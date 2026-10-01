@@ -9,7 +9,7 @@ import { DapsTeam } from '../components/Daps/DapsTeam';
 import { DAPS_ROLE_COLORS } from '../lib/constants';
 
 const DapsEvents: React.FC = () => {
-  const { events, people, sectors, pairs, stats, loading, error, refresh } = useDapsEvents();
+  const { events, people, pairs, stats, loading, error, refresh } = useDapsEvents();
   const navigate = useNavigate();
 
   const goToEvent = (event: { dateStart?: string; id: string }) => {
@@ -211,7 +211,7 @@ const DapsEvents: React.FC = () => {
           )}
 
           {/* 5. Equipe e parcerias */}
-          <DapsTeam people={people} sectors={sectors} pairs={pairs} />
+          <DapsTeam people={people} pairs={pairs} />
         </>
       )}
     </div>

@@ -2,7 +2,6 @@ import React from 'react';
 import {
   DapsPair,
   DapsPerson,
-  DapsSector,
   LEVEL_ORGANIZER,
   LEVEL_CO_ORGANIZER,
   LEVEL_PARTICIPANT,
@@ -12,13 +11,11 @@ import { DAPS_ROLE_COLORS } from '../../lib/constants';
 
 interface Props {
   people: DapsPerson[];
-  sectors: DapsSector[];
   pairs: DapsPair[];
 }
 
-export const DapsTeam: React.FC<Props> = ({ people, sectors, pairs }) => {
+export const DapsTeam: React.FC<Props> = ({ people, pairs }) => {
   const topScore = people[0]?.score || 1;
-  const maxSector = sectors[0]?.people || 1;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
@@ -111,93 +108,53 @@ export const DapsTeam: React.FC<Props> = ({ people, sectors, pairs }) => {
         )}
       </section>
 
-      {/* Setores + parcerias — dividem a mesma linha com o ranking */}
-      <div className="flex flex-col gap-4">
-        <section className="flex-1 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center size-10 rounded-xl bg-[#456086]/10 text-[#456086]">
-              <span className="material-symbols-outlined text-[22px]">apartment</span>
-            </span>
-            <h3 className="text-base font-black uppercase tracking-widest text-slate-700">
-              Por setor
-            </h3>
-          </div>
+      {/* Parcerias frequentes — dividem a mesma linha com o ranking */}
+      <section className="flex-1 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center justify-center size-10 rounded-xl bg-[#5B7DAA]/12 text-[#5B7DAA]">
+            <span className="material-symbols-outlined text-[22px]">diversity_3</span>
+          </span>
+          <h3 className="text-base font-black uppercase tracking-widest text-slate-700">
+            Parcerias frequentes
+          </h3>
+        </div>
 
-          {sectors.length === 0 ? (
-            <p className="mt-4 text-center text-sm font-semibold text-slate-400">
-              Sem dados de setor.
-            </p>
-          ) : (
-            <div className="mt-5 space-y-3.5">
-              {sectors.slice(0, 6).map((sector) => (
-                <div key={sector.sector}>
-                  <div className="flex items-center justify-between text-xs font-bold">
-                    <span className="truncate text-slate-600 uppercase tracking-wide">
-                      {sector.sector}
-                    </span>
-                    <span className="shrink-0 text-slate-500">
-                      {sector.people} {sector.people === 1 ? 'pessoa' : 'pessoas'}
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-[#456086] to-[#9AB1D0] transition-all duration-500"
-                      style={{ width: `${(sector.people / maxSector) * 100}%` }}
-                    />
-                  </div>
+        {pairs.length === 0 ? (
+          <p className="mt-4 text-center text-sm font-semibold text-slate-400">
+            Ainda não há parcerias recorrentes.
+          </p>
+        ) : (
+          <ul className="mt-4 space-y-2.5">
+            {pairs.map((pair) => (
+              <li
+                key={pair.key}
+                className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-2.5"
+              >
+                <div className="flex -space-x-2 shrink-0">
+                  <img
+                    src={getAvatarUrl(pair.a) || undefined}
+                    alt={pair.a.name}
+                    className="size-7 rounded-full border-2 border-white object-cover"
+                  />
+                  <img
+                    src={getAvatarUrl(pair.b) || undefined}
+                    alt={pair.b.name}
+                    className="size-7 rounded-full border-2 border-white object-cover"
+                  />
                 </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="flex-1 rounded-3xl border border-slate-100 bg-white p-6 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center justify-center size-10 rounded-xl bg-[#5B7DAA]/12 text-[#5B7DAA]">
-              <span className="material-symbols-outlined text-[22px]">diversity_3</span>
-            </span>
-            <h3 className="text-base font-black uppercase tracking-widest text-slate-700">
-              Parcerias frequentes
-            </h3>
-          </div>
-
-          {pairs.length === 0 ? (
-            <p className="mt-4 text-center text-sm font-semibold text-slate-400">
-              Ainda não há parcerias recorrentes.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-2.5">
-              {pairs.map((pair) => (
-                <li
-                  key={pair.key}
-                  className="flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/60 p-2.5"
-                >
-                  <div className="flex -space-x-2 shrink-0">
-                    <img
-                      src={getAvatarUrl(pair.a) || undefined}
-                      alt={pair.a.name}
-                      className="size-7 rounded-full border-2 border-white object-cover"
-                    />
-                    <img
-                      src={getAvatarUrl(pair.b) || undefined}
-                      alt={pair.b.name}
-                      className="size-7 rounded-full border-2 border-white object-cover"
-                    />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-bold text-slate-700">
-                      {pair.a.name.split(' ')[0]} + {pair.b.name.split(' ')[0]}
-                    </p>
-                  </div>
-                  <span className="shrink-0 rounded-lg bg-[#7C97BB]/15 px-2 py-1 text-[11px] font-black text-[#456086]">
-                    {pair.count}x juntos
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold text-slate-700">
+                    {pair.a.name.split(' ')[0]} + {pair.b.name.split(' ')[0]}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-lg bg-[#7C97BB]/15 px-2 py-1 text-[11px] font-black text-[#456086]">
+                  {pair.count}x juntos
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };
