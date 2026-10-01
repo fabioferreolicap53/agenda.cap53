@@ -541,15 +541,20 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
                             <span className="material-symbols-outlined text-[12px]">{rule.icon}</span>
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="flex items-center gap-1 flex-wrap">
-                              <span className="text-[10px] font-bold text-slate-600 leading-tight">
-                                {rule.label}
+                              <span className="flex items-center gap-1 flex-wrap">
+                                <span className="text-[10px] font-bold text-slate-600 leading-tight">
+                                  {rule.label}
+                                </span>
+                                {/* Só mostra o nível quando difere do rótulo (evita "X → X") */}
+                                {rule.value !== rule.label && (
+                                  <>
+                                    <span className="material-symbols-outlined text-[11px] text-slate-300">arrow_forward</span>
+                                    <span className={`text-[10px] font-black leading-tight ${accent.text}`}>
+                                      {rule.value}
+                                    </span>
+                                  </>
+                                )}
                               </span>
-                              <span className="material-symbols-outlined text-[11px] text-slate-300">arrow_forward</span>
-                              <span className={`text-[10px] font-black leading-tight ${accent.text}`}>
-                                {rule.value}
-                              </span>
-                            </span>
                             <span className="mt-0.5 block text-[9px] leading-snug text-slate-400">
                               {rule.desc}
                             </span>

@@ -366,30 +366,31 @@ const MyInvolvement: React.FC = () => {
     <div className="relative max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* Fundo com profundidade — os blocos da página ficam em primeiro plano */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 left-1/4 size-[420px] rounded-full bg-indigo-300/30 blur-3xl" />
-        <div className="absolute top-1/3 -right-32 size-[380px] rounded-full bg-violet-300/25 blur-3xl" />
-        <div className="absolute bottom-0 left-0 size-[320px] rounded-full bg-cyan-300/20 blur-3xl" />
-        <div className="absolute bottom-1/4 right-1/4 size-[260px] rounded-full bg-amber-200/15 blur-3xl" />
+        <div className="absolute -top-24 left-1/4 size-[420px] rounded-full bg-[#7C97BB]/25 blur-3xl" />
+        <div className="absolute top-1/3 -right-32 size-[380px] rounded-full bg-[#1C2E4A]/12 blur-3xl" />
+        <div className="absolute bottom-0 left-0 size-[320px] rounded-full bg-[#9AB1D0]/22 blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 size-[260px] rounded-full bg-[#F2C14E]/12 blur-3xl" />
       </div>
 
-      {/* Header Section */}
-      <header className="relative z-10 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-50/70 via-white to-violet-50/40 border border-indigo-100/70 px-6 md:px-8 py-7 md:py-8 shadow-[0_24px_55px_-28px_rgba(28,46,74,0.45)]">
-        {/* Decoração de fundo — anéis vivos */}
-        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-indigo-300/30 blur-2xl" />
-        <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-violet-300/30 blur-2xl" />
+      {/* Header Section — mesma paleta do header "Eventos DAPS" */}
+      <header className="relative z-10 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1C2E4A]/[0.07] via-white to-[#7C97BB]/[0.14] border border-[#1C2E4A]/12 px-6 md:px-8 py-7 md:py-8 shadow-[0_24px_55px_-28px_rgba(28,46,74,0.45)]">
+        {/* Decoração de fundo */}
+        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-[#7C97BB]/30 blur-2xl" />
+        <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-[#1C2E4A]/15 blur-2xl" />
+        <span aria-hidden className="absolute right-6 top-0 h-full w-[3px] bg-gradient-to-b from-[#F2C14E] via-[#7C97BB] to-transparent opacity-70" />
 
         <div className="relative flex flex-col xl:flex-row xl:items-end justify-between gap-5">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="flex items-center justify-center size-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/30">
+              <span className="flex items-center justify-center size-10 rounded-2xl bg-gradient-to-br from-[#1C2E4A] via-[#456086] to-[#7C97BB] text-white shadow-md shadow-[#1C2E4A]/35">
                 <span className="material-symbols-outlined text-[20px]">dashboard</span>
               </span>
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight bg-gradient-to-r from-indigo-700 via-violet-600 to-indigo-700 bg-clip-text text-transparent">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight bg-gradient-to-r from-[#1C2E4A] via-[#456086] to-[#7C97BB] bg-clip-text text-transparent">
                 Meu Espaço
               </h1>
             </div>
             <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-lg">
-              Seu envolvimento vem de três caminhos: eventos que <strong className="text-indigo-700">você cria</strong> (nível definido pela responsabilidade pela organização), eventos em que <strong className="text-violet-600">alguém te inclui na criação</strong> (co-organizador ou participante) e eventos em que <strong className="text-cyan-600">você entra por conta própria</strong> pelo detalhamento do evento (participante).
+              Seu envolvimento vem de três caminhos: eventos que <strong className="text-[#1C2E4A]">você cria</strong> (nível definido pela responsabilidade pela organização), eventos em que <strong className="text-[#456086]">alguém te inclui na criação</strong> (co-organizador ou participante) e eventos em que <strong className="text-[#5B7DAA]">você entra por conta própria</strong> pelo detalhamento do evento (participante).
             </p>
           </div>
 
@@ -397,7 +398,7 @@ const MyInvolvement: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => navigate('/create-event')}
-              className="flex items-center gap-2 pl-3.5 pr-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:from-indigo-600 hover:to-violet-700 transition-all shadow-md shadow-indigo-500/30 hover:shadow-lg hover:shadow-violet-500/30 hover:-translate-y-0.5 active:scale-95 group"
+              className="flex items-center gap-2 pl-3.5 pr-5 py-2.5 rounded-xl bg-gradient-to-r from-[#1C2E4A] via-[#456086] to-[#5B7DAA] text-white hover:from-[#0E1725] hover:via-[#3A5B8C] hover:to-[#456086] transition-all shadow-md shadow-[#1C2E4A]/30 hover:shadow-lg hover:shadow-[#456086]/30 hover:-translate-y-0.5 active:scale-95 group"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform duration-300">add</span>
               <span className="text-sm font-semibold tracking-wide">Novo</span>
@@ -407,8 +408,8 @@ const MyInvolvement: React.FC = () => {
               onClick={() => setShowAnalytics(!showAnalytics)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 border ${
                 showAnalytics
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent shadow-md shadow-indigo-500/25'
-                  : 'bg-white text-slate-500 border-slate-200 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-sm'
+                  ? 'bg-gradient-to-r from-[#1C2E4A] to-[#456086] text-white border-transparent shadow-md shadow-[#1C2E4A]/25'
+                  : 'bg-white text-slate-500 border-slate-200 hover:text-[#1C2E4A] hover:border-[#1C2E4A]/25 hover:shadow-sm'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">{showAnalytics ? 'view_list' : 'analytics'}</span>
@@ -419,7 +420,7 @@ const MyInvolvement: React.FC = () => {
 
             <button
               onClick={() => refresh()}
-              className="size-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
+              className="size-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-[#1C2E4A] hover:border-[#1C2E4A]/25 hover:bg-[#1C2E4A]/5 transition-all group"
               title="Sincronizar dados"
             >
               <span className="material-symbols-outlined text-[20px] transition-transform duration-700 group-hover:rotate-180">refresh</span>
