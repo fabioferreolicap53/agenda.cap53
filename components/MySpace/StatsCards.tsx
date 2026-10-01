@@ -136,9 +136,10 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
       label: 'Criados',
       value: createdActive,
       icon: 'edit_calendar',
-      panel: 'from-[#1C2E4A] via-[#2B466F] to-[#456086]',
-      flow: 'text-[#1C2E4A]/45',
-      junction: 'bg-[#1C2E4A]/70',
+      panel: 'from-[#1C2E4A] via-[#3A5B8C] to-[#5B7DAA]',
+      flow: 'text-[#5B7DAA]/70',
+      junction: 'bg-[#5B7DAA]',
+      tint: 'from-[#1C2E4A]/[0.04] via-white to-[#5B7DAA]/[0.06]',
       caption: 'Eventos que você criou. A "Responsabilidade pela organização" define seu papel.',
       children: [
         {
@@ -164,9 +165,10 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
       label: 'Criados por outros usuários',
       value: othersActive,
       icon: 'group',
-      panel: 'from-[#456086] via-[#5B7DAA] to-[#7C97BB]',
-      flow: 'text-[#456086]/45',
-      junction: 'bg-[#456086]/70',
+      panel: 'from-[#456086] via-[#7C97BB] to-[#9AB1D0]',
+      flow: 'text-[#7C97BB]/80',
+      junction: 'bg-[#7C97BB]',
+      tint: 'from-[#456086]/[0.04] via-white to-[#9AB1D0]/[0.08]',
       caption: 'Eventos de outras pessoas em que você está envolvido de forma ativa.',
       children: [
         {
@@ -209,33 +211,39 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
   ];
 
   // Como cada nível de envolvimento é assumido (regras do sistema).
+  // `tab` liga cada regra ao cartão/filtro correspondente — clique para ver.
   const origins = [
     {
-      icon: 'add_box',
+      step: '01',
+      icon: 'edit_calendar',
       accent: 'navy',
       title: 'Você cria o evento',
-      caption: 'O nível vem da responsabilidade escolhida:',
+      caption: 'O nível do seu envolvimento vem da "Responsabilidade pela organização" escolhida na criação:',
       rules: [
-        { label: 'Ação interna ou evento coletivo', value: 'Organizador' },
-        { label: 'Participação externa', value: 'Participante' },
+        { icon: 'domain', label: 'Ação interna ou evento coletivo', value: 'Organizador', desc: 'Você lidera a organização do evento.', tab: 'lead' as const },
+        { icon: 'public', label: 'Participação externa', value: 'Participante', desc: 'O evento é de terceiros; você apenas participa.', tab: 'created_participant' as const },
       ],
     },
     {
+      step: '02',
       icon: 'group_add',
       accent: 'steel',
       title: 'Alguém te inclui na criação',
-      caption: 'Só quem cria o evento pode te colocar como:',
+      caption: 'Só quem cria o evento pode te definir como:',
       rules: [
-        { label: 'Co-organizador', value: 'Co-organizador' },
-        { label: 'Participante', value: 'Participante' },
+        { icon: 'assignment_ind', label: 'Co-organizador', value: 'Co-organizador', desc: 'Você ajuda a organizar o evento de outra pessoa.', tab: 'organizer' as const },
+        { icon: 'person', label: 'Participante', value: 'Participante', desc: 'Você é convidado apenas para participar.', tab: 'participant' as const },
       ],
     },
     {
+      step: '03',
       icon: 'how_to_reg',
       accent: 'sky',
       title: 'Você entra por conta própria',
       caption: 'Pelo detalhamento do evento, você se adiciona como:',
-      rules: [{ label: 'Participante', value: 'Participante' }],
+      rules: [
+        { icon: 'person', label: 'Participante', value: 'Participante', desc: 'Sua adição fica pendente até a aprovação de quem organiza.', tab: 'participant' as const },
+      ],
     },
   ];
 
@@ -261,7 +269,7 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
           return (
             <div
               key={branch.id}
-              className="flex flex-col rounded-3xl border border-slate-100 bg-gradient-to-b from-slate-50/70 via-white to-white p-3 md:p-4 shadow-[0_12px_32px_-18px_rgba(28,46,74,0.3)]"
+              className={`flex flex-col rounded-3xl border border-slate-100 bg-gradient-to-br p-3 md:p-4 shadow-[0_12px_32px_-18px_rgba(28,46,74,0.3)] ${branch.tint}`}
             >
               {/* Cartão-pai (raiz da árvore) */}
               <button
@@ -461,36 +469,98 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
       )}
 
       {/* Como cada nível é assumido — mapa das regras do sistema */}
-      <div className="relative z-10 rounded-2xl border border-slate-100 bg-slate-50/70 px-4 py-4 shadow-[0_10px_28px_-18px_rgba(28,46,74,0.25)]">
-        <div className="flex items-center gap-2 mb-3">
-          <span className="material-symbols-outlined text-[18px] text-slate-400">route</span>
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Como você assume cada nível de envolvimento
+      <div className="relative z-10 overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-br from-slate-50/80 via-white to-slate-50/60 px-4 py-4 shadow-[0_10px_28px_-18px_rgba(28,46,74,0.25)]">
+        {/* Decorative grid — reforça a leitura de "mapa" das regras */}
+        <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full bg-[#7C97BB]/10 blur-2xl" />
+        <div className="relative flex items-center gap-2 mb-3">
+          <span className="flex items-center justify-center size-7 rounded-lg bg-[#1C2E4A]/10 text-[#1C2E4A]">
+            <span className="material-symbols-outlined text-[16px]">route</span>
           </span>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+              Como você assume cada nível de envolvimento
+            </span>
+            <span className="text-[9px] font-semibold text-slate-400 tracking-wide">
+              Três caminhos — clique num nível para ver os eventos correspondentes
+            </span>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          {origins.map((origin) => {
+        <div className="relative grid grid-cols-1 md:grid-cols-3 gap-3">
+          {origins.map((origin, index) => {
             const accent = ACCENT[origin.accent];
             return (
-              <div key={origin.title} className={`rounded-xl border bg-white/70 p-3.5 ${accent.soft}`}>
-                <div className="flex items-center gap-2">
-                  <span className={`flex items-center justify-center size-7 rounded-lg ${accent.chip}`}>
-                    <span className="material-symbols-outlined text-[16px]">{origin.icon}</span>
-                  </span>
-                  <span className="text-[11px] font-black uppercase tracking-wide text-slate-700">
-                    {origin.title}
+              <div
+                key={origin.title}
+                className={`group/origin relative rounded-xl border bg-white/85 p-3.5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-16px_rgba(28,46,74,0.35)] ${accent.soft}`}
+              >
+                {/* Step badge + conector entre os passos */}
+                {index > 0 && (
+                  <span aria-hidden className="absolute -left-[13px] top-1/2 hidden h-[2px] w-[10px] -translate-y-1/2 rounded-full bg-slate-200 md:block" />
+                )}
+
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`flex items-center justify-center size-8 rounded-lg shrink-0 transition-colors ${accent.chip}`}>
+                      <span className="material-symbols-outlined text-[17px]">{origin.icon}</span>
+                    </span>
+                    <span className="text-[11px] font-black uppercase tracking-wide text-slate-700 leading-tight">
+                      {origin.title}
+                    </span>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-1.5 py-[1px] text-[8px] font-black tracking-widest ${accent.chip}`}
+                  >
+                    {origin.step}
                   </span>
                 </div>
-                <p className="mt-2 text-[11px] font-medium text-slate-500 leading-relaxed">{origin.caption}</p>
-                <ul className="mt-1.5 space-y-1">
-                  {origin.rules.map((rule) => (
-                    <li key={rule.label} className="flex items-center gap-1.5 text-[11px] text-slate-600">
-                      <span className={`size-1.5 rounded-full ${accent.bar} shrink-0`} />
-                      <span className="font-medium">{rule.label}</span>
-                      <span className="text-slate-300">→</span>
-                      <span className={`font-bold ${accent.text}`}>{rule.value}</span>
-                    </li>
-                  ))}
+
+                <p className="mt-2 text-[10px] font-medium text-slate-500 leading-relaxed">
+                  {origin.caption}
+                </p>
+
+                <ul className="mt-2 space-y-1.5">
+                  {origin.rules.map((rule) => {
+                    const ruleActive = activeTab === rule.tab;
+                    return (
+                      <li key={rule.label}>
+                        <button
+                          type="button"
+                          onClick={() => onTabChange(rule.tab)}
+                          title={
+                            ruleActive
+                              ? 'Filtro ativo — clique novamente para ver todos os eventos.'
+                              : `Ver os eventos em que você assume o nível "${rule.value}".`
+                          }
+                          className={`flex w-full items-start gap-2 rounded-lg border px-2 py-1.5 text-left transition-all duration-200 hover:-translate-y-px ${
+                            ruleActive
+                              ? `${accent.soft} border-2 border-current/30 shadow-sm`
+                              : 'border border-slate-100 bg-slate-50/70 hover:border-slate-200 hover:bg-white hover:shadow-sm'
+                          }`}
+                        >
+                          <span className={`mt-[1px] flex size-5 shrink-0 items-center justify-center rounded-md ${accent.chip}`}>
+                            <span className="material-symbols-outlined text-[12px]">{rule.icon}</span>
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-1 flex-wrap">
+                              <span className="text-[10px] font-bold text-slate-600 leading-tight">
+                                {rule.label}
+                              </span>
+                              <span className="material-symbols-outlined text-[11px] text-slate-300">arrow_forward</span>
+                              <span className={`text-[10px] font-black leading-tight ${accent.text}`}>
+                                {rule.value}
+                              </span>
+                            </span>
+                            <span className="mt-0.5 block text-[9px] leading-snug text-slate-400">
+                              {rule.desc}
+                            </span>
+                          </span>
+                          <span className="material-symbols-outlined shrink-0 text-[13px] text-slate-300 transition-colors group-hover/origin:text-slate-400">
+                            {ruleActive ? 'check_circle' : 'filter_alt'}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             );

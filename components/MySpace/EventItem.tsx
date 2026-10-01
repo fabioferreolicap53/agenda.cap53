@@ -165,12 +165,12 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-1.5">
-            <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-col gap-2 min-w-0">
               <div className="flex items-center gap-1.5 flex-wrap">
                 {getStatusDot(event)}
                 {getRoleBadge(event)}
               </div>
-              <h3 className={`text-sm font-bold sm:truncate leading-tight uppercase flex items-center gap-1.5 ${isCompleted ? 'text-slate-500' : 'text-slate-800'}`}>
+              <h3 className={`text-sm font-bold sm:truncate leading-tight uppercase flex items-center gap-1.5 pt-0.5 ${isCompleted ? 'text-slate-500' : 'text-slate-800'}`}>
                 {(event as any).is_private ? (
                   <span className="material-symbols-outlined text-[16px] text-amber-500 font-bold" title="Evento Particular (Invisível no calendário para os demais usuários)">visibility_off</span>
                 ) : (

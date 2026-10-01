@@ -6,35 +6,39 @@ interface Props {
 }
 
 // Cartões em rampa institucional (azul corporativo #1C2E4A e derivados), do
-// mais escuro ao mais claro.
-const ACCENT: Record<string, { card: string; chip: string; value: string; line: string; glow: string }> = {
+// mais escuro ao mais claro, com brilho e acentos mais vivos.
+const ACCENT: Record<string, { card: string; chip: string; value: string; line: string; glow: string; pill: string }> = {
   navy: {
-    card: 'bg-gradient-to-br from-[#1C2E4A]/10 via-white to-white border-[#1C2E4A]/15',
-    chip: 'bg-[#1C2E4A]/10 text-[#1C2E4A] ring-1 ring-inset ring-[#1C2E4A]/10',
+    card: 'bg-gradient-to-br from-[#1C2E4A]/14 via-white to-white border-[#1C2E4A]/20',
+    chip: 'bg-[#1C2E4A]/12 text-[#1C2E4A] ring-1 ring-inset ring-[#1C2E4A]/20',
     value: 'text-[#1C2E4A]',
-    line: 'from-[#1C2E4A] via-[#456086] to-[#7C97BB]',
-    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(28,46,74,0.16),transparent_62%)]',
+    line: 'from-[#F2C14E] via-[#456086] to-[#7C97BB]',
+    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(242,193,78,0.22),transparent_62%)]',
+    pill: 'border-[#F2C14E]/40 bg-[#F2C14E]/15 text-[#8a6d1a]',
   },
   steel: {
-    card: 'bg-gradient-to-br from-[#456086]/10 via-white to-white border-[#456086]/15',
-    chip: 'bg-[#456086]/12 text-[#456086] ring-1 ring-inset ring-[#456086]/12',
+    card: 'bg-gradient-to-br from-[#456086]/14 via-white to-white border-[#456086]/20',
+    chip: 'bg-[#456086]/14 text-[#456086] ring-1 ring-inset ring-[#456086]/20',
     value: 'text-[#456086]',
-    line: 'from-[#456086] via-[#7C97BB] to-[#B8C8DE]',
-    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(69,96,134,0.16),transparent_62%)]',
+    line: 'from-[#456086] via-[#7C97BB] to-[#F2C14E]',
+    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(69,96,134,0.22),transparent_62%)]',
+    pill: 'border-[#456086]/30 bg-[#456086]/10 text-[#456086]',
   },
   mist: {
-    card: 'bg-gradient-to-br from-[#9AB1D0]/20 via-white to-white border-[#9AB1D0]/30',
-    chip: 'bg-[#9AB1D0]/25 text-[#456086] ring-1 ring-inset ring-[#9AB1D0]/25',
+    card: 'bg-gradient-to-br from-[#9AB1D0]/28 via-white to-white border-[#9AB1D0]/40',
+    chip: 'bg-[#9AB1D0]/30 text-[#456086] ring-1 ring-inset ring-[#9AB1D0]/35',
     value: 'text-[#5B7DAA]',
-    line: 'from-[#9AB1D0] via-[#7C97BB] to-[#456086]',
-    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(154,177,208,0.28),transparent_62%)]',
+    line: 'from-[#9AB1D0] via-[#7C97BB] to-[#F2C14E]',
+    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(154,177,208,0.38),transparent_62%)]',
+    pill: 'border-[#9AB1D0]/50 bg-[#9AB1D0]/25 text-[#456086]',
   },
   graphite: {
-    card: 'bg-gradient-to-br from-[#475569]/10 via-white to-white border-[#475569]/15',
-    chip: 'bg-[#475569]/10 text-[#475569] ring-1 ring-inset ring-[#475569]/10',
+    card: 'bg-gradient-to-br from-[#475569]/14 via-white to-white border-[#475569]/20',
+    chip: 'bg-[#475569]/12 text-[#475569] ring-1 ring-inset ring-[#475569]/18',
     value: 'text-[#475569]',
-    line: 'from-[#475569] via-[#64748B] to-[#94A3B8]',
-    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(71,85,105,0.16),transparent_62%)]',
+    line: 'from-[#475569] via-[#64748B] to-[#9AB1D0]',
+    glow: 'bg-[radial-gradient(circle_at_100%_0%,rgba(71,85,105,0.20),transparent_62%)]',
+    pill: 'border-[#475569]/30 bg-[#475569]/10 text-[#475569]',
   },
 };
 
@@ -76,7 +80,7 @@ export const DapsKpis: React.FC<Props> = ({ stats }) => {
           <span className={`flex items-center justify-center size-9 rounded-xl ${ACCENT.navy.chip}`}>
             <span className="material-symbols-outlined text-[20px]">campaign</span>
           </span>
-          <span className="rounded-full border border-slate-100 bg-white/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-500">
+          <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${ACCENT.navy.pill}`}>
             {roleTotal} papéis
           </span>
         </div>
@@ -126,7 +130,7 @@ export const DapsKpis: React.FC<Props> = ({ stats }) => {
           <span className={`flex items-center justify-center size-9 rounded-xl ${ACCENT.steel.chip}`}>
             <span className="material-symbols-outlined text-[20px]">event_note</span>
           </span>
-          <span className="rounded-full border border-slate-100 bg-white/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-500">
+          <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${ACCENT.steel.pill}`}>
             {pastPct}% concluídos
           </span>
         </div>
@@ -169,7 +173,7 @@ export const DapsKpis: React.FC<Props> = ({ stats }) => {
           <span className={`flex items-center justify-center size-9 rounded-xl ${ACCENT.mist.chip}`}>
             <span className="material-symbols-outlined text-[20px]">bar_chart</span>
           </span>
-          <span className="rounded-full border border-slate-100 bg-white/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-500">
+          <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${ACCENT.mist.pill}`}>
             por evento
           </span>
         </div>
@@ -206,7 +210,7 @@ export const DapsKpis: React.FC<Props> = ({ stats }) => {
             <span className="material-symbols-outlined text-[20px]">schedule</span>
           </span>
           {stats.avgGapDays !== null && (
-            <span className="rounded-full border border-slate-100 bg-white/80 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-slate-500">
+            <span className={`rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${ACCENT.graphite.pill}`}>
               cadência
             </span>
           )}

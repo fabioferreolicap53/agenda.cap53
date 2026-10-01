@@ -366,29 +366,30 @@ const MyInvolvement: React.FC = () => {
     <div className="relative max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       {/* Fundo com profundidade — os blocos da página ficam em primeiro plano */}
       <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 left-1/4 size-[420px] rounded-full bg-indigo-200/25 blur-3xl" />
-        <div className="absolute top-1/3 -right-32 size-[380px] rounded-full bg-violet-200/20 blur-3xl" />
-        <div className="absolute bottom-0 left-0 size-[320px] rounded-full bg-blue-200/20 blur-3xl" />
+        <div className="absolute -top-24 left-1/4 size-[420px] rounded-full bg-indigo-300/30 blur-3xl" />
+        <div className="absolute top-1/3 -right-32 size-[380px] rounded-full bg-violet-300/25 blur-3xl" />
+        <div className="absolute bottom-0 left-0 size-[320px] rounded-full bg-cyan-300/20 blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 size-[260px] rounded-full bg-amber-200/15 blur-3xl" />
       </div>
 
       {/* Header Section */}
-      <header className="relative z-10 overflow-hidden rounded-3xl bg-gradient-to-br from-white via-indigo-50/30 to-violet-50/20 border border-slate-100/80 px-6 md:px-8 py-7 md:py-8 shadow-[0_24px_55px_-28px_rgba(28,46,74,0.45)]">
-        {/* Decoração de fundo — anéis sutis */}
-        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-indigo-100/30 blur-2xl" />
-        <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-violet-100/25 blur-2xl" />
+      <header className="relative z-10 overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-50/70 via-white to-violet-50/40 border border-indigo-100/70 px-6 md:px-8 py-7 md:py-8 shadow-[0_24px_55px_-28px_rgba(28,46,74,0.45)]">
+        {/* Decoração de fundo — anéis vivos */}
+        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-indigo-300/30 blur-2xl" />
+        <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-violet-300/30 blur-2xl" />
 
         <div className="relative flex flex-col xl:flex-row xl:items-end justify-between gap-5">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="flex items-center justify-center size-10 rounded-2xl bg-indigo-600 text-white shadow-md shadow-indigo-600/20">
+              <span className="flex items-center justify-center size-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/30">
                 <span className="material-symbols-outlined text-[20px]">dashboard</span>
               </span>
-              <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight bg-gradient-to-r from-indigo-700 via-violet-600 to-indigo-700 bg-clip-text text-transparent">
                 Meu Espaço
               </h1>
             </div>
             <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-lg">
-              Seu envolvimento vem de três caminhos: eventos que <strong className="text-slate-700">você cria</strong> (nível definido pela responsabilidade pela organização), eventos em que <strong className="text-slate-700">alguém te inclui na criação</strong> (co-organizador ou participante) e eventos em que <strong className="text-slate-700">você entra por conta própria</strong> pelo detalhamento do evento (participante).
+              Seu envolvimento vem de três caminhos: eventos que <strong className="text-indigo-700">você cria</strong> (nível definido pela responsabilidade pela organização), eventos em que <strong className="text-violet-600">alguém te inclui na criação</strong> (co-organizador ou participante) e eventos em que <strong className="text-cyan-600">você entra por conta própria</strong> pelo detalhamento do evento (participante).
             </p>
           </div>
 
@@ -396,7 +397,7 @@ const MyInvolvement: React.FC = () => {
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => navigate('/create-event')}
-              className="flex items-center gap-2 pl-3.5 pr-5 py-2.5 rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20 hover:shadow-lg hover:-translate-y-0.5 active:scale-95 group"
+              className="flex items-center gap-2 pl-3.5 pr-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white hover:from-indigo-600 hover:to-violet-700 transition-all shadow-md shadow-indigo-500/30 hover:shadow-lg hover:shadow-violet-500/30 hover:-translate-y-0.5 active:scale-95 group"
             >
               <span className="material-symbols-outlined text-[18px] group-hover:rotate-90 transition-transform duration-300">add</span>
               <span className="text-sm font-semibold tracking-wide">Novo</span>
@@ -406,8 +407,8 @@ const MyInvolvement: React.FC = () => {
               onClick={() => setShowAnalytics(!showAnalytics)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 border ${
                 showAnalytics
-                  ? 'bg-slate-800 text-white border-slate-800 shadow-md'
-                  : 'bg-white text-slate-500 border-slate-200 hover:text-slate-800 hover:border-slate-300 hover:shadow-sm'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white border-transparent shadow-md shadow-indigo-500/25'
+                  : 'bg-white text-slate-500 border-slate-200 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-sm'
               }`}
             >
               <span className="material-symbols-outlined text-[18px]">{showAnalytics ? 'view_list' : 'analytics'}</span>
@@ -418,7 +419,7 @@ const MyInvolvement: React.FC = () => {
 
             <button
               onClick={() => refresh()}
-              className="size-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all group"
+              className="size-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 transition-all group"
               title="Sincronizar dados"
             >
               <span className="material-symbols-outlined text-[20px] transition-transform duration-700 group-hover:rotate-180">refresh</span>

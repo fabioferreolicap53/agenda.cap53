@@ -50,43 +50,52 @@ const DapsEvents: React.FC = () => {
   }, [events, stats]);
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+    <div className="relative max-w-7xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
+      {/* Fundo com profundidade — halos institucionais vivos */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-24 right-1/4 size-[420px] rounded-full bg-[#7C97BB]/30 blur-3xl" />
+        <div className="absolute top-1/3 -left-32 size-[380px] rounded-full bg-[#1C2E4A]/12 blur-3xl" />
+        <div className="absolute bottom-0 right-0 size-[320px] rounded-full bg-[#9AB1D0]/25 blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 size-[240px] rounded-full bg-[#F2C14E]/12 blur-3xl" />
+      </div>
+
       {/* Header */}
-      <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-[#7C97BB]/10 to-[#1C2E4A]/5 border border-[#1C2E4A]/10 px-6 md:px-8 py-7 md:py-8 shadow-sm">
-        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-[#1C2E4A]/8 blur-2xl" />
-        <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-[#7C97BB]/15 blur-2xl" />
+      <header className="relative z-10 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1C2E4A]/[0.07] via-white to-[#7C97BB]/[0.14] border border-[#1C2E4A]/12 px-6 md:px-8 py-7 md:py-8 shadow-[0_24px_55px_-28px_rgba(28,46,74,0.45)]">
+        <div className="absolute -top-16 -right-16 size-48 rounded-full bg-[#7C97BB]/30 blur-2xl" />
+        <div className="absolute -bottom-12 -left-12 size-36 rounded-full bg-[#1C2E4A]/15 blur-2xl" />
+        <span aria-hidden className="absolute right-6 top-0 h-full w-[3px] bg-gradient-to-b from-[#F2C14E] via-[#7C97BB] to-transparent opacity-70" />
 
         <div className="relative flex flex-col xl:flex-row xl:items-end justify-between gap-5">
           <div className="space-y-3">
             <div className="flex items-center gap-3">
-              <span className="flex items-center justify-center size-10 rounded-2xl bg-[#1C2E4A] text-white shadow-md shadow-[#1C2E4A]/30">
+              <span className="flex items-center justify-center size-10 rounded-2xl bg-gradient-to-br from-[#1C2E4A] via-[#456086] to-[#7C97BB] text-white shadow-md shadow-[#1C2E4A]/35">
                 <span className="material-symbols-outlined text-[20px]">campaign</span>
               </span>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#456086]">
                   Mobilização
                 </p>
-                <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight bg-gradient-to-r from-[#1C2E4A] via-[#456086] to-[#7C97BB] bg-clip-text text-transparent">
                   Eventos DAPS
                 </h1>
               </div>
             </div>
             <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-xl">
               Controle e visão detalhada dos eventos de natureza{' '}
-              <strong className="text-slate-700">EVENTO DAPS</strong>: quem se envolve, em qual
+              <strong className="text-[#1C2E4A]">EVENTO DAPS</strong>: quem se envolve, em qual
               nível, com que frequência e quantos dias separam um evento do outro.
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <span className="hidden md:flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[12px] font-bold text-slate-600">
-              <span className="material-symbols-outlined text-[16px] text-[#456086]">bolt</span>
+            <span className="hidden md:flex items-center gap-1.5 rounded-xl border border-[#7C97BB]/40 bg-gradient-to-r from-[#7C97BB]/15 to-[#9AB1D0]/20 px-3.5 py-2.5 text-[12px] font-bold text-[#456086]">
+              <span className="material-symbols-outlined text-[16px] text-[#F2C14E]">bolt</span>
               {stats.totalEvents} {stats.totalEvents === 1 ? 'evento' : 'eventos'} •{' '}
               {stats.totalInvolved} envolvidos
             </span>
             <button
               onClick={() => refresh()}
-              className="size-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-[#1C2E4A] hover:border-[#1C2E4A]/20 hover:bg-[#1C2E4A]/5 transition-all group"
+              className="size-10 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:text-[#1C2E4A] hover:border-[#1C2E4A]/25 hover:bg-[#1C2E4A]/5 transition-all group"
               title="Sincronizar dados"
             >
               <span className="material-symbols-outlined text-[20px] transition-transform duration-700 group-hover:rotate-180">
@@ -114,13 +123,16 @@ const DapsEvents: React.FC = () => {
       ) : (
         <>
           {/* 1. KPIs */}
-          <DapsKpis stats={stats} />
+          <div className="relative z-10">
+            <DapsKpis stats={stats} />
+          </div>
 
           {/* 2. Cadência — DESTAQUE PRINCIPAL */}
-          <section className="relative overflow-hidden rounded-3xl border-2 border-[#1C2E4A]/12 bg-gradient-to-br from-[#7C97BB]/10 via-white to-[#1C2E4A]/5 shadow-md">
+          <section className="relative z-10 overflow-hidden rounded-3xl border-2 border-[#1C2E4A]/15 bg-gradient-to-br from-[#7C97BB]/[0.14] via-white to-[#1C2E4A]/[0.06] shadow-[0_18px_45px_-22px_rgba(28,46,74,0.45)]">
             {/* Decoração de fundo */}
-            <div className="absolute -top-20 -right-20 size-64 rounded-full bg-[#1C2E4A]/8 blur-3xl" />
-            <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-[#7C97BB]/12 blur-3xl" />
+            <div className="absolute -top-20 -right-20 size-64 rounded-full bg-[#7C97BB]/20 blur-3xl" />
+            <div className="absolute -bottom-16 -left-16 size-48 rounded-full bg-[#F2C14E]/12 blur-3xl" />
+            <span aria-hidden className="absolute left-0 top-0 h-full w-[4px] bg-gradient-to-b from-[#F2C14E] via-[#7C97BB] to-transparent" />
 
             <div className="relative">
               <DapsCadence events={events} stats={stats} />
@@ -128,25 +140,26 @@ const DapsEvents: React.FC = () => {
           </section>
 
           {/* 3. Levantamento por competência (mês/ano) + calendário mensal na mesma linha */}
-          <div className="grid grid-cols-1 gap-6 xl:grid-cols-2 items-stretch">
+          <div className="relative z-10 grid grid-cols-1 gap-6 xl:grid-cols-2 items-stretch">
             <DapsCompetencia events={events} />
             <DapsCalendar events={events} onSelectEvent={goToEvent} />
           </div>
 
           {/* 4. Métricas destaque — Cards mini-resumo */}
           {highlightMetrics && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Distribuição de papéis */}
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">
+              <div className="relative overflow-hidden rounded-2xl border border-[#1C2E4A]/10 bg-gradient-to-br from-[#1C2E4A]/[0.04] via-white to-[#7C97BB]/[0.08] p-5 shadow-[0_12px_32px_-18px_rgba(28,46,74,0.35)]">
+                <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-[#7C97BB]/15 blur-2xl" />
+                <p className="relative text-xs font-black uppercase tracking-wider text-[#456086] mb-3">
                   Distribuição de papéis
                 </p>
-                <div className="flex h-3.5 w-full overflow-hidden rounded-full bg-slate-100">
-                  <div className="bg-[#1C2E4A] transition-all" style={{ width: `${highlightMetrics.orgPct}%` }} />
-                  <div className="bg-[#456086] transition-all" style={{ width: `${highlightMetrics.coOrgPct}%` }} />
-                  <div className="bg-[#7C97BB] transition-all" style={{ width: `${highlightMetrics.partPct}%` }} />
+                <div className="relative flex h-3.5 w-full overflow-hidden rounded-full bg-slate-100 ring-1 ring-inset ring-slate-200/60">
+                  <div className="bg-gradient-to-r from-[#1C2E4A] to-[#3A5B8C] transition-all" style={{ width: `${highlightMetrics.orgPct}%` }} />
+                  <div className="bg-gradient-to-r from-[#456086] to-[#5B7DAA] transition-all" style={{ width: `${highlightMetrics.coOrgPct}%` }} />
+                  <div className="bg-gradient-to-r from-[#7C97BB] to-[#9AB1D0] transition-all" style={{ width: `${highlightMetrics.partPct}%` }} />
                 </div>
-                <div className="mt-3 flex items-center gap-4 text-xs font-bold text-slate-600">
+                <div className="relative mt-3 flex items-center gap-4 text-xs font-bold text-slate-600">
                   <span className="inline-flex items-center gap-1.5">
                     <span className="size-2.5 rounded-full bg-[#1C2E4A]" />
                     {highlightMetrics.orgPct}% org.
@@ -163,12 +176,14 @@ const DapsEvents: React.FC = () => {
               </div>
 
               {/* Evento com mais envolvidos */}
-              <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">
+              <div className="relative overflow-hidden rounded-2xl border border-[#F2C14E]/25 bg-gradient-to-br from-[#F2C14E]/[0.08] via-white to-[#7C97BB]/[0.08] p-5 shadow-[0_12px_32px_-18px_rgba(28,46,74,0.35)]">
+                <span aria-hidden className="pointer-events-none absolute -right-10 -top-10 size-32 rounded-full bg-[#F2C14E]/18 blur-2xl" />
+                <p className="relative text-xs font-black uppercase tracking-wider text-[#456086] mb-3 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[15px] text-[#F2C14E]">trophy</span>
                   Maior engajamento
                 </p>
                 {highlightMetrics.mostInvolved && (
-                  <div className="space-y-2">
+                  <div className="relative space-y-2">
                     <p
                       className="text-[15px] font-bold text-slate-800 line-clamp-1 hover:text-[#1C2E4A] transition-colors cursor-pointer"
                       onClick={() => goToEvent(highlightMetrics.mostInvolved!)}
@@ -186,19 +201,19 @@ const DapsEvents: React.FC = () => {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {highlightMetrics.mostInvolved.organizerCount > 0 && (
-                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ${DAPS_ROLE_COLORS.ORGANIZADOR.chip}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ring-1 ring-inset ${DAPS_ROLE_COLORS.ORGANIZADOR.chip}`}>
                           <span className="material-symbols-outlined text-[13px]">shield_person</span>
                           {highlightMetrics.mostInvolved.organizerCount}
                         </span>
                       )}
                       {highlightMetrics.mostInvolved.coOrganizerCount > 0 && (
-                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ${DAPS_ROLE_COLORS.CO_ORGANIZADOR.chip}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ring-1 ring-inset ${DAPS_ROLE_COLORS.CO_ORGANIZADOR.chip}`}>
                           <span className="material-symbols-outlined text-[13px]">assignment_ind</span>
                           {highlightMetrics.mostInvolved.coOrganizerCount}
                         </span>
                       )}
                       {highlightMetrics.mostInvolved.participantCount > 0 && (
-                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ${DAPS_ROLE_COLORS.PARTICIPANTE.chip}`}>
+                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ring-1 ring-inset ${DAPS_ROLE_COLORS.PARTICIPANTE.chip}`}>
                           <span className="material-symbols-outlined text-[13px]">person</span>
                           {highlightMetrics.mostInvolved.participantCount}
                         </span>
@@ -211,7 +226,9 @@ const DapsEvents: React.FC = () => {
           )}
 
           {/* 5. Equipe e parcerias */}
-          <DapsTeam people={people} pairs={pairs} />
+          <div className="relative z-10">
+            <DapsTeam people={people} pairs={pairs} />
+          </div>
         </>
       )}
     </div>
