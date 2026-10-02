@@ -133,7 +133,7 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
   const branches = [
     {
       id: 'all' as const,
-      label: 'Criados',
+      label: 'Criados por você',
       value: createdActive,
       icon: 'edit_calendar',
       panel: 'from-[#1C2E4A] via-[#3A5B8C] to-[#5B7DAA]',
