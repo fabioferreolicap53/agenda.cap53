@@ -10,7 +10,7 @@ import { pb } from '../lib/pocketbase';
 // Novos componentes modularizados
 import ConfirmationModal from '../components/ConfirmationModal';
 import { StatsCards } from '../components/MySpace/StatsCards';
-import { EventList } from '../components/MySpace/EventList';
+import { EventList, EventScope, EventSortBy, SortDir } from '../components/MySpace/EventList';
 import { FilterBar } from '../components/MySpace/FilterBar';
 import { AnalyticsSection } from '../components/MySpace/AnalyticsSection';
 import RefusalModal from '../components/RefusalModal';
@@ -36,6 +36,10 @@ const MyInvolvement: React.FC = () => {
   // Local state
   // null = nenhum cartão selecionado: mostra todos os eventos sem filtro.
   const [activeTab, setActiveTab] = useState<TabId | null>(null);
+  // Chave de escopo da lista: 'open' = prazo ainda não finalizado; 'all' = todos.
+  const [eventScope, setEventScope] = useState<EventScope>('open');
+  // Ordenação da lista: por início do evento ou por criação, crescente/decrescente.
+  const [eventSort, setEventSort] = useState<{ by: EventSortBy; dir: SortDir }>({ by: 'start', dir: 'asc' });
   const [showAnalytics, setShowAnalytics] = useState(false);
 
   const [confirmationModalOpen, setConfirmationModalOpen] = useState(false);
@@ -251,12 +255,22 @@ const MyInvolvement: React.FC = () => {
     setActiveTab(prev => (prev === tab ? null : tab));
   };
 
-  // Reset pagination on tab or search change
+  // Reset pagination on tab, search, scope or sort change
   useEffect(() => {
     setVisibleCount(10);
-  }, [activeTab, searchTerm]);
+  }, [activeTab, searchTerm, eventScope, eventSort]);
 
-  const filteredEvents = useMemo(() => {
+  // "Em aberto": prazo ainda não finalizado. Usa o fim do evento; se o evento
+  // não tiver fim válido, usa o início (não pode já ter passado).
+  const isEventOpen = (e: MySpaceEvent) => {
+    const end = new Date(e.date_end);
+    if (!isNaN(end.getTime())) return end.getTime() > Date.now();
+    const start = new Date(e.date_start);
+    return isNaN(start.getTime()) ? true : start.getTime() > Date.now();
+  };
+
+  // Recorte base: tab (cartão) + busca — antes do escopo de prazo.
+  const baseEvents = useMemo(() => {
     const term = searchTerm.toLowerCase();
     
     let result = events;
@@ -343,7 +357,7 @@ const MyInvolvement: React.FC = () => {
 
     // 2. Filtro por Texto
     if (term) {
-      result = result.filter(e => 
+      result = result.filter(e =>
         (e.title || '').toLowerCase().includes(term) ||
         (e.description || '').toLowerCase().includes(term) ||
         (e.location || '').toLowerCase().includes(term) ||
@@ -352,11 +366,33 @@ const MyInvolvement: React.FC = () => {
       );
     }
 
-    // 3. Ordenação Decrescente por Data de Criação
-    result = [...result].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime());
-    
+    // 3. Ordenação por data/horário de início ou de criação (crescente/decrescente)
+    const sortValue = (e: MySpaceEvent) => {
+      const raw = eventSort.by === 'start' ? e.date_start : e.created;
+      const t = new Date(raw).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+    result = [...result].sort((a, b) =>
+      eventSort.dir === 'asc' ? sortValue(a) - sortValue(b) : sortValue(b) - sortValue(a)
+    );
+
     return result;
-  }, [events, activeTab, searchTerm]);
+  }, [events, activeTab, searchTerm, eventSort]);
+
+  // Lista final: recorte base + escopo de prazo (em aberto x todos).
+  const filteredEvents = useMemo(
+    () => (eventScope === 'open' ? baseEvents.filter(isEventOpen) : baseEvents),
+    [baseEvents, eventScope]
+  );
+
+  // Contadores por escopo sobre o recorte atual (tab + busca).
+  const scopeCounts = useMemo(
+    () => ({
+      open: baseEvents.filter(isEventOpen).length,
+      all: baseEvents.length
+    }),
+    [baseEvents]
+  );
 
   const visibleEvents = useMemo(() => {
     return filteredEvents.slice(0, visibleCount);
@@ -449,9 +485,16 @@ const MyInvolvement: React.FC = () => {
             />
             
             <div className="space-y-4">
-              <EventList 
+              <EventList
                 events={visibleEvents}
                 loading={loading}
+                scope={eventScope}
+                onScopeChange={setEventScope}
+                openCount={scopeCounts.open}
+                allCount={scopeCounts.all}
+                sortBy={eventSort.by}
+                sortDir={eventSort.dir}
+                onSortChange={(by, dir) => setEventSort({ by, dir })}
                 onOpenCalendar={handleOpenEventInCalendar}
                 onCancel={handleCancelEvent}
                 onDelete={handleDeleteEvent}

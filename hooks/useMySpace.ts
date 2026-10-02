@@ -22,6 +22,7 @@ export interface MySpaceEvent {
   category?: string; // Mapeado como "Tipo"
   nature?: string;   // Mapeado como "Natureza"
   logistics_resources?: string; // Mapeado como "Logística & Recursos"
+  transporte_suporte?: boolean; // Solicitação de transporte/suporte
   event_responsibility?: string;
   estimated_participants?: number;
   expand?: {
@@ -428,14 +429,49 @@ export const useMySpace = () => {
           console.error('Error parsing date for analytics:', e.date_start);
         }
 
-        // By Resources (Logistics)
+        // By Resources (Logistics) — campo legado (pode não existir mais)
         if (e.logistics_resources) {
           const resources = e.logistics_resources.split(',').map(r => r.trim());
           resources.forEach(r => {
             if (r) resourceMap[r] = (resourceMap[r] || 0) + 1;
           });
         }
+
+        // Transporte/Suporte solicitado no evento
+        if (e.transporte_suporte) {
+          resourceMap['Transporte / Suporte'] = (resourceMap['Transporte / Suporte'] || 0) + 1;
+        }
       });
+
+      // By Resources — demandas logísticas REAIS: solicitações de itens (almac) dos meus eventos
+      const confirmedIds = allEvents
+        .filter(e => e.type === 'created' || e.participationStatus === 'accepted' || e.requestStatus === 'accepted')
+        .map(e => e.id)
+        .filter(Boolean);
+
+      if (confirmedIds.length > 0) {
+        const CHUNK = 25;
+        const filters: string[] = [];
+        for (let i = 0; i < confirmedIds.length; i += CHUNK) {
+          filters.push(
+            confirmedIds.slice(i, i + CHUNK).map(id => `event = "${id}"`).join(' || ')
+          );
+        }
+
+        const almacLists = await Promise.all(
+          filters.map(f =>
+            pb.collection('agenda_cap53_almac_requests')
+              .getFullList<any>({ filter: f, expand: 'item' })
+              .catch(() => [])
+          )
+        );
+
+        almacLists.flat().forEach(r => {
+          const item = r?.expand?.item;
+          const label = item?.name || item?.category || 'Item de serviço';
+          resourceMap[label] = (resourceMap[label] || 0) + 1;
+        });
+      }
 
       const processedAnalytics: AnalyticsData = {
         byType: Object.entries(typeMap).map(([name, value]) => ({ name, value })),
