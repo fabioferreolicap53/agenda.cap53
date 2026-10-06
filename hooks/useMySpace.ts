@@ -34,7 +34,7 @@ export interface MySpaceEvent {
       avatar?: string;
     };
     participants?: any[];
-    'agenda_cap53_solicitacoes_evento(event)'?: any[];
+    'agenda_cap53_solicitacoes_evento_via_event'?: any[];
   };
   userRole?: string;
   type: 'created' | 'participation' | 'request';
@@ -104,7 +104,7 @@ export const useMySpace = () => {
       const createdRes = await pb.collection('agenda_cap53_eventos').getFullList<any>({
         filter: `user = "${user.id}"`,
         sort: '-date_start',
-        expand: 'location,user,type,participants,agenda_cap53_solicitacoes_evento(event)'
+        expand: 'location,user,type,participants,agenda_cap53_solicitacoes_evento_via_event'
       });
       
       const createdWithMeta = createdRes.map(e => {
@@ -122,7 +122,7 @@ export const useMySpace = () => {
       // 2. Fetch participations (Invites received by me OR roles I have in other events)
       const participationsRes = await pb.collection('agenda_cap53_participantes').getFullList({
         filter: `user = "${user.id}"`,
-        expand: 'event,event.location,event.user,event.type,event.participants,event.agenda_cap53_solicitacoes_evento(event)'
+        expand: 'event,event.location,event.user,event.type,event.participants,event.agenda_cap53_solicitacoes_evento_via_event'
       });
       
       const participationEvents = participationsRes
@@ -185,7 +185,7 @@ export const useMySpace = () => {
       // 3. Fetch requests (Solicitations sent)
       const requestsRes = await pb.collection('agenda_cap53_solicitacoes_evento').getFullList({
         filter: `user = "${user.id}"`,
-        expand: 'event,event.location,event.user,event.type,event.participants,event.agenda_cap53_solicitacoes_evento(event)'
+        expand: 'event,event.location,event.user,event.type,event.participants,event.agenda_cap53_solicitacoes_evento_via_event'
       });
       
       const requestEvents = requestsRes
