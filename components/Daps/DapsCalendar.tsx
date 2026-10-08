@@ -563,7 +563,7 @@ export const DapsCalendar: React.FC<Props> = ({ events, onSelectEvent }) => {
                     onMouseLeave={hideTooltip}
                     onFocus={(e) => showTooltip(e.currentTarget, event)}
                     onBlur={hideTooltip}
-                    className={`block w-full truncate rounded-[6px] px-1.5 py-[2px] text-left text-[9.5px] font-bold leading-tight transition-all hover:scale-[1.03] ${
+                    className={`block w-full truncate rounded-[6px] px-1.5 py-[2px] text-left uppercase text-[9.5px] font-bold leading-tight transition-all hover:scale-[1.03] ${
                       continued
                         ? 'border border-dashed border-[#7C97BB]/70 bg-[#7C97BB]/10 text-[#456086]'
                         : 'bg-gradient-to-br from-[#5B7DAA] via-[#3A5B8C] to-[#1C2E4A] text-white ring-1 ring-inset ring-white/20 shadow-[0_2px_7px_-2px_rgba(28,46,74,0.55)] hover:from-[#7C97BB] hover:to-[#2B466F]'

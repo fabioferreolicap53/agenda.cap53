@@ -185,7 +185,7 @@ const DapsEvents: React.FC = () => {
                 {highlightMetrics.mostInvolved && (
                   <div className="relative space-y-2">
                     <p
-                      className="text-[15px] font-bold text-slate-800 line-clamp-1 hover:text-[#1C2E4A] transition-colors cursor-pointer"
+                      className="uppercase text-[15px] font-bold text-slate-800 line-clamp-1 hover:text-[#1C2E4A] transition-colors cursor-pointer"
                       onClick={() => goToEvent(highlightMetrics.mostInvolved!)}
                       title="Clique para ver no calendário"
                     >

@@ -300,7 +300,7 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
             </div>
 
             <h4
-              className={`group/title mt-2 inline-flex min-w-0 max-w-full items-start gap-1.5 break-words text-base font-black leading-snug tracking-tight transition-colors cursor-pointer decoration-[#7C97BB] decoration-2 underline-offset-4 hover:underline sm:text-lg ${
+              className={`group/title mt-2 inline-flex min-w-0 max-w-full items-start gap-1.5 break-words uppercase text-base font-black leading-snug tracking-tight transition-colors cursor-pointer decoration-[#7C97BB] decoration-2 underline-offset-4 hover:underline sm:text-lg ${
                 isPast ? 'text-slate-500 hover:text-[#1C2E4A]' : 'text-slate-800 hover:text-[#1C2E4A]'
               }`}
               onClick={goToEvent}
@@ -493,7 +493,7 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
                             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                               Envolvidos
                             </p>
-                            <p className="truncate text-[11px] font-semibold text-slate-400" title={event.title}>
+                            <p className="truncate uppercase text-[11px] font-semibold text-slate-400" title={event.title}>
                               {event.title}
                             </p>
                           </div>
