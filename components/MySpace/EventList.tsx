@@ -188,7 +188,7 @@ export const EventList: React.FC<EventListProps> = ({
           <div>
             <p className="font-medium text-slate-700 mb-0.5">Aviso sobre o seu envolvimento</p>
             <p>
-              Os eventos marcados como <strong className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded">Retirou-se</strong> ou <strong className="text-red-700 bg-red-50 px-1 py-0.5 rounded">Removido</strong> não aparecerão no seu calendário ativo. Eles são mantidos aqui apenas para fins de histórico e transparência da sua agenda.
+              Os eventos marcados como <strong className="text-amber-700 bg-amber-50 px-1 py-0.5 rounded">Nega Presença/Retirou-se</strong> ou <strong className="text-red-700 bg-red-50 px-1 py-0.5 rounded">Presença Recusada/Foi Retirado(a)</strong> não aparecerão no seu calendário ativo. Eles são mantidos aqui apenas para fins de histórico e transparência da sua agenda.
             </p>
           </div>
         </div>

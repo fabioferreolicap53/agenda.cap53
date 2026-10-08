@@ -10,19 +10,12 @@ import {
   LEVEL_PARTICIPANT,
 } from '../../hooks/useDapsEvents';
 import { getAvatarUrl } from '../../lib/pocketbase';
+import { getPresenceLabel } from '../../lib/constants';
 
 interface Props {
   event: DapsEvent;
   defaultOpen?: boolean;
 }
-
-const STATUS_META: Record<string, { label: string; classes: string }> = {
-  accepted: { label: 'Confirmado', classes: 'bg-emerald-50 text-emerald-700 border-emerald-100' },
-  pending: { label: 'Pendente', classes: 'bg-amber-50 text-amber-700 border-amber-100' },
-  rejected: { label: 'Recusou', classes: 'bg-red-50 text-red-600 border-red-100' },
-  declined: { label: 'Recusou', classes: 'bg-red-50 text-red-600 border-red-100' },
-  withdrawn: { label: 'Retirou-se', classes: 'bg-slate-100 text-slate-500 border-slate-200' },
-};
 
 const LEVEL_META: Record<string, { label: string; chip: string; border: string; icon: string }> = {
   [LEVEL_ORGANIZER]: {
@@ -53,7 +46,22 @@ const formatFull = (value?: string): string => {
 };
 
 const InvolvedRow: React.FC<{ person: DapsInvolved }> = ({ person }) => {
-  const status = STATUS_META[person.status || 'accepted'] || STATUS_META.accepted;
+  const st = (person.status || 'accepted').toLowerCase();
+  const presenceLabel = getPresenceLabel({
+    isCreator: person.isCreator,
+    creatorRole: person.level,
+    status: st,
+    hasOwnRequest: person.hasOwnRequest,
+  });
+  const statusClasses = person.isCreator
+    ? 'bg-slate-800 text-white border-slate-700'
+    : st === 'accepted'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+    : st === 'rejected'
+    ? 'bg-red-50 text-red-600 border-red-100'
+    : st === 'withdrawn' || st === 'declined'
+    ? 'bg-slate-100 text-slate-500 border-slate-200'
+    : 'bg-amber-50 text-amber-700 border-amber-100';
   const meta = LEVEL_META[person.level] || LEVEL_META[LEVEL_PARTICIPANT];
 
   return (
@@ -83,8 +91,8 @@ const InvolvedRow: React.FC<{ person: DapsInvolved }> = ({ person }) => {
           <span className="material-symbols-outlined text-[12px]">{getLevelIcon(person.level)}</span>
           {getLevelLabel(person.level)}
         </span>
-        <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${status.classes}`}>
-          {status.label}
+        <span className={`rounded-md border px-1.5 py-0.5 text-[9px] font-bold ${statusClasses}`}>
+          {presenceLabel}
         </span>
       </div>
     </li>
@@ -232,7 +240,7 @@ export const DapsEventCard: React.FC<Props> = ({ event, defaultOpen = false }) =
           {event.pendingCount > 0 && (
             <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-[10px] font-bold text-amber-600">
               <span className="material-symbols-outlined text-[13px]">hourglass_top</span>
-              {event.pendingCount} {event.pendingCount === 1 ? 'pendente' : 'pendentes'}
+              {event.pendingCount} {event.pendingCount === 1 ? 'presença pendente' : 'presenças pendentes'}
             </span>
           )}
         </div>

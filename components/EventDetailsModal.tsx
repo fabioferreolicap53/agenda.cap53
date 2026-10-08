@@ -15,7 +15,7 @@ import {
 } from '../lib/pocketbase-types';
 import { notificationService } from '../lib/notifications';
 import { getEstimatedParticipants } from '../lib/eventUtils';
-import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS, getInvolvementLabel } from '../lib/constants';
+import { INVOLVEMENT_LEVELS, RESPONSIBILITY_LEVELS, getInvolvementLabel, getPresenceLabel, PRESENCE_LABELS } from '../lib/constants';
 import CustomSelect from './CustomSelect';
 import EventChatModal from './EventChatModal';
 import ReRequestModal from './ReRequestModal';
@@ -213,6 +213,21 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
     // Ensure participants_roles exists
     const rolesMap = event.participants_roles || {};
     const role = isCreator ? (event.creator_role || rolesMap[p.id]) : rolesMap[p.id];
+    // "Entrou por conta própria" quando há solicitação registrada ou quando o
+    // usuário não consta no mapa de papéis definido pelo criador (convite).
+    const hasOwnRequest = eventParticipationRequests.some(r => r.user === p.id) || !rolesMap[p.id];
+    const presenceLabel = getPresenceLabel({
+      isCreator,
+      creatorRole: role as string,
+      status,
+      hasOwnRequest,
+    });
+    const presenceTone = isCreator
+      ? 'bg-primary/10 text-primary'
+      : status === 'accepted' ? 'bg-green-100 text-green-700'
+      : status === 'rejected' ? 'bg-red-100 text-red-700'
+      : status === 'withdrawn' ? 'bg-slate-100 text-slate-700'
+      : 'bg-yellow-100 text-yellow-700';
 
     return (
       <div key={p.id} className="flex items-center justify-between p-3 rounded-xl bg-white border border-gray-100 shadow-sm">
@@ -227,13 +242,8 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
           {isCreator && (
             <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded font-black uppercase tracking-tighter shrink-0">CRIADOR</span>
           )}
-          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded shrink-0 ${
-            status === 'accepted' ? 'bg-green-100 text-green-700' :
-            status === 'rejected' ? 'bg-red-100 text-red-700' :
-            status === 'withdrawn' ? 'bg-slate-100 text-slate-700' :
-            'bg-yellow-100 text-yellow-700'
-          }`}>
-            {status === 'accepted' ? 'Confirmado' : status === 'rejected' ? 'Removido/Recusado' : status === 'withdrawn' ? 'Retirou-se' : 'Pendente'}
+          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded shrink-0 ${presenceTone}`}>
+            {presenceLabel}
           </span>
           {event.user === user?.id && !isCreator && status === 'accepted' && (
             <button 
@@ -773,7 +783,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
               await pb.collection('agenda_cap53_notifications').create({
                   user: event.user,
                   title: `Convite ${status === 'accepted' ? 'Aceito' : 'Recusado'}`,
-                  message: `${user.name || user.email} ${status === 'accepted' ? 'aceitou' : 'recusou'} o convite para "${event.title}".`,
+                  message: `${user.name || user.email} ${status === 'accepted' ? 'confirmou a presença solicitada' : 'negou presença/retirou-se'} para "${event.title}".`,
                   type: status === 'rejected' ? 'refusal' : 'system',
                   event: event.id,
                   read: false,
@@ -1144,8 +1154,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         <div>
                                             <h4 className="text-sm font-black text-slate-900 tracking-wide uppercase">Participação no Evento</h4>
                                             <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
-                                                {participantStatus[user.id] === 'accepted' ? 'Você faz parte deste evento.' : 
-                                                 participantStatus[user.id] === 'rejected' ? 'Seu convite foi recusado.' :
+                                                {participantStatus[user.id] === 'accepted' ? 
+                                                    (hasRequestedParticipation ? 'Você declara estar presente neste evento.' : 'Sua presença foi solicitada e está confirmada.') : 
+                                                 participantStatus[user.id] === 'rejected' ? 'Presença recusada — você foi retirado(a) pelo criador.' :
+                                                 participantStatus[user.id] === 'withdrawn' ? 'Você nega presença / retirou-se deste evento.' :
                                                  hasRequestedParticipation ? 'Solicitação enviada para o criador.' : 
                                                  'Deseja participar deste evento?'}
                                             </p>
@@ -1361,7 +1373,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         <div className="space-y-3">
                                              <div className="flex items-center gap-2 px-2">
                                                 <span className="w-2 h-2 rounded-full bg-green-500 shadow-sm" />
-                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Confirmados ({confirmed.length})</h3>
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Presenças Solicitadas e Declaradas ({confirmed.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
                                                 {confirmed.map((p: UsersResponse) => renderParticipantRow(p))}
@@ -1373,7 +1385,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         <div className="space-y-3">
                                              <div className="flex items-center gap-2 px-2">
                                                 <span className="w-2 h-2 rounded-full bg-yellow-500 shadow-sm" />
-                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pendentes ({pending.length})</h3>
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Presenças Pendentes ({pending.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
                                                 {pending.map((p: UsersResponse) => renderParticipantRow(p))}
@@ -1385,7 +1397,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         <div className="space-y-3">
                                              <div className="flex items-center gap-2 px-2">
                                                 <span className="w-2 h-2 rounded-full bg-red-500 shadow-sm" />
-                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Removidos ({rejected.length})</h3>
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Presença Recusada / Foi Retirado(a) ({rejected.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
                                                 {rejected.map((p: UsersResponse) => renderParticipantRow(p))}
@@ -1397,7 +1409,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                         <div className="space-y-3">
                                              <div className="flex items-center gap-2 px-2">
                                                 <span className="w-2 h-2 rounded-full bg-slate-400 shadow-sm" />
-                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Retiraram-se ({withdrawn.length})</h3>
+                                                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Nega Presença / Retirou-se ({withdrawn.length})</h3>
                                              </div>
                                              <div className="grid grid-cols-1 gap-3">
                                                 {withdrawn.map((p: UsersResponse) => renderParticipantRow(p))}
@@ -1734,7 +1746,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                         </div>
                         <div className="grid grid-cols-1 gap-4">
                             <div className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Status de Confirmação</span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-4">Status de Presença</span>
                                 {(() => {
                                     const confirmed = Object.values(participantStatus).filter(s => s === 'accepted').length + 1;
                                     const pendentes = Object.values(participantStatus).filter(s => s === 'pending').length + eventParticipationRequests.filter(r => r.status === 'pending').length;
@@ -1742,10 +1754,10 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     const retirados = Object.values(participantStatus).filter(s => s === 'withdrawn').length;
                                     const total = confirmed + pendentes + recusados + retirados;
                                     const segments = [
-                                        { label: 'Confirmados', color: 'bg-green-500', icon: 'check_circle', count: confirmed },
-                                        { label: 'Pendentes', color: 'bg-yellow-500', icon: 'schedule', count: pendentes },
-                                        { label: 'Recusados', color: 'bg-red-500', icon: 'cancel', count: recusados },
-                                        { label: 'Retiraram-se', color: 'bg-slate-500', icon: 'person_remove', count: retirados }
+                                        { label: 'Presenças Confirmadas', color: 'bg-green-500', icon: 'check_circle', count: confirmed },
+                                        { label: 'Presenças Pendentes', color: 'bg-yellow-500', icon: 'schedule', count: pendentes },
+                                        { label: 'Presenças Recusadas', color: 'bg-red-500', icon: 'cancel', count: recusados },
+                                        { label: 'Presenças Negadas', color: 'bg-slate-500', icon: 'person_remove', count: retirados }
                                     ].filter(s => s.count > 0);
                                     
                                     return (
@@ -1884,7 +1896,7 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                                     {eventParticipationRequests.filter(r => r.status === 'pending').length}
                                 </span>
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                                    Pendentes
+                                    Presenças Pendentes
                                 </span>
                             </div>
                         </div>
@@ -2133,21 +2145,26 @@ const EventDetailsModal: React.FC<EventDetailsModalProps> = ({ event: initialEve
                     {/* Print Participants */}
                     <div className="mb-3 break-inside-avoid">
                         <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-100 pb-0.5">
-                            Participantes Confirmados / Convidados
+                            Participantes e Presenças
                         </h3>
                         {event.expand?.participants && event.expand.participants.length > 0 ? (
                             <div className="grid grid-cols-3 gap-x-4 gap-y-1">
-                                {event.expand.participants.map(p => (
+                                {event.expand.participants.map(p => {
+                                    const isCreator = event.user === p.id;
+                                    const status = isCreator ? 'accepted' : (participantStatus[p.id] || 'pending');
+                                    const hasOwnRequest = eventParticipationRequests.some(r => r.user === p.id) || !(event.participants_roles || {})[p.id];
+                                    return (
                                     <div key={p.id} className="flex items-center justify-between text-[10px] border-b border-slate-50 pb-0.5">
                                         <span className="font-bold text-slate-800 truncate pr-2">{p.name || 'Usuário'}</span>
                                         <span className={`text-[8px] font-black uppercase tracking-widest shrink-0 ${
-                                            participantStatus[p.id] === 'accepted' ? 'text-emerald-600' : 
-                                            participantStatus[p.id] === 'rejected' ? 'text-red-600' : 'text-slate-400'
+                                            status === 'accepted' ? 'text-emerald-600' : 
+                                            status === 'rejected' ? 'text-red-600' : 'text-slate-400'
                                         }`}>
-                                            {participantStatus[p.id] === 'accepted' ? 'Confirmado' : participantStatus[p.id] === 'rejected' ? 'Recusado' : 'Pendente'}
+                                            {getPresenceLabel({ isCreator, creatorRole: event.creator_role as string, status, hasOwnRequest })}
                                         </span>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <p className="text-[10px] font-bold text-slate-400">Nenhum participante registrado.</p>

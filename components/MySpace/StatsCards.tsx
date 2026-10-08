@@ -194,19 +194,19 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
   const secondary = [
     {
       id: 'withdrawn' as const,
-      label: 'Retirou-se',
+      label: 'Nega Presença/Retirou-se',
       value: withdrawn,
       icon: 'logout',
       accent: 'mist',
-      hint: 'Eventos dos quais você saiu ou foi retirado.',
+      hint: 'Eventos dos quais você se retirou por conta própria.',
     },
     {
       id: 'removed' as const,
-      label: 'Removido',
+      label: 'Presença Recusada/Foi Retirado(a)',
       value: removed,
       icon: 'person_remove',
       accent: 'graphite',
-      hint: 'Convites e solicitações recusados ou removidos.',
+      hint: 'Presenças recusadas ou retiradas pelo criador do evento.',
     },
   ];
 
@@ -253,8 +253,8 @@ export const StatsCards: React.FC<StatsProps> = ({ stats, activeTab, onTabChange
     { id: 'created_participant' as const, label: 'Part. (criados)', value: createdAsParticipant, bar: ACCENT.amber.bar },
     { id: 'organizer' as const, label: 'Co-organizador', value: orgOther, bar: ACCENT.steel.bar },
     { id: 'participant' as const, label: 'Participante', value: partOther, bar: ACCENT.sky.bar },
-    { id: 'withdrawn' as const, label: 'Retirou-se', value: withdrawn, bar: ACCENT.mist.bar },
-    { id: 'removed' as const, label: 'Removido', value: removed, bar: ACCENT.graphite.bar },
+    { id: 'withdrawn' as const, label: 'Nega Presença/Retirou-se', value: withdrawn, bar: ACCENT.mist.bar },
+    { id: 'removed' as const, label: 'Presença Recusada/Foi Retirado(a)', value: removed, bar: ACCENT.graphite.bar },
   ];
   const grandTotal = segments.reduce((sum, s) => sum + s.value, 0);
 

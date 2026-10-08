@@ -71,6 +71,58 @@ export const DAPS_ROLE_COLORS = {
   },
 } as const;
 
+// ─── Rótulos de presença ───────────────────────────────────────────────
+// Vocabulário único usado em todo o sistema para informar se/como um usuário
+// estará presente em um evento. Substitui termos genéricos ("Confirmado",
+// "Removido", "Retirou-se") por rótulos que descrevem a origem da presença.
+export const PRESENCE_LABELS = {
+  /** Criador que organiza o evento. */
+  CREATOR_ORGANIZER: 'Presença Confirmada',
+  /** Criador que apenas participa (ex.: participação externa). */
+  CREATOR_PARTICIPANT: 'Presença Declarada',
+  /** Convidado pelo criador durante a criação/edição. */
+  INVITED: 'Presença Solicitada',
+  /** Entrou por conta própria pelo detalhamento do evento. */
+  SELF_JOINED: 'Declara Estar Presente',
+  /** Teve a participação retirada pelo criador. */
+  REJECTED: 'Presença Recusada/Foi Retirado(a)',
+  /** Retirou-se por conta própria (ou negou o convite). */
+  WITHDRAWN: 'Nega Presença/Retirou-se',
+  /** Ainda não houve decisão sobre a presença. */
+  PENDING: 'Presença Pendente',
+} as const;
+
+export interface PresenceLabelInput {
+  /** true quando a linha representa quem criou o evento. */
+  isCreator?: boolean;
+  /** Papel de quem criou (ORGANIZADOR | PARTICIPANTE) — só usado se isCreator. */
+  creatorRole?: string;
+  /** Status da participação (accepted | pending | rejected | withdrawn | declined). */
+  status?: string;
+  /** true quando o usuário entrou por conta própria (tem solicitação registrada). */
+  hasOwnRequest?: boolean;
+}
+
+export const getPresenceLabel = ({
+  isCreator,
+  creatorRole,
+  status,
+  hasOwnRequest,
+}: PresenceLabelInput): string => {
+  if (isCreator) {
+    return (creatorRole || '').toUpperCase() === 'PARTICIPANTE'
+      ? PRESENCE_LABELS.CREATOR_PARTICIPANT
+      : PRESENCE_LABELS.CREATOR_ORGANIZER;
+  }
+  const s = (status || 'pending').toLowerCase();
+  if (s === 'rejected') return PRESENCE_LABELS.REJECTED;
+  if (s === 'withdrawn' || s === 'declined') return PRESENCE_LABELS.WITHDRAWN;
+  if (s === 'accepted') {
+    return hasOwnRequest ? PRESENCE_LABELS.SELF_JOINED : PRESENCE_LABELS.INVITED;
+  }
+  return PRESENCE_LABELS.PENDING;
+};
+
 export const EVENT_TYPES_ORDER = [
   'EVENTO',
   'REUNIÃO',

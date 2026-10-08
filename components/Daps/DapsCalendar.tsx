@@ -292,7 +292,7 @@ const DapsEventTooltip: React.FC<{ data: HoverState | null }> = ({ data }) => {
             <span className="material-symbols-outlined text-base text-slate-400">groups</span>
             <div className="flex flex-col">
               <span className="text-[11px] font-bold text-text-main">
-                {event.confirmedCount} {event.confirmedCount === 1 ? 'Confirmado' : 'Confirmados'}
+                {event.confirmedCount} {event.confirmedCount === 1 ? 'Presença Confirmada' : 'Presenças Confirmadas'}
               </span>
               {!!event.estimatedParticipants && event.estimatedParticipants > 0 && (
                 <div className="mt-1 flex w-fit items-center gap-1 rounded border border-gray-100 bg-gray-50 px-1.5 py-0.5 text-[10px] font-bold text-text-secondary">

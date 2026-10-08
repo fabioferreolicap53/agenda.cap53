@@ -7,6 +7,7 @@ import { isNotificationDeletable } from '../lib/notifications';
 import CustomSelect from '../components/CustomSelect';
 import RefusalModal from '../components/RefusalModal';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { getPresenceLabel, PRESENCE_LABELS } from '../lib/constants';
 
 const INVOLVEMENT_LEVELS = [
     { value: 'ORGANIZADOR', label: 'Organizador' },
@@ -1183,7 +1184,14 @@ const Requests: React.FC = () => {
                                                                         'bg-amber-50 text-amber-600'
                                                                     }`}>
                                                                         {isRefusal ? (statusDisplay === 'accepted' ? 'CIENTE' : 'RECUSADO') :
-                                                                         (statusDisplay === 'accepted' || statusDisplay === 'approved' || statusDisplay === 'confirmed' ? 'Confirmado' :
+                                                                         (isInvite || isParticipationRequest)
+                                                                         ? getPresenceLabel({
+                                                                             status: (statusDisplay === 'accepted' || statusDisplay === 'approved' || statusDisplay === 'confirmed') ? 'accepted'
+                                                                                 : (statusDisplay === 'rejected' || statusDisplay === 'refused') ? (isInvite ? 'withdrawn' : 'rejected')
+                                                                                 : 'pending',
+                                                                             hasOwnRequest: isParticipationRequest,
+                                                                           })
+                                                                         : (statusDisplay === 'accepted' || statusDisplay === 'approved' || statusDisplay === 'confirmed' ? 'Confirmado' :
                                                                          statusDisplay === 'rejected' || statusDisplay === 'refused' ? 'Recusado' :
                                                                          'Pendente')}
                                                                     </span>
@@ -1380,7 +1388,12 @@ const Requests: React.FC = () => {
                                                 const isChatRoomCreated = notification.type === 'chat_room_created';
                                                 const isEventDeleted = notification.type === 'event_deleted';
                                                 const inviteStatus = notification.invite_status;
-                                                const inviteLabel = inviteStatus === 'accepted' ? 'Aceito' : inviteStatus === 'rejected' ? 'Recusado' : 'Pendente';
+                                                const isPresenceNotif = notification.type === 'event_invite' || notification.type === 'event_participation_request';
+                                                const inviteLabel = inviteStatus === 'accepted'
+                                                    ? (isPresenceNotif ? getPresenceLabel({ status: 'accepted', hasOwnRequest: notification.type === 'event_participation_request' }) : 'Aceito')
+                                                    : inviteStatus === 'rejected'
+                                                    ? (isPresenceNotif ? getPresenceLabel({ status: notification.type === 'event_invite' ? 'withdrawn' : 'rejected' }) : 'Recusado')
+                                                    : (isPresenceNotif ? PRESENCE_LABELS.PENDING : 'Pendente');
 
                                                 const isInviteRefusal = isRefusal && notification.data?.kind === 'event_invite_response';
 

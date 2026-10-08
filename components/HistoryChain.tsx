@@ -18,7 +18,7 @@ export interface HistoryEntry {
 interface HistoryChainProps {
   history: HistoryEntry[];
   currentUserId?: string;
-  type?: 'item' | 'transport';
+  type?: 'item' | 'transport' | 'participation';
 }
 
 const HistoryChain: React.FC<HistoryChainProps> = ({ history, currentUserId, type }) => {

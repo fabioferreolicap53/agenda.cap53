@@ -60,6 +60,8 @@ export interface DapsInvolved {
   role: string;
   isCreator: boolean;
   status?: string;
+  /** true quando a presença partiu do próprio usuário (entrou por conta própria). */
+  hasOwnRequest?: boolean;
 }
 
 export interface DapsGap {
@@ -256,6 +258,23 @@ export const useDapsEvents = () => {
           })
         : [];
 
+      // Solicitações de participação: identificam quem entrou por conta própria
+      // (pediu para participar), em oposição a quem foi convidado pelo criador.
+      const solicitacoes = records.length
+        ? await pb.collection(Collections.AgendaCap53SolicitacoesEvento).getFullList<any>({
+            filter: records.map((e) => `event = "${e.id}"`).join(' || '),
+            requestKey: null,
+          })
+        : [];
+
+      const ownRequestByEvent = new Map<string, Set<string>>();
+      solicitacoes.forEach((s) => {
+        if (!s?.event || !s?.user) return;
+        const set = ownRequestByEvent.get(s.event) || new Set<string>();
+        set.add(s.user);
+        ownRequestByEvent.set(s.event, set);
+      });
+
       const participacoesPorEvento = new Map<string, any[]>();
       participacoes.forEach((p) => {
         if (!p?.event || !p?.user) return;
@@ -277,6 +296,10 @@ export const useDapsEvents = () => {
         const creatorId: string = e.user;
         const creatorUser = e.expand?.user;
         const creatorLevel = (e.creator_role || LEVEL_ORGANIZER).toUpperCase();
+        const ownSet = ownRequestByEvent.get(e.id) || new Set<string>();
+        // Entrou por conta própria quando há solicitação registrada ou quando não
+        // consta no mapa de papéis definido pelo criador (isto é, não foi convidado).
+        const isSelfJoined = (userId: string) => ownSet.has(userId) || !rolesMap[userId];
 
         // Criador → nível veio de creator_role
         if (creatorId) {
@@ -289,6 +312,7 @@ export const useDapsEvents = () => {
             role: creatorLevel,
             isCreator: true,
             status: statusMap[creatorId] || 'accepted',
+            hasOwnRequest: false,
           });
         }
 
@@ -310,6 +334,7 @@ export const useDapsEvents = () => {
             role: level,
             isCreator: false,
             status: statusMap[id],
+            hasOwnRequest: isSelfJoined(id),
           });
         });
 
@@ -337,6 +362,7 @@ export const useDapsEvents = () => {
             role: level,
             isCreator: false,
             status,
+            hasOwnRequest: isSelfJoined(participantId),
           });
         });
 

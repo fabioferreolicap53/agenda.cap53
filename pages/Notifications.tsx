@@ -11,7 +11,7 @@ import RefusalModal from '../components/RefusalModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ReInviteModal from '../components/ReInviteModal';
 import HistoryChain, { HistoryEntry } from '../components/HistoryChain';
-import { RESPONSIBILITY_LEVELS } from '../lib/constants';
+import { RESPONSIBILITY_LEVELS, getPresenceLabel } from '../lib/constants';
 
 type FilterType = 'all' | 'unread' | 'actions';
 
@@ -284,7 +284,7 @@ const Notifications: React.FC = () => {
             (n.type === 'refusal' && data.kind === 'almc_item_decision')
         )) {
             const rawReqId = n.related_request;
-            const requestId = typeof rawReqId === 'object' ? rawReqId.id : rawReqId;
+            const requestId = typeof rawReqId === 'object' && rawReqId ? (rawReqId as any).id : rawReqId;
             key = `item_${requestId}`;
         } 
         // 2. Agrupa Transportes do mesmo evento
@@ -293,14 +293,14 @@ const Notifications: React.FC = () => {
                  (n.type === 'history_log' && data.icon === 'local_shipping') ||
                  (n.type === 're_requested' && data.kind === 'transport_request')) && n.event) {
             const rawEventId = n.event;
-            const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+            const eventId = typeof rawEventId === 'object' && rawEventId ? (rawEventId as any).id : rawEventId;
             key = `transport_${eventId}`;
         }
         // 3. Agrupa Recusas de Convite ou Solicitações de Participação do mesmo usuário para o mesmo evento
         else if ((n.type === 'refusal' || n.type === 'event_invite' || n.type === 'event_participation_request' || data.kind === 'event_invite_response' || data.kind === 'organizer_invite_sent' || data.kind === 'participation_request_response') && n.event) {
              // Event ID pode ser objeto ou string
              const rawEventId = n.event;
-             const eventId = typeof rawEventId === 'object' ? rawEventId.id : rawEventId;
+             const eventId = typeof rawEventId === 'object' && rawEventId ? (rawEventId as any).id : rawEventId;
              
              // Guest/Requester ID
              const guestId = data.guest_id || 
@@ -2059,8 +2059,12 @@ const Notifications: React.FC = () => {
                             {(notification.invite_status === 'accepted' || notification.invite_status === 'confirmed' || notification.invite_status === 'approved') ? 'check_circle' : 'cancel'}
                          </span>
                          {(notification.invite_status === 'accepted' || notification.invite_status === 'confirmed' || notification.invite_status === 'approved') 
-                         ? (notification.invite_status === 'confirmed' ? 'Confirmado' : 'Aceito')
-                         : 'Recusado'}
+                         ? (notification.type === 'event_invite' || notification.type === 'event_participation_request'
+                            ? getPresenceLabel({ status: 'accepted', hasOwnRequest: notification.type === 'event_participation_request' })
+                            : (notification.invite_status === 'confirmed' ? 'Confirmado' : 'Aceito'))
+                         : (notification.type === 'event_invite' || notification.type === 'event_participation_request'
+                            ? getPresenceLabel({ status: notification.type === 'event_invite' ? 'withdrawn' : 'rejected' })
+                            : 'Recusado')}
                       </span>
                    )}
                 </div>

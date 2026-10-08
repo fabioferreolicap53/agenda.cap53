@@ -348,7 +348,7 @@ export const AnalyticsSection: React.FC<AnalyticsSectionProps> = ({ analytics })
                       radius={[0, 8, 8, 0]}
                       barSize={16}
                       animationDuration={900}
-                      background={{ fill: 'rgba(28,46,74,0.05)', radius: [0, 8, 8, 0] }}
+                      background={{ fill: 'rgba(28,46,74,0.05)', radius: [0, 8, 8, 0] as any }}
                     >
                       {analytics.byResources.map((entry, index) => (
                         <Cell

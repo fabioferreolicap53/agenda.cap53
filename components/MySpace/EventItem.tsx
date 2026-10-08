@@ -2,7 +2,7 @@ import React from 'react';
 import { format, isPast, isFuture, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MySpaceEvent } from '../../hooks/useMySpace';
-import { RESPONSIBILITY_LEVELS } from '../../lib/constants';
+import { RESPONSIBILITY_LEVELS, getPresenceLabel } from '../../lib/constants';
 import { getEstimatedParticipants } from '../../lib/eventUtils';
 
 interface EventItemProps {
@@ -27,22 +27,25 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
     // Fundo do chip de status — harmônico e discreto.
     let colorClass = 'bg-slate-100 text-slate-600';
 
-    if (event.participationStatus === 'pending') {
-      color = 'bg-amber-500';
-      colorClass = 'bg-amber-50 text-amber-700';
-      label = 'Convite Pendente';
-    } else if (event.requestStatus === 'pending') {
-      color = 'bg-blue-500';
-      colorClass = 'bg-blue-50 text-blue-700';
-      label = 'Solicitação Pendente';
-    } else if (event.participationStatus === 'rejected' || event.requestStatus === 'rejected') {
-      color = 'bg-red-500';
-      colorClass = 'bg-red-50 text-red-700';
-      label = 'Removido/Recusado';
-    } else if (event.participationStatus === 'withdrawn') {
-      color = 'bg-amber-600';
-      colorClass = 'bg-amber-50 text-amber-700';
-      label = 'Retirou-se';
+    // Presença do usuário — vocabulário unificado em todo o sistema.
+    // "participation" = convite do criador; "request" = entrou por conta própria.
+    if (event.type === 'participation' || event.type === 'request') {
+      const isOwnRequest = event.type === 'request';
+      const st = ((isOwnRequest ? event.requestStatus : event.participationStatus) || 'pending').toLowerCase();
+      label = getPresenceLabel({ status: st, hasOwnRequest: isOwnRequest });
+      if (st === 'accepted') {
+        color = 'bg-green-500';
+        colorClass = 'bg-emerald-50 text-emerald-700';
+      } else if (st === 'rejected') {
+        color = 'bg-red-500';
+        colorClass = 'bg-red-50 text-red-700';
+      } else if (st === 'withdrawn' || st === 'declined') {
+        color = 'bg-amber-600';
+        colorClass = 'bg-amber-50 text-amber-700';
+      } else {
+        color = isOwnRequest ? 'bg-blue-500' : 'bg-amber-500';
+        colorClass = isOwnRequest ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700';
+      }
     } else if (event.status === 'canceled') {
       color = 'bg-red-600';
       colorClass = 'bg-red-50 text-red-700';
@@ -91,21 +94,11 @@ export const EventItem: React.FC<EventItemProps> = ({ event, onOpenCalendar, onC
       icon = 'assignment_ind';
       classes = 'text-primary bg-primary/10 border-primary/20';
       title = 'Te definiram como organizador deste evento de outra pessoa.';
-    } else if (event.requestStatus === 'pending') {
-      label = 'Aguardando';
-      icon = 'hourglass_top';
-      classes = 'text-slate-500 bg-slate-50 border-slate-100';
-      title = 'Sua solicitação de participação aguarda aprovação.';
-    } else if (event.participationStatus === 'withdrawn') {
-      label = 'Desistente';
-      icon = 'logout';
-      classes = 'text-amber-700 bg-amber-50 border-amber-200';
-      title = 'Você retirou sua participação deste evento.';
-    } else if (event.participationStatus === 'rejected') {
-      label = 'Removido';
-      icon = 'person_remove';
-      classes = 'text-red-700 bg-red-50 border-red-200';
-      title = 'Você foi removido deste evento.';
+    } else if (event.type === 'request') {
+      label = 'Participante';
+      icon = 'person_add';
+      classes = 'text-blue-700 bg-blue-50 border-blue-200';
+      title = 'Você entrou neste evento por conta própria.';
     }
 
     return (
