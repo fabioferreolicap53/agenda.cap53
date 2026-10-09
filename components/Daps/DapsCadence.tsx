@@ -113,6 +113,16 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
   const roleTotal = event.organizerCount + event.coOrganizerCount + event.participantCount;
   const pct = (n: number) => (roleTotal > 0 ? (n / roleTotal) * 100 : 0);
 
+  // Ordem de destaque nos avatares: criador primeiro, depois por nível e nome.
+  const involvedPile = [...event.involved]
+    .sort(
+      (a, b) =>
+        Number(b.isCreator) - Number(a.isCreator) ||
+        levelMeta(a.level).rank - levelMeta(b.level).rank ||
+        a.name.localeCompare(b.name)
+    )
+    .slice(0, 7);
+
   const dayNum = date ? String(date.getDate()).padStart(2, '0') : '--';
   const monthLbl = date ? date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '') : '—';
   const weekLbl = date ? date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '') : '';
@@ -329,10 +339,191 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
               )}
             </div>
 
-            {/* Composição de papéis */}
+            {/* Envolvidos — bloco unificado: quem participa e em qual papel */}
             {roleTotal > 0 && (
-              <div className="mt-3">
-                <div className="flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`mt-3 rounded-xl border p-2.5 ${
+                  isPast
+                    ? 'border-slate-100 bg-slate-50/50'
+                    : 'border-[#7C97BB]/25 bg-gradient-to-br from-white to-[#7C97BB]/8'
+                }`}
+              >
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  {/* Avatares — quem está envolvido */}
+                  <div className="flex items-center -space-x-3">
+                    {involvedPile.map((person) => {
+                      const meta = levelMeta(person.level);
+                      const ring =
+                        person.level === LEVEL_ORGANIZER
+                          ? 'ring-[#1C2E4A]/70'
+                          : person.level === LEVEL_CO_ORGANIZER
+                          ? 'ring-[#456086]/70'
+                          : 'ring-[#7C97BB]/70';
+                      return (
+                        <button
+                          key={person.id}
+                          type="button"
+                          onClick={() => setInvolvedOpen(true)}
+                          title={`${person.name} · ${meta.label}${person.isCreator ? ' (criador)' : ''}`}
+                          className="group/av relative z-0 transition-[z-index] duration-150 hover:z-20 focus:z-20 focus:outline-none"
+                        >
+                          <img
+                            src={getAvatarUrl(person) || undefined}
+                            alt={person.name}
+                            className={`size-9 rounded-full object-cover ring-2 ring-offset-2 ring-offset-white transition-transform duration-200 group-hover/av:-translate-y-1.5 group-hover/av:scale-110 ${ring}`}
+                          />
+                          {person.isCreator && (
+                            <span className="absolute -bottom-1 -right-1 flex size-4 items-center justify-center rounded-full bg-amber-400 text-white shadow ring-2 ring-white">
+                              <span className="material-symbols-outlined text-[10px]">star</span>
+                            </span>
+                          )}
+                          <span className="pointer-events-none absolute -top-8 left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-bold text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/av:opacity-100">
+                            {person.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                    {event.involved.length > involvedPile.length && (
+                      <button
+                        type="button"
+                        onClick={() => setInvolvedOpen(true)}
+                        title="Ver todos os envolvidos"
+                        className={`flex size-9 items-center justify-center rounded-full text-[10px] font-black ring-2 ring-slate-200 ring-offset-2 ring-offset-white ${
+                          isPast ? 'bg-slate-100 text-slate-400' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        }`}
+                      >
+                        +{event.involved.length - involvedPile.length}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Indicadores e relação completa */}
+                  <div className="ml-auto flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
+                    {event.estimatedParticipants !== undefined && event.estimatedParticipants > 0 && (
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm ${
+                          isPast
+                            ? 'border-slate-200/70 bg-white/60 text-slate-400'
+                            : 'border-[#7C97BB]/40 bg-[#7C97BB]/12 text-[#456086]'
+                        }`}
+                      >
+                        <span className={`material-symbols-outlined text-[13px] ${isPast ? 'text-slate-400' : 'text-[#5B7DAA]'}`}>
+                          groups
+                        </span>
+                        <span className={`text-xs font-black ${isPast ? 'text-slate-400' : 'text-[#1C2E4A]'}`}>
+                          {event.estimatedParticipants}
+                        </span>
+                        previstos
+                      </span>
+                    )}
+
+                    {event.pendingCount > 0 && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${
+                          isPast ? 'bg-amber-50/60 text-amber-600/70' : 'bg-amber-50 text-amber-700'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">pending</span>
+                        {event.pendingCount} pendentes
+                      </span>
+                    )}
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setInvolvedOpen((prev) => !prev)}
+                        title="Ver a relação dos envolvidos"
+                        className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 transition-all ${
+                          isPast
+                            ? 'bg-emerald-50/60 text-emerald-600/70 hover:bg-emerald-100/70'
+                            : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                        } ${involvedOpen ? 'ring-2 ring-emerald-300/60' : ''}`}
+                      >
+                        <span className="material-symbols-outlined text-[13px]">groups</span>
+                        {event.involved.length} envolvidos
+                        <span
+                          className={`material-symbols-outlined text-[14px] transition-transform duration-300 ${
+                            involvedOpen ? 'rotate-180' : ''
+                          }`}
+                        >
+                          expand_more
+                        </span>
+                      </button>
+
+                      {involvedOpen && (
+                        <>
+                          {/* Camada para fechar ao clicar fora */}
+                          <div className="fixed inset-0 z-30" onClick={() => setInvolvedOpen(false)} />
+                          <div className="absolute bottom-full right-0 z-40 mb-2 w-72 origin-bottom-right overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+                            <div className="flex items-center gap-2 border-b border-slate-100 bg-slate-50/70 px-3 py-2.5">
+                              <span className="material-symbols-outlined text-[16px] text-[#5B7DAA]">groups</span>
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                                Relação de envolvidos
+                              </p>
+                            </div>
+
+                            <div className="max-h-64 overflow-y-auto p-1.5">
+                              {[
+                                { level: LEVEL_ORGANIZER, label: 'Organizadores' },
+                                { level: LEVEL_CO_ORGANIZER, label: 'Co-organizadores' },
+                                { level: LEVEL_PARTICIPANT, label: 'Participantes' },
+                              ].map((group) => {
+                                const people = event.involved
+                                  .filter((p) => p.level === group.level)
+                                  .sort(
+                                    (a, b) =>
+                                      Number(b.isCreator) - Number(a.isCreator) ||
+                                      a.name.localeCompare(b.name)
+                                  );
+                                if (people.length === 0) return null;
+                                const meta = levelMeta(group.level);
+                                return (
+                                  <div key={group.level} className="mb-0.5">
+                                    <p className="flex items-center gap-1.5 px-2 pb-1 pt-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                                      <span className={`size-1.5 rounded-full ${meta.dot}`} />
+                                      {group.label}
+                                      <span className="text-slate-300">{people.length}</span>
+                                    </p>
+                                    {people.map((person) => (
+                                      <div
+                                        key={person.id}
+                                        className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-slate-50"
+                                      >
+                                        <span className="relative shrink-0">
+                                          <img
+                                            src={getAvatarUrl(person) || undefined}
+                                            alt={person.name}
+                                            className="size-7 rounded-full border-2 border-white object-cover"
+                                          />
+                                          {person.isCreator && (
+                                            <span className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-amber-400 text-white ring-1 ring-white">
+                                              <span className="material-symbols-outlined text-[9px]">star</span>
+                                            </span>
+                                          )}
+                                        </span>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="truncate text-xs font-bold text-slate-700">{person.name}</p>
+                                          {(person.sector || person.isCreator) && (
+                                            <p className="truncate text-[10px] font-semibold text-slate-400">
+                                              {person.sector || 'Criador do evento'}
+                                            </p>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Composição por papel */}
+                <div className="mt-2.5 flex h-2 w-full overflow-hidden rounded-full bg-slate-100">
                   {event.organizerCount > 0 && (
                     <div className="bg-[#1C2E4A]" style={{ width: `${pct(event.organizerCount)}%` }} />
                   )}
@@ -340,10 +531,7 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
                     <div className="bg-[#456086]" style={{ width: `${pct(event.coOrganizerCount)}%` }} />
                   )}
                   {event.participantCount > 0 && (
-                    <div
-                      className="bg-[#7C97BB]"
-                      style={{ width: `${pct(event.participantCount)}%` }}
-                    />
+                    <div className="bg-[#7C97BB]" style={{ width: `${pct(event.participantCount)}%` }} />
                   )}
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
@@ -355,27 +543,6 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
                   )}
                   {event.participantCount > 0 && (
                     <RoleLegend color="bg-[#7C97BB]" value={event.participantCount} label="participantes" muted={isPast} />
-                  )}
-                  {event.estimatedParticipants !== undefined && event.estimatedParticipants > 0 && (
-                    <span
-                      className={`ml-auto inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-bold uppercase tracking-wide shadow-sm ${
-                        isPast
-                          ? 'border-slate-200/70 bg-white/60 text-slate-400'
-                          : 'border-[#7C97BB]/40 bg-[#7C97BB]/12 text-[#456086]'
-                      }`}
-                    >
-                      <span
-                        className={`material-symbols-outlined text-[13px] ${
-                          isPast ? 'text-slate-400' : 'text-[#5B7DAA]'
-                        }`}
-                      >
-                        groups
-                      </span>
-                      <span className={`text-xs font-black ${isPast ? 'text-slate-400' : 'text-[#1C2E4A]'}`}>
-                        {event.estimatedParticipants}
-                      </span>
-                      previstos
-                    </span>
                   )}
                 </div>
               </div>
@@ -417,143 +584,6 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
                 ))}
               </div>
             )}
-
-            {/* Envolvidos e status */}
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              {event.involved.length > 0 && (
-                <div className="flex -space-x-2">
-                  {event.involved.slice(0, 8).map((person) => {
-                    const borderColor =
-                      person.level === LEVEL_ORGANIZER
-                        ? 'border-[#1C2E4A]/60'
-                        : person.level === LEVEL_CO_ORGANIZER
-                        ? 'border-[#456086]/60'
-                        : 'border-white';
-                    return (
-                      <img
-                        key={person.id}
-                        src={getAvatarUrl(person) || undefined}
-                        alt={person.name}
-                        title={`${person.name} · ${
-                          person.level === LEVEL_ORGANIZER
-                            ? 'Organizador'
-                            : person.level === LEVEL_CO_ORGANIZER
-                            ? 'Co-organizador'
-                            : 'Participante'
-                        }${person.isCreator ? ' (criador)' : ''}`}
-                        className={`size-8 rounded-full border-2 object-cover ${borderColor}`}
-                      />
-                    );
-                  })}
-                  {event.involved.length > 8 && (
-                    <span
-                      className={`flex size-8 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[10px] font-black ${
-                        isPast ? 'text-slate-400' : 'text-slate-500'
-                      }`}
-                    >
-                      +{event.involved.length - 8}
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <div className="ml-auto flex flex-wrap items-center gap-1.5 text-[11px] font-bold">
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setInvolvedOpen((prev) => !prev)}
-                    title="Ver a relação dos envolvidos"
-                    className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 transition-all ${
-                      isPast
-                        ? 'bg-emerald-50/60 text-emerald-600/70 hover:bg-emerald-100/70'
-                        : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
-                    } ${involvedOpen ? 'ring-2 ring-emerald-300/60' : ''}`}
-                  >
-                    <span className="material-symbols-outlined text-[13px]">groups</span>
-                    {event.confirmedCount} envolvidos
-                    <span
-                      className={`material-symbols-outlined text-[14px] transition-transform duration-300 ${
-                        involvedOpen ? 'rotate-180' : ''
-                      }`}
-                    >
-                      expand_more
-                    </span>
-                  </button>
-
-                  {involvedOpen && (
-                    <>
-                      {/* Camada para fechar ao clicar fora */}
-                      <div
-                        className="fixed inset-0 z-30"
-                        onClick={() => setInvolvedOpen(false)}
-                      />
-                      <div className="absolute bottom-full right-0 z-40 mb-2 w-72 origin-bottom-right overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        <div className="flex items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/70 px-3 py-2.5">
-                          <div className="min-w-0">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                              Envolvidos
-                            </p>
-                            <p className="truncate uppercase text-[11px] font-semibold text-slate-400" title={event.title}>
-                              {event.title}
-                            </p>
-                          </div>
-                          <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-black text-emerald-700">
-                            {event.involved.length}
-                          </span>
-                        </div>
-
-                        <div className="max-h-64 overflow-y-auto p-1.5">
-                          {event.involved.length === 0 ? (
-                            <p className="px-2 py-4 text-center text-[11px] font-medium text-slate-400">
-                              Sem envolvidos registrados
-                            </p>
-                          ) : (
-                            [...event.involved]
-                              .sort((a, b) => levelMeta(a.level).rank - levelMeta(b.level).rank)
-                              .map((person) => {
-                                const meta = levelMeta(person.level);
-                                return (
-                                  <div
-                                    key={person.id}
-                                    className="flex items-center gap-2 rounded-xl px-2 py-1.5 transition-colors hover:bg-slate-50"
-                                  >
-                                    <img
-                                      src={getAvatarUrl(person) || undefined}
-                                      alt={person.name}
-                                      className="size-7 shrink-0 rounded-full border-2 border-white object-cover"
-                                    />
-                                    <div className="min-w-0 flex-1">
-                                      <p className="truncate text-xs font-bold text-slate-700">
-                                        {person.name}
-                                      </p>
-                                      <p className="flex items-center gap-1 text-[10px] font-semibold text-slate-400">
-                                        <span className={`size-1.5 rounded-full ${meta.dot}`} />
-                                        <span className={meta.text}>{meta.label}</span>
-                                        {person.isCreator && ' · criador'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                );
-                              })
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {event.pendingCount > 0 && (
-                  <span
-                    className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 ${
-                      isPast ? 'bg-amber-50/60 text-amber-600/70' : 'bg-amber-50 text-amber-700'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[13px]">pending</span>
-                    {event.pendingCount} pendentes
-                  </span>
-                )}
-              </div>
-            </div>
           </div>
           </div>
 
