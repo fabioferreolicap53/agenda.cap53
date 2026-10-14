@@ -88,15 +88,14 @@ const EventRow: React.FC<{ event: DapsEvent; isNext: boolean; isPast?: boolean }
   const endDate = event.dateEnd ? new Date(event.dateEnd) : null;
 
   const now = new Date();
-  const nowMs = now.getTime();
   const startMs = date ? date.getTime() : NaN;
   const validDate = !isNaN(startMs);
 
-  // Contagem considera data E horário de início: um evento cujo horário já
-  // passou hoje conta como iniciado; os dias restantes usam dias corridos,
-  // então um evento mais tarde hoje mostra "É hoje" (0 dia).
-  const isFuture = validDate && startMs >= nowMs;
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+  // Um evento fica ativo durante todo o dia da data/hora inicial: só conta
+  // como "realizado" depois que o dia vira, não quando a hora de início passa.
+  const isFuture = validDate && startOfDay(date as Date) >= startOfDay(now);
   const daysUntil = isFuture
     ? Math.round((startOfDay(date as Date) - startOfDay(now)) / 86400000)
     : null;
@@ -617,16 +616,20 @@ export const DapsCadence: React.FC<Props> = ({ events, stats }) => {
   const [archiveOpen, setArchiveOpen] = useState(false);
 
   const { upcoming, past } = useMemo(() => {
-    const nowMs = Date.now();
+    // Corte no início do dia: o evento continua em exibição durante toda a
+    // data da data/hora inicial e só vai para o arquivo quando o dia vira.
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const todayMs = startOfToday.getTime();
 
     const up = events.filter((e) => {
       const t = e.dateStart ? new Date(e.dateStart).getTime() : NaN;
-      return !isNaN(t) && t >= nowMs;
+      return !isNaN(t) && t >= todayMs;
     });
 
     const pa = events.filter((e) => {
       const t = e.dateStart ? new Date(e.dateStart).getTime() : NaN;
-      return isNaN(t) || t < nowMs;
+      return isNaN(t) || t < todayMs;
     }).sort((a, b) => new Date(b.dateStart || 0).getTime() - new Date(a.dateStart || 0).getTime());
 
     return { upcoming: up, past: pa };
